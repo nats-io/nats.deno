@@ -1,0 +1,31 @@
+# Logs
+npm-debug.log*
+
+# generated files
+.DS_Store
+build/
+nats.js
+*.d.ts
+nats.js.map
+src/version.json
+old_tests/
+examples/certs/
+
+
+.idea/
+
+# nyc test coverage
+.nyc_output
+coverage/
+
+# Dependency directories
+node_modules
+
+# Optional npm cache directory
+.npm
+
+# ide crud
+vcs.xml
+
+# we copy package.json to read the version so ts, webpack, etc are happy
+src/package.json
