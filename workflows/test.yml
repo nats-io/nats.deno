@@ -1,0 +1,65 @@
+name: NATS.deno
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - '*'
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: ${{ matrix.config.kind }} ${{ matrix.config.os }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        deno-version: [1.1.0]
+
+    steps:
+      - name: Git Checkout Deno Module
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Use Deno Version ${{ matrix.deno-version }}
+        uses: denolib/setup-deno@master
+        with:
+          deno-version: ${{ matrix.deno-version }}
+
+      - name: Set NATS Server Version
+        run: echo '::set-env name=NATS_VERSION::v2.1.7'
+      - name: Get nats-server
+        run: |
+          wget "https://github.com/nats-io/nats-server/releases/download/$NATS_VERSION/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
+          unzip tmp.zip
+          mv nats-server-$NATS_VERSION-linux-amd64 nats-server
+
+      - name: ls
+        run: ls -lg
+
+      - name: Lint Deno Module
+        run: deno fmt --check
+
+      - name: Test Deno Module
+        env:
+          TMPDIR: ${{ runner.temp }}
+          CI: true
+        run: deno test --allow-all --unstable --failfast
+
+      - name: build nats.js
+        run: deno bundle --unstable src/connect.ts nats.js
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          !startsWith(github.ref, 'refs/tags/std/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            nats.js
+          draft: true
