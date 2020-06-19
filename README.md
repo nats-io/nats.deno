@@ -17,6 +17,9 @@ import * as nats from 'https://raw.githubusercontent.com/nats-io/nats.deno/maste
 
 # Basic Usage
 
+The Deno client is under active development. All tests are passing, but the APIs will change
+slightly - See the [TODO](TODO.md).
+
 ```javascript
 // create a connection
   const nc = await nats.connect({ url: 'nats://localhost:4222', payload: Payload.STRING });

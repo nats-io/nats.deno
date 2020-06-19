@@ -8,6 +8,8 @@
 - [X] Changed drain/sub.drain to return Promise<void>
 - [X] Remove argument from flush()
 - [X] Binary apis changed to be Uint8Array
+- [ ] Subscriptions as iterators
+
 
 
 ## BUGS
