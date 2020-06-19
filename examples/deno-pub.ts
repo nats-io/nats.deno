@@ -1,10 +1,11 @@
 import parseArgs from "https://deno.land/x/deno_minimist@1.0.0/mod.ts";
-import { connect, ConnectionOptions, DEFAULT_URL } from "../src/mod.ts";
+import { ConnectionOptions, DEFAULT_URI } from "../nats-base-client/mod.ts";
+import { connect } from "../src/mod.ts";
 
 const argv = parseArgs(Deno.args);
 const opts = {} as ConnectionOptions;
 
-opts.url = String(argv.s) || DEFAULT_URL;
+opts.url = String(argv.s) || DEFAULT_URI;
 
 const subject = String(argv._[0]);
 const payload = argv._[1] || "";
