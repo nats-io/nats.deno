@@ -16,14 +16,10 @@ import * as nats from 'https://raw.githubusercontent.com/nats-io/nats.deno/maste
 ```
 
 # Basic Usage
-nats.deno supports Promises, depending on the runtime environment you can also use async-await constructs.
 
-
-
-In another script block, reference the 'nats' global:
 ```javascript
 // create a connection
-  const nc = await nats.connect({ url: 'nats://localhost:4222', payload: nats.Payload.STRING });
+  const nc = await nats.connect({ url: 'nats://localhost:4222', payload: Payload.STRING });
 
   // simple publisher
   nc.publish('hello', 'nats');
