@@ -21,8 +21,11 @@ The Deno client is under active development. All tests are passing, but the APIs
 slightly - See the [TODO](TODO.md).
 
 ```javascript
+// import the connect function
+  import { connect } from "https://deno.land/x/nats/src/mod.ts";
+  
 // create a connection
-  const nc = await nats.connect({ url: 'nats://localhost:4222', payload: Payload.STRING });
+  const nc = await connect({ url: 'nats://localhost:4222', payload: Payload.STRING });
 
   // simple publisher
   nc.publish('hello', 'nats');
@@ -54,7 +57,6 @@ slightly - See the [TODO](TODO.md).
 
   // close the connection
   nc.close();
-
 }
 ```
 
@@ -100,10 +102,10 @@ const qsub = nc.subscribe('urgent.help', (_, msg) => {
 // provide it in the URL. NATS credentials are specified
 // in the `user`, `pass` or `token` options in the NatsConnectionOptions
 
-const nc = nats.connect({url: "nats://wsuser:wsuserpass@localhost:4222" });
-const nc1 = nats.connect({url: "nats://localhost:4222", user: "me", pass: "secret"});
-const nc2 = nats.connect({url: "nats://localhost:8080", user: "jenny", token: "867-5309"});
-const nc3 = nats.connect({url: "nats://localhost:8080", token: "t0pS3cret!"});
+const nc = connect({url: "nats://wsuser:wsuserpass@localhost:4222" });
+const nc1 = connect({url: "nats://localhost:4222", user: "me", pass: "secret"});
+const nc2 = connect({url: "nats://localhost:8080", user: "jenny", token: "867-5309"});
+const nc3 = connect({url: "nats://localhost:8080", token: "t0pS3cret!"});
 ```
 
 ## Advanced Usage
