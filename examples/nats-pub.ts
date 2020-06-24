@@ -1,7 +1,8 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@v0.56.0/flags/mod.ts";
+import { parse } from "https://deno.land/std/flags/mod.ts";
 import { connect } from "https://deno.land/x/nats/src/mod.ts";
+import { ConnectionOptions } from "../src/mod.ts";
 
 const argv = parse(
   Deno.args,
@@ -10,7 +11,7 @@ const argv = parse(
       "s": ["server"],
     },
     default: {
-      s: "nats://localhost:4222"
+      s: "nats://localhost:4222",
     },
   },
 );

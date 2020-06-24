@@ -1,27 +1,65 @@
 import * as path from "https://deno.land/std/path/mod.ts";
 import { check } from "./mod.ts";
 
-export class NatsServer {
+export interface PortInfo {
   hostname: string;
   port: number;
+  cluster?: number;
+}
+
+export interface Ports {
+  nats: string[];
+  cluster?: string;
+}
+
+function parseHostport(s?: string) {
+  if (!s) {
+    return;
+  }
+  s = s.toString().replace("nats://", "");
+  const [hostname, ps] = s.split(":");
+  const port = parseInt(ps, 10);
+
+  return { hostname, port };
+}
+
+function parsePorts(ports: Ports): PortInfo {
+  const listen = parseHostport(ports.nats[0]);
+  const p: PortInfo = {} as PortInfo;
+  if (listen) {
+    p.hostname = listen.hostname;
+    p.port = listen.port;
+  }
+
+  const cluster = parseHostport(ports.cluster);
+  if (cluster) {
+    p.cluster = cluster.port;
+  }
+  return p;
+}
+
+export class NatsServer implements PortInfo {
+  hostname: string;
+  port: number;
+  cluster?: number;
   process: Deno.Process;
   srvLog!: Uint8Array;
   err?: Promise<void>;
+  debug: boolean;
 
   constructor(
-    hostname: string,
-    port: number,
+    info: PortInfo,
     process: Deno.Process,
     debug: boolean,
   ) {
-    this.hostname = hostname;
-    this.port = port;
+    this.hostname = info.hostname;
+    this.port = info.port;
+    this.cluster = info.cluster;
     this.process = process;
+    this.debug = debug;
 
-    if (debug) {
-      // @ts-ignore
-      this.err = this.drain(process.stderr as Deno.Reader);
-    }
+    //@ts-ignore
+    this.err = this.drain(process.stderr as Deno.Reader);
   }
 
   async drain(r: Deno.Reader): Promise<void> {
@@ -32,7 +70,7 @@ export class NatsServer {
         if (c === null) {
           break;
         }
-        if (c) {
+        if (c && this.debug) {
           console.log(new TextDecoder().decode(buf.slice(0, c)));
         }
       } catch (err) {
@@ -58,6 +96,7 @@ export class NatsServer {
     const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
     const tmp = Deno.env.get("TMPDIR") || ".";
 
+    let srv: Deno.Process;
     return new Promise(async (resolve, reject) => {
       try {
         conf = conf || {};
@@ -66,7 +105,7 @@ export class NatsServer {
 
         const confFile = await Deno.makeTempFileSync();
         await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
-        const srv = await Deno.run(
+        srv = await Deno.run(
           {
             cmd: [exe, "-c", confFile],
             stderr: debug ? "piped" : "null",
@@ -75,11 +114,15 @@ export class NatsServer {
           },
         );
 
+        if (debug) {
+          console.info(`[${srv.pid}] - launched`);
+        }
+
         const portsFile = path.resolve(
           path.join(tmp, `nats-server_${srv.pid}.ports`),
         );
 
-        const ports = await check(() => {
+        const pi = await check(() => {
           try {
             const data = Deno.readFileSync(portsFile);
             const d = JSON.parse(new TextDecoder().decode(data));
@@ -90,22 +133,33 @@ export class NatsServer {
           }
         }, 2000);
 
-        let u = ports.nats[0] as String;
-        u = u.replace("nats://", "");
-        const [hostname, p] = u.split(":");
-        const port = parseInt(p, 10);
+        if (debug) {
+          console.info(`[${srv.pid}] - ports file found`);
+        }
 
+        const ports = parsePorts(pi as Ports);
         await check(async () => {
           try {
-            const conn = await Deno.connect({ hostname, port });
+            if (debug) {
+              console.info(`[${srv.pid}] - attempting to connect`);
+            }
+            const conn = await Deno.connect(ports as Deno.ConnectOptions);
             conn.close();
-            return port;
+            return ports.port;
           } catch (_) {
             // ignore
           }
         }, 5000);
-        resolve(new NatsServer(hostname, port, srv, debug));
+        resolve(new NatsServer(ports, srv, debug));
       } catch (err) {
+        if (srv) {
+          try {
+            const d = await srv.stderrOutput();
+            console.error(new TextDecoder().decode(d));
+          } catch (err) {
+            console.error("unable to read server output");
+          }
+        }
         reject(err);
       }
     });

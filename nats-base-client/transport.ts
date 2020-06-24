@@ -37,7 +37,7 @@ export interface Transport extends AsyncIterable<Uint8Array>, EventTarget {
   readonly version: string;
 
   connect(
-    url: string,
+    hp: { hostname: string; port: number },
     opts: ConnectionOptions,
   ): Promise<void>;
 

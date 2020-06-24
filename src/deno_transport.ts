@@ -65,16 +65,11 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   async connect(
-    url: string,
+    hp: { hostname: string; port: number },
     options: ConnectionOptions,
   ): Promise<any> {
     this.options = options;
     try {
-      // deno cannot parse urls with a `nats://` or `tls://` protocol
-      url = url.replace("nats://", "https://");
-      url = url.replace("tls://", "https://");
-      const u = new URL(url);
-      const hp = { hostname: u.hostname, port: parseInt(u.port, 10) };
       this.conn = await Deno.connect(hp);
       const info = await this.peekInfo();
       this.checkOpts(info);

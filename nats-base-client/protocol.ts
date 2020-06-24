@@ -38,12 +38,17 @@ import {
   extend,
   extractProtocolMessage,
   timeout,
+  Timeout,
+  deferred,
+  render,
+  Deferred,
   //@ts-ignore
 } from "./util.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
+import { Server, Servers } from "./servers.ts";
 
 const nuid = new Nuid();
 
@@ -366,6 +371,7 @@ export class MsgBuffer {
 }
 
 export class ProtocolHandler extends EventTarget {
+  connected: boolean = false;
   clientHandlers: ClientHandlers;
   inbound: DataBuffer;
   infoReceived: boolean = false;
@@ -380,6 +386,8 @@ export class ProtocolHandler extends EventTarget {
   transport!: Transport;
   noMorePublishing: boolean = false;
   connectError?: Function;
+  private servers: Servers;
+  private server!: Server;
 
   constructor(options: ConnectionOptions, handlers: ClientHandlers) {
     super();
@@ -389,60 +397,94 @@ export class ProtocolHandler extends EventTarget {
     this.muxSubscriptions = new MuxSubscription();
     this.inbound = new DataBuffer();
     this.outbound = new DataBuffer();
+    this.servers = new Servers(
+      !options.noRandomize,
+      this.options.servers,
+      this.options.url,
+    );
   }
 
-  public static connect(
+  private prepare(): Deferred<void> {
+    const pong = deferred<void>();
+
+    this.pongs.length = 0;
+    this.connectError = undefined;
+
+    this.pongs.unshift(() => {
+      this.connectError = undefined;
+      if (this.connected) {
+        this.sendSubscriptions();
+      }
+      this.connected = true;
+      this.infoReceived = true;
+      this.flushPending();
+      pong.resolve();
+    });
+
+    this.connectError = (err: NatsError) => {
+      pong.reject(err);
+    };
+
+    this.transport = newTransport();
+    this.transport.addEventListener("close", (evt: Event) => {
+      evt.stopPropagation();
+      this.closeHandler();
+    });
+
+    return pong;
+  }
+
+  dial(srv: Server): Promise<any> {
+    const pong = this.prepare();
+    const timer = timeout(this.options.timeout || 20000);
+    this.transport.connect(srv.hostport(), this.options)
+      .then(() => {
+        (async () => {
+          try {
+            for await (const b of this.transport) {
+              this.inbound.fill(b);
+              this.processInbound();
+            }
+          } catch (err) {
+            console.log("reader closed");
+          }
+        })();
+      })
+      .catch((err: Error) => {
+        pong.reject(err);
+      });
+    return Promise.race([timer, pong])
+      .then(() => {
+        timer.cancel();
+      })
+      .catch((err) => {
+        timer.cancel();
+        this.transport?.close();
+        throw err;
+      });
+  }
+
+  public static async connect(
     options: ConnectionOptions,
     handlers: ClientHandlers,
   ): Promise<ProtocolHandler> {
-    const timer = timeout<ProtocolHandler>(options.timeout || 20000);
-    const ph = new ProtocolHandler(options, handlers);
-    const tp = new Promise<ProtocolHandler>((resolve, reject) => {
-      ph.connectError = (err: NatsError) => {
-        reject(err);
-      };
-      ph.transport = newTransport();
-      ph.transport.addEventListener("close", (evt: Event) => {
-        evt.stopPropagation();
-        ph.closeHandler();
-      });
-      ph.pongs.unshift(() => {
-        ph.connectError = undefined;
-        // this resolves the protocol
-        ph.sendSubscriptions();
-        ph.infoReceived = true;
-        ph.flushPending();
-        resolve(ph);
-      });
-      ph.transport.connect(options.url, options)
-        .then(() => {
-          (async () => {
-            try {
-              for await (const b of ph.transport) {
-                ph.inbound.fill(b);
-                ph.processInbound();
-              }
-            } catch (err) {
-              console.log("reader closed");
-            }
-          })();
-        })
-        .catch((err: Error) => {
-          reject(err);
-        });
-    });
-    return new Promise((resolve, reject) => {
-      Promise.race([timer, tp])
-        .then((v) => {
-          timer.cancel();
-          resolve(v);
-        })
-        .catch((err) => {
-          timer.cancel();
-          ph.transport?.close();
-          reject(err);
-        });
-    });
+    const h = new ProtocolHandler(options, handlers);
+    let lastError: Error | undefined;
+    while (true) {
+      const srv = h.selectServer();
+      if (!srv) {
+        throw NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED, lastError);
+      }
+      try {
+        await h.dial(srv);
+        return h;
+      } catch (err) {
+        lastError = err;
+        if (!h.options.waitOnFirstConnect) {
+          h.servers.removeCurrentServer();
+        }
+      }
+    }
   }
 
   static toError(s: string) {
@@ -783,5 +825,15 @@ export class ProtocolHandler extends EventTarget {
     }
     await this.close();
     this.clientHandlers.errorHandler(err);
+  }
+
+  private selectServer(): Server | undefined {
+    let server = this.servers.selectServer();
+    if (server === undefined) {
+      return undefined;
+    }
+    // Place in client context.
+    this.server = server;
+    return this.server;
   }
 }

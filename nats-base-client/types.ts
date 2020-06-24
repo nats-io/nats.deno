@@ -181,3 +181,22 @@ export function defaultSub(): Sub {
 export function defaultReq(): Req {
   return { token: "", subject: "", received: 0, max: 1 } as Req;
 }
+
+export interface ServerInfo {
+  tls_required?: boolean;
+  tls_verify?: boolean;
+  connect_urls?: string[];
+  max_payload: number;
+  client_id: number;
+  proto: number;
+  server_id: string;
+  version: string;
+  echo?: boolean;
+  nonce?: string;
+  nkey?: string;
+}
+
+export interface ServersChangedEvent {
+  added: string[];
+  deleted: string[];
+}

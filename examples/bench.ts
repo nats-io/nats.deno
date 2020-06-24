@@ -13,6 +13,7 @@ const argv = parse(
     alias: {
       "s": ["server"],
       "c": ["count"],
+      "d": ["debug"],
     },
     default: defaults,
   },
@@ -32,7 +33,7 @@ const subj = String(argv.subj) || new Nuid().next();
 const nc = await connect({ url: server, debug: argv.debug });
 nc.addEventListener("error", (err: Error): void => {
   console.error(err);
-})
+});
 const start = Date.now();
 
 if (argv.req) {
@@ -77,7 +78,8 @@ if ((argv.pub && !argv.sub) || (argv.sub && !argv.pub)) {
   console.log(`${Math.round(i / secs)} msgs/sec - ${millis} millis`);
 } else {
   console.log(
-    `${Math.round((argv.c * 2) / secs)} msgs/sec - ${millis} millis - ${j}`);
+    `${Math.round((argv.c * 2) / secs)} msgs/sec - ${millis} millis - ${j}`,
+  );
 }
 
 if (argv.req) {

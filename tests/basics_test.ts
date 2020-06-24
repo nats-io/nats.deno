@@ -12,7 +12,8 @@ import {
   Nuid,
   Payload,
 } from "../src/mod.ts";
-import { Connection, Lock, TestServer } from "./helpers/mod.ts";
+import { Connection, delay, Lock, TestServer } from "./helpers/mod.ts";
+import { timeout } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
 
@@ -53,8 +54,8 @@ Deno.test("pubsub", async () => {
   const subj = nuid.next();
   connect({ url: u })
     .then((nc) => {
-      nc.subscribe(subj, () => {
-        nc.close();
+      nc.subscribe(subj, async () => {
+        await nc.close();
         lock.unlock();
       });
       nc.publish(subj);
@@ -387,15 +388,12 @@ Deno.test("subscription timeout autocancels", async () => {
   const sub = nc.subscribe(subj, () => {
     c++;
   }, { max: 2 });
-  sub.setTimeout(150, () => {
+  sub.setTimeout(300, () => {
     fail();
   });
   nc.publish(subj);
   nc.publish(subj);
-  const lock = Lock(350);
-  setTimeout(lock.unlock, 250);
-  await lock;
-  await nc.flush();
+  await delay(500);
   assertEquals(c, 2);
   await nc.close();
 });

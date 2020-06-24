@@ -39,25 +39,25 @@ export enum ErrorCode {
 
 export class Messages {
   static messages = new Messages();
-  messages: { [key: string]: string } = {};
+  messages: Map<string, string>;
 
-  private constructor() {
-    this.messages[ErrorCode.BAD_AUTHENTICATION] =
-      "User and Token can not both be provided";
-    this.messages[ErrorCode.BAD_SUBJECT] = "Subject must be supplied";
-    this.messages[ErrorCode.CONNECTION_CLOSED] = "Connection closed";
-    this.messages[ErrorCode.CONNECTION_REFUSED] = "Connection refused";
-    this.messages[ErrorCode.CONNECTION_TIMEOUT] = "Connection timeout";
-    this.messages[ErrorCode.CONNECTION_DRAINING] = "Connection draining";
-    this.messages[ErrorCode.INVALID_PAYLOAD_TYPE] =
-      "Invalid payload type - payloads can be 'binary', 'string', or 'json'";
-    this.messages[ErrorCode.BAD_JSON] = "Bad JSON";
+  constructor() {
+    this.messages = new Map<string, string>();
 
-    this.messages[ErrorCode.SUB_CLOSED] = "Subscription closed";
-    this.messages[ErrorCode.SUB_DRAINING] = "Subscription draining";
+    this.messages.set(
+      ErrorCode.BAD_AUTHENTICATION,
+      "User and Token can not both be provided",
+    );
+    this.messages.set(
+      ErrorCode.INVALID_PAYLOAD_TYPE,
+      "Invalid payload type - payloads can be 'binary', 'string', or 'json'",
+    );
+    this.messages.set(ErrorCode.BAD_JSON, "Bad JSON");
 
-    this.messages[ErrorCode.WSS_REQUIRED] =
-      "TLS is required, therefore a secure websocket connection is also required";
+    this.messages.set(
+      ErrorCode.WSS_REQUIRED,
+      "TLS is required, therefore a secure websocket connection is also required",
+    );
   }
 
   static getMessage(s: string): string {
@@ -65,11 +65,7 @@ export class Messages {
   }
 
   getMessage(s: string): string {
-    let v = this.messages[s];
-    if (!v) {
-      v = s;
-    }
-    return v;
+    return this.messages.get(s) || s;
   }
 }
 

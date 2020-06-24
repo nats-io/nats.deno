@@ -24,7 +24,7 @@ const nuid = new Nuid();
 
 let max = 1000;
 Deno.test(`bench - pubsub`, async () => {
-  const lock = Lock(20000, max);
+  const lock = Lock(30000, max);
   const nc = await connect({ url: u });
   const subj = nuid.next();
   nc.subscribe(subj, () => {

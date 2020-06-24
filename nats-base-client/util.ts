@@ -148,7 +148,6 @@ export function render(frame: Uint8Array): string {
 }
 
 export interface Timeout<T> extends Promise<T> {
-  resolve: (value?: T | PromiseLike<T>) => void;
   cancel: () => void;
 }
 
@@ -161,11 +160,34 @@ export function timeout<T>(ms: number): Timeout<T> {
         clearTimeout(timer);
       }
     };
-    methods = { resolve, cancel };
+    methods = { cancel };
     timer = setTimeout(() => {
       reject(new Error("timeout"));
     }, ms);
   });
   // noinspection JSUnusedAssignment
   return Object.assign(p, methods) as Timeout<T>;
+}
+
+export interface Deferred<T> extends Promise<T> {
+  resolve: (value?: T | PromiseLike<T>) => void;
+  //@ts-ignore
+  reject: (reason?: any) => void;
+}
+
+export function deferred<T>(): Deferred<T> {
+  let methods;
+  const p = new Promise<T>((resolve, reject): void => {
+    methods = { resolve, reject };
+  });
+  //@ts-ignore
+  return Object.assign(p, methods) as Deferred<T>;
+}
+
+export function shuffle(a: any[]): any[] {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
