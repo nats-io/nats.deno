@@ -23,5 +23,5 @@ export {
   ProtocolHandler,
   Subscription,
 } from "./protocol.ts";
-export { render, extractProtocolMessage, INFO, Timeout } from "./util.ts";
+export { render, extractProtocolMessage, INFO, Timeout, delay } from "./util.ts";
 export { DataBuffer } from "./databuffer.ts";

@@ -33,7 +33,8 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { parseOptions, defaultReq, defaultSub } from "./types.ts";
+import { defaultReq, defaultSub } from "./types.ts";
+import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
 

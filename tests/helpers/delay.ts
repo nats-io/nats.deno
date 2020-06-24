@@ -1,12 +1,3 @@
-/* Promise that resolves the optional value after the given number of milliseconds. */
-export function delay<T>(ms: number = 0, value?: T): Promise<T> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(value);
-    }, ms);
-  });
-}
-
 export function check(
   fn: Function,
   interval: number = 50,

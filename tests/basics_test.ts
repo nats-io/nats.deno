@@ -12,8 +12,8 @@ import {
   Nuid,
   Payload,
 } from "../src/mod.ts";
-import { Connection, delay, Lock, TestServer } from "./helpers/mod.ts";
-import { timeout } from "../nats-base-client/util.ts";
+import { Connection, Lock, TestServer } from "./helpers/mod.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
 

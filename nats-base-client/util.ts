@@ -169,6 +169,14 @@ export function timeout<T>(ms: number): Timeout<T> {
   return Object.assign(p, methods) as Timeout<T>;
 }
 
+export function delay<T>(ms: number = 0, value?: T): Promise<T> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(value);
+    }, ms);
+  });
+}
+
 export interface Deferred<T> extends Promise<T> {
   resolve: (value?: T | PromiseLike<T>) => void;
   //@ts-ignore

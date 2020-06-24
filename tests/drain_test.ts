@@ -23,6 +23,7 @@ import {
 import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
+import { deferred } from '../nats-base-client/util.ts'
 
 const u = "https://demo.nats.io:4222";
 const nuid = new Nuid();
@@ -34,49 +35,45 @@ Deno.test("connection drains when no subs", async () => {
 });
 
 Deno.test("connection drain", async () => {
-  const lock = Lock();
-
+  const max = 1000;
+  const lock = Lock(3000, max);
   const subj = nuid.next();
 
   const nc1 = await connect({ url: u });
-  let c1 = 0;
+  let first = true;
+  const closed = deferred<void>();
   await nc1.subscribe(subj, () => {
-    c1++;
-    if (c1 === 1) {
-      let dp = nc1.drain();
-      dp.then(() => {
-        lock.unlock();
-      }).catch((ex) => {
-        fail(ex);
-      });
+    lock.unlock();
+    if (first) {
+      first = false;
+      nc1.drain()
+        .then(() => {
+          closed.resolve();
+        })
+        .catch((err) => {
+          fail(err);
+        })
     }
   }, { queue: "q1" });
 
   const nc2 = await connect({ url: u });
-  let c2 = 0;
+  let count = 0;
   await nc2.subscribe(subj, () => {
-    c2++;
+    lock.unlock();
+    count++;
   }, { queue: "q1" });
 
   await nc1.flush();
   await nc2.flush();
 
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < max; i++) {
     nc2.publish(subj);
-    // FIXME: shouldn't be necessary to flush
-    if (i % 1000 === 0) {
-      await nc2.flush();
-    }
   }
   await nc2.flush();
-  // @ts-ignore
-
+  await closed;
   await lock;
-
-  assertEquals(c1 + c2, 10000);
-  assert(c1 >= 1, "s1 got more than one message");
-  assert(c2 >= 1, "s2 got more than one message");
   await nc2.close();
+  assert(count > 0, "expected second connection to get some messages");
 });
 
 Deno.test("subscription drain", async () => {
@@ -286,8 +283,8 @@ Deno.test("reject subscription drain on draining sub", async () => {
     const err = await assertThrowsAsync(() => {
       return sub.drain();
     });
-    assertErrorCode(err, ErrorCode.SUB_DRAINING);
     await nc.close();
+    assertErrorCode(err, ErrorCode.SUB_DRAINING);
   });
   nc.publish(subj);
   await nc.flush();

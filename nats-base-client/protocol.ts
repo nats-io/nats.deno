@@ -38,9 +38,7 @@ import {
   extend,
   extractProtocolMessage,
   timeout,
-  Timeout,
   deferred,
-  render,
   Deferred,
   //@ts-ignore
 } from "./util.ts";
@@ -49,6 +47,7 @@ import { Nuid } from "./nuid.ts";
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
+import { delay } from "./util.ts";
 
 const nuid = new Nuid();
 
@@ -471,18 +470,28 @@ export class ProtocolHandler extends EventTarget {
     const h = new ProtocolHandler(options, handlers);
     let lastError: Error | undefined;
     while (true) {
+      // @ts-ignore
+      let wait = h.options.reconnectDelayHandler();
+      let maxWait = wait;
       const srv = h.selectServer();
       if (!srv) {
-        throw NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED, lastError);
+        throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
       }
-      try {
-        await h.dial(srv);
-        return h;
-      } catch (err) {
-        lastError = err;
-        if (!h.options.waitOnFirstConnect) {
-          h.servers.removeCurrentServer();
+      const now = Date.now();
+      if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
+        srv.lastConnect = Date.now();
+        try {
+          await h.dial(srv);
+          return h;
+        } catch (err) {
+          lastError = err;
+          if (!h.options.waitOnFirstConnect) {
+            h.servers.removeCurrentServer();
+          }
         }
+      } else {
+        maxWait = Math.min(maxWait, srv.lastConnect + wait - now);
+        await delay(maxWait);
       }
     }
   }
