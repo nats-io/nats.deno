@@ -179,11 +179,7 @@ export class NatsConnection implements ClientHandlers {
      * @returns {Promise<void>}
      */
   flush(): Promise<void> {
-    return new Promise((resolve) => {
-      this.protocol.flush(() => {
-        resolve();
-      });
-    });
+    return this.protocol.flush();
   }
 
   drain(): Promise<void> {

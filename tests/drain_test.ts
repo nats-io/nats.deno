@@ -23,7 +23,7 @@ import {
 import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
-import { deferred } from '../nats-base-client/util.ts'
+import { deferred } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
 const nuid = new Nuid();
@@ -52,7 +52,7 @@ Deno.test("connection drain", async () => {
         })
         .catch((err) => {
           fail(err);
-        })
+        });
     }
   }, { queue: "q1" });
 

@@ -20,6 +20,8 @@ import {
   Sub,
   Req,
   defaultSub,
+  ServerInfo,
+  CLOSE_EVT,
 } from "./types.ts";
 //@ts-ignore
 import { Transport, newTransport } from "./transport.ts";
@@ -378,7 +380,7 @@ export class ProtocolHandler extends EventTarget {
   options: ConnectionOptions;
   outbound: DataBuffer;
   payload: MsgBuffer | null = null;
-  pongs: Array<Function | undefined> = [];
+  pongs: Array<Deferred<void>>;
   pout: number = 0;
   state: ParserState = ParserState.AWAITING_CONTROL;
   subscriptions: Subscriptions;
@@ -396,6 +398,7 @@ export class ProtocolHandler extends EventTarget {
     this.muxSubscriptions = new MuxSubscription();
     this.inbound = new DataBuffer();
     this.outbound = new DataBuffer();
+    this.pongs = [];
     this.servers = new Servers(
       !options.noRandomize,
       this.options.servers,
@@ -403,31 +406,36 @@ export class ProtocolHandler extends EventTarget {
     );
   }
 
-  private prepare(): Deferred<void> {
-    const pong = deferred<void>();
-
-    this.pongs.length = 0;
-    this.connectError = undefined;
-
-    this.pongs.unshift(() => {
-      this.connectError = undefined;
-      if (this.connected) {
-        this.sendSubscriptions();
-      }
-      this.connected = true;
-      this.infoReceived = true;
-      this.flushPending();
-      pong.resolve();
+  private resetOutbound(): void {
+    this.pongs.forEach((p) => {
+      p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
     });
+    this.pongs.length = 0;
+    this.state = ParserState.AWAITING_CONTROL;
+    this.outbound = new DataBuffer();
+    this.infoReceived = false;
+  }
+
+  private prepare(): Deferred<void> {
+    this.resetOutbound();
+
+    const pong = deferred<void>();
+    this.pongs.unshift(pong);
+
+    this.connectError = undefined;
 
     this.connectError = (err: NatsError) => {
       pong.reject(err);
     };
 
     this.transport = newTransport();
-    this.transport.addEventListener("close", (evt: Event) => {
+    this.transport.addEventListener(CLOSE_EVT, (evt: Event) => {
       evt.stopPropagation();
-      this.closeHandler();
+      if (this.transport.closeError) {
+        // disconnect
+      } else {
+        this.closeHandler();
+      }
     });
 
     return pong;
@@ -455,6 +463,13 @@ export class ProtocolHandler extends EventTarget {
     return Promise.race([timer, pong])
       .then(() => {
         timer.cancel();
+        this.connectError = undefined;
+        if (this.connected) {
+          this.sendSubscriptions();
+        }
+        this.connected = true;
+        this.infoReceived = true;
+        this.flushPending();
       })
       .catch((err) => {
         timer.cancel();
@@ -475,7 +490,7 @@ export class ProtocolHandler extends EventTarget {
       let maxWait = wait;
       const srv = h.selectServer();
       if (!srv) {
-        throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
+        throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED);
       }
       const now = Date.now();
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
@@ -531,9 +546,9 @@ export class ProtocolHandler extends EventTarget {
             return;
           } else if ((m = PONG.exec(buf))) {
             this.pout = 0;
-            let cb = this.pongs.shift();
+            const cb = this.pongs.shift();
             if (cb) {
-              cb();
+              cb.resolve();
             }
           } else if ((m = PING.exec(buf))) {
             this.transport.send(buildMessage(`PONG ${CR_LF}`));
@@ -708,9 +723,13 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  flush(f?: Function): void {
-    this.pongs.push(f);
+  flush(p?: Deferred<any>): Promise<void> {
+    if (!p) {
+      p = deferred();
+    }
+    this.pongs.push(p);
     this.sendCommand(`PING ${CR_LF}`);
+    return p;
   }
 
   processError(s: string) {
@@ -775,32 +794,26 @@ export class ProtocolHandler extends EventTarget {
       });
   }
 
-  drainSubscription(sid: number): Promise<void> {
+  async drainSubscription(sid: number): Promise<void> {
     if (this.isClosed()) {
-      return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED),
-      );
+      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
     }
     if (!sid) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_CLOSED));
+      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
     }
     let s = this.subscriptions.get(sid);
     if (!s) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_CLOSED));
+      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
     }
     if (s.draining) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_DRAINING));
+      throw NatsError.errorForCode(ErrorCode.SUB_DRAINING);
     }
 
     let sub = s;
-    return new Promise((resolve) => {
-      sub.draining = true;
-      this.sendCommand(`UNSUB ${sub.sid}\r\n`);
-      this.flush(() => {
-        this.subscriptions.cancel(sub);
-        resolve();
-      });
-    });
+    sub.draining = true;
+    this.sendCommand(`UNSUB ${sub.sid}\r\n`);
+    await this.flush();
+    this.subscriptions.cancel(sub);
   }
 
   private flushPending() {

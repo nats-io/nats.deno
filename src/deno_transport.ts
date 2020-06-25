@@ -44,6 +44,7 @@ export async function write(
 export class DenoTransport extends EventTarget implements Transport {
   version: string = VERSION;
   lang: string = LANG;
+  closeError?: Error;
   private options!: ConnectionOptions;
   private buf: Uint8Array;
   private encrypted = false;
@@ -98,7 +99,7 @@ export class DenoTransport extends EventTarget implements Transport {
       let c = await this.conn.read(this.buf);
       if (c) {
         if (c === null) {
-          // closed!
+          // EOF
           return Promise.reject(
             new Error("socket closed while expecting INFO"),
           );
@@ -216,6 +217,7 @@ export class DenoTransport extends EventTarget implements Transport {
     if (this.closed) {
       return;
     }
+    this.closeError = err;
     if (!err) {
       try {
         // this is a noop for the server, but gives us a place to hang

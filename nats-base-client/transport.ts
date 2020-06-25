@@ -35,6 +35,7 @@ export interface Transport extends AsyncIterable<Uint8Array>, EventTarget {
   readonly isClosed: boolean;
   readonly lang: string;
   readonly version: string;
+  readonly closeError?: Error;
 
   connect(
     hp: { hostname: string; port: number },
