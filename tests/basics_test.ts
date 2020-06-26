@@ -12,14 +12,38 @@ import {
   Nuid,
   Payload,
 } from "../src/mod.ts";
-import { Connection, Lock, TestServer } from "./helpers/mod.ts";
+import { Connection, Lock, NatsServer, TestServer } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
 
 const nuid = new Nuid();
 
-Deno.test("connect", async () => {
+Deno.test("connect with port", async () => {
+  const ns = await NatsServer.start();
+  let nc = await connect({ port: ns.port });
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("connect default", async () => {
+  const ns = await NatsServer.start({ port: 4222 });
+  let nc = await connect({});
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("connect host", async () => {
+  let nc = await connect({ url: "demo.nats.io" });
+  await nc.close();
+});
+
+Deno.test("connect hostport", async () => {
+  let nc = await connect({ url: "demo.nats.io:4222" });
+  await nc.close();
+});
+
+Deno.test("connect url", async () => {
   const nc = await connect({ url: u });
   await nc.close();
 });

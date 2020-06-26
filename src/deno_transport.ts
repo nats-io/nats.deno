@@ -98,7 +98,6 @@ export class DenoTransport extends EventTarget implements Transport {
     while (true) {
       let c = await this.conn.read(this.buf);
       if (c) {
-
         if (null === c) {
           // EOF
           return Promise.reject(

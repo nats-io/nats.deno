@@ -55,7 +55,7 @@ export interface ConnectionOptions {
   pingInterval?: number;
   timeout?: number;
   token?: string;
-  url: string;
+  url?: string;
   user?: string;
   userJWT?: (() => string) | string;
   verbose?: boolean;
