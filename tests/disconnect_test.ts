@@ -22,7 +22,7 @@ import {
 
 Deno.test("close handler is called on close", async () => {
   const ns = await NatsServer.start();
-  let lock = Lock(20000);
+  let lock = Lock(1, 20000);
   let nc = await connect(
     { url: `nats://localhost:${ns.port}`, reconnect: false },
   );
@@ -36,7 +36,7 @@ Deno.test("close handler is called on close", async () => {
 
 Deno.test("close process inbound ignores", async () => {
   const ns = await NatsServer.start();
-  let lock = Lock(2000);
+  let lock = Lock(1, 2000);
   let nc = await connect(
     { url: `nats://localhost:${ns.port}`, reconnect: false },
   );

@@ -80,7 +80,7 @@ Deno.test("binary types", async () => {
 });
 
 Deno.test("binary encoded per client", async () => {
-  let lock = Lock(5000, 2);
+  let lock = Lock(2, 5000);
   let nc1 = await connect({ url: u, payload: Payload.BINARY });
   let nc2 = await connect({ url: u, payload: Payload.STRING });
   let subj = nuid.next();

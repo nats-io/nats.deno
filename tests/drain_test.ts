@@ -36,7 +36,7 @@ Deno.test("connection drains when no subs", async () => {
 
 Deno.test("connection drain", async () => {
   const max = 1000;
-  const lock = Lock(3000, max);
+  const lock = Lock(max, 3000);
   const subj = nuid.next();
 
   const nc1 = await connect({ url: u });

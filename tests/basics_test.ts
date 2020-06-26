@@ -356,7 +356,7 @@ Deno.test("close listener is called", async () => {
 });
 
 Deno.test("error listener is called", async () => {
-  const lock = Lock(3000);
+  const lock = Lock(1, 3000);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
       await ca.write(new TextEncoder().encode("-ERR 'here'\r\n"));
@@ -375,7 +375,7 @@ Deno.test("error listener is called", async () => {
 });
 
 Deno.test("subscription with timeout", async () => {
-  const lock = Lock(3000);
+  const lock = Lock(1, 3000);
   const nc = await connect({ url: u });
   const sub = nc.subscribe(nuid.next(), () => {
   }, { max: 1 });
@@ -432,7 +432,7 @@ Deno.test("subscription timeout cancel", async () => {
     fail();
   });
   sub.cancelTimeout();
-  const lock = Lock(300);
+  const lock = Lock(1, 300);
   setTimeout(lock.unlock, 200);
   await lock;
   await nc.flush();
