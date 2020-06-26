@@ -27,7 +27,10 @@ const conf = { authorization: { token: "tokenxxxx" } };
 Deno.test("token empty", async () => {
   const ns = await NatsServer.start(conf);
   try {
-    const nc = await connect({ url: `http://localhost:${ns.port}` });
+    const nc = await connect(
+      { url: `http://localhost:${ns.port}`, maxReconnectAttempts: 0 },
+    );
+    console.log("here");
     await nc.close();
     fail("should not have connected");
   } catch (err) {

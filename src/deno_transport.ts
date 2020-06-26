@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@v0.56.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@v0.56.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   CLOSE_EVT,
@@ -98,7 +98,8 @@ export class DenoTransport extends EventTarget implements Transport {
     while (true) {
       let c = await this.conn.read(this.buf);
       if (c) {
-        if (c === null) {
+
+        if (null === c) {
           // EOF
           return Promise.reject(
             new Error("socket closed while expecting INFO"),
@@ -166,7 +167,7 @@ export class DenoTransport extends EventTarget implements Transport {
         break;
       }
     }
-    await this.close(reason);
+    this._closed(reason);
   }
 
   private enqueue(frame: Uint8Array): Promise<void> {
@@ -214,9 +215,12 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   async close(err?: Error): Promise<void> {
-    if (this.closed) {
-      return;
-    }
+    return this._closed(err, false);
+  }
+
+  private async _closed(err?: Error, internal: boolean = true): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
     this.closeError = err;
     if (!err) {
       try {
@@ -229,18 +233,12 @@ export class DenoTransport extends EventTarget implements Transport {
         }
       }
     }
-    this._close();
-  }
-
-  private _close(): void {
-    if (this.closed) return;
     try {
       this.conn?.close();
     } catch (err) {
-      console.error(err);
-    } finally {
-      this.closed = true;
-      // for now we always publish the close event
+    }
+
+    if (internal) {
       this.dispatchEvent(new Event(CLOSE_EVT));
     }
   }

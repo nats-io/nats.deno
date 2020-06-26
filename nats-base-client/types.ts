@@ -16,7 +16,10 @@
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
 
+export const ERROR_EVT = "error";
 export const CLOSE_EVT = "close";
+export const DISCONNECT_EVT = "disconnect";
+export const RECONNECT_EVT = "reconnect";
 
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_PRE = "nats://localhost:";

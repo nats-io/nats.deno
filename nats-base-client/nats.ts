@@ -48,14 +48,18 @@ export interface ErrorCallback {
 
 export interface ClientEventMap {
   "close": Callback;
+  "disconnect": Callback;
   "error": ErrorCallback;
+  "reconnect": Callback;
 }
 
 export class NatsConnection implements ClientHandlers {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   closeListeners: Callback[] = [];
+  disconnectListeners: Callback[] = [];
   errorListeners: ErrorCallback[] = [];
+  reconnectListeners: Callback[] = [];
   draining: boolean = false;
 
   private constructor(opts: ConnectionOptions) {
@@ -215,16 +219,44 @@ export class NatsConnection implements ClientHandlers {
     });
   }
 
+  disconnectHandler(): void {
+    this.disconnectListeners.forEach((cb) => {
+      try {
+        cb();
+      } catch (ex) {
+      }
+    });
+  }
+
+  reconnectHandler(): void {
+    this.reconnectListeners.forEach((cb: Callback) => {
+      try {
+        cb();
+      } catch (ex) {
+      }
+    });
+  }
+
   addEventListener<K extends keyof ClientEventMap>(
     type: K,
     listener: ClientEventMap[K],
   ): void {
+    //@ts-ignore
     if (type === "close") {
       //@ts-ignore
       this.closeListeners.push(listener);
+      //@ts-ignore
     } else if (type === "error") {
       //@ts-ignore
       this.errorListeners.push(listener);
+      //@ts-ignore
+    } else if (type === "disconnect") {
+      //@ts-ignore
+      this.disconnectListeners.push(listener);
+      //@ts-ignore
+    } else if (type === "reconnect") {
+      //@ts-ignore
+      this.reconnectListeners.push(listener);
     }
   }
 

@@ -20,7 +20,6 @@ import {
   Sub,
   Req,
   defaultSub,
-  ServerInfo,
   CLOSE_EVT,
 } from "./types.ts";
 //@ts-ignore
@@ -107,6 +106,8 @@ export interface Publisher {
 export interface ClientHandlers extends Publisher {
   closeHandler: () => void;
   errorHandler: (error: Error) => void;
+  reconnectHandler: () => void;
+  disconnectHandler: () => void;
 }
 
 export interface RequestOptions {
@@ -429,16 +430,26 @@ export class ProtocolHandler extends EventTarget {
     };
 
     this.transport = newTransport();
-    this.transport.addEventListener(CLOSE_EVT, (evt: Event) => {
+    this.transport.addEventListener(CLOSE_EVT, async (evt: Event) => {
       evt.stopPropagation();
-      if (this.transport.closeError) {
-        // disconnect
-      } else {
-        this.closeHandler();
+      if (this.transport.closeError || this.state !== ParserState.CLOSED) {
+        await this.disconnected();
+        return;
       }
     });
 
     return pong;
+  }
+
+  async disconnected(): Promise<void> {
+    this.clientHandlers.disconnectHandler();
+    if (this.options.reconnect) {
+      await this.dialLoop();
+      this.clientHandlers.reconnectHandler();
+    } else {
+      await this.close();
+      this.clientHandlers.closeHandler();
+    }
   }
 
   dial(srv: Server): Promise<any> {
@@ -468,27 +479,25 @@ export class ProtocolHandler extends EventTarget {
           this.sendSubscriptions();
         }
         this.connected = true;
+        this.server.didConnect = true;
+        this.server.reconnects = 0;
         this.infoReceived = true;
         this.flushPending();
       })
       .catch((err) => {
         timer.cancel();
-        this.transport?.close();
+        this.transport?.close(err);
         throw err;
       });
   }
 
-  public static async connect(
-    options: ConnectionOptions,
-    handlers: ClientHandlers,
-  ): Promise<ProtocolHandler> {
-    const h = new ProtocolHandler(options, handlers);
+  async dialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
       // @ts-ignore
-      let wait = h.options.reconnectDelayHandler();
+      let wait = this.options.reconnectDelayHandler();
       let maxWait = wait;
-      const srv = h.selectServer();
+      const srv = this.selectServer();
       if (!srv) {
         throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED);
       }
@@ -496,12 +505,19 @@ export class ProtocolHandler extends EventTarget {
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
         srv.lastConnect = Date.now();
         try {
-          await h.dial(srv);
-          return h;
+          await this.dial(srv);
+          break;
         } catch (err) {
           lastError = err;
-          if (!h.options.waitOnFirstConnect) {
-            h.servers.removeCurrentServer();
+          if (!this.connected) {
+            if (!this.options.waitOnFirstConnect) {
+              this.servers.removeCurrentServer();
+            }
+            continue;
+          }
+          const mra = this.options.maxReconnectAttempts || 0;
+          if (mra !== -1 && srv.reconnects >= mra) {
+            this.servers.removeCurrentServer();
           }
         }
       } else {
@@ -509,6 +525,15 @@ export class ProtocolHandler extends EventTarget {
         await delay(maxWait);
       }
     }
+  }
+
+  public static async connect(
+    options: ConnectionOptions,
+    handlers: ClientHandlers,
+  ): Promise<ProtocolHandler> {
+    const h = new ProtocolHandler(options, handlers);
+    await h.dialLoop();
+    return h;
   }
 
   static toError(s: string) {
@@ -753,7 +778,6 @@ export class ProtocolHandler extends EventTarget {
   }
 
   closeHandler(): void {
-    this.close();
     this.clientHandlers.closeHandler();
   }
 

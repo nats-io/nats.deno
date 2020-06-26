@@ -319,7 +319,9 @@ Deno.test("close listener is called", async () => {
       ca.close();
     }, 0);
   });
-  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
+  const nc = await connect(
+    { url: `https://localhost:${cs.getPort()}`, reconnect: false },
+  );
   nc.addEventListener("close", async () => {
     lock.unlock();
   });

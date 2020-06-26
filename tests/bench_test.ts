@@ -43,18 +43,17 @@ Deno.test(`bench - pubsub`, async () => {
   await lock;
 });
 
-Deno.test(`bench - pubonly`, async () => {
-  const lock = Lock(5000);
-  const nc = await connect({ url: u });
-  nc.addEventListener("close", () => {
-    lock.unlock();
-  });
-  const subj = nuid.next();
-
-  let i = 0;
-  for (; i < max; i++) {
-    nc.publish(subj);
-  }
-  await nc.drain();
-  await lock;
-});
+// Deno.test(`bench - pubonly`, async () => {
+//   const lock = Lock(5000, max);
+//   const nc = await connect({ url: u });
+//   nc.addEventListener("close", () => {
+//     lock.unlock();
+//   });
+//   const subj = nuid.next();
+//
+//   for (let i=0; i < max; i++) {
+//     nc.publish(subj);
+//   }
+//   await nc.drain();
+//   await lock;
+// });
