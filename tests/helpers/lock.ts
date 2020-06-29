@@ -10,7 +10,7 @@ export interface Lock<T> extends Promise<T> {
  * If a timeout is provided, the lock rejects if it has not unlocked
  * by the specified number of milliseconds (default 1000).
  */
-export function Lock<T> (count: number = 1, ms: number = 1000): Lock<T> {
+export function Lock<T>(count: number = 1, ms: number = 1000): Lock<T> {
   let methods;
   const promise = new Promise((resolve, reject) => {
     let timer: number;

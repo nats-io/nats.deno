@@ -56,7 +56,7 @@ Deno.test("fail connect", async () => {
 
 Deno.test("publish", async () => {
   const nc = await connect({ url: u });
-  nc.publish("foo");
+  nc.publish(nuid.next());
   await nc.flush();
   await nc.close();
 });
@@ -255,7 +255,7 @@ Deno.test("closed cannot subscribe", async () => {
   await nc.close();
   let failed = false;
   try {
-    nc.subscribe("foo", () => {});
+    nc.subscribe(nuid.next(), () => {});
     fail("should have not been able to subscribe");
   } catch (err) {
     failed = true;
@@ -268,7 +268,7 @@ Deno.test("close cannot request", async () => {
   nc.close();
   let failed = false;
   try {
-    await nc.request("foo");
+    await nc.request(nuid.next());
     fail("should have not been able to request");
   } catch (err) {
     failed = true;

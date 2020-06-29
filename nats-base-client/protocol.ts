@@ -761,6 +761,7 @@ export class ProtocolHandler extends EventTarget {
     let err = ProtocolHandler.toError(s);
     let evt = { error: err } as ErrorEvent;
     this.errorHandler(evt);
+    this._close(err);
   }
 
   sendSubscriptions() {
@@ -789,12 +790,16 @@ export class ProtocolHandler extends EventTarget {
     this.handleError(err);
   }
 
-  close(): Promise<void> {
+  private _close(err?: Error): Promise<void> {
     if (this.state === ParserState.CLOSED) {
       return Promise.resolve();
     }
     this.state = ParserState.CLOSED;
-    return this.transport.close();
+    return this.transport.close(err);
+  }
+
+  close(): Promise<void> {
+    return this._close();
   }
 
   isClosed(): boolean {
