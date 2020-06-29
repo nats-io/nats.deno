@@ -12,7 +12,13 @@ import {
   Nuid,
   Payload,
 } from "../src/mod.ts";
-import { Connection, Lock, NatsServer, TestServer } from "./helpers/mod.ts";
+import {
+  assertErrorCode,
+  Connection,
+  Lock,
+  NatsServer,
+  TestServer,
+} from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
@@ -346,7 +352,7 @@ Deno.test("close listener is called", async () => {
   const nc = await connect(
     { url: `https://localhost:${cs.getPort()}`, reconnect: false },
   );
-  nc.addEventListener("close", async () => {
+  nc.status().then((err) => {
     lock.unlock();
   });
 
@@ -362,14 +368,13 @@ Deno.test("error listener is called", async () => {
       await ca.write(new TextEncoder().encode("-ERR 'here'\r\n"));
     }, 500);
   });
-  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
-  nc.addEventListener("error", (err) => {
-    const ne = err as NatsError;
-    assertEquals(ne.message, "'here'");
-    lock.unlock();
-  });
 
-  await lock;
+  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
+  const status = await nc.status()
+    .then((v) => {
+      assertEquals((v as Error).message, "'here'");
+      lock.unlock();
+    });
   assertEquals(nc.isClosed(), true);
   await cs.stop();
 });

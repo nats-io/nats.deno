@@ -26,7 +26,7 @@ Deno.test("close handler is called on close", async () => {
   let nc = await connect(
     { url: `nats://localhost:${ns.port}`, reconnect: false },
   );
-  nc.addEventListener("close", () => {
+  nc.status().then(() => {
     lock.unlock();
   });
 
@@ -40,7 +40,7 @@ Deno.test("close process inbound ignores", async () => {
   let nc = await connect(
     { url: `nats://localhost:${ns.port}`, reconnect: false },
   );
-  nc.addEventListener("close", () => {
+  nc.status().then(() => {
     assertEquals(ParserState.CLOSED, nc.protocol.state);
     lock.unlock();
   });

@@ -16,7 +16,6 @@
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
 
-export const ERROR_EVT = "error";
 export const CLOSE_EVT = "close";
 export const DISCONNECT_EVT = "disconnect";
 export const RECONNECT_EVT = "reconnect";

@@ -30,7 +30,9 @@ Deno.test("token empty", async () => {
     const nc = await connect(
       { url: `http://localhost:${ns.port}`, maxReconnectAttempts: 0 },
     );
-    console.log("here");
+    nc.status().then((err) => {
+      console.table(err);
+    });
     await nc.close();
     fail("should not have connected");
   } catch (err) {

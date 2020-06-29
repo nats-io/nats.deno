@@ -84,8 +84,8 @@ Deno.test("auth cannot sub to foo", async () => {
   const nc = await connect(
     { url: `nats://localhost:${ns.port}`, user: "derek", pass: "foobar" },
   );
-  nc.addEventListener("error", (err) => {
-    assertErrorCode(err, ErrorCode.PERMISSIONS_VIOLATION);
+  nc.status().then((err) => {
+    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });
 
@@ -94,10 +94,8 @@ Deno.test("auth cannot sub to foo", async () => {
   });
 
   nc.publish("foo");
-  nc.flush();
 
   await lock;
-  await nc.close();
   await ns.stop();
 });
 
@@ -107,8 +105,8 @@ Deno.test("auth cannot pub bar", async () => {
   const nc = await connect(
     { url: `nats://localhost:${ns.port}`, user: "derek", pass: "foobar" },
   );
-  nc.addEventListener("error", (err) => {
-    assertErrorCode(err, ErrorCode.PERMISSIONS_VIOLATION);
+  nc.status().then((err) => {
+    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });
 
@@ -117,10 +115,8 @@ Deno.test("auth cannot pub bar", async () => {
   });
 
   nc.publish("bar");
-  nc.flush();
 
   await lock;
-  await nc.close();
   await ns.stop();
 });
 

@@ -5,7 +5,6 @@ import { ConnectionOptions, connect } from "../src/mod.ts";
 import { CLOSE_EVT } from "../nats-base-client/mod.ts";
 import {
   DISCONNECT_EVT,
-  ERROR_EVT,
   RECONNECT_EVT,
 } from "../nats-base-client/types.ts";
 
@@ -29,10 +28,13 @@ const nc = await connect(opts);
 nc.addEventListener(CLOSE_EVT, () => {
   console.log("client closed");
 });
-nc.addEventListener(ERROR_EVT, (err: Error): void => {
-  console.error(err);
-  Deno.exit(1);
-});
+nc.addEventListener(
+  CLOSE_EVT,
+  ((evt: ErrorEvent): void => {
+    console.error(evt.error);
+    Deno.exit(1);
+  }) as EventListener,
+);
 nc.addEventListener(DISCONNECT_EVT, () => {
   console.log("disconnected");
 });

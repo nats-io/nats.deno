@@ -21,6 +21,7 @@ import {
   Req,
   defaultSub,
   CLOSE_EVT,
+  RECONNECT_EVT,
 } from "./types.ts";
 //@ts-ignore
 import { Transport, newTransport } from "./transport.ts";
@@ -97,6 +98,9 @@ export class Connect {
     }
     extend(this, opts, transport);
   }
+}
+
+export interface Closer {
 }
 
 export interface Publisher {
@@ -374,7 +378,6 @@ export class MsgBuffer {
 
 export class ProtocolHandler extends EventTarget {
   connected: boolean = false;
-  clientHandlers: ClientHandlers;
   inbound: DataBuffer;
   infoReceived: boolean = false;
   muxSubscriptions: MuxSubscription;
@@ -388,13 +391,15 @@ export class ProtocolHandler extends EventTarget {
   transport!: Transport;
   noMorePublishing: boolean = false;
   connectError?: Function;
+  publisher: Publisher;
+  closed: Deferred<Error | void>;
   private servers: Servers;
   private server!: Server;
 
-  constructor(options: ConnectionOptions, handlers: ClientHandlers) {
+  constructor(options: ConnectionOptions, publisher: Publisher) {
     super();
     this.options = options;
-    this.clientHandlers = handlers;
+    this.publisher = publisher;
     this.subscriptions = new Subscriptions();
     this.muxSubscriptions = new MuxSubscription();
     this.inbound = new DataBuffer();
@@ -405,6 +410,7 @@ export class ProtocolHandler extends EventTarget {
       this.options.servers,
       this.options.url,
     );
+    this.closed = deferred<Error | void>();
   }
 
   private resetOutbound(): void {
@@ -430,25 +436,27 @@ export class ProtocolHandler extends EventTarget {
     };
 
     this.transport = newTransport();
-    this.transport.addEventListener(CLOSE_EVT, async (evt: Event) => {
-      evt.stopPropagation();
-      if (this.transport.closeError || this.state !== ParserState.CLOSED) {
-        await this.disconnected();
-        return;
-      }
-    });
+    this.transport.addEventListener(
+      CLOSE_EVT,
+      (async (evt: CustomEvent) => {
+        evt.stopPropagation();
+        if (this.state !== ParserState.CLOSED) {
+          await this.disconnected(this.transport.closeError);
+          return;
+        }
+      }) as EventListener,
+    );
 
     return pong;
   }
 
-  async disconnected(): Promise<void> {
-    this.clientHandlers.disconnectHandler();
+  async disconnected(err?: Error): Promise<void> {
     if (this.options.reconnect) {
       await this.dialLoop();
-      this.clientHandlers.reconnectHandler();
+      this.dispatchEvent(new Event(RECONNECT_EVT));
     } else {
       await this.close();
-      this.clientHandlers.closeHandler();
+      this.dispatchEvent(new ErrorEvent(CLOSE_EVT, { error: err }));
     }
   }
 
@@ -529,9 +537,9 @@ export class ProtocolHandler extends EventTarget {
 
   public static async connect(
     options: ConnectionOptions,
-    handlers: ClientHandlers,
+    publisher: Publisher,
   ): Promise<ProtocolHandler> {
-    const h = new ProtocolHandler(options, handlers);
+    const h = new ProtocolHandler(options, publisher);
     await h.dialLoop();
     return h;
   }
@@ -559,7 +567,7 @@ export class ProtocolHandler extends EventTarget {
 
           if ((m = MSG.exec(buf))) {
             this.payload = new MsgBuffer(
-              this.clientHandlers,
+              this.publisher,
               m,
               this.options.payload,
             );
@@ -757,11 +765,11 @@ export class ProtocolHandler extends EventTarget {
     return p;
   }
 
-  processError(s: string) {
+  async processError(s: string) {
     let err = ProtocolHandler.toError(s);
-    let evt = { error: err } as ErrorEvent;
-    this.errorHandler(evt);
-    this._close(err);
+    await this._close(err);
+
+    // this.dispatchEvent(new ErrorEvent(CLOSE_EVT, new ErrorEvent("error", { error: err })));
   }
 
   sendSubscriptions() {
@@ -778,24 +786,19 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  closeHandler(): void {
-    this.clientHandlers.closeHandler();
-  }
-
-  errorHandler(evt: Event | Error): void {
-    let err;
-    if (evt) {
-      err = (evt as ErrorEvent).error;
-    }
-    this.handleError(err);
-  }
-
   private _close(err?: Error): Promise<void> {
     if (this.state === ParserState.CLOSED) {
       return Promise.resolve();
     }
+    if (this.connectError) {
+      this.connectError(err);
+      this.connectError = undefined;
+    }
     this.state = ParserState.CLOSED;
-    return this.transport.close(err);
+    return this.transport.close(err)
+      .then(() => {
+        return this.closed.resolve(err);
+      });
   }
 
   close(): Promise<void> {
@@ -867,15 +870,6 @@ export class ProtocolHandler extends EventTarget {
       this.subscriptions.setMux(sub);
       this.subscribe(sub);
     }
-  }
-
-  private async handleError(err: Error) {
-    if (this.connectError) {
-      this.connectError(err);
-      this.connectError = undefined;
-    }
-    await this.close();
-    this.clientHandlers.errorHandler(err);
   }
 
   private selectServer(): Server | undefined {

@@ -14,12 +14,13 @@
  */
 
 //@ts-ignore
-import { extend, isUint8Array } from "./util.ts";
+import { deferred, Deferred, extend, isUint8Array } from "./util.ts";
 import {
   Payload,
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
+  CLOSE_EVT,
   //@ts-ignore
 } from "./mod.ts";
 import {
@@ -38,31 +39,13 @@ import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
 
-export interface Callback {
-  (): void;
-}
-
-export interface ErrorCallback {
-  (error: Error): void;
-}
-
-export interface ClientEventMap {
-  "close": Callback;
-  "disconnect": Callback;
-  "error": ErrorCallback;
-  "reconnect": Callback;
-}
-
-export class NatsConnection implements ClientHandlers {
+export class NatsConnection extends EventTarget {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
-  closeListeners: Callback[] = [];
-  disconnectListeners: Callback[] = [];
-  errorListeners: ErrorCallback[] = [];
-  reconnectListeners: Callback[] = [];
   draining: boolean = false;
 
   private constructor(opts: ConnectionOptions) {
+    super();
     this.options = parseOptions(opts);
   }
 
@@ -72,16 +55,16 @@ export class NatsConnection implements ClientHandlers {
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;
-          ph.addEventListener("close", () => {
-            console.log("close evt");
-            nc.closeHandler();
-          });
           resolve(nc);
         })
         .catch((err: Error) => {
           reject(err);
         });
     });
+  }
+
+  status(): Promise<void | Error> {
+    return this.protocol.closed;
   }
 
   async close() {
@@ -200,77 +183,6 @@ export class NatsConnection implements ClientHandlers {
     this.draining = true;
     return this.protocol.drain();
   }
-
-  errorHandler(error: Error): void {
-    this.errorListeners.forEach((cb) => {
-      try {
-        cb(error);
-      } catch (ex) {
-      }
-    });
-  }
-
-  closeHandler(): void {
-    this.closeListeners.forEach((cb) => {
-      try {
-        cb();
-      } catch (ex) {
-      }
-    });
-  }
-
-  disconnectHandler(): void {
-    this.disconnectListeners.forEach((cb) => {
-      try {
-        cb();
-      } catch (ex) {
-      }
-    });
-  }
-
-  reconnectHandler(): void {
-    this.reconnectListeners.forEach((cb: Callback) => {
-      try {
-        cb();
-      } catch (ex) {
-      }
-    });
-  }
-
-  addEventListener<K extends keyof ClientEventMap>(
-    type: K,
-    listener: ClientEventMap[K],
-  ): void {
-    //@ts-ignore
-    if (type === "close") {
-      //@ts-ignore
-      this.closeListeners.push(listener);
-      //@ts-ignore
-    } else if (type === "error") {
-      //@ts-ignore
-      this.errorListeners.push(listener);
-      //@ts-ignore
-    } else if (type === "disconnect") {
-      //@ts-ignore
-      this.disconnectListeners.push(listener);
-      //@ts-ignore
-    } else if (type === "reconnect") {
-      //@ts-ignore
-      this.reconnectListeners.push(listener);
-    }
-  }
-
-  // addEventListener<K extends keyof ClientEventMap>(
-  //   type: K,
-  //   listener: (this: NatsConnection, ev: ClientEventMap[K]) => void): void {
-  //   if (type === "close") {
-  //     //@ts-ignore
-  //     this.closeListeners.push(listener);
-  //   } else if (type === "error") {
-  //     //@ts-ignore
-  //     this.errorListeners.push(listener);
-  //   }
-  // }
 
   isClosed(): boolean {
     return this.protocol.isClosed();

@@ -239,7 +239,7 @@ export class DenoTransport extends EventTarget implements Transport {
     }
 
     if (internal) {
-      this.dispatchEvent(new Event(CLOSE_EVT));
+      this.dispatchEvent(new ErrorEvent(CLOSE_EVT, { error: err }));
     }
   }
 }
