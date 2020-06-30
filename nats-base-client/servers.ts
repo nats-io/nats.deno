@@ -17,7 +17,7 @@ import {
   DEFAULT_PORT,
   DEFAULT_URI,
   ServerInfo,
-  ServersChangedEvent,
+  ServersChanged,
 } from "./types.ts";
 import { shuffle } from "./util.ts";
 
@@ -163,7 +163,7 @@ export class Servers {
     return this.servers;
   }
 
-  processServerUpdate(info: ServerInfo): ServersChangedEvent {
+  update(info: ServerInfo): ServersChanged | void {
     let added = [];
     let deleted: string[] = [];
 
@@ -207,6 +207,6 @@ export class Servers {
         }
       }
     }
-    return { added: added, deleted: deleted } as ServersChangedEvent;
+    return { added, deleted };
   }
 }

@@ -17,14 +17,18 @@ import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
 
 export const CLOSE_EVT = "close";
-export const DISCONNECT_EVT = "disconnect";
-export const RECONNECT_EVT = "reconnect";
+
+export const Events = Object.freeze({
+  DISCONNECT: "disconnect",
+  RECONNECT: "reconnect",
+  UPDATE: "update",
+});
 
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_PRE = "nats://localhost:";
 export const DEFAULT_URI = DEFAULT_PRE + DEFAULT_PORT;
 
-// Reconnect Parameters, 2 sec wait, 10 tries
+// DISCONNECT Parameters, 2 sec wait, 10 tries
 export const DEFAULT_RECONNECT_TIME_WAIT = 2 * 1000;
 export const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
 export const DEFAULT_JITTER = 100;
@@ -138,7 +142,7 @@ export interface ServerInfo {
   nkey?: string;
 }
 
-export interface ServersChangedEvent {
-  added: string[];
-  deleted: string[];
+export interface ServersChanged {
+  readonly added: string[];
+  readonly deleted: string[];
 }

@@ -14,17 +14,16 @@
  */
 
 //@ts-ignore
-import { deferred, Deferred, extend, isUint8Array } from "./util.ts";
+import { extend, isUint8Array } from "./util.ts";
 import {
   Payload,
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
-  CLOSE_EVT,
+  Events,
   //@ts-ignore
 } from "./mod.ts";
 import {
-  ClientHandlers,
   ProtocolHandler,
   RequestOptions,
   Subscription,
@@ -55,6 +54,17 @@ export class NatsConnection extends EventTarget {
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;
+          // setup a listener to forward lifecycle events
+          const handler = (evt: Event): void | Promise<void> => {
+            const { detail } = evt as CustomEvent;
+            const e = detail
+              ? new CustomEvent(evt.type, { detail })
+              : new Event(evt.type);
+            nc.dispatchEvent(e);
+          };
+          ph.addEventListener(Events.DISCONNECT, handler);
+          ph.addEventListener(Events.RECONNECT, handler);
+          ph.addEventListener(Events.UPDATE, handler);
           resolve(nc);
         })
         .catch((err: Error) => {

@@ -28,7 +28,6 @@ import {
   NatsServer,
 } from "./helpers/mod.ts";
 import { nuid } from "../nats-base-client/nats.ts";
-import { RECONNECT_EVT } from "../nats-base-client/types.ts";
 
 // Deno.test('reconnect - should receive when some servers are invalid', async () => {
 //   const lock = Lock(1, 5000);

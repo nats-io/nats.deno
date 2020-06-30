@@ -21,7 +21,7 @@ import {
   Req,
   defaultSub,
   CLOSE_EVT,
-  RECONNECT_EVT,
+  Events,
 } from "./types.ts";
 //@ts-ignore
 import { Transport, newTransport } from "./transport.ts";
@@ -100,18 +100,8 @@ export class Connect {
   }
 }
 
-export interface Closer {
-}
-
 export interface Publisher {
   publish(subject: string, data: any, reply: string): void;
-}
-
-export interface ClientHandlers extends Publisher {
-  closeHandler: () => void;
-  errorHandler: (error: Error) => void;
-  reconnectHandler: () => void;
-  disconnectHandler: () => void;
 }
 
 export interface RequestOptions {
@@ -451,9 +441,10 @@ export class ProtocolHandler extends EventTarget {
   }
 
   async disconnected(err?: Error): Promise<void> {
+    this.dispatchEvent((new Event(Events.DISCONNECT)));
     if (this.options.reconnect) {
       await this.dialLoop();
-      this.dispatchEvent(new Event(RECONNECT_EVT));
+      this.dispatchEvent(new Event(Events.RECONNECT));
     } else {
       await this.close();
       this.dispatchEvent(new ErrorEvent(CLOSE_EVT, { error: err }));
@@ -586,9 +577,10 @@ export class ProtocolHandler extends EventTarget {
           } else if ((m = PING.exec(buf))) {
             this.transport.send(buildMessage(`PONG ${CR_LF}`));
           } else if ((m = INFO.exec(buf))) {
+            const info = JSON.parse(m[1]);
+            const updates = this.servers.update(info);
             if (!this.infoReceived) {
               // send connect
-              // const info = JSON.parse(m[1]);
               const { version, lang } = this.transport;
               let cs = JSON.stringify(
                 new Connect({ version, lang }, this.options),
@@ -598,6 +590,11 @@ export class ProtocolHandler extends EventTarget {
               );
               this.transport.send(
                 buildMessage(`PING ${CR_LF}`),
+              );
+            }
+            if (updates) {
+              this.dispatchEvent(
+                new CustomEvent(Events.UPDATE, { detail: updates }),
               );
             }
           } else {

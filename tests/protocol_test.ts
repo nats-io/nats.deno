@@ -17,7 +17,6 @@ import {
   ConnectionOptions,
   ProtocolHandler,
   Sub,
-  ClientHandlers,
   defaultReq,
   Msg,
 } from "../nats-base-client/mod.ts";

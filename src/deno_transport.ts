@@ -27,7 +27,6 @@ import {
   render,
   Transport,
 } from "../nats-base-client/mod.ts";
-import { DISCONNECT_EVT } from "../nats-base-client/types.ts";
 
 const VERSION = "0.0.1";
 const LANG = "Deno";

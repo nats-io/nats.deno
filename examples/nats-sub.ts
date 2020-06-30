@@ -1,12 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
-import { CLOSE_EVT } from "../nats-base-client/mod.ts";
-import {
-  DISCONNECT_EVT,
-  RECONNECT_EVT,
-} from "../nats-base-client/types.ts";
+import { ConnectionOptions, connect, Events } from "../src/mod.ts";
 
 const argv = parse(
   Deno.args,
@@ -24,22 +19,16 @@ const opts = { url: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : ">";
 
 const nc = await connect(opts);
-
-nc.addEventListener(CLOSE_EVT, () => {
+nc.status().then(() => {
   console.log("client closed");
+  Deno.exit(1);
 });
-nc.addEventListener(
-  CLOSE_EVT,
-  ((evt: ErrorEvent): void => {
-    console.error(evt.error);
-    Deno.exit(1);
-  }) as EventListener,
-);
-nc.addEventListener(DISCONNECT_EVT, () => {
+
+nc.addEventListener(Events.DISCONNECT, () => {
   console.log("disconnected");
 });
 
-nc.addEventListener(RECONNECT_EVT, () => {
+nc.addEventListener(Events.RECONNECT, () => {
   console.log("reconnected");
 });
 

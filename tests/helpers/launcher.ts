@@ -84,12 +84,58 @@ export class NatsServer implements PortInfo {
     console.log(new TextDecoder().decode(this.srvLog));
   }
 
+  static stopAll(cluster: NatsServer[]): Promise<void[]> {
+    const buf: Promise<void>[] = [];
+    cluster.forEach((s) => {
+      buf.push(s.stop());
+    });
+
+    return Promise.all(buf);
+  }
+
   async stop(): Promise<void> {
     this.process.kill(Deno.Signal.SIGKILL);
     this.process.close();
     if (this.err) {
       await this.err;
     }
+  }
+
+  static async cluster(
+    count: number = 2,
+    conf?: any,
+    debug: boolean = false,
+  ): Promise<NatsServer[]> {
+    conf = conf || {};
+    conf = Object.assign({}, conf);
+    conf.cluster = conf.cluster || {};
+    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
+
+    const ns = await NatsServer.start(conf, debug);
+    const cluster = [ns];
+
+    for (let i = 1; i < count; i++) {
+      const s = await NatsServer.addClusterMember(ns, conf, debug);
+      cluster.push(s);
+    }
+
+    return cluster;
+  }
+
+  static async addClusterMember(
+    ns: NatsServer,
+    conf?: any,
+    debug: boolean = false,
+  ): Promise<NatsServer> {
+    if (ns.cluster === undefined) {
+      return Promise.reject(new Error("no cluster port on server"));
+    }
+    conf = conf || {};
+    conf = Object.assign({}, conf);
+    conf.cluster = conf.cluster || {};
+    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
+    conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
+    return NatsServer.start(conf, debug);
   }
 
   static async start(conf?: any, debug: boolean = false): Promise<NatsServer> {
