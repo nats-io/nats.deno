@@ -33,7 +33,7 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { defaultReq, defaultSub } from "./types.ts";
+import { DebugEvents, defaultReq, defaultSub } from './types.ts'
 import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
@@ -64,6 +64,7 @@ export class NatsConnection extends EventTarget {
           };
           ph.addEventListener(Events.DISCONNECT, handler);
           ph.addEventListener(Events.RECONNECT, handler);
+          ph.addEventListener(DebugEvents.RECONNECTING, handler);
           ph.addEventListener(Events.UPDATE, handler);
           resolve(nc);
         })
@@ -200,5 +201,10 @@ export class NatsConnection extends EventTarget {
 
   isDraining(): boolean {
     return this.draining;
+  }
+
+  getServer(): string {
+    const srv = this.protocol.getServer();
+    return srv ? srv.url.host : "";
   }
 }

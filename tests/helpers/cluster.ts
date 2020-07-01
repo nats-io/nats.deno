@@ -22,7 +22,7 @@ const argv = parse(
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster --count 2\n",
+    "usage: cluster [--count 2] [--port 4222] [--debug]\n",
   );
   Deno.exit(0);
 }
@@ -34,7 +34,7 @@ try {
     argv.debug,
   );
   cluster.forEach((s) => {
-    console.log(`launched server at ${s.port}`);
+    console.log(`launched server [${s.process.pid}] at ${s.port}`);
   });
 
   console.log("control+c to terminate");

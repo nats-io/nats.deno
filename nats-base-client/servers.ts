@@ -164,48 +164,45 @@ export class Servers {
   }
 
   update(info: ServerInfo): ServersChanged | void {
-    let added = [];
+    let added: string[] = [];
     let deleted: string[] = [];
 
     if (info.connect_urls && info.connect_urls.length > 0) {
-      let discovered: { [key: string]: Server } = {};
+      console.log(info.connect_urls)
+      const discovered = new Map<string,Server>()
 
-      info.connect_urls.forEach((server) => {
+      info.connect_urls.forEach((hp) => {
         // protocol in node includes the ':'
         let protocol = this.currentServer.url.protocol;
-        let u = `${protocol}//${server}`;
-        discovered[u] = new Server(u, true);
+        discovered.set(hp, new Server(hp, true))
       });
 
       // remove implicit servers that are no longer reported
       let toDelete: number[] = [];
       this.servers.forEach((s, index) => {
-        let u = s.toString();
+        let u = s.url.host;
         if (
-          s.implicit && this.currentServer.url.href !== u &&
-          discovered[u] === undefined
+          s.implicit && this.currentServer.url.host !== u && discovered.get(u) === undefined
         ) {
           // server was removed
           toDelete.push(index);
         }
         // remove this entry from reported
-        delete discovered[u];
+        discovered.delete(u);
       });
 
       // perform the deletion
       toDelete.reverse();
       toDelete.forEach((index) => {
         let removed = this.servers.splice(index, 1);
-        deleted = deleted.concat(removed[0].url.toString());
+        deleted = deleted.concat(removed[0].url.host);
       });
 
       // remaining servers are new
-      for (let k in discovered) {
-        if (discovered.hasOwnProperty(k)) {
-          this.servers.push(discovered[k]);
-          added.push(k);
-        }
-      }
+      discovered.forEach((v, k, m) => {
+        this.servers.push(v);
+        added.push(k);
+      })
     }
     return { added, deleted };
   }

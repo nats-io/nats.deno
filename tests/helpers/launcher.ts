@@ -132,6 +132,7 @@ export class NatsServer implements PortInfo {
     }
     conf = conf || {};
     conf = Object.assign({}, conf);
+    conf.port = -1;
     conf.cluster = conf.cluster || {};
     conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
     conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
@@ -151,10 +152,13 @@ export class NatsServer implements PortInfo {
 
         const confFile = await Deno.makeTempFileSync();
         await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
+        if (debug) {
+          console.info(`${exe} -c ${confFile}`);
+        }
         srv = await Deno.run(
           {
             cmd: [exe, "-c", confFile],
-            stderr: debug ? "piped" : "null",
+            stderr: "piped",
             stdout: "null",
             stdin: "null",
           },
@@ -177,7 +181,7 @@ export class NatsServer implements PortInfo {
             }
           } catch (_) {
           }
-        }, 2000);
+        }, 1000, {name: 'read ports file'});
 
         if (debug) {
           console.info(`[${srv.pid}] - ports file found`);
@@ -195,7 +199,7 @@ export class NatsServer implements PortInfo {
           } catch (_) {
             // ignore
           }
-        }, 5000);
+        }, 5000, {name: 'wait for server'}, );
         resolve(new NatsServer(ports, srv, debug));
       } catch (err) {
         if (srv) {

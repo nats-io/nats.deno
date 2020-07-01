@@ -21,8 +21,8 @@ import {
   Req,
   defaultSub,
   CLOSE_EVT,
-  Events,
-} from "./types.ts";
+  Events, DebugEvents,
+} from './types.ts'
 //@ts-ignore
 import { Transport, newTransport } from "./transport.ts";
 //@ts-ignore
@@ -504,6 +504,7 @@ export class ProtocolHandler extends EventTarget {
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
         srv.lastConnect = Date.now();
         try {
+          this.dispatchEvent(new CustomEvent(DebugEvents.RECONNECTING, { detail: srv.url.host }));
           await this.dial(srv);
           break;
         } catch (err) {
@@ -514,7 +515,9 @@ export class ProtocolHandler extends EventTarget {
             }
             continue;
           }
+          srv.reconnects++;
           const mra = this.options.maxReconnectAttempts || 0;
+          console.log(`mra ${mra} reconnects: ${srv.reconnects}`)
           if (mra !== -1 && srv.reconnects >= mra) {
             this.servers.removeCurrentServer();
           }
@@ -876,6 +879,10 @@ export class ProtocolHandler extends EventTarget {
     }
     // Place in client context.
     this.server = server;
+    return this.server;
+  }
+
+  getServer(): Server | undefined {
     return this.server;
   }
 }

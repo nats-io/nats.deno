@@ -18,21 +18,33 @@ const argv = parse(
 const opts = { url: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : ">";
 
+opts.maxReconnectAttempts = 10;
+opts.reconnectTimeWait = 5;
+
 const nc = await connect(opts);
+console.info(`connected ${nc.getServer()}`);
 nc.status().then(() => {
-  console.log("client closed");
+  console.log(`closed ${nc.getServer()}`);
   Deno.exit(1);
 });
 
 nc.addEventListener(Events.DISCONNECT, () => {
-  console.log("disconnected");
+  console.info(`disconnected ${nc.getServer()}`);
 });
 
 nc.addEventListener(Events.RECONNECT, () => {
-  console.log("reconnected");
+  console.info(`reconnected ${nc.getServer()}`);
 });
 
-console.log(`subscribing to ${subject}`);
+nc.addEventListener(
+  Events.UPDATE,
+  ((evt: CustomEvent) => {
+    console.info(`cluster updated`);
+    console.table(evt.detail);
+  }) as EventListener,
+);
+
+console.info(`subscribing to ${subject}`);
 const sub = nc.subscribe(subject, (err, msg) => {
   if (err) {
     console.error(err);

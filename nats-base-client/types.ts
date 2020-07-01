@@ -24,6 +24,10 @@ export const Events = Object.freeze({
   UPDATE: "update",
 });
 
+export const DebugEvents = Object.freeze({
+  RECONNECTING: "reconnecting",
+})
+
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_PRE = "nats://localhost:";
 export const DEFAULT_URI = DEFAULT_PRE + DEFAULT_PORT;
