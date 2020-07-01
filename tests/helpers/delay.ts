@@ -1,10 +1,10 @@
 export function check(
   fn: Function,
   timeout: number = 1000,
-  opts?: {interval?: number, name?: string}
+  opts?: { interval?: number; name?: string },
 ): Promise<any> {
-  opts = opts || {}
-  opts = Object.assign(opts, {interval: 50})
+  opts = opts || {};
+  opts = Object.assign(opts, { interval: 50 });
   let toHandle: number;
   const to = new Promise((_, reject) => {
     toHandle = setTimeout(() => {

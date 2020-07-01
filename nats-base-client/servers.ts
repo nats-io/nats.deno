@@ -25,15 +25,15 @@ import { shuffle } from "./util.ts";
  * @hidden
  */
 export class Server {
-  url: URL;
+  listen: string;
   hostname: string;
   port: number;
   didConnect: boolean;
   reconnects: number;
   lastConnect: number;
-  implicit: boolean;
+  gossiped: boolean;
 
-  constructor(u: string, implicit = false) {
+  constructor(u: string, gossiped = false) {
     // remove any of the standard protocols we are used to seeing
     u = u.replace("tls://", "");
     u = u.replace("ws://", "");
@@ -46,39 +46,26 @@ export class Server {
     if (!/^.*:\/\/.*/.test(u)) {
       u = `http://${u}`;
     }
-    this.url = new URL(u);
-    if (!this.url.port) {
-      this.url.port = `${DEFAULT_PORT}`;
+    let url = new URL(u);
+    if (!url.port) {
+      url.port = `${DEFAULT_PORT}`;
     }
-
-    this.hostname = this.url.hostname;
-    this.port = parseInt(this.url.port, 10);
+    this.listen = url.host;
+    this.hostname = url.hostname;
+    this.port = parseInt(url.port, 10);
 
     this.didConnect = false;
     this.reconnects = 0;
     this.lastConnect = 0;
-    this.implicit = implicit;
+    this.gossiped = gossiped;
   }
 
   toString(): string {
-    return this.url.href || "";
+    return this.listen;
   }
 
   hostport(): { hostname: string; port: number } {
     return this;
-  }
-
-  getCredentials(): string[] | undefined {
-    let auth;
-    if (this.url.username) {
-      auth = [];
-      auth.push(this.url.username);
-    }
-    if (this.url.password) {
-      auth = auth || [];
-      auth.push(this.url.password);
-    }
-    return auth;
   }
 }
 
@@ -90,11 +77,15 @@ export class Servers {
   private readonly servers: Server[];
   private currentServer: Server;
 
-  constructor(randomize: boolean, urls: string[] = [], firstServer?: string) {
+  constructor(
+    randomize: boolean,
+    listens: string[] = [],
+    firstServer?: string,
+  ) {
     this.servers = [] as Server[];
-    if (urls) {
-      urls.forEach((element) => {
-        this.servers.push(new Server(element));
+    if (listens) {
+      listens.forEach((hp) => {
+        this.servers.push(new Server(hp));
       });
       if (randomize) {
         this.servers = shuffle(this.servers);
@@ -102,9 +93,9 @@ export class Servers {
     }
 
     if (firstServer) {
-      let index = urls.indexOf(firstServer);
+      let index = listens.indexOf(firstServer);
       if (index === -1) {
-        this.addServer(firstServer, false);
+        this.servers.unshift(new Server(firstServer));
       } else {
         let fs = this.servers[index];
         this.servers.splice(index, 1);
@@ -163,47 +154,44 @@ export class Servers {
     return this.servers;
   }
 
-  update(info: ServerInfo): ServersChanged | void {
-    let added: string[] = [];
+  update(info: ServerInfo): ServersChanged {
+    const added: string[] = [];
     let deleted: string[] = [];
 
+    const discovered = new Map<string, Server>();
     if (info.connect_urls && info.connect_urls.length > 0) {
-      console.log(info.connect_urls)
-      const discovered = new Map<string,Server>()
-
       info.connect_urls.forEach((hp) => {
-        // protocol in node includes the ':'
-        let protocol = this.currentServer.url.protocol;
-        discovered.set(hp, new Server(hp, true))
+        discovered.set(hp, new Server(hp, true));
       });
-
-      // remove implicit servers that are no longer reported
-      let toDelete: number[] = [];
-      this.servers.forEach((s, index) => {
-        let u = s.url.host;
-        if (
-          s.implicit && this.currentServer.url.host !== u && discovered.get(u) === undefined
-        ) {
-          // server was removed
-          toDelete.push(index);
-        }
-        // remove this entry from reported
-        discovered.delete(u);
-      });
-
-      // perform the deletion
-      toDelete.reverse();
-      toDelete.forEach((index) => {
-        let removed = this.servers.splice(index, 1);
-        deleted = deleted.concat(removed[0].url.host);
-      });
-
-      // remaining servers are new
-      discovered.forEach((v, k, m) => {
-        this.servers.push(v);
-        added.push(k);
-      })
     }
+    // remove gossiped servers that are no longer reported
+    let toDelete: number[] = [];
+    this.servers.forEach((s, index) => {
+      let u = s.listen;
+      if (
+        s.gossiped && this.currentServer.listen !== u &&
+        discovered.get(u) === undefined
+      ) {
+        // server was removed
+        toDelete.push(index);
+      }
+      // remove this entry from reported
+      discovered.delete(u);
+    });
+
+    // perform the deletion
+    toDelete.reverse();
+    toDelete.forEach((index) => {
+      let removed = this.servers.splice(index, 1);
+      deleted = deleted.concat(removed[0].listen);
+    });
+
+    // remaining servers are new
+    discovered.forEach((v, k, m) => {
+      this.servers.push(v);
+      added.push(k);
+    });
+
     return { added, deleted };
   }
 }

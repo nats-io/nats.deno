@@ -33,7 +33,7 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { DebugEvents, defaultReq, defaultSub } from './types.ts'
+import { DebugEvents, defaultReq, defaultSub } from "./types.ts";
 import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
@@ -205,6 +205,6 @@ export class NatsConnection extends EventTarget {
 
   getServer(): string {
     const srv = this.protocol.getServer();
-    return srv ? srv.url.host : "";
+    return srv ? srv.listen : "";
   }
 }

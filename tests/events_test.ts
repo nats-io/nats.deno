@@ -3,6 +3,7 @@ import { connect, Events } from "../src/mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std/testing/asserts.ts";
+import { delay } from "../nats-base-client/mod.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -39,32 +40,24 @@ Deno.test("events - disconnect, reconnect", async () => {
   const cluster = await NatsServer.cluster();
   const nc = await connect(
     {
-      url: `nats://localhost:${cluster[0].port}`,
+      url: `${cluster[0].hostname}:${cluster[0].port}`,
       maxReconnectAttempts: 1,
       reconnectTimeWait: 0,
     },
   );
   const disconnect = Lock();
   const reconnect = Lock();
-  const update = Lock();
   nc.addEventListener(Events.RECONNECT, () => {
     reconnect.unlock();
   });
   nc.addEventListener(Events.DISCONNECT, () => {
     disconnect.unlock();
   });
-  nc.addEventListener(
-    Events.UPDATE,
-    ((evt: CustomEvent) => {
-      assertEquals(evt.detail.deleted.length, 1);
-      update.unlock();
-    }) as EventListener,
-  );
 
   await cluster[0].stop();
-  await Promise.all([disconnect, reconnect, update]);
+  await Promise.all([disconnect, reconnect]);
   await nc.close();
-  await cluster[1].stop();
+  await NatsServer.stopAll(cluster);
 });
 
 Deno.test("events - update", async () => {

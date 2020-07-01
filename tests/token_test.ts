@@ -28,7 +28,7 @@ Deno.test("token empty", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
-      { url: `http://localhost:${ns.port}`, maxReconnectAttempts: 0 },
+      { url: `http://localhost:${ns.port}`, reconnect: false },
     );
     nc.status().then((err) => {
       console.table(err);

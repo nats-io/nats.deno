@@ -46,6 +46,7 @@ export class NatsServer implements PortInfo {
   srvLog!: Uint8Array;
   err?: Promise<void>;
   debug: boolean;
+  stopped: boolean = false;
 
   constructor(
     info: PortInfo,
@@ -94,10 +95,13 @@ export class NatsServer implements PortInfo {
   }
 
   async stop(): Promise<void> {
-    this.process.kill(Deno.Signal.SIGKILL);
-    this.process.close();
-    if (this.err) {
-      await this.err;
+    if (!this.stopped) {
+      this.stopped = true;
+      this.process.kill(Deno.Signal.SIGKILL);
+      this.process.close();
+      if (this.err) {
+        await this.err;
+      }
     }
   }
 
@@ -148,6 +152,7 @@ export class NatsServer implements PortInfo {
       try {
         conf = conf || {};
         conf.ports_file_dir = tmp;
+        conf.host = conf.host || "127.0.0.1";
         conf.port = conf.port || -1;
 
         const confFile = await Deno.makeTempFileSync();
@@ -158,7 +163,7 @@ export class NatsServer implements PortInfo {
         srv = await Deno.run(
           {
             cmd: [exe, "-c", confFile],
-            stderr: "piped",
+            stderr: debug ? "piped" : "null",
             stdout: "null",
             stdin: "null",
           },
@@ -172,34 +177,42 @@ export class NatsServer implements PortInfo {
           path.join(tmp, `nats-server_${srv.pid}.ports`),
         );
 
-        const pi = await check(() => {
-          try {
-            const data = Deno.readFileSync(portsFile);
-            const d = JSON.parse(new TextDecoder().decode(data));
-            if (d) {
-              return d;
+        const pi = await check(
+          () => {
+            try {
+              const data = Deno.readFileSync(portsFile);
+              const d = JSON.parse(new TextDecoder().decode(data));
+              if (d) {
+                return d;
+              }
+            } catch (_) {
             }
-          } catch (_) {
-          }
-        }, 1000, {name: 'read ports file'});
+          },
+          1000,
+          { name: "read ports file" },
+        );
 
         if (debug) {
           console.info(`[${srv.pid}] - ports file found`);
         }
 
         const ports = parsePorts(pi as Ports);
-        await check(async () => {
-          try {
-            if (debug) {
-              console.info(`[${srv.pid}] - attempting to connect`);
+        await check(
+          async () => {
+            try {
+              if (debug) {
+                console.info(`[${srv.pid}] - attempting to connect`);
+              }
+              const conn = await Deno.connect(ports as Deno.ConnectOptions);
+              conn.close();
+              return ports.port;
+            } catch (_) {
+              // ignore
             }
-            const conn = await Deno.connect(ports as Deno.ConnectOptions);
-            conn.close();
-            return ports.port;
-          } catch (_) {
-            // ignore
-          }
-        }, 5000, {name: 'wait for server'}, );
+          },
+          5000,
+          { name: "wait for server" },
+        );
         resolve(new NatsServer(ports, srv, debug));
       } catch (err) {
         if (srv) {
