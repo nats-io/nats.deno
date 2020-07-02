@@ -48,7 +48,7 @@ Deno.test("reconnect - should receive when some servers are invalid", async () =
   assert(a[0].didConnect);
 });
 
-Deno.test("reconnect events", async () => {
+Deno.test("reconnect - events", async () => {
   const srv = await NatsServer.start();
 
   let nc = await connect({
@@ -76,214 +76,113 @@ Deno.test("reconnect events", async () => {
   assertEquals(disconnects, 1);
   assertEquals(reconnecting, 10);
 });
-//
-// test('reconnect not emitted if suppressed', async (t) => {
-//   t.plan(2);
-//   let lock = new Lock();
-//
-//   let server = await startServer();
-//   registerServer(server, t);
-//
-//   let nc = await connect({
-//     url: server.nats,
-//     reconnect: false
-//   });
-//
-//   nc.on('connect', () => {
-//     setTimeout(() => {
-//       stopServer(server);
-//     }, 100);
-//   });
-//
-//   let disconnects = 0;
-//   nc.on('disconnect', () => {
-//     disconnects++;
-//   });
-//
-//   let reconnecting = false;
-//   nc.on('reconnecting', () => {
-//     reconnecting = true;
-//   });
-//
-//   nc.on('close', () => {
-//     t.is(disconnects, 1);
-//     t.false(reconnecting);
-//     lock.unlock();
-//   });
-//
-//   return lock.latch;
-// });
-//
-// test('reconnecting after proper delay', async (t) => {
-//   t.plan(2);
-//   let lock = new Lock();
-//
-//   let server = await startServer();
-//   registerServer(server, t);
-//   let nc = await connect({
-//     url: server.nats,
-//     reconnectTimeWait: 500,
-//     maxReconnectAttempts: 1
-//   });
-//
-//   let serverLastConnect = 0;
-//   nc.on('connect', () => {
-//     //@ts-ignore
-//     serverLastConnect = nc.protocolHandler.servers.getCurrentServer().lastConnect;
-//     setTimeout(() => {
-//       stopServer(server);
-//     }, 100);
-//   });
-//
-//   let disconnect = 0;
-//   nc.on('disconnect', () => {
-//     disconnect = Date.now();
-//   });
-//
-//   nc.on('reconnecting', () => {
-//     let elapsed = Date.now() - serverLastConnect;
-//     t.true(elapsed >= 485);
-//     t.true(elapsed <= 600);
-//     nc.close();
-//     lock.unlock();
-//   });
-//
-//   return lock.latch;
-// });
-//
-// test('indefinite reconnects', async (t) => {
-//   let lock = new Lock();
-//   t.plan(3);
-//
-//   let server: Server | null;
-//   server = await startServer();
-//   registerServer(server, t);
-//
-//   let u = new url.URL(server.nats);
-//   let port = parseInt(u.port, 10);
-//
-//   let nc = await connect({
-//     url: server.nats,
-//     reconnectTimeWait: 100,
-//     maxReconnectAttempts: -1
-//   });
-//
-//   nc.on('connect', () => {
-//     setTimeout(() => {
-//       stopServer(server, () => {
-//         server = null;
-//       });
-//     }, 100);
-//   });
-//
-//   setTimeout(async () => {
-//     server = await startServer(['-p', port.toString()]);
-//     registerServer(server, t);
-//   }, 1000);
-//
-//
-//   let disconnects = 0;
-//   nc.on('disconnect', () => {
-//     disconnects++;
-//   });
-//
-//   let reconnectings = 0;
-//   nc.on('reconnecting', () => {
-//     reconnectings++;
-//   });
-//
-//   let reconnects = 0;
-//   nc.on('reconnect', () => {
-//     reconnects++;
-//     nc.flush(() => {
-//       nc.close();
-//       t.true(reconnectings >= 5);
-//       t.is(reconnects, 1);
-//       t.is(disconnects, 1);
-//       lock.unlock();
-//     });
-//   });
-//
-//   return lock.latch;
-// });
-//
-// test('jitter', async(t) => {
-//   t.plan(2)
-//   let lock = new Lock();
-//   let socket: Socket | null = null
-//   const srv = createServer((c: Socket) => {
-//     // @ts-ignore
-//     socket = c
-//     c.write('INFO ' + JSON.stringify({
-//       server_id: 'TEST',
-//       version: '0.0.0',
-//       host: '127.0.0.1',
-//       // @ts-ignore
-//       port: srv.address.port,
-//       auth_required: false
-//     }) + '\r\n')
-//     c.on('data', (d: string) => {
-//       const r = d.toString()
-//       const lines = r.split('\r\n')
-//       lines.forEach((line) => {
-//         if (line === '\r\n') {
-//           return
-//         }
-//         if (/^CONNECT\s+/.test(line)) {
-//         } else if (/^PING/.test(line)) {
-//           c.write('PONG\r\n')
-//
-//           process.nextTick(()=> {
-//             // @ts-ignore
-//             socket.destroy()
-//           })
-//         } else if (/^SUB\s+/i.test(line)) {
-//         } else if (/^PUB\s+/i.test(line)) {
-//         } else if (/^UNSUB\s+/i.test(line)) {
-//         } else if (/^MSG\s+/i.test(line)) {
-//         } else if (/^INFO\s+/i.test(line)) {
-//         }
-//       })
-//     })
-//     c.on('error', () => {
-//       // we are messing with the server so this will raise connection reset
-//     })
-//   })
-//   // @ts-ignore
-//   srv.sockets = []
-//   srv.listen(0, async () => {
-//     // @ts-ignore
-//     const p = srv.address().port
-//     connect({
-//       url: 'nats://localhost:' + p,
-//       reconnect: true,
-//       reconnectTimeWait: 100,
-//       reconnectJitter: 100
-//     }).then(async (nc) => {
-//       const durations: number[] = []
-//       let startTime: number
-//
-//       nc.on('reconnect', () => {
-//         const elapsed = Date.now() - startTime
-//         durations.push(elapsed)
-//         if (durations.length === 10) {
-//           const sum = durations.reduce((a, b) => {
-//             return a + b
-//           }, 0)
-//           t.true(sum >= 1000 && 2000 >= sum, `${sum} >= 1000 && 2000 >= ${sum}`)
-//           const extra = sum - 1000
-//           t.true(extra >= 100 && 900 >= extra, `${extra} >= 100 && 900 >= ${extra}`)
-//           srv.close(() => {
-//             nc.close()
-//             lock.unlock()
-//           })
-//         }
-//       })
-//       nc.on('disconnect', () => {
-//         startTime = Date.now()
-//       })
-//     })
-//
-//   })
-//   return lock.latch
-// })
+
+Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
+  const srv = await NatsServer.start();
+  let nc = await connect({
+    port: srv.port,
+    reconnect: false,
+  });
+
+  let disconnects = 0;
+  nc.addEventListener(Events.DISCONNECT, () => {
+    disconnects++;
+  });
+
+  nc.addEventListener(DebugEvents.RECONNECTING, () => {
+    fail("shouldn't have emitted reconnecting");
+  });
+
+  await srv.stop();
+  await nc.status();
+});
+
+Deno.test("reconnect - reconnecting after proper delay", async () => {
+  const srv = await NatsServer.start();
+  let nc = await connect({
+    port: srv.port,
+    reconnectTimeWait: 500,
+    maxReconnectAttempts: 1,
+  });
+  // @ts-ignore
+  const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
+  await srv.stop();
+
+  nc.addEventListener(DebugEvents.RECONNECTING, () => {
+    const elapsed = Date.now() - serverLastConnect;
+    assert(elapsed >= 500 && elapsed <= 600);
+  });
+
+  await nc.status();
+});
+
+Deno.test("reconnect - indefinite reconnects", async () => {
+  let srv = await NatsServer.start();
+
+  let nc = await connect({
+    port: srv.port,
+    reconnectTimeWait: 100,
+    maxReconnectAttempts: -1,
+  });
+
+  let disconnects = 0;
+  nc.addEventListener(Events.DISCONNECT, () => {
+    disconnects++;
+  });
+
+  let reconnects = 0;
+  nc.addEventListener(DebugEvents.RECONNECTING, () => {
+    reconnects++;
+  });
+
+  let reconnect = false;
+  nc.addEventListener(Events.RECONNECT, () => {
+    reconnect = true;
+    nc.close();
+  });
+
+  await srv.stop();
+
+  const lock = Lock(1, 2000);
+  setTimeout(async () => {
+    srv = await srv.restart();
+    lock.unlock();
+  }, 1000);
+
+  await nc.status();
+  await srv.stop();
+  await lock;
+  await srv.stop();
+  assert(reconnects > 5);
+  assert(reconnect);
+  assertEquals(disconnects, 1);
+});
+
+Deno.test("reconnect - jitter", async () => {
+  let srv = await NatsServer.start();
+
+  let called = false;
+  const h = () => {
+    called = true;
+    return 15;
+  };
+
+  let hasDefaultFn = false;
+  let dc = await connect({
+    port: srv.port,
+    reconnect: false,
+  });
+  hasDefaultFn = typeof dc.options.reconnectDelayHandler === "function";
+
+  let nc = await connect({
+    port: srv.port,
+    maxReconnectAttempts: 1,
+    reconnectDelayHandler: h,
+  });
+
+  await srv.stop();
+  await nc.status();
+  await dc.status();
+  assert(called);
+  assert(hasDefaultFn);
+});

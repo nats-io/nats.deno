@@ -81,6 +81,10 @@ export class NatsServer implements PortInfo {
     return Promise.resolve();
   }
 
+  restart(): Promise<NatsServer> {
+    return NatsServer.start({ port: this.port });
+  }
+
   log() {
     console.log(new TextDecoder().decode(this.srvLog));
   }
