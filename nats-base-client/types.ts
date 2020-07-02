@@ -16,8 +16,6 @@
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
 
-export const CLOSE_EVT = "close";
-
 export const Events = Object.freeze({
   DISCONNECT: "disconnect",
   RECONNECT: "reconnect",

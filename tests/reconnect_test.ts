@@ -21,6 +21,7 @@ import {
 import {
   connect,
   ErrorCode,
+  Events,
 } from "../src/mod.ts";
 import {
   assertErrorCode,
@@ -28,87 +29,53 @@ import {
   NatsServer,
 } from "./helpers/mod.ts";
 import { nuid } from "../nats-base-client/nats.ts";
+import { DebugEvents } from "../nats-base-client/types.ts";
 
-// Deno.test('reconnect - should receive when some servers are invalid', async () => {
-//   const lock = Lock(1, 5000);
-//   const servers = ['nats://localhost:7', "demo.nats.io:4222"];
-//   const nc = await connect({servers: servers, noRandomize: true});
-//   const subj = nuid.next();
-//   await nc.subscribe(subj, (err, msg) => {
-//       lock.unlock();
-//   });
-//   nc.publish(subj);
-//   await lock;
-//   await nc.close();
-//   // @ts-ignore
-//   const a = nc.protocol.servers.servers;
-//   assertEquals(a.length, 1);
-//   assert(a[0].didConnect)
-// });
+Deno.test("reconnect - should receive when some servers are invalid", async () => {
+  const lock = Lock(1, 5000);
+  const servers = ["nats://localhost:7", "demo.nats.io:4222"];
+  const nc = await connect({ servers: servers, noRandomize: true });
+  const subj = nuid.next();
+  await nc.subscribe(subj, (err, msg) => {
+    lock.unlock();
+  });
+  nc.publish(subj);
+  await lock;
+  await nc.close();
+  // @ts-ignore
+  const a = nc.protocol.servers.getServers();
+  assertEquals(a.length, 1);
+  assert(a[0].didConnect);
+});
 
-// Deno.test("reconnect - disconnect", async () => {
-//   const lock = Lock(1, 5000);
-//   const nc = await connect({url: "demo.nats.io"});
-//   nc.addEventListener("disconnect", () => {
-//     console.log('dc');
-//   })
-//   console.log('close', () => {
-//     console.log('close!');
-//   })
-//   nc.addEventListener("error", (err) => {
-//     console.log('error', err);
-//   })
-//   // crash the client
-//   nc.protocol.sendCommand("BUP\r\n");
-//   await nc.flush();
-//   await lock;
-//   await nc.close();
-// })
+Deno.test("reconnect events", async () => {
+  const srv = await NatsServer.start();
 
-// Deno.test('reconnect events', async () => {
-//   let lock = Lock();
-//
-//   let server = await startServer();
-//   registerServer(server, t);
-//
-//   let nc = await connect({
-//     url: server.nats,
-//     waitOnFirstConnect: true,
-//     reconnectTimeWait: 100,
-//     maxReconnectAttempts: 10
-//   });
-//
-//   let reconnecting = 0;
-//   let stopTime = 0;
-//   nc.on('connect', () => {
-//     setTimeout(() => {
-//       stopServer(server, () => {
-//         stopTime = Date.now();
-//       });
-//     }, 100);
-//   });
-//
-//   let disconnects = 0;
-//   nc.on('disconnect', () => {
-//     disconnects++;
-//   });
-//
-//   nc.on('reconnecting', () => {
-//     reconnecting++;
-//   });
-//
-//   nc.on('error', (err) => {
-//     t.fail('on error should not have produced error: ' + err);
-//   });
-//
-//   nc.on('close', () => {
-//     t.is(reconnecting, 10, 'reconnecting count');
-//     t.is(disconnects, 1, 'disconnect count');
-//     lock.unlock();
-//   });
-//
-//   return lock.latch;
-// });
+  let nc = await connect({
+    port: srv.port,
+    waitOnFirstConnect: true,
+    reconnectTimeWait: 100,
+    maxReconnectAttempts: 10,
+  });
+
+  let disconnects = 0;
+  nc.addEventListener(Events.DISCONNECT, () => {
+    disconnects++;
+  });
+
+  let reconnecting = 0;
+  nc.addEventListener(DebugEvents.RECONNECTING, () => {
+    reconnecting++;
+  });
+  await srv.stop();
+  try {
+    await nc.status();
+  } catch (err) {
+    assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
+  }
+  assertEquals(disconnects, 1);
+  assertEquals(reconnecting, 10);
+});
 //
 // test('reconnect not emitted if suppressed', async (t) => {
 //   t.plan(2);

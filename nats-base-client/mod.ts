@@ -2,7 +2,6 @@ export { NatsConnection } from "./nats.ts";
 export { Nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
-  CLOSE_EVT,
   Events,
   ConnectionOptions,
   Msg,
@@ -14,7 +13,11 @@ export {
   defaultReq,
   defaultSub,
 } from "./types.ts";
-export { Transport, setTransportFactory } from "./transport.ts";
+export {
+  Transport,
+  setTransportFactory,
+  TransportEvents,
+} from "./transport.ts";
 export {
   Connect,
   MuxSubscription,

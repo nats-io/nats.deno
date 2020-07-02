@@ -17,7 +17,6 @@ import { BufWriter } from "https://deno.land/std/io/mod.ts";
 import { Deferred, deferred } from "https://deno.land/std/async/mod.ts";
 import Conn = Deno.Conn;
 import {
-  CLOSE_EVT,
   ConnectionOptions,
   DataBuffer,
   ErrorCode,
@@ -26,6 +25,7 @@ import {
   NatsError,
   render,
   Transport,
+  TransportEvents,
 } from "../nats-base-client/mod.ts";
 
 const VERSION = "0.0.1";
@@ -238,7 +238,7 @@ export class DenoTransport extends EventTarget implements Transport {
     }
 
     if (internal) {
-      this.dispatchEvent(new ErrorEvent(CLOSE_EVT, { error: err }));
+      this.dispatchEvent(new ErrorEvent(TransportEvents.CLOSE, { error: err }));
     }
   }
 }

@@ -20,12 +20,11 @@ import {
   Sub,
   Req,
   defaultSub,
-  CLOSE_EVT,
   Events,
   DebugEvents,
 } from "./types.ts";
 //@ts-ignore
-import { Transport, newTransport } from "./transport.ts";
+import { Transport, newTransport, TransportEvents } from "./transport.ts";
 //@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 import {
@@ -428,7 +427,7 @@ export class ProtocolHandler extends EventTarget {
 
     this.transport = newTransport();
     this.transport.addEventListener(
-      CLOSE_EVT,
+      TransportEvents.CLOSE,
       (async (evt: CustomEvent) => {
         evt.stopPropagation();
         if (this.state !== ParserState.CLOSED) {
@@ -444,11 +443,15 @@ export class ProtocolHandler extends EventTarget {
   async disconnected(err?: Error): Promise<void> {
     this.dispatchEvent((new Event(Events.DISCONNECT)));
     if (this.options.reconnect) {
-      await this.dialLoop();
-      this.dispatchEvent(new Event(Events.RECONNECT));
+      await this.dialLoop()
+        .then(() => {
+          this.dispatchEvent(new Event(Events.RECONNECT));
+        })
+        .catch((err) => {
+          this._close(err);
+        });
     } else {
-      await this.close();
-      this.dispatchEvent(new ErrorEvent(CLOSE_EVT, { error: err }));
+      await this._close();
     }
   }
 

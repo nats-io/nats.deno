@@ -15,6 +15,10 @@
 //@ts-ignore
 import { ConnectionOptions } from "./types.ts";
 
+export const TransportEvents = Object.freeze({
+  CLOSE: "close",
+});
+
 let transportFactory: TransportFactory;
 export function setTransportFactory(fn: TransportFactory): void {
   transportFactory = fn;
