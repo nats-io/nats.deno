@@ -3,7 +3,7 @@
 
 A Deno client for the [NATS messaging system](https://nats.io).
 
-[![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](./LICENSE.txt)
+[![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](./LICENSE)
 ![Test NATS.deno](https://github.com/nats-io/nats.deno/workflows/NATS.deno/badge.svg)
 
 
@@ -25,7 +25,7 @@ slightly - See the [TODO](TODO.md).
   import { connect } from "https://deno.land/x/nats/src/mod.ts";
   
 // create a connection
-  const nc = await connect({ url: 'nats://localhost:4222', payload: Payload.STRING });
+  const nc = await connect({ url: 'nats://127.0.0.1:4222', payload: Payload.STRING });
 
   // simple publisher
   nc.publish('hello', 'nats');
@@ -56,8 +56,7 @@ slightly - See the [TODO](TODO.md).
 
 
   // close the connection
-  nc.close();
-}
+  await nc.close();
 ```
 
 ## Wildcard Subscriptions
@@ -98,14 +97,12 @@ const qsub = nc.subscribe('urgent.help', (_, msg) => {
 
 ## Authentication
 ```javascript
-// if the connection requires authentication, 
-// provide it in the URL. NATS credentials are specified
-// in the `user`, `pass` or `token` options in the NatsConnectionOptions
+// if the connection requires authentication, provide `user` and `pass` or 
+// `token` options in the NatsConnectionOptions
 
-const nc = connect({url: "nats://wsuser:wsuserpass@localhost:4222" });
-const nc1 = connect({url: "nats://localhost:4222", user: "me", pass: "secret"});
-const nc2 = connect({url: "nats://localhost:8080", user: "jenny", token: "867-5309"});
-const nc3 = connect({url: "nats://localhost:8080", token: "t0pS3cret!"});
+const nc1 = await connect({url: "nats://127.0.0.1:4222", user: "me", pass: "secret"});
+const nc2 = await connect({url: "localhost:8080", user: "jenny", token: "867-5309"});
+const nc3 = await connect({port: 4222, token: "t0pS3cret!"});
 ```
 
 ## Advanced Usage
@@ -155,14 +152,34 @@ sub.clearTimeout()
 
 ### Error Handling
 ```javascript
-// when server returns an error, you are notified asynchronously
-nc.addEventListener('error', (ex)=> {
-  console.log('server sent error: ', ex)
+// Any async error results in the client being closed.
+// You can track the status of the client by registering
+// for a promise that will return when the client closes:
+nc.status().then((v) => {
+  if(v) {
+    console.log(`client closed with an error ${err.message}`);
+  } else {
+    console.log('client closed');
+  }
 });
 
-// when disconnected from the server, the 'close' event is sent
-nc.addEventListener('close', ()=> {
-  console.log('the connection closed')
-})
+```
+
+### Lifecycle/Informational Events
+```javascript
+// Clients can get notification on various event types:
+  nc.addEventListener(Events.RECONNECT, () => {
+    console.info("reconnected!!!")
+  });
+  nc.addEventListener(Events.DISCONNECT, () => {
+    console.error("disconnected!!!")
+  });
+  nc.addEventListener(Events.UPDATE, (evt) => {
+    // ServersChanged is a { added: string[], deleted: string[] }
+    const v = evt.detail;
+    console.log("servers changed");
+    console.table(v);
+  });
+
 ```
 

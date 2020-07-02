@@ -39,7 +39,7 @@ Deno.test("connect is a function", () => {
 Deno.test("default connect properties", () => {
   let c = new Connect(
     { version, lang },
-    { url: "nats://localhost:4222" } as ConnectionOptions,
+    { url: "nats://127.0.0.1:4222" } as ConnectionOptions,
   );
   assertEquals(c.lang, lang);
   assert(c.version);
@@ -54,7 +54,7 @@ Deno.test("default connect properties", () => {
 
 Deno.test("configured options", () => {
   let opts = {} as ConnectionOptions;
-  opts.url = "nats://localhost:4222";
+  opts.url = "nats://127.0.0.1:4222";
   opts.payload = Payload.BINARY;
   opts.name = "test";
   opts.pass = "secret";

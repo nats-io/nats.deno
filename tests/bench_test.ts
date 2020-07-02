@@ -24,7 +24,7 @@ const nuid = new Nuid();
 
 let max = 1000;
 Deno.test(`bench - pubsub`, async () => {
-  const lock = Lock(20000, max);
+  const lock = Lock(max, 30000);
   const nc = await connect({ url: u });
   const subj = nuid.next();
   nc.subscribe(subj, () => {
@@ -43,18 +43,17 @@ Deno.test(`bench - pubsub`, async () => {
   await lock;
 });
 
-Deno.test(`bench - pubonly`, async () => {
-  const lock = Lock(5000);
-  const nc = await connect({ url: u });
-  nc.addEventListener("close", () => {
-    lock.unlock();
-  });
-  const subj = nuid.next();
-
-  let i = 0;
-  for (; i < max; i++) {
-    nc.publish(subj);
-  }
-  await nc.drain();
-  await lock;
-});
+// Deno.test(`bench - pubonly`, async () => {
+//   const lock = Lock(max);
+//   const nc = await connect({ url: u });
+//   nc.addEventListener("close", () => {
+//     lock.unlock();
+//   });
+//   const subj = nuid.next();
+//
+//   for (let i=0; i < max; i++) {
+//     nc.publish(subj);
+//   }
+//   await nc.drain();
+//   await lock;
+// });

@@ -20,9 +20,11 @@ import {
   Sub,
   Req,
   defaultSub,
+  Events,
+  DebugEvents,
 } from "./types.ts";
 //@ts-ignore
-import { Transport, newTransport } from "./transport.ts";
+import { Transport, newTransport, TransportEvents } from "./transport.ts";
 //@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 import {
@@ -38,12 +40,16 @@ import {
   extend,
   extractProtocolMessage,
   timeout,
+  deferred,
+  Deferred,
   //@ts-ignore
 } from "./util.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
+import { Server, Servers } from "./servers.ts";
+import { delay } from "./util.ts";
 
 const nuid = new Nuid();
 
@@ -96,11 +102,6 @@ export class Connect {
 
 export interface Publisher {
   publish(subject: string, data: any, reply: string): void;
-}
-
-export interface ClientHandlers extends Publisher {
-  closeHandler: () => void;
-  errorHandler: (error: Error) => void;
 }
 
 export interface RequestOptions {
@@ -366,83 +367,183 @@ export class MsgBuffer {
 }
 
 export class ProtocolHandler extends EventTarget {
-  clientHandlers: ClientHandlers;
+  connected: boolean = false;
   inbound: DataBuffer;
   infoReceived: boolean = false;
   muxSubscriptions: MuxSubscription;
   options: ConnectionOptions;
   outbound: DataBuffer;
   payload: MsgBuffer | null = null;
-  pongs: Array<Function | undefined> = [];
+  pongs: Array<Deferred<void>>;
   pout: number = 0;
   state: ParserState = ParserState.AWAITING_CONTROL;
   subscriptions: Subscriptions;
   transport!: Transport;
   noMorePublishing: boolean = false;
   connectError?: Function;
+  publisher: Publisher;
+  closed: Deferred<Error | void>;
+  private servers: Servers;
+  private server!: Server;
 
-  constructor(options: ConnectionOptions, handlers: ClientHandlers) {
+  constructor(options: ConnectionOptions, publisher: Publisher) {
     super();
     this.options = options;
-    this.clientHandlers = handlers;
+    this.publisher = publisher;
     this.subscriptions = new Subscriptions();
     this.muxSubscriptions = new MuxSubscription();
     this.inbound = new DataBuffer();
     this.outbound = new DataBuffer();
+    this.pongs = [];
+    this.servers = new Servers(
+      !options.noRandomize,
+      this.options.servers,
+      this.options.url,
+    );
+    this.closed = deferred<Error | void>();
   }
 
-  public static connect(
-    options: ConnectionOptions,
-    handlers: ClientHandlers,
-  ): Promise<ProtocolHandler> {
-    const timer = timeout<ProtocolHandler>(options.timeout || 20000);
-    const ph = new ProtocolHandler(options, handlers);
-    const tp = new Promise<ProtocolHandler>((resolve, reject) => {
-      ph.connectError = (err: NatsError) => {
-        reject(err);
-      };
-      ph.transport = newTransport();
-      ph.transport.addEventListener("close", (evt: Event) => {
-        evt.stopPropagation();
-        ph.closeHandler();
-      });
-      ph.pongs.unshift(() => {
-        ph.connectError = undefined;
-        // this resolves the protocol
-        ph.sendSubscriptions();
-        ph.infoReceived = true;
-        ph.flushPending();
-        resolve(ph);
-      });
-      ph.transport.connect(options.url, options)
-        .then(() => {
-          (async () => {
-            try {
-              for await (const b of ph.transport) {
-                ph.inbound.fill(b);
-                ph.processInbound();
-              }
-            } catch (err) {
-              console.log("reader closed");
-            }
-          })();
-        })
-        .catch((err: Error) => {
-          reject(err);
-        });
+  private resetOutbound(): void {
+    this.pongs.forEach((p) => {
+      p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
     });
-    return new Promise((resolve, reject) => {
-      Promise.race([timer, tp])
-        .then((v) => {
-          timer.cancel();
-          resolve(v);
+    this.pongs.length = 0;
+    this.state = ParserState.AWAITING_CONTROL;
+    this.outbound = new DataBuffer();
+    this.infoReceived = false;
+  }
+
+  private prepare(): Deferred<void> {
+    this.resetOutbound();
+
+    const pong = deferred<void>();
+    this.pongs.unshift(pong);
+
+    this.connectError = undefined;
+
+    this.connectError = (err: NatsError) => {
+      pong.reject(err);
+    };
+
+    this.transport = newTransport();
+    this.transport.addEventListener(
+      TransportEvents.CLOSE,
+      (async (evt: CustomEvent) => {
+        evt.stopPropagation();
+        if (this.state !== ParserState.CLOSED) {
+          await this.disconnected(this.transport.closeError);
+          return;
+        }
+      }) as EventListener,
+    );
+
+    return pong;
+  }
+
+  async disconnected(err?: Error): Promise<void> {
+    this.dispatchEvent((new Event(Events.DISCONNECT)));
+    if (this.options.reconnect) {
+      await this.dialLoop()
+        .then(() => {
+          this.dispatchEvent(new Event(Events.RECONNECT));
         })
         .catch((err) => {
-          timer.cancel();
-          ph.transport?.close();
-          reject(err);
+          this._close(err);
         });
-    });
+    } else {
+      await this._close();
+    }
+  }
+
+  dial(srv: Server): Promise<any> {
+    const pong = this.prepare();
+    const timer = timeout(this.options.timeout || 20000);
+    this.transport.connect(srv.hostport(), this.options)
+      .then(() => {
+        (async () => {
+          try {
+            for await (const b of this.transport) {
+              this.inbound.fill(b);
+              this.processInbound();
+            }
+          } catch (err) {
+            console.log("reader closed", err);
+          }
+        })();
+      })
+      .catch((err: Error) => {
+        pong.reject(err);
+      });
+    return Promise.race([timer, pong])
+      .then(() => {
+        timer.cancel();
+        this.connectError = undefined;
+        if (this.connected) {
+          this.sendSubscriptions();
+        }
+        this.connected = true;
+        this.server.didConnect = true;
+        this.server.reconnects = 0;
+        this.infoReceived = true;
+        this.flushPending();
+      })
+      .catch((err) => {
+        timer.cancel();
+        this.transport?.close(err);
+        throw err;
+      });
+  }
+
+  async dialLoop(): Promise<void> {
+    let lastError: Error | undefined;
+    while (true) {
+      // @ts-ignore
+      let wait = this.options.reconnectDelayHandler();
+      let maxWait = wait;
+      const srv = this.selectServer();
+      if (!srv) {
+        throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED);
+      }
+      const now = Date.now();
+      if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
+        srv.lastConnect = Date.now();
+        try {
+          this.dispatchEvent(
+            new CustomEvent(
+              DebugEvents.RECONNECTING,
+              { detail: srv.hostport() },
+            ),
+          );
+          await this.dial(srv);
+          break;
+        } catch (err) {
+          lastError = err;
+          if (!this.connected) {
+            if (!this.options.waitOnFirstConnect) {
+              this.servers.removeCurrentServer();
+            }
+            continue;
+          }
+          srv.reconnects++;
+          const mra = this.options.maxReconnectAttempts || 0;
+          if (mra !== -1 && srv.reconnects >= mra) {
+            this.servers.removeCurrentServer();
+          }
+        }
+      } else {
+        maxWait = Math.min(maxWait, srv.lastConnect + wait - now);
+        await delay(maxWait);
+      }
+    }
+  }
+
+  public static async connect(
+    options: ConnectionOptions,
+    publisher: Publisher,
+  ): Promise<ProtocolHandler> {
+    const h = new ProtocolHandler(options, publisher);
+    await h.dialLoop();
+    return h;
   }
 
   static toError(s: string) {
@@ -468,7 +569,7 @@ export class ProtocolHandler extends EventTarget {
 
           if ((m = MSG.exec(buf))) {
             this.payload = new MsgBuffer(
-              this.clientHandlers,
+              this.publisher,
               m,
               this.options.payload,
             );
@@ -480,16 +581,17 @@ export class ProtocolHandler extends EventTarget {
             return;
           } else if ((m = PONG.exec(buf))) {
             this.pout = 0;
-            let cb = this.pongs.shift();
+            const cb = this.pongs.shift();
             if (cb) {
-              cb();
+              cb.resolve();
             }
           } else if ((m = PING.exec(buf))) {
             this.transport.send(buildMessage(`PONG ${CR_LF}`));
           } else if ((m = INFO.exec(buf))) {
+            const info = JSON.parse(m[1]);
+            const updates = this.servers.update(info);
             if (!this.infoReceived) {
               // send connect
-              // const info = JSON.parse(m[1]);
               const { version, lang } = this.transport;
               let cs = JSON.stringify(
                 new Connect({ version, lang }, this.options),
@@ -499,6 +601,11 @@ export class ProtocolHandler extends EventTarget {
               );
               this.transport.send(
                 buildMessage(`PING ${CR_LF}`),
+              );
+            }
+            if (updates) {
+              this.dispatchEvent(
+                new CustomEvent(Events.UPDATE, { detail: updates }),
               );
             }
           } else {
@@ -657,15 +764,20 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  flush(f?: Function): void {
-    this.pongs.push(f);
+  flush(p?: Deferred<any>): Promise<void> {
+    if (!p) {
+      p = deferred();
+    }
+    this.pongs.push(p);
     this.sendCommand(`PING ${CR_LF}`);
+    return p;
   }
 
-  processError(s: string) {
+  async processError(s: string) {
     let err = ProtocolHandler.toError(s);
-    let evt = { error: err } as ErrorEvent;
-    this.errorHandler(evt);
+    await this._close(err);
+
+    // this.dispatchEvent(new ErrorEvent(CLOSE_EVT, new ErrorEvent("error", { error: err })));
   }
 
   sendSubscriptions() {
@@ -682,25 +794,23 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  closeHandler(): void {
-    this.close();
-    this.clientHandlers.closeHandler();
-  }
-
-  errorHandler(evt: Event | Error): void {
-    let err;
-    if (evt) {
-      err = (evt as ErrorEvent).error;
-    }
-    this.handleError(err);
-  }
-
-  close(): Promise<void> {
+  private _close(err?: Error): Promise<void> {
     if (this.state === ParserState.CLOSED) {
       return Promise.resolve();
     }
+    if (this.connectError) {
+      this.connectError(err);
+      this.connectError = undefined;
+    }
     this.state = ParserState.CLOSED;
-    return this.transport.close();
+    return this.transport.close(err)
+      .then(() => {
+        return this.closed.resolve(err);
+      });
+  }
+
+  close(): Promise<void> {
+    return this._close();
   }
 
   isClosed(): boolean {
@@ -724,32 +834,26 @@ export class ProtocolHandler extends EventTarget {
       });
   }
 
-  drainSubscription(sid: number): Promise<void> {
+  async drainSubscription(sid: number): Promise<void> {
     if (this.isClosed()) {
-      return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED),
-      );
+      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
     }
     if (!sid) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_CLOSED));
+      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
     }
     let s = this.subscriptions.get(sid);
     if (!s) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_CLOSED));
+      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
     }
     if (s.draining) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.SUB_DRAINING));
+      throw NatsError.errorForCode(ErrorCode.SUB_DRAINING);
     }
 
     let sub = s;
-    return new Promise((resolve) => {
-      sub.draining = true;
-      this.sendCommand(`UNSUB ${sub.sid}\r\n`);
-      this.flush(() => {
-        this.subscriptions.cancel(sub);
-        resolve();
-      });
-    });
+    sub.draining = true;
+    this.sendCommand(`UNSUB ${sub.sid}\r\n`);
+    await this.flush();
+    this.subscriptions.cancel(sub);
   }
 
   private flushPending() {
@@ -776,12 +880,17 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  private async handleError(err: Error) {
-    if (this.connectError) {
-      this.connectError(err);
-      this.connectError = undefined;
+  private selectServer(): Server | undefined {
+    let server = this.servers.selectServer();
+    if (server === undefined) {
+      return undefined;
     }
-    await this.close();
-    this.clientHandlers.errorHandler(err);
+    // Place in client context.
+    this.server = server;
+    return this.server;
+  }
+
+  getServer(): Server | undefined {
+    return this.server;
   }
 }

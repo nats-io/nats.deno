@@ -8,30 +8,59 @@ import {
   connect,
   ErrorCode,
   NatsConnection,
-  NatsError,
   Nuid,
   Payload,
 } from "../src/mod.ts";
-import { Connection, Lock, TestServer } from "./helpers/mod.ts";
+import {
+  Connection,
+  Lock,
+  NatsServer,
+  TestServer,
+} from "./helpers/mod.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 const u = "https://demo.nats.io:4222";
 
 const nuid = new Nuid();
 
-Deno.test("connect", async () => {
+Deno.test("connect port", async () => {
+  const ns = await NatsServer.start();
+  let nc = await connect({ port: ns.port });
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("connect default", async () => {
+  const ns = await NatsServer.start({ port: 4222 });
+  let nc = await connect({});
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("connect host", async () => {
+  let nc = await connect({ url: "demo.nats.io" });
+  await nc.close();
+});
+
+Deno.test("connect hostport", async () => {
+  let nc = await connect({ url: "demo.nats.io:4222" });
+  await nc.close();
+});
+
+Deno.test("connect url", async () => {
   const nc = await connect({ url: u });
   await nc.close();
 });
 
 Deno.test("fail connect", async () => {
   await assertThrowsAsync(async (): Promise<void> => {
-    await connect({ url: `https://localhost:32001` });
+    await connect({ url: `127.0.0.1:32001` });
   });
 });
 
 Deno.test("publish", async () => {
   const nc = await connect({ url: u });
-  nc.publish("foo");
+  nc.publish(nuid.next());
   await nc.flush();
   await nc.close();
 });
@@ -53,8 +82,8 @@ Deno.test("pubsub", async () => {
   const subj = nuid.next();
   connect({ url: u })
     .then((nc) => {
-      nc.subscribe(subj, () => {
-        nc.close();
+      nc.subscribe(subj, async () => {
+        await nc.close();
         lock.unlock();
       });
       nc.publish(subj);
@@ -230,7 +259,7 @@ Deno.test("closed cannot subscribe", async () => {
   await nc.close();
   let failed = false;
   try {
-    nc.subscribe("foo", () => {});
+    nc.subscribe(nuid.next(), () => {});
     fail("should have not been able to subscribe");
   } catch (err) {
     failed = true;
@@ -243,7 +272,7 @@ Deno.test("close cannot request", async () => {
   nc.close();
   let failed = false;
   try {
-    await nc.request("foo");
+    await nc.request(nuid.next());
     fail("should have not been able to request");
   } catch (err) {
     failed = true;
@@ -318,8 +347,10 @@ Deno.test("close listener is called", async () => {
       ca.close();
     }, 0);
   });
-  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
-  nc.addEventListener("close", async () => {
+  const nc = await connect(
+    { port: cs.getPort(), reconnect: false },
+  );
+  nc.status().then((err) => {
     lock.unlock();
   });
 
@@ -328,27 +359,26 @@ Deno.test("close listener is called", async () => {
   await nc.close();
 });
 
-Deno.test("error listener is called", async () => {
-  const lock = Lock(3000);
+Deno.test("status returns error", async () => {
+  const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
       await ca.write(new TextEncoder().encode("-ERR 'here'\r\n"));
     }, 500);
   });
-  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
-  nc.addEventListener("error", (err) => {
-    const ne = err as NatsError;
-    assertEquals(ne.message, "'here'");
-    lock.unlock();
-  });
 
-  await lock;
+  const nc = await connect({ url: `127.0.0.1:${cs.getPort()}` });
+  await nc.status()
+    .then((v) => {
+      assertEquals((v as Error).message, "'here'");
+      lock.unlock();
+    });
   assertEquals(nc.isClosed(), true);
   await cs.stop();
 });
 
 Deno.test("subscription with timeout", async () => {
-  const lock = Lock(3000);
+  const lock = Lock(1);
   const nc = await connect({ url: u });
   const sub = nc.subscribe(nuid.next(), () => {
   }, { max: 1 });
@@ -387,15 +417,12 @@ Deno.test("subscription timeout autocancels", async () => {
   const sub = nc.subscribe(subj, () => {
     c++;
   }, { max: 2 });
-  sub.setTimeout(150, () => {
+  sub.setTimeout(300, () => {
     fail();
   });
   nc.publish(subj);
   nc.publish(subj);
-  const lock = Lock(350);
-  setTimeout(lock.unlock, 250);
-  await lock;
-  await nc.flush();
+  await delay(500);
   assertEquals(c, 2);
   await nc.close();
 });
@@ -408,7 +435,7 @@ Deno.test("subscription timeout cancel", async () => {
     fail();
   });
   sub.cancelTimeout();
-  const lock = Lock(300);
+  const lock = Lock(1, 300);
   setTimeout(lock.unlock, 200);
   await lock;
   await nc.flush();

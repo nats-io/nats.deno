@@ -27,7 +27,12 @@ const conf = { authorization: { token: "tokenxxxx" } };
 Deno.test("token empty", async () => {
   const ns = await NatsServer.start(conf);
   try {
-    const nc = await connect({ url: `http://localhost:${ns.port}` });
+    const nc = await connect(
+      { port: ns.port, reconnect: false },
+    );
+    nc.status().then((err) => {
+      console.table(err);
+    });
     await nc.close();
     fail("should not have connected");
   } catch (err) {
@@ -40,7 +45,7 @@ Deno.test("token bad", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
-      { url: `http://localhost:${ns.port}`, token: "bad" },
+      { port: ns.port, token: "bad" },
     );
     await nc.close();
     fail("should not have connected");
@@ -53,7 +58,7 @@ Deno.test("token bad", async () => {
 Deno.test("token ok", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
-    { url: `http://localhost:${ns.port}`, token: "tokenxxxx" },
+    { port: ns.port, token: "tokenxxxx" },
   );
   await nc.close();
   await ns.stop();

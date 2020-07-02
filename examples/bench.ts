@@ -3,7 +3,7 @@
 import { parse } from "https://deno.land/std@v0.56.0/flags/mod.ts";
 import { connect, Nuid } from "https://deno.land/x/nats/src/mod.ts";
 const defaults = {
-  s: "nats://localhost:4222",
+  s: "nats://127.0.0.1:4222",
   c: 1000000,
 };
 
@@ -13,6 +13,7 @@ const argv = parse(
     alias: {
       "s": ["server"],
       "c": ["count"],
+      "d": ["debug"],
     },
     default: defaults,
   },
@@ -32,7 +33,7 @@ const subj = String(argv.subj) || new Nuid().next();
 const nc = await connect({ url: server, debug: argv.debug });
 nc.addEventListener("error", (err: Error): void => {
   console.error(err);
-})
+});
 const start = Date.now();
 
 if (argv.req) {
@@ -77,7 +78,8 @@ if ((argv.pub && !argv.sub) || (argv.sub && !argv.pub)) {
   console.log(`${Math.round(i / secs)} msgs/sec - ${millis} millis`);
 } else {
   console.log(
-    `${Math.round((argv.c * 2) / secs)} msgs/sec - ${millis} millis - ${j}`);
+    `${Math.round((argv.c * 2) / secs)} msgs/sec - ${millis} millis - ${j}`,
+  );
 }
 
 if (argv.req) {

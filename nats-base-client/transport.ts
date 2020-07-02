@@ -15,6 +15,10 @@
 //@ts-ignore
 import { ConnectionOptions } from "./types.ts";
 
+export const TransportEvents = Object.freeze({
+  CLOSE: "close",
+});
+
 let transportFactory: TransportFactory;
 export function setTransportFactory(fn: TransportFactory): void {
   transportFactory = fn;
@@ -35,9 +39,10 @@ export interface Transport extends AsyncIterable<Uint8Array>, EventTarget {
   readonly isClosed: boolean;
   readonly lang: string;
   readonly version: string;
+  readonly closeError?: Error;
 
   connect(
-    url: string,
+    hp: { hostname: string; port: number },
     opts: ConnectionOptions,
   ): Promise<void>;
 

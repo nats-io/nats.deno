@@ -17,7 +17,7 @@
 
 ## Features
 - [X] Transform all urls to something deno can handle
-- [ ] Implement reconnect
+- [X] Implement reconnect
 - [X] TLS support
 - [ ] NKey signing support
 

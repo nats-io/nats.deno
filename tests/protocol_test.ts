@@ -17,7 +17,6 @@ import {
   ConnectionOptions,
   ProtocolHandler,
   Sub,
-  ClientHandlers,
   defaultReq,
   Msg,
 } from "../nats-base-client/mod.ts";
@@ -30,10 +29,10 @@ import {
 import { MuxSubscription } from "../nats-base-client/protocol.ts";
 
 Deno.test("protocol - partial messages correctly", async () => {
-  let lock = Lock(3);
+  let lock = Lock(1, 3);
   let protocol = new ProtocolHandler(
     {} as ConnectionOptions,
-    {} as ClientHandlers,
+    { publish: (subject, data1, reply) => {} },
   );
   protocol.infoReceived = true;
   // feed the inbound with arrays of 1 byte at a time

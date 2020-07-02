@@ -13,11 +13,10 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@v0.56.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@v0.56.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std/async/mod.ts";
 import Conn = Deno.Conn;
 import {
-  CLOSE_EVT,
   ConnectionOptions,
   DataBuffer,
   ErrorCode,
@@ -26,6 +25,7 @@ import {
   NatsError,
   render,
   Transport,
+  TransportEvents,
 } from "../nats-base-client/mod.ts";
 
 const VERSION = "0.0.1";
@@ -44,6 +44,7 @@ export async function write(
 export class DenoTransport extends EventTarget implements Transport {
   version: string = VERSION;
   lang: string = LANG;
+  closeError?: Error;
   private options!: ConnectionOptions;
   private buf: Uint8Array;
   private encrypted = false;
@@ -65,16 +66,11 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   async connect(
-    url: string,
+    hp: { hostname: string; port: number },
     options: ConnectionOptions,
   ): Promise<any> {
     this.options = options;
     try {
-      // deno cannot parse urls with a `nats://` or `tls://` protocol
-      url = url.replace("nats://", "https://");
-      url = url.replace("tls://", "https://");
-      const u = new URL(url);
-      const hp = { hostname: u.hostname, port: parseInt(u.port, 10) };
       this.conn = await Deno.connect(hp);
       const info = await this.peekInfo();
       this.checkOpts(info);
@@ -102,8 +98,8 @@ export class DenoTransport extends EventTarget implements Transport {
     while (true) {
       let c = await this.conn.read(this.buf);
       if (c) {
-        if (c === null) {
-          // closed!
+        if (null === c) {
+          // EOF
           return Promise.reject(
             new Error("socket closed while expecting INFO"),
           );
@@ -170,7 +166,7 @@ export class DenoTransport extends EventTarget implements Transport {
         break;
       }
     }
-    await this.close(reason);
+    this._closed(reason);
   }
 
   private enqueue(frame: Uint8Array): Promise<void> {
@@ -218,9 +214,13 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   async close(err?: Error): Promise<void> {
-    if (this.closed) {
-      return;
-    }
+    return this._closed(err, false);
+  }
+
+  private async _closed(err?: Error, internal: boolean = true): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    this.closeError = err;
     if (!err) {
       try {
         // this is a noop for the server, but gives us a place to hang
@@ -232,19 +232,13 @@ export class DenoTransport extends EventTarget implements Transport {
         }
       }
     }
-    this._close();
-  }
-
-  private _close(): void {
-    if (this.closed) return;
     try {
       this.conn?.close();
     } catch (err) {
-      console.error(err);
-    } finally {
-      this.closed = true;
-      // for now we always publish the close event
-      this.dispatchEvent(new Event(CLOSE_EVT));
+    }
+
+    if (internal) {
+      this.dispatchEvent(new ErrorEvent(TransportEvents.CLOSE, { error: err }));
     }
   }
 }

@@ -20,10 +20,10 @@ import {
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
+  Events,
   //@ts-ignore
 } from "./mod.ts";
 import {
-  ClientHandlers,
   ProtocolHandler,
   RequestOptions,
   Subscription,
@@ -33,31 +33,18 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { parseOptions, defaultReq, defaultSub } from "./types.ts";
+import { DebugEvents, defaultReq, defaultSub } from "./types.ts";
+import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
 
-export interface Callback {
-  (): void;
-}
-
-export interface ErrorCallback {
-  (error: Error): void;
-}
-
-export interface ClientEventMap {
-  "close": Callback;
-  "error": ErrorCallback;
-}
-
-export class NatsConnection implements ClientHandlers {
+export class NatsConnection extends EventTarget {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
-  closeListeners: Callback[] = [];
-  errorListeners: ErrorCallback[] = [];
   draining: boolean = false;
 
   private constructor(opts: ConnectionOptions) {
+    super();
     this.options = parseOptions(opts);
   }
 
@@ -67,16 +54,28 @@ export class NatsConnection implements ClientHandlers {
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;
-          ph.addEventListener("close", () => {
-            console.log("close evt");
-            nc.closeHandler();
-          });
+          // setup a listener to forward lifecycle events
+          const handler = (evt: Event): void | Promise<void> => {
+            const { detail } = evt as CustomEvent;
+            const e = detail
+              ? new CustomEvent(evt.type, { detail })
+              : new Event(evt.type);
+            nc.dispatchEvent(e);
+          };
+          ph.addEventListener(Events.DISCONNECT, handler);
+          ph.addEventListener(Events.RECONNECT, handler);
+          ph.addEventListener(DebugEvents.RECONNECTING, handler);
+          ph.addEventListener(Events.UPDATE, handler);
           resolve(nc);
         })
         .catch((err: Error) => {
           reject(err);
         });
     });
+  }
+
+  status(): Promise<void | Error> {
+    return this.protocol.closed;
   }
 
   async close() {
@@ -178,11 +177,7 @@ export class NatsConnection implements ClientHandlers {
      * @returns {Promise<void>}
      */
   flush(): Promise<void> {
-    return new Promise((resolve) => {
-      this.protocol.flush(() => {
-        resolve();
-      });
-    });
+    return this.protocol.flush();
   }
 
   drain(): Promise<void> {
@@ -200,54 +195,16 @@ export class NatsConnection implements ClientHandlers {
     return this.protocol.drain();
   }
 
-  errorHandler(error: Error): void {
-    this.errorListeners.forEach((cb) => {
-      try {
-        cb(error);
-      } catch (ex) {
-      }
-    });
-  }
-
-  closeHandler(): void {
-    this.closeListeners.forEach((cb) => {
-      try {
-        cb();
-      } catch (ex) {
-      }
-    });
-  }
-
-  addEventListener<K extends keyof ClientEventMap>(
-    type: K,
-    listener: ClientEventMap[K],
-  ): void {
-    if (type === "close") {
-      //@ts-ignore
-      this.closeListeners.push(listener);
-    } else if (type === "error") {
-      //@ts-ignore
-      this.errorListeners.push(listener);
-    }
-  }
-
-  // addEventListener<K extends keyof ClientEventMap>(
-  //   type: K,
-  //   listener: (this: NatsConnection, ev: ClientEventMap[K]) => void): void {
-  //   if (type === "close") {
-  //     //@ts-ignore
-  //     this.closeListeners.push(listener);
-  //   } else if (type === "error") {
-  //     //@ts-ignore
-  //     this.errorListeners.push(listener);
-  //   }
-  // }
-
   isClosed(): boolean {
     return this.protocol.isClosed();
   }
 
   isDraining(): boolean {
     return this.draining;
+  }
+
+  getServer(): string {
+    const srv = this.protocol.getServer();
+    return srv ? srv.listen : "";
   }
 }
