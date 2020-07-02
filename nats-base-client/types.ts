@@ -27,7 +27,7 @@ export const DebugEvents = Object.freeze({
 });
 
 export const DEFAULT_PORT = 4222;
-export const DEFAULT_PRE = "nats://localhost:";
+export const DEFAULT_PRE = "nats://127.0.0.1:";
 export const DEFAULT_URI = DEFAULT_PRE + DEFAULT_PORT;
 
 // DISCONNECT Parameters, 2 sec wait, 10 tries
