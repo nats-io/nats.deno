@@ -10,7 +10,7 @@ const argv = parse(
       "s": ["server"],
     },
     default: {
-      s: "nats://localhost:4222",
+      s: "nats://127.0.0.1:4222",
     },
   },
 );

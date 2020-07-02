@@ -149,7 +149,7 @@ export class NatsServer implements PortInfo {
 
   static async start(conf?: any, debug: boolean = false): Promise<NatsServer> {
     const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
-    const tmp = Deno.env.get("TMPDIR") || ".";
+    const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
 
     let srv: Deno.Process;
     return new Promise(async (resolve, reject) => {
@@ -185,7 +185,8 @@ export class NatsServer implements PortInfo {
           () => {
             try {
               const data = Deno.readFileSync(portsFile);
-              const d = JSON.parse(new TextDecoder().decode(data));
+              const txt = new TextDecoder().decode(data);
+              const d = JSON.parse(txt);
               if (d) {
                 return d;
               }
@@ -224,7 +225,7 @@ export class NatsServer implements PortInfo {
             const d = await srv.stderrOutput();
             console.error(new TextDecoder().decode(d));
           } catch (err) {
-            console.error("unable to read server output");
+            console.error("unable to read server output:", err);
           }
         }
         reject(err);

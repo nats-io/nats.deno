@@ -10,7 +10,7 @@ const argv = parse(
       "s": ["server"],
     },
     default: {
-      s: "nats://localhost:4222",
+      s: "nats://127.0.0.1:4222",
     },
   },
 );
@@ -25,10 +25,10 @@ if (!subject) {
 }
 
 const nc = await connect(opts);
-
-nc.addEventListener("error", (err: Error): void => {
-  console.error(err);
-});
+nc.status()
+  .then((err) => {
+    console.log("closed", err);
+  });
 
 nc.publish(subject, payload);
 await nc.flush();

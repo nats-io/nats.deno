@@ -25,7 +25,7 @@ slightly - See the [TODO](TODO.md).
   import { connect } from "https://deno.land/x/nats/src/mod.ts";
   
 // create a connection
-  const nc = await connect({ url: 'nats://localhost:4222', payload: Payload.STRING });
+  const nc = await connect({ url: 'nats://127.0.0.1:4222', payload: Payload.STRING });
 
   // simple publisher
   nc.publish('hello', 'nats');
@@ -100,7 +100,7 @@ const qsub = nc.subscribe('urgent.help', (_, msg) => {
 // if the connection requires authentication, provide `user` and `pass` or 
 // `token` options in the NatsConnectionOptions
 
-const nc1 = await connect({url: "nats://localhost:4222", user: "me", pass: "secret"});
+const nc1 = await connect({url: "nats://127.0.0.1:4222", user: "me", pass: "secret"});
 const nc2 = await connect({url: "localhost:8080", user: "jenny", token: "867-5309"});
 const nc3 = await connect({port: 4222, token: "t0pS3cret!"});
 ```

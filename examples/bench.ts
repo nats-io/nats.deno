@@ -3,7 +3,7 @@
 import { parse } from "https://deno.land/std@v0.56.0/flags/mod.ts";
 import { connect, Nuid } from "https://deno.land/x/nats/src/mod.ts";
 const defaults = {
-  s: "nats://localhost:4222",
+  s: "nats://127.0.0.1:4222",
   c: 1000000,
 };
 

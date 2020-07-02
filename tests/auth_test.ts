@@ -44,7 +44,7 @@ Deno.test("auth none", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
-      { url: `nats://localhost:${ns.port}` },
+      { port: ns.port },
     );
     await nc.close();
     fail("shouldnt have been able to connect");
@@ -58,7 +58,7 @@ Deno.test("auth bad", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
-      { url: `nats://localhost:${ns.port}`, user: "me", pass: "hello" },
+      { port: ns.port, user: "me", pass: "hello" },
     );
     await nc.close();
     fail("shouldnt have been able to connect");
@@ -71,7 +71,7 @@ Deno.test("auth bad", async () => {
 Deno.test("auth", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
-    { url: `nats://localhost:${ns.port}`, user: "derek", pass: "foobar" },
+    { port: ns.port, user: "derek", pass: "foobar" },
   );
   await nc.flush();
   await nc.close();
@@ -82,7 +82,7 @@ Deno.test("auth cannot sub to foo", async () => {
   const ns = await NatsServer.start(conf);
   const lock = Lock();
   const nc = await connect(
-    { url: `nats://localhost:${ns.port}`, user: "derek", pass: "foobar" },
+    { port: ns.port, user: "derek", pass: "foobar" },
   );
   nc.status().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
@@ -103,7 +103,7 @@ Deno.test("auth cannot pub bar", async () => {
   const ns = await NatsServer.start(conf);
   const lock = Lock();
   const nc = await connect(
-    { url: `nats://localhost:${ns.port}`, user: "derek", pass: "foobar" },
+    { port: ns.port, user: "derek", pass: "foobar" },
   );
   nc.status().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
@@ -121,7 +121,7 @@ Deno.test("auth cannot pub bar", async () => {
 });
 
 Deno.test("auth no user and token", async () => {
-  connect({ url: "nats://localhost:4222", user: "derek", token: "foobar" })
+  connect({ url: "nats://127.0.0.1:4222", user: "derek", token: "foobar" })
     .then(async (nc) => {
       await nc.close();
       fail("should not have connected");

@@ -1,6 +1,6 @@
 export function check(
   fn: Function,
-  timeout: number = 1000,
+  timeout: number = 5000,
   opts?: { interval?: number; name?: string },
 ): Promise<any> {
   opts = opts || {};

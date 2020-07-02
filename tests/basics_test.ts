@@ -8,12 +8,10 @@ import {
   connect,
   ErrorCode,
   NatsConnection,
-  NatsError,
   Nuid,
   Payload,
 } from "../src/mod.ts";
 import {
-  assertErrorCode,
   Connection,
   Lock,
   NatsServer,
@@ -25,7 +23,7 @@ const u = "https://demo.nats.io:4222";
 
 const nuid = new Nuid();
 
-Deno.test("connect with port", async () => {
+Deno.test("connect port", async () => {
   const ns = await NatsServer.start();
   let nc = await connect({ port: ns.port });
   await nc.close();
@@ -350,7 +348,7 @@ Deno.test("close listener is called", async () => {
     }, 0);
   });
   const nc = await connect(
-    { url: `https://localhost:${cs.getPort()}`, reconnect: false },
+    { port: cs.getPort(), reconnect: false },
   );
   nc.status().then((err) => {
     lock.unlock();
@@ -362,7 +360,7 @@ Deno.test("close listener is called", async () => {
 });
 
 Deno.test("error listener is called", async () => {
-  const lock = Lock(1, 3000);
+  const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
       await ca.write(new TextEncoder().encode("-ERR 'here'\r\n"));
@@ -380,7 +378,7 @@ Deno.test("error listener is called", async () => {
 });
 
 Deno.test("subscription with timeout", async () => {
-  const lock = Lock(1, 3000);
+  const lock = Lock(1);
   const nc = await connect({ url: u });
   const sub = nc.subscribe(nuid.next(), () => {
   }, { max: 1 });

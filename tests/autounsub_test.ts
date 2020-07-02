@@ -141,7 +141,7 @@ Deno.test("manual request receives expected count with multiple helpers", async 
   let nc = await connect({ url: u });
   let requestSubject = nuid.next();
 
-  const lock = Lock(6, 1000);
+  const lock = Lock(6);
   for (let i = 0; i < 5; i++) {
     nc.subscribe(requestSubject, (_, msg) => {
       if (msg.reply) {

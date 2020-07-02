@@ -44,7 +44,7 @@ Deno.test(`bench - pubsub`, async () => {
 });
 
 // Deno.test(`bench - pubonly`, async () => {
-//   const lock = Lock(5000, max);
+//   const lock = Lock(max);
 //   const nc = await connect({ url: u });
 //   nc.addEventListener("close", () => {
 //     lock.unlock();

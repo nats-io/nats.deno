@@ -32,8 +32,8 @@ import { nuid } from "../nats-base-client/nats.ts";
 import { DebugEvents } from "../nats-base-client/types.ts";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
-  const lock = Lock(1, 5000);
-  const servers = ["nats://localhost:7", "demo.nats.io:4222"];
+  const lock = Lock(1);
+  const servers = ["nats://127.0.0.1:7", "demo.nats.io:4222"];
   const nc = await connect({ servers: servers, noRandomize: true });
   const subj = nuid.next();
   await nc.subscribe(subj, (err, msg) => {
@@ -143,7 +143,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
 
   await srv.stop();
 
-  const lock = Lock(1, 2000);
+  const lock = Lock(1);
   setTimeout(async () => {
     srv = await srv.restart();
     lock.unlock();

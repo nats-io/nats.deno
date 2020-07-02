@@ -8,7 +8,7 @@ import { delay } from "../nats-base-client/mod.ts";
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
   const nc = await connect(
-    { url: `nats://localhost:${ns.port}` },
+    { port: ns.port },
   );
   nc.close();
   const status = await nc.status();
@@ -20,7 +20,7 @@ Deno.test("events - disconnect and close", async () => {
   const lock = Lock(2);
   const ns = await NatsServer.start();
   const nc = await connect(
-    { url: `nats://localhost:${ns.port}`, reconnect: false },
+    { port: ns.port, reconnect: false },
   );
   nc.addEventListener(Events.DISCONNECT, () => {
     lock.unlock();
@@ -64,14 +64,14 @@ Deno.test("events - update", async () => {
   const cluster = await NatsServer.cluster(1);
   const nc = await connect(
     {
-      url: `nats://localhost:${cluster[0].port}`,
+      url: `nats://127.0.0.1:${cluster[0].port}`,
     },
   );
-  const lock = Lock(1, 5000);
+  const lock = Lock(1);
   nc.addEventListener(
     Events.UPDATE,
     ((evt: CustomEvent) => {
-      assertEquals(evt.detail.added.length, 2);
+      assertEquals(evt.detail.added.length, 1);
       lock.unlock();
     }) as EventListener,
   );
