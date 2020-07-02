@@ -54,7 +54,7 @@ Deno.test("connect url", async () => {
 
 Deno.test("fail connect", async () => {
   await assertThrowsAsync(async (): Promise<void> => {
-    await connect({ url: `https://localhost:32001` });
+    await connect({ url: `127.0.0.1:32001` });
   });
 });
 
@@ -359,7 +359,7 @@ Deno.test("close listener is called", async () => {
   await nc.close();
 });
 
-Deno.test("error listener is called", async () => {
+Deno.test("status returns error", async () => {
   const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
@@ -367,8 +367,8 @@ Deno.test("error listener is called", async () => {
     }, 500);
   });
 
-  const nc = await connect({ url: `https://localhost:${cs.getPort()}` });
-  const status = await nc.status()
+  const nc = await connect({ url: `127.0.0.1:${cs.getPort()}` });
+  await nc.status()
     .then((v) => {
       assertEquals((v as Error).message, "'here'");
       lock.unlock();
