@@ -34,16 +34,21 @@ try {
     argv.debug,
   );
   cluster.forEach((s) => {
-    console.log(`launched server [${s.process.pid}] at ${s.port}`);
+    console.log(
+      `launched server [${s.process.pid}] at ${s.hostname}:${s.port}`,
+    );
   });
 
-  console.log("control+c to terminate");
-  await new Promise((resolve) => {
-    Deno.signal(Deno.Signal.SIGINT)
-      .then(() => {
-        resolve();
-      });
-  });
+  await waitForStop();
 } catch (err) {
   console.error(err);
+}
+
+async function waitForStop() {
+  console.log("control+c to terminate");
+  const interval = setInterval(() => {}, Number.MAX_SAFE_INTEGER);
+  Deno.signal(Deno.Signal.SIGINT)
+    .then(() => {
+      clearInterval(interval);
+    });
 }

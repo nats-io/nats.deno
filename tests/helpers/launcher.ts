@@ -254,7 +254,6 @@ export function toConf(o: object, indent?: string): string {
       } else {
         if (!Array.isArray(o)) {
           if (
-            //@ts-ignore
             typeof v === "string" && v.charAt(0) >= "0" && v.charAt(0) <= "9"
           ) {
             buf.push(pad + k + ': \"' + v + '\"');

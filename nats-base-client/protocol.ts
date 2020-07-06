@@ -22,6 +22,7 @@ import {
   defaultSub,
   Events,
   DebugEvents,
+  DEFAULT_RECONNECT_TIME_WAIT,
 } from "./types.ts";
 //@ts-ignore
 import { Transport, newTransport, TransportEvents } from "./transport.ts";
@@ -155,7 +156,6 @@ export class Subscription {
         clearTimeout(sub.timeout);
         sub.timeout = null;
       }
-      // @ts-ignore
       sub.timeout = setTimeout(cb, millis);
       return true;
     }
@@ -310,6 +310,7 @@ class msg implements Msg {
     this.publisher = publisher;
   }
 
+  // eslint-ignore-next-line @typescript-eslint/no-explicit-any
   respond(data?: any): void {
     const reply = this.reply || "";
     this.publisher.publish(reply, data, "");
@@ -455,7 +456,7 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  dial(srv: Server): Promise<any> {
+  dial(srv: Server): Promise<void> {
     const pong = this.prepare();
     const timer = timeout(this.options.timeout || 20000);
     this.transport.connect(srv.hostport(), this.options)
@@ -497,8 +498,9 @@ export class ProtocolHandler extends EventTarget {
   async dialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
-      // @ts-ignore
-      let wait = this.options.reconnectDelayHandler();
+      let wait = this.options.reconnectDelayHandler
+        ? this.options.reconnectDelayHandler()
+        : DEFAULT_RECONNECT_TIME_WAIT;
       let maxWait = wait;
       const srv = this.selectServer();
       if (!srv) {
@@ -764,7 +766,7 @@ export class ProtocolHandler extends EventTarget {
     }
   }
 
-  flush(p?: Deferred<any>): Promise<void> {
+  flush(p?: Deferred<void>): Promise<void> {
     if (!p) {
       p = deferred();
     }
