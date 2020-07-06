@@ -28,13 +28,13 @@ const cryptoObj = initCrypto();
 
 function initCrypto() {
   let cryptoObj = null;
-  if (window) {
-    if ("crypto" in window && window.crypto.getRandomValues) {
-      cryptoObj = window.crypto;
+  if (globalThis) {
+    if ("crypto" in globalThis && globalThis.crypto.getRandomValues) {
+      cryptoObj = globalThis.crypto;
     } // @ts-ignore
-    else if ("msCrypto" in window && window.msCrypto.getRandomValues) {
+    else if ("msCrypto" in globalThis && globalThis.msCrypto.getRandomValues) {
       //@ts-ignore
-      cryptoObj = window.msCrypto;
+      cryptoObj = globalThis.msCrypto;
     }
   }
   if (!cryptoObj) {
