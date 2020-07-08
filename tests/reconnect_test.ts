@@ -36,8 +36,10 @@ Deno.test("reconnect - should receive when some servers are invalid", async () =
   const servers = ["nats://127.0.0.1:7", "demo.nats.io:4222"];
   const nc = await connect({ servers: servers, noRandomize: true });
   const subj = nuid.next();
-  await nc.subscribe(subj, (err, msg) => {
-    lock.unlock();
+  await nc.subscribe(subj, {
+    callback: (err, msg) => {
+      lock.unlock();
+    },
   });
   nc.publish(subj);
   await lock;

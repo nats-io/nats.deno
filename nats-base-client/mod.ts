@@ -8,10 +8,8 @@ export {
   Payload,
   Req,
   ServersChanged,
-  Sub,
   SubscriptionOptions,
   defaultReq,
-  defaultSub,
 } from "./types.ts";
 export {
   Transport,

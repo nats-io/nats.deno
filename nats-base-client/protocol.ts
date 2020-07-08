@@ -17,12 +17,11 @@ import {
   ConnectionOptions,
   Msg,
   Payload,
-  Sub,
   Req,
-  defaultSub,
   Events,
   DebugEvents,
   DEFAULT_RECONNECT_TIME_WAIT,
+  Base,
 } from "./types.ts";
 //@ts-ignore
 import { Transport, newTransport, TransportEvents } from "./transport.ts";
@@ -123,13 +122,75 @@ export class Request {
   }
 }
 
-export class Subscription {
-  sid: number;
-  private protocol: ProtocolHandler;
+export class Subscription implements Base {
+  sid!: number;
+  queue?: string | null;
+  draining: boolean = false;
+  max?: number | undefined;
+  received: number = 0;
+  subject: string;
+  timeout?: number | null;
+  yields: { err: NatsError | null; msg: Msg }[] = [];
+  signal?: Deferred<void> = deferred<void>();
+  done: boolean = false;
+  protocol: ProtocolHandler;
 
-  constructor(sub: Sub, protocol: ProtocolHandler) {
-    this.sid = sub.sid;
+  constructor(protocol: ProtocolHandler, subject: string) {
     this.protocol = protocol;
+    this.subject = subject;
+  }
+
+  callback(err: NatsError | null, msg: Msg) {
+    if (this.done) {
+      return;
+    }
+    this.yields.push({ err, msg });
+    this.signal?.resolve();
+  }
+
+  [Symbol.asyncIterator]() {
+    return this.iterate();
+  }
+
+  async *iterate(): AsyncIterableIterator<Msg> {
+    while (true) {
+      await this.signal;
+      for (let i = 0; i < this.yields.length; i++) {
+        if (this.done) {
+          break;
+        }
+        const em = this.yields.shift();
+        if (em) {
+          if (em.err) {
+            throw em.err;
+          }
+          yield em.msg;
+        }
+      }
+      if (this.done) {
+        break;
+      } else {
+        this.yields.length = 0;
+        this.signal = deferred();
+      }
+    }
+  }
+
+  return() {
+    this.unsubscribe();
+    this.close();
+  }
+
+  close(): void {
+    if (!this.isCancelled()) {
+      this.done = true;
+      this.cancelTimeout();
+      if (this.signal) {
+        const s = this.signal;
+        this.signal = undefined;
+        s.resolve();
+      }
+    }
   }
 
   unsubscribe(max?: number): void {
@@ -138,12 +199,15 @@ export class Subscription {
 
   hasTimeout(): boolean {
     let sub = this.protocol.subscriptions.get(this.sid);
-    return sub !== null && sub.timeout !== null;
+    if (sub) {
+      return sub.timeout !== undefined;
+    }
+    return false;
   }
 
   cancelTimeout(): void {
     let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub !== null && sub.timeout !== null) {
+    if (sub && sub.timeout !== null) {
       clearTimeout(sub.timeout);
       sub.timeout = null;
     }
@@ -151,7 +215,7 @@ export class Subscription {
 
   setTimeout(millis: number, cb: () => void): boolean {
     let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub !== null) {
+    if (sub) {
       if (sub.timeout) {
         clearTimeout(sub.timeout);
         sub.timeout = null;
@@ -183,14 +247,17 @@ export class Subscription {
   }
 
   isCancelled(): boolean {
-    return this.protocol.subscriptions.get(this.sid) === null;
+    return this.protocol.subscriptions.get(this.sid) === undefined;
   }
 }
 
 export class MuxSubscription {
   baseInbox!: string;
-  reqs: { [key: string]: Req } = {};
-  length: number = 0;
+  reqs: Map<string, Req> = new Map<string, Req>();
+
+  size(): number {
+    return this.reqs.size;
+  }
 
   init(): string {
     this.baseInbox = `${createInbox()}.`;
@@ -201,15 +268,11 @@ export class MuxSubscription {
     if (!isNaN(r.received)) {
       r.received = 0;
     }
-    this.length++;
-    this.reqs[r.token] = r;
+    this.reqs.set(r.token, r);
   }
 
-  get(token: string): Req | null {
-    if (token in this.reqs) {
-      return this.reqs[token];
-    }
-    return null;
+  get(token: string): Req | undefined {
+    return this.reqs.get(token);
   }
 
   cancel(r: Req): void {
@@ -217,10 +280,7 @@ export class MuxSubscription {
       clearTimeout(r.timeout);
       r.timeout = null;
     }
-    if (r.token in this.reqs) {
-      delete this.reqs[r.token];
-      this.length--;
-    }
+    this.reqs.delete(r.token);
   }
 
   getToken(m: Msg): string | null {
@@ -249,53 +309,48 @@ export class MuxSubscription {
 }
 
 export class Subscriptions {
-  mux!: Sub;
-  subs: { [key: number]: Sub } = {};
+  mux!: Subscription;
+  subs: Map<number, Subscription> = new Map<number, Subscription>();
   sidCounter: number = 0;
-  length: number = 0;
 
-  add(s: Sub): Sub {
+  size(): number {
+    return this.subs.size;
+  }
+
+  add(s: Subscription): Subscription {
     this.sidCounter++;
-    this.length++;
     s.sid = this.sidCounter;
-    this.subs[s.sid] = s;
+    this.subs.set(s.sid, s);
     return s;
   }
 
-  setMux(s: Sub): Sub {
+  setMux(s: Subscription): Subscription {
     this.mux = s;
     return s;
   }
 
-  getMux(): Sub | null {
+  getMux(): Subscription | null {
     return this.mux;
   }
 
-  get(sid: number): (Sub | null) {
-    if (sid in this.subs) {
-      return this.subs[sid];
-    }
-    return null;
+  get(sid: number): (Subscription | undefined) {
+    return this.subs.get(sid);
   }
 
-  all(): (Sub)[] {
+  all(): (Subscription)[] {
     let buf = [];
-    for (let sid in this.subs) {
-      let sub = this.subs[sid];
-      buf.push(sub);
+    for (let s of this.subs.values()) {
+      buf.push(s);
     }
     return buf;
   }
 
-  cancel(s: Sub): void {
+  cancel(s: Subscription): void {
     if (s && s.timeout) {
       clearTimeout(s.timeout);
       s.timeout = null;
     }
-    if (s.sid in this.subs) {
-      delete this.subs[s.sid];
-      this.length--;
-    }
+    this.subs.delete(s.sid);
   }
 }
 
@@ -724,14 +779,14 @@ export class ProtocolHandler extends EventTarget {
     return new Request(r, this);
   }
 
-  subscribe(s: Sub): Subscription {
-    let sub = this.subscriptions.add(s) as Sub;
+  subscribe(s: Subscription): Subscription {
+    let sub = this.subscriptions.add(s);
     if (sub.queue) {
       this.sendCommand(`SUB ${sub.subject} ${sub.queue} ${sub.sid}\r\n`);
     } else {
       this.sendCommand(`SUB ${sub.subject} ${sub.sid}\r\n`);
     }
-    return new Subscription(sub, this);
+    return sub;
   }
 
   unsubscribe(sid: number, max?: number) {
@@ -822,9 +877,8 @@ export class ProtocolHandler extends EventTarget {
   drain(): Promise<void> {
     let subs = this.subscriptions.all();
     let promises: Promise<void>[] = [];
-    subs.forEach((sub: Sub) => {
-      let p = this.drainSubscription(sub.sid);
-      promises.push(p);
+    subs.forEach((sub: Subscription) => {
+      promises.push(sub.drain());
     });
     return Promise.all(promises)
       .then(async () => {
@@ -873,9 +927,8 @@ export class ProtocolHandler extends EventTarget {
     let mux = this.subscriptions.getMux();
     if (!mux) {
       let inbox = this.muxSubscriptions.init();
-      let sub = defaultSub();
       // dot is already part of mux
-      sub.subject = `${inbox}*`;
+      const sub = new Subscription(this, `${inbox}*`);
       sub.callback = this.muxSubscriptions.dispatcher();
       this.subscriptions.setMux(sub);
       this.subscribe(sub);

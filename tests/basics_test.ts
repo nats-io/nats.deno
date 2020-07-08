@@ -19,53 +19,53 @@ import {
 } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 
 const nuid = new Nuid();
 
-Deno.test("connect port", async () => {
+Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
   let nc = await connect({ port: ns.port });
   await nc.close();
   await ns.stop();
 });
 
-Deno.test("connect default", async () => {
+Deno.test("basics - connect default", async () => {
   const ns = await NatsServer.start({ port: 4222 });
   let nc = await connect({});
   await nc.close();
   await ns.stop();
 });
 
-Deno.test("connect host", async () => {
+Deno.test("basics - connect host", async () => {
   let nc = await connect({ url: "demo.nats.io" });
   await nc.close();
 });
 
-Deno.test("connect hostport", async () => {
+Deno.test("basics - connect hostport", async () => {
   let nc = await connect({ url: "demo.nats.io:4222" });
   await nc.close();
 });
 
-Deno.test("connect url", async () => {
+Deno.test("basics - connect url", async () => {
   const nc = await connect({ url: u });
   await nc.close();
 });
 
-Deno.test("fail connect", async () => {
+Deno.test("basics - fail connect", async () => {
   await assertThrowsAsync(async (): Promise<void> => {
     await connect({ url: `127.0.0.1:32001` });
   });
 });
 
-Deno.test("publish", async () => {
+Deno.test("basics - publish", async () => {
   const nc = await connect({ url: u });
   nc.publish(nuid.next());
   await nc.flush();
   await nc.close();
 });
 
-Deno.test("no publish without subject", async () => {
+Deno.test("basics - no publish without subject", async () => {
   const nc = await connect({ url: u });
   try {
     nc.publish("");
@@ -77,27 +77,32 @@ Deno.test("no publish without subject", async () => {
   }
 });
 
-Deno.test("pubsub", async () => {
+Deno.test("basics - pubsub", async () => {
   const lock = Lock();
   const subj = nuid.next();
   connect({ url: u })
     .then((nc) => {
-      nc.subscribe(subj, async () => {
-        await nc.close();
-        lock.unlock();
+      nc.subscribe(subj, {
+        callback: async () => {
+          await nc.close();
+          lock.unlock();
+        },
       });
       nc.publish(subj);
     });
   await lock;
 });
 
-Deno.test("subscribe and unsubscribe", async () => {
+Deno.test("basics - subscribe and unsubscribe", async () => {
   const subj = nuid.next();
   const nc = await connect({ url: u });
-  const sub = nc.subscribe(subj, () => {}, { max: 1000, queue: "aaa" });
+  const sub = nc.subscribe(
+    subj,
+    { max: 1000, queue: "aaa", callback: () => {} },
+  );
 
   // check the subscription
-  assertEquals(nc.protocol.subscriptions.length, 1);
+  assertEquals(nc.protocol.subscriptions.size(), 1);
   let s = nc.protocol.subscriptions.get(1);
   assert(s);
   assertEquals(s.received, 0);
@@ -121,16 +126,18 @@ Deno.test("subscribe and unsubscribe", async () => {
 
   // verify cleanup
   sub.unsubscribe();
-  assertEquals(nc.protocol.subscriptions.length, 0);
+  assertEquals(nc.protocol.subscriptions.size(), 0);
   await nc.close();
 });
 
-Deno.test("subscriptions fire callbacks", async () => {
+Deno.test("basics - subscriptions fire callbacks", async () => {
   const lock = Lock();
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  nc.subscribe(subj, () => {
-    lock.unlock();
+  nc.subscribe(subj, {
+    callback: () => {
+      lock.unlock();
+    },
   });
   nc.publish(subj);
   await nc.flush();
@@ -138,13 +145,15 @@ Deno.test("subscriptions fire callbacks", async () => {
   await lock;
 });
 
-Deno.test("subscriptions pass exact subject to cb", async () => {
+Deno.test("basics - subscriptions pass exact subject to cb", async () => {
   const s = nuid.next();
   const subj = `${s}.foo.bar.baz`;
   const nc = await connect({ url: u });
   let received = "";
-  nc.subscribe(`${s}.*.*.*`, (err, msg) => {
-    received = msg.subject;
+  nc.subscribe(`${s}.*.*.*`, {
+    callback: (err, msg) => {
+      received = msg.subject;
+    },
   });
   nc.publish(subj);
   await nc.flush();
@@ -152,15 +161,15 @@ Deno.test("subscriptions pass exact subject to cb", async () => {
   assertEquals(received, subj);
 });
 
-Deno.test("subscribe returns Subscription", async () => {
+Deno.test("basics - subscribe returns Subscription", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  const sub = nc.subscribe(subj, () => {});
+  const sub = nc.subscribe(subj);
   assertEquals(sub.sid, 1);
   await nc.close();
 });
 
-Deno.test("wildcard subscriptions", async () => {
+Deno.test("basics - wildcard subscriptions", async () => {
   let single = 3;
   let partial = 2;
   let full = 5;
@@ -172,14 +181,20 @@ Deno.test("wildcard subscriptions", async () => {
   let nc = await connect({ url: u });
 
   let s = nuid.next();
-  nc.subscribe(`${s}.*`, () => {
-    singleCounter++;
+  nc.subscribe(`${s}.*`, {
+    callback: () => {
+      singleCounter++;
+    },
   });
-  nc.subscribe(`${s}.foo.bar.*`, () => {
-    partialCounter++;
+  nc.subscribe(`${s}.foo.bar.*`, {
+    callback: () => {
+      partialCounter++;
+    },
   });
-  nc.subscribe(`${s}.foo.>`, () => {
-    fullCounter++;
+  nc.subscribe(`${s}.foo.>`, {
+    callback: () => {
+      fullCounter++;
+    },
   });
 
   nc.publish(`${s}.bar`);
@@ -199,17 +214,20 @@ Deno.test("wildcard subscriptions", async () => {
   await nc.close();
 });
 
-Deno.test("correct data in message", async () => {
+Deno.test("basics - correct data in message", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
 
   let called = false;
-  nc.subscribe(subj, (_, m) => {
-    called = true;
-    assertEquals(m.subject, subj);
-    assertEquals(m.data, subj);
-    assertEquals(m.reply, undefined);
-  }, { max: 1 });
+  nc.subscribe(subj, {
+    callback: (_, m) => {
+      called = true;
+      assertEquals(m.subject, subj);
+      assertEquals(m.data, subj);
+      assertEquals(m.reply, undefined);
+    },
+    max: 1,
+  });
 
   nc.publish(subj, subj);
   await nc.flush();
@@ -217,14 +235,16 @@ Deno.test("correct data in message", async () => {
   assert(called);
 });
 
-Deno.test("correct reply in message", async () => {
+Deno.test("basics - correct reply in message", async () => {
   let nc = await connect({ url: u });
   let s = nuid.next();
   let r = nuid.next();
 
   let rsubj = null;
-  nc.subscribe(s, (_, m) => {
-    rsubj = m.reply;
+  nc.subscribe(s, {
+    callback: (_, m) => {
+      rsubj = m.reply;
+    },
   });
 
   nc.publish(s, "", r);
@@ -233,19 +253,21 @@ Deno.test("correct reply in message", async () => {
   assertEquals(rsubj, r);
 });
 
-Deno.test("respond throws if no reply subject set", async () => {
+Deno.test("basics - respond throws if no reply subject set", async () => {
   let nc = await connect({ url: u });
   let s = nuid.next();
 
   let called = false;
-  nc.subscribe(s, (_, m) => {
-    try {
-      m.respond();
-      fail("should have not been able to respond");
-    } catch (err) {
-      assertEquals(err.code, ErrorCode.BAD_SUBJECT);
-      called = true;
-    }
+  nc.subscribe(s, {
+    callback: (_, m) => {
+      try {
+        m.respond();
+        fail("should have not been able to respond");
+      } catch (err) {
+        assertEquals(err.code, ErrorCode.BAD_SUBJECT);
+        called = true;
+      }
+    },
   });
 
   nc.publish(s);
@@ -254,12 +276,12 @@ Deno.test("respond throws if no reply subject set", async () => {
   assert(called);
 });
 
-Deno.test("closed cannot subscribe", async () => {
+Deno.test("basics - closed cannot subscribe", async () => {
   let nc = await connect({ url: u });
   await nc.close();
   let failed = false;
   try {
-    nc.subscribe(nuid.next(), () => {});
+    nc.subscribe(nuid.next());
     fail("should have not been able to subscribe");
   } catch (err) {
     failed = true;
@@ -267,7 +289,7 @@ Deno.test("closed cannot subscribe", async () => {
   assert(failed);
 });
 
-Deno.test("close cannot request", async () => {
+Deno.test("basics - close cannot request", async () => {
   let nc = await connect({ url: u });
   nc.close();
   let failed = false;
@@ -280,7 +302,7 @@ Deno.test("close cannot request", async () => {
   assert(failed);
 });
 
-Deno.test("flush returns promise", async () => {
+Deno.test("basics - flush returns promise", async () => {
   const nc = await connect({ url: u });
   let p = nc.flush();
   if (!p) {
@@ -290,20 +312,22 @@ Deno.test("flush returns promise", async () => {
   await nc.close();
 });
 
-Deno.test("unsubscribe after close", async () => {
+Deno.test("basics - unsubscribe after close", async () => {
   let nc = await connect({ url: u });
-  let sub = nc.subscribe(nuid.next(), () => {});
+  let sub = nc.subscribe(nuid.next());
   await nc.close();
   sub.unsubscribe();
 });
 
-Deno.test("unsubscribe stops messages", async () => {
+Deno.test("basics - unsubscribe stops messages", async () => {
   let received = 0;
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  const sub = nc.subscribe(subj, () => {
-    received++;
-    sub.unsubscribe();
+  const sub = nc.subscribe(subj, {
+    callback: () => {
+      received++;
+      sub.unsubscribe();
+    },
   });
   nc.publish(subj);
   nc.publish(subj);
@@ -315,32 +339,34 @@ Deno.test("unsubscribe stops messages", async () => {
   await nc.close();
 });
 
-Deno.test("request", async () => {
+Deno.test("basics - request", async () => {
   let nc = await connect({ url: u });
   let s = nuid.next();
-  nc.subscribe(s, (_, msg) => {
-    msg.respond("foo");
+  nc.subscribe(s, {
+    callback: (_, msg) => {
+      msg.respond("foo");
+    },
   });
   let msg = await nc.request(s, 1000, "test");
   await nc.close();
   assertEquals(msg.data, "foo");
 });
 
-Deno.test("request timeout", async () => {
+Deno.test("basics - request timeout", async () => {
   const nc = await connect({ url: u });
   const s = nuid.next();
   let timedOut = false;
   try {
     await nc.request(s, 100, "test");
   } catch (err) {
-    assertEquals(err.code, ErrorCode.CONNECTION_TIMEOUT);
+    assertEquals(err.code, ErrorCode.TIMEOUT);
     timedOut = true;
   }
   await nc.close();
   assert(timedOut);
 });
 
-Deno.test("close listener is called", async () => {
+Deno.test("basics - close listener is called", async () => {
   const lock = Lock();
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(() => {
@@ -359,7 +385,7 @@ Deno.test("close listener is called", async () => {
   await nc.close();
 });
 
-Deno.test("status returns error", async () => {
+Deno.test("basics - status returns error", async () => {
   const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
@@ -377,11 +403,10 @@ Deno.test("status returns error", async () => {
   await cs.stop();
 });
 
-Deno.test("subscription with timeout", async () => {
+Deno.test("basics - subscription with timeout", async () => {
   const lock = Lock(1);
   const nc = await connect({ url: u });
-  const sub = nc.subscribe(nuid.next(), () => {
-  }, { max: 1 });
+  const sub = nc.subscribe(nuid.next(), { max: 1 });
 
   sub.setTimeout(1000, () => {
     lock.unlock();
@@ -392,31 +417,32 @@ Deno.test("subscription with timeout", async () => {
   await nc.close();
 });
 
-Deno.test("subscription expecting 2 fires timeout", async () => {
+Deno.test("basics - subscription expecting 2 fires timeout", async () => {
   const lock = Lock();
   const nc = await connect({ url: u });
   const subj = nuid.next();
   let c = 0;
-  const sub = nc.subscribe(subj, () => {
-    c++;
-  }, { max: 2 });
+  const sub = nc.subscribe(subj, { max: 2 });
   sub.setTimeout(100, () => {
     lock.unlock();
   });
   nc.publish(subj);
   await nc.flush();
   await lock;
-  assertEquals(c, 1);
+  assertEquals(1, sub.getReceived());
   await nc.close();
 });
 
-Deno.test("subscription timeout autocancels", async () => {
+Deno.test("basics - subscription timeout autocancels", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   let c = 0;
-  const sub = nc.subscribe(subj, () => {
-    c++;
-  }, { max: 2 });
+  const sub = nc.subscribe(subj, {
+    callback: () => {
+      c++;
+    },
+    max: 2,
+  });
   sub.setTimeout(300, () => {
     fail();
   });
@@ -427,10 +453,10 @@ Deno.test("subscription timeout autocancels", async () => {
   await nc.close();
 });
 
-Deno.test("subscription timeout cancel", async () => {
+Deno.test("basics - subscription timeout cancel", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  const sub = nc.subscribe(subj, () => {}, { max: 2 });
+  const sub = nc.subscribe(subj, { callback: () => {}, max: 2 });
   sub.setTimeout(100, () => {
     fail();
   });
@@ -442,14 +468,14 @@ Deno.test("subscription timeout cancel", async () => {
   await nc.close();
 });
 
-Deno.test("subscription received", async () => {
-  let lock = Lock();
-  let nc = await connect({ url: u });
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, () => {
-    if (sub.getReceived() === 3) {
+Deno.test("basics - subscription received", async () => {
+  const lock = Lock(3);
+  const nc = await connect({ url: u });
+  const subj = nuid.next();
+  nc.subscribe(subj, {
+    callback: () => {
       lock.unlock();
-    }
+    },
   });
   nc.publish(subj);
   nc.publish(subj);
@@ -459,22 +485,22 @@ Deno.test("subscription received", async () => {
   await nc.close();
 });
 
-Deno.test("payload - json", async () => {
+Deno.test("basics - json payload", async () => {
   const nc = await connect({ url: u, payload: Payload.JSON });
   await nc.close();
 });
 
-Deno.test("payload - binary", async () => {
+Deno.test("basics - binary payload", async () => {
   const nc = await connect({ url: u, payload: Payload.BINARY });
   await nc.close();
 });
 
-Deno.test("payload - string", async () => {
+Deno.test("basics - string payload", async () => {
   const nc = await connect({ url: u, payload: Payload.STRING });
   await nc.close();
 });
 
-Deno.test("payload - test", async () => {
+Deno.test("basics - bad payload option", async () => {
   await connect({ url: u, payload: "TEXT" as Payload })
     .then((nc: NatsConnection) => {
       fail("didn't expect to connect with bad payload");

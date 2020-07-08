@@ -25,30 +25,32 @@ import {
 
 import { Lock } from "./helpers/mod.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 const nuid = new Nuid();
 
-Deno.test("connect no json propagates options", async () => {
+Deno.test("json - connect no json propagates options", async () => {
   let nc = await connect({ url: u });
+  await nc.close();
   assertEquals(nc.options.payload, Payload.STRING, "nc options");
   assertEquals(nc.protocol.options.payload, Payload.STRING, "protocol");
-  await nc.close();
 });
 
-Deno.test("connect json propagates options", async () => {
+Deno.test("json - connect json propagates options", async () => {
   let nc = await connect({ url: u, payload: Payload.JSON });
   assertEquals(nc.options.payload, Payload.JSON, "nc options");
   assertEquals(nc.protocol.options.payload, Payload.JSON, "protocol");
   await nc.close();
 });
 
-Deno.test("bad json error in callback", async () => {
+Deno.test("json - bad json error in callback", async () => {
   let o = {};
   //@ts-ignore
   o.a = o;
   let jc = await connect({ url: u, payload: Payload.JSON });
-  jc.subscribe("bad_json", (err) => {
-    assertEquals(err?.code, ErrorCode.BAD_JSON);
+  jc.subscribe("bad_json", {
+    callback: (err) => {
+      assertEquals(err?.code, ErrorCode.BAD_JSON);
+    },
   });
   await jc.flush();
 
@@ -65,15 +67,18 @@ function macro(input: any) {
     const nc = await connect({ url: u, payload: Payload.JSON });
     let lock = Lock();
     let subj = nuid.next();
-    nc.subscribe(subj, (err: NatsError | null, msg: Msg) => {
-      assertEquals(null, err);
-      // in JSON undefined is translated to null
-      if (input === undefined) {
-        input = null;
-      }
-      assertEquals(msg.data, input);
-      lock.unlock();
-    }, { max: 1 });
+    nc.subscribe(subj, {
+      callback: (err: NatsError | null, msg: Msg) => {
+        assertEquals(null, err);
+        // in JSON undefined is translated to null
+        if (input === undefined) {
+          input = null;
+        }
+        assertEquals(msg.data, input);
+        lock.unlock();
+      },
+      max: 1,
+    });
 
     nc.publish(subj, input);
     await nc.flush();
@@ -82,14 +87,14 @@ function macro(input: any) {
   };
 }
 
-Deno.test("string", macro("helloworld"));
-Deno.test("empty", macro(""));
-Deno.test("null", macro(null));
-Deno.test("undefined", macro(undefined));
-Deno.test("number", macro(10));
-Deno.test("false", macro(false));
-Deno.test("true", macro(true));
-Deno.test("empty array", macro([]));
-Deno.test("any array", macro([1, "a", false, 3.1416]));
-Deno.test("empty object", macro({}));
-Deno.test("object", macro({ a: 1, b: false, c: "name", d: 3.1416 }));
+Deno.test("json - string", macro("helloworld"));
+Deno.test("json - empty", macro(""));
+Deno.test("json - null", macro(null));
+Deno.test("json - undefined", macro(undefined));
+Deno.test("json - number", macro(10));
+Deno.test("json - false", macro(false));
+Deno.test("json - true", macro(true));
+Deno.test("json - empty array", macro([]));
+Deno.test("json - any array", macro([1, "a", false, 3.1416]));
+Deno.test("json - empty object", macro({}));
+Deno.test("json - object", macro({ a: 1, b: false, c: "name", d: 3.1416 }));

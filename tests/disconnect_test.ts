@@ -20,7 +20,7 @@ import {
   assertEquals,
 } from "https://deno.land/std/testing/asserts.ts";
 
-Deno.test("close handler is called on close", async () => {
+Deno.test("disconnect - close handler is called on close", async () => {
   const ns = await NatsServer.start();
   let lock = Lock(1);
   let nc = await connect(
@@ -34,7 +34,7 @@ Deno.test("close handler is called on close", async () => {
   await lock;
 });
 
-Deno.test("close process inbound ignores", async () => {
+Deno.test("disconnect - close process inbound ignores", async () => {
   const ns = await NatsServer.start();
   let lock = Lock(1);
   let nc = await connect(

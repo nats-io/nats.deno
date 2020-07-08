@@ -45,10 +45,7 @@ nc.addEventListener(
 );
 
 console.info(`subscribing to ${subject}`);
-const sub = nc.subscribe(subject, (err, msg) => {
-  if (err) {
-    console.error(err);
-    return;
-  }
-  console.log(`[${sub.getReceived()}]: ${msg.subject}: ${msg.data}`);
-});
+const sub = nc.subscribe(subject);
+for await (const m of sub) {
+  console.log(`[${sub.getReceived()}]: ${m.subject}: ${m.data}`);
+}

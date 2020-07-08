@@ -40,7 +40,7 @@ const conf = {
   },
 };
 
-Deno.test("auth none", async () => {
+Deno.test("auth - none", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
@@ -54,7 +54,7 @@ Deno.test("auth none", async () => {
   await ns.stop();
 });
 
-Deno.test("auth bad", async () => {
+Deno.test("auth - bad", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
@@ -68,7 +68,7 @@ Deno.test("auth bad", async () => {
   await ns.stop();
 });
 
-Deno.test("auth", async () => {
+Deno.test("auth - un/pw", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
@@ -78,7 +78,7 @@ Deno.test("auth", async () => {
   await ns.stop();
 });
 
-Deno.test("auth cannot sub to foo", async () => {
+Deno.test("auth - sub permissions", async () => {
   const ns = await NatsServer.start(conf);
   const lock = Lock();
   const nc = await connect(
@@ -89,8 +89,10 @@ Deno.test("auth cannot sub to foo", async () => {
     lock.unlock();
   });
 
-  nc.subscribe("foo", () => {
-    fail("should not have called message handler");
+  nc.subscribe("foo", {
+    callback: () => {
+      fail("should not have called message handler");
+    },
   });
 
   nc.publish("foo");
@@ -99,7 +101,7 @@ Deno.test("auth cannot sub to foo", async () => {
   await ns.stop();
 });
 
-Deno.test("auth cannot pub bar", async () => {
+Deno.test("auth - pub perm", async () => {
   const ns = await NatsServer.start(conf);
   const lock = Lock();
   const nc = await connect(
@@ -110,8 +112,10 @@ Deno.test("auth cannot pub bar", async () => {
     lock.unlock();
   });
 
-  nc.subscribe("bar", () => {
-    fail("should not have been called");
+  nc.subscribe("bar", {
+    callback: () => {
+      fail("should not have been called");
+    },
   });
 
   nc.publish("bar");
@@ -120,7 +124,7 @@ Deno.test("auth cannot pub bar", async () => {
   await ns.stop();
 });
 
-Deno.test("auth no user and token", async () => {
+Deno.test("auth - no user and token", async () => {
   connect({ url: "nats://127.0.0.1:4222", user: "derek", token: "foobar" })
     .then(async (nc) => {
       await nc.close();

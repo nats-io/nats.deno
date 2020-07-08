@@ -20,46 +20,56 @@ import {
 import {
   assertEquals,
 } from "https://deno.land/std/testing/asserts.ts";
+import { Lock } from "./helpers/mod.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 const nuid = new Nuid();
 
-Deno.test("deliver to single queue", async () => {
+Deno.test("queues - deliver to single queue", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   const subs = [];
+
   let count = 0;
   for (let i = 0; i < 5; i++) {
-    const s = nc.subscribe(subj, () => {
-      count++;
-    }, { queue: "a" });
+    const s = nc.subscribe(subj, {
+      callback: () => {
+        count++;
+      },
+      queue: "a",
+    });
     subs.push(s);
   }
   await Promise.all(subs);
 
   nc.publish(subj);
   await nc.flush();
-  assertEquals(count, 1);
   await nc.close();
 });
 
-Deno.test("deliver to multiple queues", async () => {
+Deno.test("queues - deliver to multiple queues", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   const subs = [];
   let queue1 = 0;
   for (let i = 0; i < 5; i++) {
-    let s = nc.subscribe(subj, () => {
-      queue1++;
-    }, { queue: "a" });
+    let s = nc.subscribe(subj, {
+      callback: () => {
+        queue1++;
+      },
+      queue: "a",
+    });
     subs.push(s);
   }
 
   let queue2 = 0;
   for (let i = 0; i < 5; i++) {
-    let s = nc.subscribe(subj, () => {
-      queue2++;
-    }, { queue: "b" });
+    let s = nc.subscribe(subj, {
+      callback: () => {
+        queue2++;
+      },
+      queue: "b",
+    });
     subs.push(s);
   }
   await Promise.all(subs);
@@ -71,21 +81,26 @@ Deno.test("deliver to multiple queues", async () => {
   await nc.close();
 });
 
-Deno.test("queues and subs independent", async () => {
+Deno.test("queues - queues and subs independent", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   const subs = [];
   let queueCount = 0;
   for (let i = 0; i < 5; i++) {
-    let s = nc.subscribe(subj, () => {
-      queueCount++;
-    }, { queue: "a" });
+    let s = nc.subscribe(subj, {
+      callback: () => {
+        queueCount++;
+      },
+      queue: "a",
+    });
     subs.push(s);
   }
 
   let count = 0;
-  subs.push(nc.subscribe(subj, () => {
-    count++;
+  subs.push(nc.subscribe(subj, {
+    callback: () => {
+      count++;
+    },
   }));
   await Promise.all(subs);
 

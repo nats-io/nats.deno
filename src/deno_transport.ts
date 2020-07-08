@@ -219,7 +219,6 @@ export class DenoTransport extends EventTarget implements Transport {
 
   private async _closed(err?: Error, internal: boolean = true): Promise<void> {
     if (this.closed) return;
-    this.closed = true;
     this.closeError = err;
     if (!err) {
       try {
@@ -232,6 +231,7 @@ export class DenoTransport extends EventTarget implements Transport {
         }
       }
     }
+    this.closed = true;
     try {
       this.conn?.close();
     } catch (err) {
