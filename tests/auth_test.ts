@@ -80,7 +80,7 @@ Deno.test("auth - un/pw", async () => {
 
 Deno.test("auth - sub permissions", async () => {
   const ns = await NatsServer.start(conf);
-  const lock = Lock();
+  const lock = Lock(2);
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
@@ -90,8 +90,9 @@ Deno.test("auth - sub permissions", async () => {
   });
 
   nc.subscribe("foo", {
-    callback: () => {
-      fail("should not have called message handler");
+    callback: (err, msg) => {
+      lock.unlock();
+      assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     },
   });
 

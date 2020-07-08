@@ -155,10 +155,7 @@ export class Subscription implements Base {
   async *iterate(): AsyncIterableIterator<Msg> {
     while (true) {
       await this.signal;
-      for (let i = 0; i < this.yields.length; i++) {
-        if (this.done) {
-          break;
-        }
+      while (this.yields.length > 0) {
         const em = this.yields.shift();
         if (em) {
           if (em.err) {
@@ -170,7 +167,6 @@ export class Subscription implements Base {
       if (this.done) {
         break;
       } else {
-        this.yields.length = 0;
         this.signal = deferred();
       }
     }
@@ -186,9 +182,8 @@ export class Subscription implements Base {
       this.done = true;
       this.cancelTimeout();
       if (this.signal) {
-        const s = this.signal;
+        this.signal.resolve();
         this.signal = undefined;
-        s.resolve();
       }
     }
   }
@@ -198,40 +193,27 @@ export class Subscription implements Base {
   }
 
   hasTimeout(): boolean {
-    let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub) {
-      return sub.timeout !== undefined;
-    }
-    return false;
+    return this.timeout !== undefined;
   }
 
   cancelTimeout(): void {
-    let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub && sub.timeout !== null) {
-      clearTimeout(sub.timeout);
-      sub.timeout = null;
+    if (this.timeout !== null) {
+      clearTimeout(this.timeout);
+      this.timeout = null;
     }
   }
 
   setTimeout(millis: number, cb: () => void): boolean {
-    let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub) {
-      if (sub.timeout) {
-        clearTimeout(sub.timeout);
-        sub.timeout = null;
-      }
-      sub.timeout = setTimeout(cb, millis);
+    if (!this.done) {
+      this.cancelTimeout();
+      this.timeout = setTimeout(cb, millis);
       return true;
     }
     return false;
   }
 
   getReceived(): number {
-    let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub) {
-      return sub.received;
-    }
-    return 0;
+    return this.received;
   }
 
   drain(): Promise<void> {
@@ -239,15 +221,11 @@ export class Subscription implements Base {
   }
 
   isDraining(): boolean {
-    let sub = this.protocol.subscriptions.get(this.sid);
-    if (sub) {
-      return sub.draining;
-    }
-    return false;
+    return this.draining;
   }
 
   isCancelled(): boolean {
-    return this.protocol.subscriptions.get(this.sid) === undefined;
+    return this.done;
   }
 }
 
@@ -306,6 +284,13 @@ export class MuxSubscription {
       }
     };
   }
+
+  close() {
+    const to = NatsError.errorForCode(ErrorCode.TIMEOUT);
+    this.reqs.forEach((req) => {
+      req.callback(to, {} as Msg);
+    });
+  }
 }
 
 export class Subscriptions {
@@ -346,11 +331,36 @@ export class Subscriptions {
   }
 
   cancel(s: Subscription): void {
-    if (s && s.timeout) {
-      clearTimeout(s.timeout);
-      s.timeout = null;
+    if (s) {
+      if (s.timeout) {
+        clearTimeout(s.timeout);
+        s.timeout = null;
+      }
+      s.close();
+      this.subs.delete(s.sid);
     }
-    this.subs.delete(s.sid);
+  }
+
+  handleError(err?: NatsError) {
+    if (err) {
+      const re = /^'Permissions Violation for Subscription to "(\S+)"'/i;
+      const ma = re.exec(err.message);
+      if (ma) {
+        const subj = ma[1];
+        this.subs.forEach((sub) => {
+          if (subj == sub.subject) {
+            sub.callback(err, {} as Msg);
+            sub.close();
+          }
+        });
+      }
+    }
+  }
+
+  close() {
+    this.subs.forEach((sub) => {
+      sub.close();
+    });
   }
 }
 
@@ -832,6 +842,7 @@ export class ProtocolHandler extends EventTarget {
 
   async processError(s: string) {
     let err = ProtocolHandler.toError(s);
+    this.subscriptions.handleError(err);
     await this._close(err);
 
     // this.dispatchEvent(new ErrorEvent(CLOSE_EVT, new ErrorEvent("error", { error: err })));
@@ -859,6 +870,8 @@ export class ProtocolHandler extends EventTarget {
       this.connectError(err);
       this.connectError = undefined;
     }
+    this.muxSubscriptions.close();
+    this.subscriptions.close();
     this.state = ParserState.CLOSED;
     return this.transport.close(err)
       .then(() => {

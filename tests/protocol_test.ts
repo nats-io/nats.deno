@@ -114,9 +114,8 @@ Deno.test("protocol - dispatch without max", async () => {
 });
 
 Deno.test("protocol - subs all", () => {
-  let subs = new Subscriptions();
-  let s = {} as Subscription;
-  s.subject = "hello";
+  const subs = new Subscriptions();
+  const s = new Subscription({} as ProtocolHandler, "hello");
   s.timeout = 1;
   s.received = 0;
   subs.add(s);
@@ -124,16 +123,15 @@ Deno.test("protocol - subs all", () => {
   assertEquals(s.sid, 1);
   assertEquals(subs.sidCounter, 1);
   equal(subs.get(0), s);
-  let a = subs.all();
+  const a = subs.all();
   assertEquals(a.length, 1);
   subs.cancel(a[0]);
   assertEquals(subs.size(), 0);
 });
 
 Deno.test("protocol - cancel unknown sub", () => {
-  let subs = new Subscriptions();
-  let s = {} as Subscription;
-  s.subject = "hello";
+  const subs = new Subscriptions();
+  const s = new Subscription({} as ProtocolHandler, "hello");
   assertEquals(subs.size(), 0);
   subs.add(s);
   assertEquals(subs.size(), 1);
