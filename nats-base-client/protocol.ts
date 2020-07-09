@@ -376,9 +376,12 @@ class msg implements Msg {
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any): void {
-    const reply = this.reply || "";
-    this.publisher.publish(reply, data, "");
+  respond(data?: any): boolean {
+    if (this.reply) {
+      this.publisher.publish(this.reply, data, "");
+      return true;
+    }
+    return false;
   }
 }
 

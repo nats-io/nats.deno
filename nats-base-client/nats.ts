@@ -48,7 +48,7 @@ export class NatsConnection extends EventTarget {
     this.options = parseOptions(opts);
   }
 
-  public static connect(opts: ConnectionOptions): Promise<NatsConnection> {
+  public static connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     return new Promise<NatsConnection>((resolve, reject) => {
       let nc = new NatsConnection(opts);
       ProtocolHandler.connect(nc.options, nc)

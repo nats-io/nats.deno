@@ -253,20 +253,17 @@ Deno.test("basics - correct reply in message", async () => {
   assertEquals(rsubj, r);
 });
 
-Deno.test("basics - respond throws if no reply subject set", async () => {
+Deno.test("basics - respond returns false if no reply subject set", async () => {
   let nc = await connect({ url: u });
   let s = nuid.next();
 
   let called = false;
   nc.subscribe(s, {
     callback: (_, m) => {
-      try {
-        m.respond();
+      if (m.respond()) {
         fail("should have not been able to respond");
-      } catch (err) {
-        assertEquals(err.code, ErrorCode.BAD_SUBJECT);
-        called = true;
       }
+      called = true;
     },
   });
 
