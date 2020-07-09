@@ -14,6 +14,7 @@
  */
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
+import { ErrorCode, NatsError } from "./mod.ts";
 
 export const MSG =
   /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
@@ -162,7 +163,7 @@ export function timeout<T>(ms: number): Timeout<T> {
     };
     methods = { cancel };
     timer = setTimeout(() => {
-      reject(new Error("timeout"));
+      reject(NatsError.errorForCode(ErrorCode.TIMEOUT));
     }, ms);
   });
   // noinspection JSUnusedAssignment

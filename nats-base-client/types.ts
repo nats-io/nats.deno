@@ -102,6 +102,7 @@ export interface Msg {
 export interface SubscriptionOptions {
   queue?: string;
   max?: number;
+  callback?: (err: NatsError | null, msg: Msg) => void;
 }
 
 export interface Base {
@@ -115,15 +116,6 @@ export interface Base {
 
 export interface Req extends Base {
   token: string;
-}
-
-export interface Sub extends Base {
-  sid: number;
-  queue?: string | null;
-}
-
-export function defaultSub(): Sub {
-  return { sid: 0, subject: "", received: 0 } as Sub;
 }
 
 export function defaultReq(): Req {

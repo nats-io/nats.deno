@@ -28,15 +28,15 @@ import {
 
 const { version, lang } = new DenoTransport();
 
-Deno.test("VERSION is semver", () => {
+Deno.test("properties - VERSION is semver", () => {
   assertMatch(version, /[0-9]+\.[0-9]+\.[0-9]+/);
 });
 
-Deno.test("connect is a function", () => {
+Deno.test("properties - connect is a function", () => {
   assert(typeof connect === "function");
 });
 
-Deno.test("default connect properties", () => {
+Deno.test("properties - default connect properties", () => {
   let c = new Connect(
     { version, lang },
     { url: "nats://127.0.0.1:4222" } as ConnectionOptions,
@@ -52,7 +52,7 @@ Deno.test("default connect properties", () => {
   assertEquals(c.name, undefined);
 });
 
-Deno.test("configured options", () => {
+Deno.test("properties - configured options", () => {
   let opts = {} as ConnectionOptions;
   opts.url = "nats://127.0.0.1:4222";
   opts.payload = Payload.BINARY;

@@ -16,7 +16,7 @@
 import { toConf } from "./launcher.ts";
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 
-Deno.test("test serializing simple", () => {
+Deno.test("conf - serializing simple", () => {
   let x = {
     test: "one",
   };
@@ -31,7 +31,7 @@ Deno.test("test serializing simple", () => {
   assertEquals(z, "test: one");
 });
 
-Deno.test("test serializing nested", () => {
+Deno.test("conf - serializing nested", () => {
   let x = {
     a: "one",
     b: {
@@ -49,7 +49,7 @@ Deno.test("test serializing nested", () => {
   assertEquals(z, "a: one b { a: two }");
 });
 
-Deno.test("test serializing array", () => {
+Deno.test("conf - serializing array", () => {
   let x = {
     a: "one",
     b: ["a", "b", "c"],
@@ -65,7 +65,7 @@ Deno.test("test serializing array", () => {
   assertEquals(z, "a: one b [ a b c ]");
 });
 
-Deno.test("test serializing array objs", () => {
+Deno.test("conf - serializing array objs", () => {
   let x = {
     a: "one",
     b: [{
@@ -86,7 +86,7 @@ Deno.test("test serializing array objs", () => {
   assertEquals(z, "a: one b [ { a: a } { b: b } { c: c } ]");
 });
 
-Deno.test("test serializing array arrays", () => {
+Deno.test("conf - serializing array arrays", () => {
   let x = {
     a: "one",
     b: [{
@@ -108,7 +108,7 @@ Deno.test("test serializing array arrays", () => {
   assertEquals(z, "a: one b [ { a: a b [ b c ] } { b: b } { c: c } ]");
 });
 
-Deno.test("strings that start with numbers are quoted", () => {
+Deno.test("conf - strings that start with numbers are quoted", () => {
   let x = {
     a: "2hello",
     b: 2,

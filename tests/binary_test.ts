@@ -25,7 +25,7 @@ import {
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 const nuid = new Nuid();
 
 function macro(input: any) {
@@ -36,11 +36,14 @@ function macro(input: any) {
     let err!: NatsError | null;
     let msg!: Msg;
 
-    nc.subscribe(subj, (e, m: Msg) => {
-      err = e;
-      msg = m;
-      lock.unlock();
-    }, { max: 1 });
+    nc.subscribe(subj, {
+      callback: (e, m: Msg) => {
+        err = e;
+        msg = m;
+        lock.unlock();
+      },
+      max: 1,
+    });
 
     nc.publish(subj, input);
     await nc.flush();
@@ -62,8 +65,11 @@ const embeddedNull = new Uint8Array(
   [0x00, 0xf0, 0x00, 0x28, 0x00, 0x00, 0xf0, 0x9f, 0x92, 0xa9, 0x00],
 );
 
-Deno.test("invalid2octet", macro(invalid2octet));
-Deno.test("invalidSequenceIdentifier", macro(invalidSequenceIdentifier));
-Deno.test("invalid3octet", macro(invalid3octet));
-Deno.test("invalid4octet", macro(invalid4octet));
-Deno.test("embeddednull", macro(embeddedNull));
+Deno.test("binary - invalid2octet", macro(invalid2octet));
+Deno.test(
+  "binary - invalidSequenceIdentifier",
+  macro(invalidSequenceIdentifier),
+);
+Deno.test("binary - invalid3octet", macro(invalid3octet));
+Deno.test("binary - invalid4octet", macro(invalid4octet));
+Deno.test("binary - embeddednull", macro(embeddedNull));

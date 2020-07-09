@@ -16,17 +16,21 @@
 import {
   ConnectionOptions,
   ProtocolHandler,
-  Sub,
   defaultReq,
   Msg,
+  Subscription,
 } from "../nats-base-client/mod.ts";
 
 import { Lock } from "./helpers/mod.ts";
 
 import {
   assertEquals,
+  equal,
 } from "https://deno.land/std/testing/asserts.ts";
-import { MuxSubscription } from "../nats-base-client/protocol.ts";
+import {
+  MuxSubscription,
+  Subscriptions,
+} from "../nats-base-client/protocol.ts";
 
 Deno.test("protocol - partial messages correctly", async () => {
   let lock = Lock(1, 3);
@@ -44,7 +48,7 @@ Deno.test("protocol - partial messages correctly", async () => {
     chunks.push(te.encode(data.charAt(i)));
   }
 
-  let s = {} as Sub;
+  let s = {} as Subscription;
   s.sid = 1;
   s.subject = "test.*";
   s.callback = ((_, msg) => {
@@ -75,11 +79,11 @@ Deno.test("protocol - mux subscription unknown return null", () => {
   let r = defaultReq();
   r.token = "alberto";
   mux.add(r);
-  assertEquals(mux.length, 1);
+  assertEquals(mux.size(), 1);
   assertEquals(mux.get("alberto"), r);
   assertEquals(mux.getToken({ subject: "" } as Msg), null);
   mux.cancel(r);
-  assertEquals(mux.length, 0);
+  assertEquals(mux.size(), 0);
 });
 
 Deno.test("protocol - bad dispatch is noop", () => {
@@ -97,7 +101,7 @@ Deno.test("protocol - dispatch without max", async () => {
   // max in requests is supposed to be 1 - this just for coverage
   r.max = 2;
   r.callback = () => {
-    assertEquals(mux.length, 1);
+    assertEquals(mux.size(), 1);
     lock.unlock();
   };
   mux.add(r);
@@ -108,31 +112,29 @@ Deno.test("protocol - dispatch without max", async () => {
   f(null, m);
   await lock;
 });
-//
-// Deno.test("protocol - subs all", () => {
-//   t.plan(6);
-//   let subs = new Subscriptions();
-//   let s = {} as Sub;
-//   s.subject = "hello";
-//   s.timeout = 1;
-//   s.received = 0;
-//   subs.add(s);
-//   t.is(subs.length, 1);
-//   t.is(s.sid, 1);
-//   t.is(subs.sidCounter, 1);
-//   t.deepEqual(subs.get(1), s);
-//   let a = subs.all();
-//   t.is(a.length, 1);
-//   subs.cancel(a[0]);
-//   t.is(subs.length, 0);
-// });
-//
-// Deno.test("protocol - cancel unknown sub", () => {
-//   t.plan(2);
-//   let subs = new Subscriptions();
-//   let s = {} as Sub;
-//   s.subject = "hello";
-//   t.is(subs.length, 0);
-//   subs.cancel(s);
-//   t.is(subs.length, 0);
-// });
+
+Deno.test("protocol - subs all", () => {
+  const subs = new Subscriptions();
+  const s = new Subscription({} as ProtocolHandler, "hello");
+  s.timeout = 1;
+  s.received = 0;
+  subs.add(s);
+  assertEquals(subs.size(), 1);
+  assertEquals(s.sid, 1);
+  assertEquals(subs.sidCounter, 1);
+  equal(subs.get(0), s);
+  const a = subs.all();
+  assertEquals(a.length, 1);
+  subs.cancel(a[0]);
+  assertEquals(subs.size(), 0);
+});
+
+Deno.test("protocol - cancel unknown sub", () => {
+  const subs = new Subscriptions();
+  const s = new Subscription({} as ProtocolHandler, "hello");
+  assertEquals(subs.size(), 0);
+  subs.add(s);
+  assertEquals(subs.size(), 1);
+  subs.cancel(s);
+  assertEquals(subs.size(), 0);
+});

@@ -17,7 +17,7 @@ import {
   connect,
   Nuid,
 } from "../src/mod.ts";
-import { Lock } from "./helpers/mod.ts";
+import { Lock, NatsServer } from "./helpers/mod.ts";
 
 const u = "nats://demo.nats.io:4222";
 const nuid = new Nuid();
@@ -27,9 +27,12 @@ Deno.test(`bench - pubsub`, async () => {
   const lock = Lock(max, 30000);
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  nc.subscribe(subj, () => {
-    lock.unlock();
-  }, { max: max });
+  nc.subscribe(subj, {
+    callback: () => {
+      lock.unlock();
+    },
+    max: max,
+  });
   await nc.flush();
   for (let i = 0; i < max; i++) {
     nc.publish(subj);
@@ -43,17 +46,13 @@ Deno.test(`bench - pubsub`, async () => {
   await lock;
 });
 
-// Deno.test(`bench - pubonly`, async () => {
-//   const lock = Lock(max);
-//   const nc = await connect({ url: u });
-//   nc.addEventListener("close", () => {
-//     lock.unlock();
-//   });
-//   const subj = nuid.next();
-//
-//   for (let i=0; i < max; i++) {
-//     nc.publish(subj);
-//   }
-//   await nc.drain();
-//   await lock;
-// });
+Deno.test(`bench - pubonly`, async () => {
+  const nc = await connect({ url: u });
+  const subj = nuid.next();
+
+  for (let i = 0; i < max; i++) {
+    nc.publish(subj);
+  }
+  await nc.drain();
+  await nc.status();
+});

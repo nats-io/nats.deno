@@ -25,16 +25,16 @@ import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
 import { deferred } from "../nats-base-client/util.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 const nuid = new Nuid();
 
-Deno.test("connection drains when no subs", async () => {
+Deno.test("drain - connection drains when no subs", async () => {
   let nc = await connect({ url: u });
   await nc.drain();
   await nc.close();
 });
 
-Deno.test("connection drain", async () => {
+Deno.test("drain - connection drain", async () => {
   const max = 1000;
   const lock = Lock(max);
   const subj = nuid.next();
@@ -42,26 +42,32 @@ Deno.test("connection drain", async () => {
   const nc1 = await connect({ url: u });
   let first = true;
   const closed = deferred<void>();
-  await nc1.subscribe(subj, () => {
-    lock.unlock();
-    if (first) {
-      first = false;
-      nc1.drain()
-        .then(() => {
-          closed.resolve();
-        })
-        .catch((err) => {
-          fail(err);
-        });
-    }
-  }, { queue: "q1" });
+  await nc1.subscribe(subj, {
+    callback: () => {
+      lock.unlock();
+      if (first) {
+        first = false;
+        nc1.drain()
+          .then(() => {
+            closed.resolve();
+          })
+          .catch((err) => {
+            fail(err);
+          });
+      }
+    },
+    queue: "q1",
+  });
 
   const nc2 = await connect({ url: u });
   let count = 0;
-  await nc2.subscribe(subj, () => {
-    lock.unlock();
-    count++;
-  }, { queue: "q1" });
+  await nc2.subscribe(subj, {
+    callback: () => {
+      lock.unlock();
+      count++;
+    },
+    queue: "q1",
+  });
 
   await nc1.flush();
   await nc2.flush();
@@ -76,26 +82,32 @@ Deno.test("connection drain", async () => {
   assert(count > 0, "expected second connection to get some messages");
 });
 
-Deno.test("subscription drain", async () => {
+Deno.test("drain - subscription drain", async () => {
   let lock = Lock();
   let nc = await connect({ url: u });
   let subj = nuid.next();
   let c1 = 0;
-  let s1 = nc.subscribe(subj, () => {
-    c1++;
-    if (!s1.isDraining()) {
-      // resolve when done
-      s1.drain()
-        .then(() => {
-          lock.unlock();
-        });
-    }
-  }, { queue: "q1" });
+  let s1 = nc.subscribe(subj, {
+    callback: () => {
+      c1++;
+      if (!s1.isDraining()) {
+        // resolve when done
+        s1.drain()
+          .then(() => {
+            lock.unlock();
+          });
+      }
+    },
+    queue: "q1",
+  });
 
   let c2 = 0;
-  nc.subscribe(subj, () => {
-    c2++;
-  }, { queue: "q1" });
+  nc.subscribe(subj, {
+    callback: () => {
+      c2++;
+    },
+    queue: "q1",
+  });
 
   for (let i = 0; i < 10000; i++) {
     nc.publish(subj);
@@ -114,33 +126,39 @@ Deno.test("subscription drain", async () => {
   await nc.close();
 });
 
-Deno.test("publisher drain", async () => {
+Deno.test("drain - publisher drain", async () => {
   const lock = Lock();
   const subj = nuid.next();
 
   const nc1 = await connect({ url: u });
   let c1 = 0;
-  await nc1.subscribe(subj, () => {
-    c1++;
-    if (c1 === 1) {
-      let dp = nc1.drain();
-      for (let i = 0; i < 100; i++) {
-        nc1.publish(subj);
+  await nc1.subscribe(subj, {
+    callback: () => {
+      c1++;
+      if (c1 === 1) {
+        let dp = nc1.drain();
+        for (let i = 0; i < 100; i++) {
+          nc1.publish(subj);
+        }
+        dp.then(() => {
+          lock.unlock();
+        })
+          .catch((ex) => {
+            fail(ex);
+          });
       }
-      dp.then(() => {
-        lock.unlock();
-      })
-        .catch((ex) => {
-          fail(ex);
-        });
-    }
-  }, { queue: "q1" });
+    },
+    queue: "q1",
+  });
 
   const nc2 = await connect({ url: u });
   let c2 = 0;
-  await nc2.subscribe(subj, () => {
-    c2++;
-  }, { queue: "q1" });
+  await nc2.subscribe(subj, {
+    callback: () => {
+      c2++;
+    },
+    queue: "q1",
+  });
 
   await nc1.flush();
 
@@ -161,10 +179,10 @@ Deno.test("publisher drain", async () => {
   await nc2.close();
 });
 
-Deno.test("publish after drain fails", async () => {
+Deno.test("drain - publish after drain fails", async () => {
   const subj = nuid.next();
   const nc = await connect({ url: u });
-  nc.subscribe(subj, () => {});
+  nc.subscribe(subj);
   await nc.drain();
 
   const err = assertThrows(() => {
@@ -177,38 +195,42 @@ Deno.test("publish after drain fails", async () => {
   );
 });
 
-Deno.test("reject reqrep during connection drain", async () => {
+Deno.test("drain - reject reqrep during connection drain", async () => {
   let lock = Lock();
   let subj = nuid.next();
   // start a service for replies
   let nc1 = await connect({ url: u });
-  await nc1.subscribe(subj, (_, msg: Msg) => {
-    if (msg.reply) {
-      msg.respond("ok");
-    }
+  await nc1.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      if (msg.reply) {
+        msg.respond("ok");
+      }
+    },
   });
   nc1.flush();
 
   let nc2 = await connect({ url: u });
   let first = true;
   let done = Lock();
-  await nc2.subscribe(subj, async () => {
-    if (first) {
-      first = false;
-      nc2.drain()
-        .then(() => {
-          done.unlock();
-        });
-      try {
-        // should fail
-        await nc2.request(subj + "a", 1000);
-        fail("shouldn't have been able to request");
-        lock.unlock();
-      } catch (err) {
-        assertEquals(err.code, ErrorCode.CONNECTION_DRAINING);
-        lock.unlock();
+  await nc2.subscribe(subj, {
+    callback: async () => {
+      if (first) {
+        first = false;
+        nc2.drain()
+          .then(() => {
+            done.unlock();
+          });
+        try {
+          // should fail
+          await nc2.request(subj + "a", 1000);
+          fail("shouldn't have been able to request");
+          lock.unlock();
+        } catch (err) {
+          assertEquals(err.code, ErrorCode.CONNECTION_DRAINING);
+          lock.unlock();
+        }
       }
-    }
+    },
   });
   // publish a trigger for the drain and requests
   nc2.publish(subj, "here");
@@ -218,7 +240,7 @@ Deno.test("reject reqrep during connection drain", async () => {
   await done;
 });
 
-Deno.test("reject drain on closed", async () => {
+Deno.test("drain - reject drain on closed", async () => {
   const nc = await connect({ url: u });
   await nc.close();
   const err = await assertThrowsAsync(() => {
@@ -227,7 +249,7 @@ Deno.test("reject drain on closed", async () => {
   assertErrorCode(err, ErrorCode.CONNECTION_CLOSED);
 });
 
-Deno.test("reject drain on draining", async () => {
+Deno.test("drain - reject drain on draining", async () => {
   const nc = await connect({ url: u });
   const done = nc.drain();
   const err = await assertThrowsAsync(() => {
@@ -237,19 +259,19 @@ Deno.test("reject drain on draining", async () => {
   assertErrorCode(err, ErrorCode.CONNECTION_DRAINING);
 });
 
-Deno.test("reject subscribe on draining", async () => {
+Deno.test("drain - reject subscribe on draining", async () => {
   const nc = await connect({ url: u });
   const done = nc.drain();
   const err = await assertThrowsAsync(async (): Promise<any> => {
-    return nc.subscribe("foo", () => {});
+    return nc.subscribe("foo");
   });
   assertErrorCode(err, ErrorCode.CONNECTION_DRAINING);
   await done;
 });
 
-Deno.test("reject subscription drain on closed sub", async () => {
+Deno.test("drain - reject subscription drain on closed sub", async () => {
   let nc = await connect({ url: u });
-  let sub = nc.subscribe("foo", () => {});
+  let sub = nc.subscribe("foo");
   await sub.drain();
   const err = await assertThrowsAsync((): Promise<any> => {
     return sub.drain();
@@ -258,16 +280,16 @@ Deno.test("reject subscription drain on closed sub", async () => {
   assertErrorCode(err, ErrorCode.SUB_CLOSED);
 });
 
-Deno.test("connection is closed after drain", async () => {
+Deno.test("drain - connection is closed after drain", async () => {
   let nc = await connect({ url: u });
-  nc.subscribe("foo", () => {});
+  nc.subscribe("foo");
   await nc.drain();
   assert(nc.isClosed());
 });
 
-Deno.test("reject subscription drain on closed", async () => {
+Deno.test("drain - reject subscription drain on closed", async () => {
   let nc = await connect({ url: u });
-  let sub = nc.subscribe("foo", () => {});
+  let sub = nc.subscribe("foo");
   await nc.close();
   const err = await assertThrowsAsync(() => {
     return sub.drain();
@@ -275,16 +297,18 @@ Deno.test("reject subscription drain on closed", async () => {
   assertErrorCode(err, ErrorCode.CONNECTION_CLOSED);
 });
 
-Deno.test("reject subscription drain on draining sub", async () => {
+Deno.test("drain - reject subscription drain on draining sub", async () => {
   let nc = await connect({ url: u });
   let subj = nuid.next();
-  let sub = nc.subscribe(subj, async () => {
-    sub.drain();
-    const err = await assertThrowsAsync(() => {
-      return sub.drain();
-    });
-    await nc.close();
-    assertErrorCode(err, ErrorCode.SUB_DRAINING);
+  let sub = nc.subscribe(subj, {
+    callback: async () => {
+      sub.drain();
+      const err = await assertThrowsAsync(() => {
+        return sub.drain();
+      });
+      await nc.close();
+      assertErrorCode(err, ErrorCode.SUB_DRAINING);
+    },
   });
   nc.publish(subj);
   await nc.flush();

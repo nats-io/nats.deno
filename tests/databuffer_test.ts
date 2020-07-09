@@ -15,7 +15,7 @@
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 import { DataBuffer } from "../nats-base-client/mod.ts";
 
-Deno.test("empty", () => {
+Deno.test("databuffer - empty", () => {
   let buf = new DataBuffer();
   assertEquals(0, buf.length());
   assertEquals(0, buf.size());
@@ -23,7 +23,7 @@ Deno.test("empty", () => {
   assertEquals(0, buf.peek().byteLength);
 });
 
-Deno.test("simple", () => {
+Deno.test("databuffer - simple", () => {
   let buf = new DataBuffer();
   buf.fill(DataBuffer.fromAscii("Hello"));
   buf.fill(DataBuffer.fromAscii(" "));
@@ -38,7 +38,7 @@ Deno.test("simple", () => {
   assertEquals("Hello World", DataBuffer.toAscii(d));
 });
 
-Deno.test("from empty", () => {
+Deno.test("databuffer - from empty", () => {
   //@ts-ignore
   let a = DataBuffer.fromAscii(undefined);
   assertEquals(0, a.byteLength);

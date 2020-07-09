@@ -14,7 +14,7 @@
  */
 
 //@ts-ignore
-import { extend, isUint8Array } from "./util.ts";
+import { deferred, extend, isUint8Array, timeout } from "./util.ts";
 import {
   Payload,
   ConnectionOptions,
@@ -33,7 +33,7 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { DebugEvents, defaultReq, defaultSub } from "./types.ts";
+import { DebugEvents, defaultReq } from "./types.ts";
 import { parseOptions } from "./options.ts";
 
 export const nuid = new Nuid();
@@ -105,7 +105,6 @@ export class NatsConnection extends EventTarget {
 
   subscribe(
     subject: string,
-    cb: (error: NatsError | null, msg: Msg) => void,
     opts: SubscriptionOptions = {},
   ): Subscription {
     if (this.isClosed()) {
@@ -119,16 +118,15 @@ export class NatsConnection extends EventTarget {
       throw NatsError.errorForCode(ErrorCode.BAD_SUBJECT);
     }
 
-    let s = defaultSub();
-    extend(s, opts);
-    s.subject = subject;
-    s.callback = cb;
-    return this.protocol.subscribe(s);
+    const sub = new Subscription(this.protocol, subject);
+    extend(sub, opts);
+    this.protocol.subscribe(sub);
+    return sub;
   }
 
   request(
     subject: string,
-    timeout: number = 1000,
+    timeoutMillis: number = 1000,
     data: any = undefined,
   ): Promise<Msg> {
     if (this.isClosed()) {
@@ -145,31 +143,31 @@ export class NatsConnection extends EventTarget {
     if (subject.length === 0) {
       return Promise.reject(NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
     }
-
-    return new Promise<Msg>((resolve, reject) => {
-      let r = defaultReq();
-      let opts = { max: 1 } as RequestOptions;
-      extend(r, opts);
-      r.token = nuid.next();
-      //@ts-ignore
-      r.timeout = setTimeout(() => {
-        request.cancel();
-        reject(NatsError.errorForCode(ErrorCode.CONNECTION_TIMEOUT));
-      }, timeout);
-      r.callback = (err: Error | null, msg: Msg) => {
-        if (err) {
-          reject(msg);
-        } else {
-          resolve(msg);
-        }
-      };
-      let request = this.protocol.request(r);
-      this.publish(
-        subject,
-        data,
-        `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
-      );
+    const d = deferred<Msg>();
+    const to = timeout<Msg>(timeoutMillis);
+    const r = defaultReq();
+    const opts = { max: 1 } as RequestOptions;
+    extend(r, opts);
+    r.token = nuid.next();
+    r.callback = (err: Error | null, msg: Msg) => {
+      to.cancel();
+      if (err) {
+        d.reject(msg);
+      } else {
+        d.resolve(msg);
+      }
+    };
+    const request = this.protocol.request(r);
+    this.publish(
+      subject,
+      data,
+      `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+    );
+    const p = Promise.race([to, d]);
+    p.catch(() => {
+      request.cancel();
     });
+    return p;
   }
 
   /***

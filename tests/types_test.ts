@@ -26,19 +26,22 @@ import {
   assertEquals,
 } from "https://deno.land/std/testing/asserts.ts";
 
-const u = "https://demo.nats.io:4222";
+const u = "demo.nats.io:4222";
 
 const nuid = new Nuid();
 
-Deno.test("json types", async () => {
+Deno.test("types - json types", async () => {
   let lock = Lock();
   let nc = await connect({ url: u, payload: Payload.JSON });
   let subj = nuid.next();
-  nc.subscribe(subj, (_, msg: Msg) => {
-    assertEquals(typeof msg.data, "number");
-    assertEquals(msg.data, 6691);
-    lock.unlock();
-  }, { max: 1 });
+  nc.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      assertEquals(typeof msg.data, "number");
+      assertEquals(msg.data, 6691);
+      lock.unlock();
+    },
+    max: 1,
+  });
 
   nc.publish(subj, 6691);
   nc.flush();
@@ -46,15 +49,18 @@ Deno.test("json types", async () => {
   await nc.close();
 });
 
-Deno.test("string types", async () => {
+Deno.test("types - string types", async () => {
   let lock = Lock();
   let nc = await connect({ url: u, payload: Payload.STRING });
   let subj = nuid.next();
-  nc.subscribe(subj, (_, msg: Msg) => {
-    assertEquals(typeof msg.data, "string");
-    assertEquals(msg.data, "hello world");
-    lock.unlock();
-  }, { max: 1 });
+  nc.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      assertEquals(typeof msg.data, "string");
+      assertEquals(msg.data, "hello world");
+      lock.unlock();
+    },
+    max: 1,
+  });
 
   nc.publish(subj, DataBuffer.fromAscii("hello world"));
   nc.flush();
@@ -62,16 +68,19 @@ Deno.test("string types", async () => {
   await nc.close();
 });
 
-Deno.test("binary types", async () => {
+Deno.test("types - binary types", async () => {
   let lock = Lock();
   let nc = await connect({ url: u, payload: Payload.BINARY });
   let subj = nuid.next();
   let m1!: Msg;
-  nc.subscribe(subj, (_, msg: Msg) => {
-    assert(msg.data instanceof Uint8Array);
-    assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-    lock.unlock();
-  }, { max: 1 });
+  nc.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      assert(msg.data instanceof Uint8Array);
+      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
+      lock.unlock();
+    },
+    max: 1,
+  });
 
   nc.publish(subj, DataBuffer.fromAscii("hello world"));
   nc.flush();
@@ -79,23 +88,29 @@ Deno.test("binary types", async () => {
   await nc.close();
 });
 
-Deno.test("binary encoded per client", async () => {
+Deno.test("types - binary encoded per client", async () => {
   let lock = Lock(2);
   let nc1 = await connect({ url: u, payload: Payload.BINARY });
   let nc2 = await connect({ url: u, payload: Payload.STRING });
   let subj = nuid.next();
 
-  nc1.subscribe(subj, (_, msg: Msg) => {
-    lock.unlock();
-    assert(msg.data instanceof Uint8Array);
-    assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-  }, { max: 1 });
+  nc1.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      lock.unlock();
+      assert(msg.data instanceof Uint8Array);
+      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
+    },
+    max: 1,
+  });
 
-  nc2.subscribe(subj, (_, msg: Msg) => {
-    lock.unlock();
-    assertEquals(typeof msg.data, "string");
-    assertEquals(msg.data, "hello world");
-  }, { max: 1 });
+  nc2.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      lock.unlock();
+      assertEquals(typeof msg.data, "string");
+      assertEquals(msg.data, "hello world");
+    },
+    max: 1,
+  });
   await nc1.flush();
   await nc2.flush();
 
@@ -106,15 +121,18 @@ Deno.test("binary encoded per client", async () => {
   await nc2.close();
 });
 
-Deno.test("binary client gets binary", async () => {
+Deno.test("types - binary client gets binary", async () => {
   let lock = Lock();
   let nc = await connect({ url: u, payload: Payload.BINARY });
   let subj = nuid.next();
-  nc.subscribe(subj, (_, msg: Msg) => {
-    assert(msg.data instanceof Uint8Array);
-    assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-    lock.unlock();
-  }, { max: 1 });
+  nc.subscribe(subj, {
+    callback: (_, msg: Msg) => {
+      assert(msg.data instanceof Uint8Array);
+      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
+      lock.unlock();
+    },
+    max: 1,
+  });
 
   nc.publish(subj, "hello world");
   await nc.flush();
