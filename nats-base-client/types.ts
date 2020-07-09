@@ -96,7 +96,7 @@ export interface Msg {
   reply?: string;
   data?: any;
 
-  respond(data?: any): void;
+  respond(data?: any): boolean;
 }
 
 export interface SubscriptionOptions {
