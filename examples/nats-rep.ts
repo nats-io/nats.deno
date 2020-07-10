@@ -9,7 +9,9 @@ const argv = parse(
     alias: {
       "s": ["server"],
       "q": ["queue"],
+      "e": ["echo"],
     },
+    boolean: ["echo"],
     default: {
       s: "nats://127.0.0.1:4222",
       q: "",
@@ -18,10 +20,13 @@ const argv = parse(
 );
 
 const opts = { url: argv.s } as ConnectionOptions;
-const subject = argv._[0] ? String(argv._[0]) : ">";
+const subject = argv._[0] ? String(argv._[0]) : "";
+const payload = argv._[1] || "";
 
-if (argv.h || argv.help || !subject) {
-  console.log("Usage: nats-sub [-s server] [-q queue] subject");
+if (argv.h || argv.help || !subject || (argv._[1] && argv.q)) {
+  console.log(
+    "Usage: nats-rep [-s server] [-q queue] [-e echo_payload] subject [payload]",
+  );
   Deno.exit(1);
 }
 
@@ -34,8 +39,14 @@ nc.status()
     }
   });
 
+let count = 0;
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
-  console.log(`[${sub.getReceived()}]: ${m.subject}: ${m.data}`);
+  count++;
+  if (m.respond(argv.e ? m.data : payload)) {
+    console.log(`[${count}]: ${m.reply}: ${m.data}`);
+  } else {
+    console.log(`[${count}]: ignored - no reply subject`);
+  }
 }

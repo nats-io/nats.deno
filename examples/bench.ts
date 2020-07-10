@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@v0.56.0/flags/mod.ts";
-import { connect, Nuid } from "https://deno.land/x/nats/src/mod.ts";
+import { parse } from "https://deno.land/std/flags/mod.ts";
+import { connect, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "nats://127.0.0.1:4222",
   c: 1000000,
@@ -19,7 +19,7 @@ const argv = parse(
   },
 );
 
-if (argv.h || argv.help) {
+if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   console.log(
     "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--server server]\n",
   );
@@ -31,22 +31,25 @@ const count = parseInt(String(argv.count));
 const subj = String(argv.subj) || new Nuid().next();
 
 const nc = await connect({ url: server, debug: argv.debug });
-nc.addEventListener("error", (err: Error): void => {
-  console.error(err);
-});
 const start = Date.now();
 
 if (argv.req) {
-  nc.subscribe(subj, (_, m) => {
-    m.respond("ok");
-  });
+  const sub = nc.subscribe(subj);
+  (async () => {
+    for await (const m of sub) {
+      m.respond("ok");
+    }
+  })();
 }
 
 let j = 0;
 if (argv.sub) {
-  nc.subscribe(subj, () => {
-    j++;
-  });
+  const sub = nc.subscribe(subj);
+  (async () => {
+    for await (const m of sub) {
+      j++;
+    }
+  })();
 }
 
 let i = 0;
@@ -69,6 +72,13 @@ if (argv.req) {
     }
   }
 }
+
+nc.status()
+  .then((err) => {
+    if (err) {
+      console.error(`bench closed with an error: ${err.message}`);
+    }
+  });
 
 await nc.drain();
 const millis = Date.now() - start;
