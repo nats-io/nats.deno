@@ -11,11 +11,13 @@ const argv = parse(
       "s": ["server"],
       "c": ["count"],
       "i": ["interval"],
+      "t": ["timeout"],
     },
     default: {
       s: "nats://127.0.0.1:4222",
       c: 1,
       i: 0,
+      t: 1000,
     },
   },
 );
@@ -24,13 +26,13 @@ const opts = { url: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
 const payload = argv._[1] || "";
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
-const interval = argv.i || 0;
+const interval = argv.i;
 
 if (argv.h || argv.help || !subject) {
   console.log(
     "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] subject [msg]",
   );
-  console.log("to publish forever, specify -c=-1 or --count=-1");
+  console.log("to request forever, specify -c=-1 or --count=-1");
   Deno.exit(1);
 }
 
@@ -43,8 +45,13 @@ nc.status()
   });
 
 for (let i = 1; i <= count; i++) {
-  nc.publish(subject, payload);
-  console.log(`[${i}] ${subject}: ${payload}`);
+  await nc.request(subject, argv.t, payload)
+    .then((m) => {
+      console.log(`[${i}]: ${m.data}`);
+    })
+    .catch((err) => {
+      console.log(`[${i}]: request failed: ${err.message}`);
+    });
   if (interval) {
     await delay(interval);
   }
