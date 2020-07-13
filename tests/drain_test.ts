@@ -19,7 +19,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";

@@ -26,7 +26,7 @@ import { Lock } from "./helpers/mod.ts";
 import {
   assertEquals,
   equal,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   MuxSubscription,
   Subscriptions,

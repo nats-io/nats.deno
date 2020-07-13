@@ -16,7 +16,7 @@ import { connect } from "../src/connect.ts";
 import { ErrorCode, NatsError, Nuid } from "../nats-base-client/mod.ts";
 import {
   assertEquals,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";

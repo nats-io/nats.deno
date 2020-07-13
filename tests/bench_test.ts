@@ -17,7 +17,7 @@ import {
   connect,
   Nuid,
 } from "../src/mod.ts";
-import { Lock, NatsServer } from "./helpers/mod.ts";
+import { Lock } from "./helpers/mod.ts";
 
 const u = "nats://demo.nats.io:4222";
 const nuid = new Nuid();

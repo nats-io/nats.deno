@@ -1,4 +1,4 @@
-import { AssertionError } from "https://deno.land/std/testing/asserts.ts";
+import { AssertionError } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { NatsError } from "../../src/mod.ts";
 
 export function assertErrorCode(err: Error, ...code: string[]) {

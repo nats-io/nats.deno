@@ -19,8 +19,7 @@ import {
 } from "../src/mod.ts";
 import {
   assertEquals,
-} from "https://deno.land/std/testing/asserts.ts";
-import { Lock } from "./helpers/mod.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
 const nuid = new Nuid();
