@@ -29,7 +29,7 @@ import {
 } from "../nats-base-client/mod.ts";
 
 const VERSION = "0.0.1";
-const LANG = "Deno";
+const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason
 // messages are dropped - deno websocket implementation does this.
