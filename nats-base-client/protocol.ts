@@ -19,6 +19,7 @@ import {
   Payload,
   Req,
   Events,
+  Status,
   DebugEvents,
   DEFAULT_RECONNECT_TIME_WAIT,
   Base,
@@ -411,7 +412,7 @@ export class MsgBuffer {
   }
 }
 
-export class ProtocolHandler extends EventTarget {
+export class ProtocolHandler {
   connected: boolean = false;
   inbound: DataBuffer;
   infoReceived: boolean = false;
@@ -428,11 +429,12 @@ export class ProtocolHandler extends EventTarget {
   connectError?: Function;
   publisher: Publisher;
   closed: Deferred<Error | void>;
+  listeners: QueuedIterator<Status>[] = [];
+
   private servers: Servers;
   private server!: Server;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
-    super();
     this.options = options;
     this.publisher = publisher;
     this.subscriptions = new Subscriptions();
@@ -456,6 +458,18 @@ export class ProtocolHandler extends EventTarget {
     this.state = ParserState.AWAITING_CONTROL;
     this.outbound = new DataBuffer();
     this.infoReceived = false;
+  }
+
+  private dispatchStatus(status: Status): void {
+    this.listeners.forEach((q) => {
+      q.push(status);
+    });
+  }
+
+  status(): AsyncIterable<Status> {
+    const iter = new QueuedIterator<Status>();
+    this.listeners.push(iter);
+    return iter;
   }
 
   private prepare(): Deferred<void> {
@@ -483,11 +497,21 @@ export class ProtocolHandler extends EventTarget {
   }
 
   async disconnected(err?: Error): Promise<void> {
-    this.dispatchEvent((new Event(Events.DISCONNECT)));
+    this.dispatchStatus(
+      {
+        type: Events.DISCONNECT,
+        data: this.servers.getCurrentServer().toString(),
+      },
+    );
     if (this.options.reconnect) {
       await this.dialLoop()
         .then(() => {
-          this.dispatchEvent(new Event(Events.RECONNECT));
+          this.dispatchStatus(
+            {
+              type: Events.RECONNECT,
+              data: this.servers.getCurrentServer().toString(),
+            },
+          );
         })
         .catch((err) => {
           this._close(err);
@@ -551,11 +575,8 @@ export class ProtocolHandler extends EventTarget {
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
         srv.lastConnect = Date.now();
         try {
-          this.dispatchEvent(
-            new CustomEvent(
-              DebugEvents.RECONNECTING,
-              { detail: srv.hostport() },
-            ),
+          this.dispatchStatus(
+            { type: DebugEvents.RECONNECTING, data: srv.toString() },
           );
           await this.dial(srv);
           break;
@@ -647,9 +668,7 @@ export class ProtocolHandler extends EventTarget {
               );
             }
             if (updates) {
-              this.dispatchEvent(
-                new CustomEvent(Events.UPDATE, { detail: updates }),
-              );
+              this.dispatchStatus({ type: Events.UPDATE, data: updates });
             }
           } else {
             return;
@@ -820,8 +839,6 @@ export class ProtocolHandler extends EventTarget {
     let err = ProtocolHandler.toError(s);
     this.subscriptions.handleError(err);
     await this._close(err);
-
-    // this.dispatchEvent(new ErrorEvent(CLOSE_EVT, new ErrorEvent("error", { error: err })));
   }
 
   sendSubscriptions() {
@@ -848,6 +865,9 @@ export class ProtocolHandler extends EventTarget {
     }
     this.muxSubscriptions.close();
     this.subscriptions.close();
+    this.listeners.forEach((l) => {
+      l.stop();
+    });
     this.state = ParserState.CLOSED;
     return this.transport.close(err)
       .then(() => {

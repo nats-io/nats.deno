@@ -22,6 +22,11 @@ export const Events = Object.freeze({
   UPDATE: "update",
 });
 
+export interface Status {
+  type: string;
+  data: string | ServersChanged;
+}
+
 export const DebugEvents = Object.freeze({
   RECONNECTING: "reconnecting",
 });

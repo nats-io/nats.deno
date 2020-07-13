@@ -3,6 +3,7 @@ export { Nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
   Events,
+  Status,
   ConnectionOptions,
   Msg,
   Payload,

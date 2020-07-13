@@ -21,6 +21,7 @@ import {
   Msg,
   SubscriptionOptions,
   Events,
+  Status,
   //@ts-ignore
 } from "./mod.ts";
 import {
@@ -35,6 +36,7 @@ import { ErrorCode, NatsError } from "./error.ts";
 import { Nuid } from "./nuid.ts";
 import { DebugEvents, defaultReq } from "./types.ts";
 import { parseOptions } from "./options.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
 
 export const nuid = new Nuid();
 
@@ -42,6 +44,7 @@ export class NatsConnection extends EventTarget {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean = false;
+  listeners: QueuedIterator<Status>[] = [];
 
   private constructor(opts: ConnectionOptions) {
     super();
@@ -54,18 +57,13 @@ export class NatsConnection extends EventTarget {
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;
-          // setup a listener to forward lifecycle events
-          const handler = (evt: Event): void | Promise<void> => {
-            const { detail } = evt as CustomEvent;
-            const e = detail
-              ? new CustomEvent(evt.type, { detail })
-              : new Event(evt.type);
-            nc.dispatchEvent(e);
-          };
-          ph.addEventListener(Events.DISCONNECT, handler);
-          ph.addEventListener(Events.RECONNECT, handler);
-          ph.addEventListener(DebugEvents.RECONNECTING, handler);
-          ph.addEventListener(Events.UPDATE, handler);
+          (async function () {
+            for await (const s of ph.status()) {
+              nc.listeners.forEach((l) => {
+                l.push(s);
+              });
+            }
+          })();
           resolve(nc);
         })
         .catch((err: Error) => {
@@ -204,5 +202,11 @@ export class NatsConnection extends EventTarget {
   getServer(): string {
     const srv = this.protocol.getServer();
     return srv ? srv.listen : "";
+  }
+
+  status(): AsyncIterable<Status> {
+    const iter = new QueuedIterator<Status>();
+    this.listeners.push(iter);
+    return iter;
   }
 }
