@@ -105,7 +105,7 @@ Deno.test("basics - subscribe and unsubscribe", async () => {
   assertEquals(nc.protocol.subscriptions.size(), 1);
   let s = nc.protocol.subscriptions.get(1);
   assert(s);
-  assertEquals(s.received, 0);
+  assertEquals(s.getReceived(), 0);
   assertEquals(s.subject, subj);
   assert(s.callback);
   assertEquals(s.max, 1000);
@@ -122,7 +122,7 @@ Deno.test("basics - subscribe and unsubscribe", async () => {
   await nc.flush();
   s = nc.protocol.subscriptions.get(1);
   assert(s);
-  assertEquals(s.received, 1);
+  assertEquals(s.getReceived(), 1);
 
   // verify cleanup
   sub.unsubscribe();

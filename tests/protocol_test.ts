@@ -117,7 +117,6 @@ Deno.test("protocol - subs all", () => {
   const subs = new Subscriptions();
   const s = new Subscription({} as ProtocolHandler, "hello");
   s.timeout = 1;
-  s.received = 0;
   subs.add(s);
   assertEquals(subs.size(), 1);
   assertEquals(s.sid, 1);

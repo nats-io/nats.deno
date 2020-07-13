@@ -28,7 +28,7 @@ Deno.test("iterators - return breaks and closes", async () => {
   const sub = nc.subscribe(subj);
   const done = (async () => {
     for await (const m of sub) {
-      if (sub.received > 1) {
+      if (sub.getReceived() > 1) {
         sub.return();
       }
     }
@@ -36,7 +36,7 @@ Deno.test("iterators - return breaks and closes", async () => {
   nc.publish(subj);
   nc.publish(subj);
   await done;
-  assertEquals(sub.received, 2);
+  assertEquals(sub.getReceived(), 2);
   await nc.close();
 });
 
@@ -54,7 +54,7 @@ Deno.test("iterators - autounsub breaks and closes", async () => {
   nc.publish(subj);
   await done;
   await lock;
-  assertEquals(sub.received, 2);
+  assertEquals(sub.getReceived(), 2);
   await nc.close();
 });
 
