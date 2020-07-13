@@ -25,7 +25,6 @@ import {
   NatsError,
   render,
   Transport,
-  TransportEvents,
 } from "../nats-base-client/mod.ts";
 
 const VERSION = "0.0.1";
@@ -41,14 +40,15 @@ export async function write(
   await writer.flush();
 }
 
-export class DenoTransport extends EventTarget implements Transport {
+export class DenoTransport implements Transport {
   version: string = VERSION;
   lang: string = LANG;
   closeError?: Error;
   private options!: ConnectionOptions;
   private buf: Uint8Array;
   private encrypted = false;
-  private closed = false;
+  private done = false;
+  private closedNotification: Deferred<void | Error> = deferred();
   private conn!: Conn;
   private writer!: BufWriter;
 
@@ -61,7 +61,6 @@ export class DenoTransport extends EventTarget implements Transport {
   }> = [];
 
   constructor() {
-    super();
     this.buf = new Uint8Array(1024 * 8);
   }
 
@@ -89,7 +88,7 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   get isClosed(): boolean {
-    return this.closed;
+    return this.done;
   }
 
   async peekInfo(): Promise<object> {
@@ -148,7 +147,7 @@ export class DenoTransport extends EventTarget implements Transport {
     yield this.buf;
 
     this.buf = new Uint8Array(64 * 1024);
-    while (!this.closed) {
+    while (!this.done) {
       try {
         let c = await this.conn.read(this.buf);
         if (c === null) {
@@ -170,7 +169,7 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   private enqueue(frame: Uint8Array): Promise<void> {
-    if (this.closed) {
+    if (this.done) {
       return Promise.resolve();
     }
     const d = deferred<void>();
@@ -184,7 +183,7 @@ export class DenoTransport extends EventTarget implements Transport {
   private dequeue(): void {
     const [entry] = this.sendQueue;
     if (!entry) return;
-    if (this.closed) return;
+    if (this.done) return;
     const { frame, d } = entry;
     write(frame, this.writer)
       .then(() => {
@@ -218,7 +217,7 @@ export class DenoTransport extends EventTarget implements Transport {
   }
 
   private async _closed(err?: Error, internal: boolean = true): Promise<void> {
-    if (this.closed) return;
+    if (this.done) return;
     this.closeError = err;
     if (!err) {
       try {
@@ -231,14 +230,18 @@ export class DenoTransport extends EventTarget implements Transport {
         }
       }
     }
-    this.closed = true;
+    this.done = true;
     try {
       this.conn?.close();
     } catch (err) {
     }
 
     if (internal) {
-      this.dispatchEvent(new ErrorEvent(TransportEvents.CLOSE, { error: err }));
+      this.closedNotification.resolve(err);
     }
+  }
+
+  closed(): Promise<void | Error> {
+    return this.closedNotification;
   }
 }

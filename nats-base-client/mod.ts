@@ -14,7 +14,6 @@ export {
 export {
   Transport,
   setTransportFactory,
-  TransportEvents,
 } from "./transport.ts";
 export {
   Connect,

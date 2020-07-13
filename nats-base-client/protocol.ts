@@ -24,7 +24,7 @@ import {
   Base,
 } from "./types.ts";
 //@ts-ignore
-import { Transport, newTransport, TransportEvents } from "./transport.ts";
+import { Transport, newTransport } from "./transport.ts";
 //@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 import {
@@ -495,16 +495,13 @@ export class ProtocolHandler extends EventTarget {
     };
 
     this.transport = newTransport();
-    this.transport.addEventListener(
-      TransportEvents.CLOSE,
-      (async (evt: CustomEvent) => {
-        evt.stopPropagation();
+    this.transport.closed()
+      .then(async (err?) => {
         if (this.state !== ParserState.CLOSED) {
           await this.disconnected(this.transport.closeError);
           return;
         }
-      }) as EventListener,
-    );
+      });
 
     return pong;
   }
