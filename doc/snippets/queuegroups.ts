@@ -25,7 +25,7 @@ async function createService(
     const nc = await connect(
       { url: "demo.nats.io:4222", name: `${n}` },
     );
-    nc.status()
+    nc.closed()
       .then((err) => {
         if (err) {
           console.error(
@@ -65,6 +65,6 @@ conns.push(...await createService("standalone"));
 
 const a: Promise<void | Error>[] = [];
 conns.forEach((c) => {
-  a.push(c.status());
+  a.push(c.closed());
 });
 await Promise.all(a);

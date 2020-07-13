@@ -32,7 +32,7 @@ const dials: Promise<NatsConnection>[] = [];
 
 const conns: NatsConnection[] = [];
 // wait until all the dialed connections resolve or fail
-// allSettled returns a tupple with `status` and `value`:
+// allSettled returns a tupple with `closed` and `value`:
 await Promise.allSettled(dials)
   .then((a) => {
     // filter all the ones that succeeded
@@ -48,10 +48,10 @@ await Promise.allSettled(dials)
 // Print where we connected, and register a close handler
 conns.forEach((nc) => {
   console.log(`connected to ${nc.getServer()}`);
-  // you can get notified when the client exits by getting status.
-  // status resolves void or with an error if the connection
+  // you can get notified when the client exits by getting closed.
+  // closed resolves void or with an error if the connection
   // closed because of an error
-  nc.status()
+  nc.closed()
     .then((err) => {
       let m = `connection to ${nc.getServer()} closed`;
       if (err) {

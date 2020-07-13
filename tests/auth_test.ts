@@ -84,7 +84,7 @@ Deno.test("auth - sub permissions", async () => {
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });
@@ -108,7 +108,7 @@ Deno.test("auth - pub perm", async () => {
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });

@@ -31,7 +31,7 @@ const msub = nc.subscribe("admin.*");
 adminHandler(msub);
 
 // wait for the client to close here.
-await nc.status().then((err?: void | Error) => {
+await nc.closed().then((err?: void | Error) => {
   let m = `connection to ${nc.getServer()} closed`;
   if (err) {
     m = `${m} with an error: ${err.message}`;

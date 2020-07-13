@@ -33,7 +33,7 @@ sent to the server when a disconnect happens are lost. A client can queue
 new messages to be sent when the connection resumes. If the connection
 cannot be re-established the client will give up and `close` the connection.
 
-To learn when a connection closes, wait for the promise returned by the `status()`
+To learn when a connection closes, wait for the promise returned by the `closed()`
 function. If the close was due to an error, it will resolve to an error.
 
 To disconnect from the nats-server, you call `close()` on the connection.
@@ -65,7 +65,7 @@ const dials: Promise<NatsConnection>[] = [];
 
 const conns: NatsConnection[] = [];
 // wait until all the dialed connections resolve or fail
-// allSettled returns a tupple with `status` and `value`:
+// allSettled returns a tupple with `closed` and `value`:
 await Promise.allSettled(dials)
   .then((a) => {
     // filter all the ones that succeeded
@@ -81,10 +81,10 @@ await Promise.allSettled(dials)
 // Print where we connected, and register a close handler
 conns.forEach((nc) => {
   console.log(`connected to ${nc.getServer()}`);
-  // you can get notified when the client exits by getting status.
-  // status resolves void or with an error if the connection
+  // you can get notified when the client exits by getting `closed()`.
+  // closed resolves void or with an error if the connection
   // closed because of an error
-  nc.status()
+  nc.closed()
     .then((err) => {
       let m = `connection to ${nc.getServer()} closed`;
       if (err) {
@@ -194,7 +194,7 @@ printMsgs(s2);
 printMsgs(s3);
 
 // don't exit until the client closes
-await nc.status();
+await nc.closed();
 ```
 
 
@@ -225,7 +225,7 @@ const msub = nc.subscribe("admin.*");
 adminHandler(msub);
 
 // wait for the client to close here.
-await nc.status().then((err?: void | Error) => {
+await nc.closed().then((err?: void | Error) => {
   let m = `connection to ${nc.getServer()} closed`;
   if (err) {
     m = `${m} with an error: ${err.message}`;
@@ -318,7 +318,7 @@ async function createService(
     const nc = await connect(
       { url: "demo.nats.io:4222", name: `${n}` },
     );
-    nc.status()
+    nc.closed()
       .then((err) => {
         if (err) {
           console.error(
@@ -358,7 +358,7 @@ conns.push(...await createService("standalone"));
 
 const a: Promise<void | Error>[] = [];
 conns.forEach((c) => {
-  a.push(c.status());
+  a.push(c.closed());
 });
 await Promise.all(a);
 ```

@@ -86,7 +86,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
   });
 
   await lock;
-  await nc.status().then((err) => {
+  await nc.closed().then((err) => {
     assertErrorCode(err as NatsError, ErrorCode.PERMISSIONS_VIOLATION);
   });
   await nc.close();

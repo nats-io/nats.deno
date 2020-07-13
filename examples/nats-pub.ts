@@ -35,7 +35,7 @@ if (argv.h || argv.help || !subject) {
 }
 
 const nc = await connect(opts);
-nc.status()
+nc.closed()
   .then((err) => {
     if (err) {
       console.error(`closed with an error: ${err.message}`);

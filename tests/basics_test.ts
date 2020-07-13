@@ -373,7 +373,7 @@ Deno.test("basics - close listener is called", async () => {
   const nc = await connect(
     { port: cs.getPort(), reconnect: false },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     lock.unlock();
   });
 
@@ -382,7 +382,7 @@ Deno.test("basics - close listener is called", async () => {
   await nc.close();
 });
 
-Deno.test("basics - status returns error", async () => {
+Deno.test("basics - closed returns error", async () => {
   const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
@@ -391,7 +391,7 @@ Deno.test("basics - status returns error", async () => {
   });
 
   const nc = await connect({ url: `127.0.0.1:${cs.getPort()}` });
-  await nc.status()
+  await nc.closed()
     .then((v) => {
       assertEquals((v as Error).message, "'here'");
       lock.unlock();

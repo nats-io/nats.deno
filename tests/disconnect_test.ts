@@ -26,7 +26,7 @@ Deno.test("disconnect - close handler is called on close", async () => {
   let nc = await connect(
     { port: ns.port, reconnect: false },
   );
-  nc.status().then(() => {
+  nc.closed().then(() => {
     lock.unlock();
   });
 
@@ -40,7 +40,7 @@ Deno.test("disconnect - close process inbound ignores", async () => {
   let nc = await connect(
     { port: ns.port, reconnect: false },
   );
-  nc.status().then(() => {
+  nc.closed().then(() => {
     assertEquals(ParserState.CLOSED, nc.protocol.state);
     lock.unlock();
   });

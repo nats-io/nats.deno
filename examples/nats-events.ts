@@ -36,7 +36,7 @@ nc.addEventListener(
   }) as EventListener,
 );
 
-await nc.status()
+await nc.closed()
   .then((err) => {
     if (err) {
       console.error(`closed with an error: ${err.message}`);

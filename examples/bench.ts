@@ -73,7 +73,7 @@ if (argv.req) {
   }
 }
 
-nc.status()
+nc.closed()
   .then((err) => {
     if (err) {
       console.error(`bench closed with an error: ${err.message}`);

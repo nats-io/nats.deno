@@ -54,5 +54,5 @@ Deno.test(`bench - pubonly`, async () => {
     nc.publish(subj);
   }
   await nc.drain();
-  await nc.status();
+  await nc.closed();
 });

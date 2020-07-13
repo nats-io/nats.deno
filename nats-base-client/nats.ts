@@ -74,7 +74,7 @@ export class NatsConnection extends EventTarget {
     });
   }
 
-  status(): Promise<void | Error> {
+  closed(): Promise<void | Error> {
     return this.protocol.closed;
   }
 

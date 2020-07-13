@@ -11,7 +11,7 @@ Deno.test("events - close on close", async () => {
     { port: ns.port },
   );
   nc.close();
-  const status = await nc.status();
+  const status = await nc.closed();
   await ns.stop();
   assertEquals(status, undefined);
 });
@@ -25,13 +25,13 @@ Deno.test("events - disconnect and close", async () => {
   nc.addEventListener(Events.DISCONNECT, () => {
     lock.unlock();
   });
-  nc.status().then(() => {
+  nc.closed().then(() => {
     lock.unlock();
   });
   await ns.stop();
   await lock;
 
-  const v = await nc.status();
+  const v = await nc.closed();
 
   assertEquals(v, undefined);
 });

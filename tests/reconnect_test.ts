@@ -71,7 +71,7 @@ Deno.test("reconnect - events", async () => {
   });
   await srv.stop();
   try {
-    await nc.status();
+    await nc.closed();
   } catch (err) {
     assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
   }
@@ -96,7 +96,7 @@ Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
   });
 
   await srv.stop();
-  await nc.status();
+  await nc.closed();
 });
 
 Deno.test("reconnect - reconnecting after proper delay", async () => {
@@ -115,7 +115,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
     assert(elapsed >= 500 && elapsed <= 600);
   });
 
-  await nc.status();
+  await nc.closed();
 });
 
 Deno.test("reconnect - indefinite reconnects", async () => {
@@ -151,7 +151,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
     lock.unlock();
   }, 1000);
 
-  await nc.status();
+  await nc.closed();
   await srv.stop();
   await lock;
   await srv.stop();
@@ -183,8 +183,8 @@ Deno.test("reconnect - jitter", async () => {
   });
 
   await srv.stop();
-  await nc.status();
-  await dc.status();
+  await nc.closed();
+  await dc.closed();
   assert(called);
   assert(hasDefaultFn);
 });

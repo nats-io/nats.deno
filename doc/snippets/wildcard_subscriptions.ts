@@ -40,4 +40,4 @@ printMsgs(s2);
 printMsgs(s3);
 
 // don't exit until the client closes
-await nc.status();
+await nc.closed();
