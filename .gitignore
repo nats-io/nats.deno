@@ -3,7 +3,6 @@ npm-debug.log*
 
 # generated files
 .DS_Store
-build/
 nats.js
 *.d.ts
 nats.js.map

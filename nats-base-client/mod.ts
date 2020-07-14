@@ -30,6 +30,6 @@ export {
   Timeout,
   delay,
   Deferred,
-  deferred
+  deferred,
 } from "./util.ts";
 export { DataBuffer } from "./databuffer.ts";
