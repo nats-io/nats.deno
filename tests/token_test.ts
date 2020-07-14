@@ -14,7 +14,7 @@
  */
 import {
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { connect } from "../src/mod.ts";
 import {
   assertErrorCode,
@@ -30,7 +30,7 @@ Deno.test("token empty", async () => {
     const nc = await connect(
       { port: ns.port, reconnect: false },
     );
-    nc.status().then((err) => {
+    nc.closed().then((err) => {
       console.table(err);
     });
     await nc.close();

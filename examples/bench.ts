@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
 import { connect, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "nats://127.0.0.1:4222",
@@ -73,7 +73,7 @@ if (argv.req) {
   }
 }
 
-nc.status()
+nc.closed()
   .then((err) => {
     if (err) {
       console.error(`bench closed with an error: ${err.message}`);

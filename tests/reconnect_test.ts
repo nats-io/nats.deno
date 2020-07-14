@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
   ErrorCode,
@@ -61,17 +61,23 @@ Deno.test("reconnect - events", async () => {
   });
 
   let disconnects = 0;
-  nc.addEventListener(Events.DISCONNECT, () => {
-    disconnects++;
-  });
-
   let reconnecting = 0;
-  nc.addEventListener(DebugEvents.RECONNECTING, () => {
-    reconnecting++;
-  });
+
+  (async () => {
+    for await (const e of nc.status()) {
+      switch (e.type) {
+        case Events.DISCONNECT:
+          disconnects++;
+          break;
+        case DebugEvents.RECONNECTING:
+          reconnecting++;
+          break;
+      }
+    }
+  })().then();
   await srv.stop();
   try {
-    await nc.status();
+    await nc.closed();
   } catch (err) {
     assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
   }
@@ -87,16 +93,21 @@ Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
   });
 
   let disconnects = 0;
-  nc.addEventListener(Events.DISCONNECT, () => {
-    disconnects++;
-  });
-
-  nc.addEventListener(DebugEvents.RECONNECTING, () => {
-    fail("shouldn't have emitted reconnecting");
-  });
+  (async () => {
+    for await (const e of nc.status()) {
+      switch (e.type) {
+        case Events.DISCONNECT:
+          disconnects++;
+          break;
+        case DebugEvents.RECONNECTING:
+          fail("shouldn't have emitted reconnecting");
+          break;
+      }
+    }
+  })().then();
 
   await srv.stop();
-  await nc.status();
+  await nc.closed();
 });
 
 Deno.test("reconnect - reconnecting after proper delay", async () => {
@@ -108,14 +119,19 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
   });
   // @ts-ignore
   const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
+
+  (async () => {
+    for await (const e of nc.status()) {
+      switch (e.type) {
+        case DebugEvents.RECONNECTING:
+          const elapsed = Date.now() - serverLastConnect;
+          assert(elapsed >= 500 && elapsed <= 600);
+          break;
+      }
+    }
+  })().then();
   await srv.stop();
-
-  nc.addEventListener(DebugEvents.RECONNECTING, () => {
-    const elapsed = Date.now() - serverLastConnect;
-    assert(elapsed >= 500 && elapsed <= 600);
-  });
-
-  await nc.status();
+  await nc.closed();
 });
 
 Deno.test("reconnect - indefinite reconnects", async () => {
@@ -128,20 +144,24 @@ Deno.test("reconnect - indefinite reconnects", async () => {
   });
 
   let disconnects = 0;
-  nc.addEventListener(Events.DISCONNECT, () => {
-    disconnects++;
-  });
-
   let reconnects = 0;
-  nc.addEventListener(DebugEvents.RECONNECTING, () => {
-    reconnects++;
-  });
-
   let reconnect = false;
-  nc.addEventListener(Events.RECONNECT, () => {
-    reconnect = true;
-    nc.close();
-  });
+  (async () => {
+    for await (const e of nc.status()) {
+      switch (e.type) {
+        case Events.DISCONNECT:
+          disconnects++;
+          break;
+        case Events.RECONNECT:
+          reconnect = true;
+          nc.close();
+          break;
+        case DebugEvents.RECONNECTING:
+          reconnects++;
+          break;
+      }
+    }
+  })().then();
 
   await srv.stop();
 
@@ -151,7 +171,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
     lock.unlock();
   }, 1000);
 
-  await nc.status();
+  await nc.closed();
   await srv.stop();
   await lock;
   await srv.stop();
@@ -183,8 +203,8 @@ Deno.test("reconnect - jitter", async () => {
   });
 
   await srv.stop();
-  await nc.status();
-  await dc.status();
+  await nc.closed();
+  await dc.closed();
   assert(called);
   assert(hasDefaultFn);
 });

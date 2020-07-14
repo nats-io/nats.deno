@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
 import { ConnectionOptions, connect } from "../src/mod.ts";
 
 const argv = parse(
@@ -27,7 +27,7 @@ if (argv.h || argv.help || !subject) {
 
 const nc = await connect(opts);
 console.info(`connected ${nc.getServer()}`);
-nc.status()
+nc.closed()
   .then((err) => {
     if (err) {
       console.error(`closed with an error: ${err.message}`);

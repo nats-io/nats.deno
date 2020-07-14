@@ -19,12 +19,13 @@ import {
   Payload,
   Req,
   Events,
+  Status,
   DebugEvents,
   DEFAULT_RECONNECT_TIME_WAIT,
   Base,
 } from "./types.ts";
 //@ts-ignore
-import { Transport, newTransport, TransportEvents } from "./transport.ts";
+import { Transport, newTransport } from "./transport.ts";
 //@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 import {
@@ -50,6 +51,7 @@ import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { delay } from "./util.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
 
 const nuid = new Nuid();
 
@@ -122,54 +124,24 @@ export class Request {
   }
 }
 
-export class Subscription implements Base {
+export class Subscription extends QueuedIterator<Msg> implements Base {
   sid!: number;
   queue?: string | null;
   draining: boolean = false;
   max?: number | undefined;
-  received: number = 0;
   subject: string;
   timeout?: number | null;
-  yields: { err: NatsError | null; msg: Msg }[] = [];
-  signal?: Deferred<void> = deferred<void>();
-  done: boolean = false;
+  drained?: Promise<void>;
   protocol: ProtocolHandler;
 
   constructor(protocol: ProtocolHandler, subject: string) {
+    super();
     this.protocol = protocol;
     this.subject = subject;
   }
 
   callback(err: NatsError | null, msg: Msg) {
-    if (this.done) {
-      return;
-    }
-    this.yields.push({ err, msg });
-    this.signal?.resolve();
-  }
-
-  [Symbol.asyncIterator]() {
-    return this.iterate();
-  }
-
-  async *iterate(): AsyncIterableIterator<Msg> {
-    while (true) {
-      await this.signal;
-      while (this.yields.length > 0) {
-        const em = this.yields.shift();
-        if (em) {
-          if (em.err) {
-            throw em.err;
-          }
-          yield em.msg;
-        }
-      }
-      if (this.done) {
-        break;
-      } else {
-        this.signal = deferred();
-      }
-    }
+    err ? this.stop(err) : this.push(msg);
   }
 
   return() {
@@ -178,18 +150,14 @@ export class Subscription implements Base {
   }
 
   close(): void {
-    if (!this.isCancelled()) {
-      this.done = true;
+    if (!this.isClosed()) {
       this.cancelTimeout();
-      if (this.signal) {
-        this.signal.resolve();
-        this.signal = undefined;
-      }
+      this.stop();
     }
   }
 
   unsubscribe(max?: number): void {
-    this.protocol.unsubscribe(this.sid, max);
+    this.protocol.unsubscribe(this, max);
   }
 
   hasTimeout(): boolean {
@@ -212,19 +180,28 @@ export class Subscription implements Base {
     return false;
   }
 
-  getReceived(): number {
-    return this.received;
-  }
-
   drain(): Promise<void> {
-    return this.protocol.drainSubscription(this.sid);
+    if (this.protocol.isClosed()) {
+      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
+    }
+    if (this.isClosed()) {
+      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
+    }
+    if (!this.drained) {
+      this.protocol.drainSubscription(this);
+      this.drained = this.protocol.flush(deferred<void>());
+      this.drained.then(() => {
+        this.protocol.subscriptions.cancel(this);
+      });
+    }
+    return this.drained;
   }
 
   isDraining(): boolean {
     return this.draining;
   }
 
-  isCancelled(): boolean {
+  isClosed(): boolean {
     return this.done;
   }
 }
@@ -435,7 +412,7 @@ export class MsgBuffer {
   }
 }
 
-export class ProtocolHandler extends EventTarget {
+export class ProtocolHandler {
   connected: boolean = false;
   inbound: DataBuffer;
   infoReceived: boolean = false;
@@ -452,11 +429,12 @@ export class ProtocolHandler extends EventTarget {
   connectError?: Function;
   publisher: Publisher;
   closed: Deferred<Error | void>;
+  listeners: QueuedIterator<Status>[] = [];
+
   private servers: Servers;
   private server!: Server;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
-    super();
     this.options = options;
     this.publisher = publisher;
     this.subscriptions = new Subscriptions();
@@ -482,6 +460,18 @@ export class ProtocolHandler extends EventTarget {
     this.infoReceived = false;
   }
 
+  private dispatchStatus(status: Status): void {
+    this.listeners.forEach((q) => {
+      q.push(status);
+    });
+  }
+
+  status(): AsyncIterable<Status> {
+    const iter = new QueuedIterator<Status>();
+    this.listeners.push(iter);
+    return iter;
+  }
+
   private prepare(): Deferred<void> {
     this.resetOutbound();
 
@@ -495,26 +485,33 @@ export class ProtocolHandler extends EventTarget {
     };
 
     this.transport = newTransport();
-    this.transport.addEventListener(
-      TransportEvents.CLOSE,
-      (async (evt: CustomEvent) => {
-        evt.stopPropagation();
+    this.transport.closed()
+      .then(async (err?) => {
         if (this.state !== ParserState.CLOSED) {
           await this.disconnected(this.transport.closeError);
           return;
         }
-      }) as EventListener,
-    );
+      });
 
     return pong;
   }
 
   async disconnected(err?: Error): Promise<void> {
-    this.dispatchEvent((new Event(Events.DISCONNECT)));
+    this.dispatchStatus(
+      {
+        type: Events.DISCONNECT,
+        data: this.servers.getCurrentServer().toString(),
+      },
+    );
     if (this.options.reconnect) {
       await this.dialLoop()
         .then(() => {
-          this.dispatchEvent(new Event(Events.RECONNECT));
+          this.dispatchStatus(
+            {
+              type: Events.RECONNECT,
+              data: this.servers.getCurrentServer().toString(),
+            },
+          );
         })
         .catch((err) => {
           this._close(err);
@@ -578,11 +575,8 @@ export class ProtocolHandler extends EventTarget {
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
         srv.lastConnect = Date.now();
         try {
-          this.dispatchEvent(
-            new CustomEvent(
-              DebugEvents.RECONNECTING,
-              { detail: srv.hostport() },
-            ),
+          this.dispatchStatus(
+            { type: DebugEvents.RECONNECTING, data: srv.toString() },
           );
           await this.dial(srv);
           break;
@@ -674,9 +668,7 @@ export class ProtocolHandler extends EventTarget {
               );
             }
             if (updates) {
-              this.dispatchEvent(
-                new CustomEvent(Events.UPDATE, { detail: updates }),
-              );
+              this.dispatchStatus({ type: Events.UPDATE, data: updates });
             }
           } else {
             return;
@@ -742,7 +734,7 @@ export class ProtocolHandler extends EventTarget {
     }
 
     if (sub.max !== undefined && sub.received >= sub.max) {
-      this.unsubscribe(sub.sid);
+      sub.unsubscribe();
     }
   }
 
@@ -802,23 +794,23 @@ export class ProtocolHandler extends EventTarget {
     return sub;
   }
 
-  unsubscribe(sid: number, max?: number) {
-    if (!sid || this.isClosed()) {
+  unsubscribe(s: Subscription, max?: number) {
+    this.drainSubscription(s, max);
+    if (s.max === undefined || s.received >= s.max) {
+      this.subscriptions.cancel(s);
+    }
+  }
+
+  drainSubscription(s: Subscription, max?: number) {
+    if (!s || this.isClosed()) {
       return;
     }
-
-    let s = this.subscriptions.get(sid);
-    if (s) {
-      if (max) {
-        this.sendCommand(`UNSUB ${sid} ${max}\r\n`);
-      } else {
-        this.sendCommand(`UNSUB ${sid}\r\n`);
-      }
-      s.max = max;
-      if (s.max === undefined || s.received >= s.max) {
-        this.subscriptions.cancel(s);
-      }
+    if (max) {
+      this.sendCommand(`UNSUB ${s.sid} ${max}\r\n`);
+    } else {
+      this.sendCommand(`UNSUB ${s.sid}\r\n`);
     }
+    s.max = max;
   }
 
   cancelRequest(token: string, max?: number): void {
@@ -847,8 +839,6 @@ export class ProtocolHandler extends EventTarget {
     let err = ProtocolHandler.toError(s);
     this.subscriptions.handleError(err);
     await this._close(err);
-
-    // this.dispatchEvent(new ErrorEvent(CLOSE_EVT, new ErrorEvent("error", { error: err })));
   }
 
   sendSubscriptions() {
@@ -875,6 +865,9 @@ export class ProtocolHandler extends EventTarget {
     }
     this.muxSubscriptions.close();
     this.subscriptions.close();
+    this.listeners.forEach((l) => {
+      l.stop();
+    });
     this.state = ParserState.CLOSED;
     return this.transport.close(err)
       .then(() => {
@@ -904,28 +897,6 @@ export class ProtocolHandler extends EventTarget {
       .catch(() => {
         // cannot happen
       });
-  }
-
-  async drainSubscription(sid: number): Promise<void> {
-    if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
-    }
-    if (!sid) {
-      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
-    }
-    let s = this.subscriptions.get(sid);
-    if (!s) {
-      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
-    }
-    if (s.draining) {
-      throw NatsError.errorForCode(ErrorCode.SUB_DRAINING);
-    }
-
-    let sub = s;
-    sub.draining = true;
-    this.sendCommand(`UNSUB ${sub.sid}\r\n`);
-    await this.flush();
-    this.subscriptions.cancel(sub);
   }
 
   private flushPending() {

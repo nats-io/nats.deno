@@ -1,4 +1,4 @@
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as path from "https://deno.land/std@0.61.0/path/mod.ts";
 import { check } from "./mod.ts";
 
 export interface PortInfo {

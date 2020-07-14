@@ -15,7 +15,7 @@
 
 import {
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
   ErrorCode,
@@ -84,7 +84,7 @@ Deno.test("auth - sub permissions", async () => {
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });
@@ -108,7 +108,7 @@ Deno.test("auth - pub perm", async () => {
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
   });

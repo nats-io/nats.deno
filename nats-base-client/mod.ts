@@ -3,6 +3,7 @@ export { Nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
   Events,
+  Status,
   ConnectionOptions,
   Msg,
   Payload,
@@ -14,7 +15,6 @@ export {
 export {
   Transport,
   setTransportFactory,
-  TransportEvents,
 } from "./transport.ts";
 export {
   Connect,

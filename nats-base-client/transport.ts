@@ -15,10 +15,6 @@
 //@ts-ignore
 import { ConnectionOptions } from "./types.ts";
 
-export const TransportEvents = Object.freeze({
-  CLOSE: "close",
-});
-
 let transportFactory: TransportFactory;
 export function setTransportFactory(fn: TransportFactory): void {
   transportFactory = fn;
@@ -35,7 +31,7 @@ export interface TransportFactory {
   (): Transport;
 }
 
-export interface Transport extends AsyncIterable<Uint8Array>, EventTarget {
+export interface Transport extends AsyncIterable<Uint8Array> {
   readonly isClosed: boolean;
   readonly lang: string;
   readonly version: string;
@@ -53,4 +49,6 @@ export interface Transport extends AsyncIterable<Uint8Array>, EventTarget {
   send(frame: Uint8Array): Promise<void>;
 
   close(err?: Error): Promise<void>;
+
+  closed(): Promise<void | Error>;
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
 import { ConnectionOptions, connect, Events } from "../src/mod.ts";
 
 const argv = parse(
@@ -18,25 +18,14 @@ const argv = parse(
 const opts = { url: argv.s } as ConnectionOptions;
 
 const nc = await connect(opts);
-console.info(`connected ${nc.getServer()}`);
+(async () => {
+  console.info(`connected ${nc.getServer()}`);
+  for await (const s of nc.status()) {
+    console.info(`${s.type}: ${s.data}`);
+  }
+})().then();
 
-nc.addEventListener(Events.DISCONNECT, () => {
-  console.info(`disconnected ${nc.getServer()}`);
-});
-
-nc.addEventListener(Events.RECONNECT, () => {
-  console.info(`reconnected ${nc.getServer()}`);
-});
-
-nc.addEventListener(
-  Events.UPDATE,
-  ((evt: CustomEvent) => {
-    console.info(`cluster updated`);
-    console.table(evt.detail);
-  }) as EventListener,
-);
-
-await nc.status()
+await nc.closed()
   .then((err) => {
     if (err) {
       console.error(`closed with an error: ${err.message}`);

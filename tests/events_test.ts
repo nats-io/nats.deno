@@ -1,9 +1,8 @@
 import { NatsServer, Lock } from "../tests/helpers/mod.ts";
-import { connect, Events } from "../src/mod.ts";
+import { connect, Events, ServersChanged } from "../src/mod.ts";
 import {
   assertEquals,
-} from "https://deno.land/std/testing/asserts.ts";
-import { delay } from "../nats-base-client/mod.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -11,7 +10,7 @@ Deno.test("events - close on close", async () => {
     { port: ns.port },
   );
   nc.close();
-  const status = await nc.status();
+  const status = await nc.closed();
   await ns.stop();
   assertEquals(status, undefined);
 });
@@ -22,16 +21,22 @@ Deno.test("events - disconnect and close", async () => {
   const nc = await connect(
     { port: ns.port, reconnect: false },
   );
-  nc.addEventListener(Events.DISCONNECT, () => {
-    lock.unlock();
-  });
-  nc.status().then(() => {
+  (async () => {
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case Events.DISCONNECT:
+          lock.unlock();
+          break;
+      }
+    }
+  })().then();
+  nc.closed().then(() => {
     lock.unlock();
   });
   await ns.stop();
   await lock;
 
-  const v = await nc.status();
+  const v = await nc.closed();
 
   assertEquals(v, undefined);
 });
@@ -47,12 +52,19 @@ Deno.test("events - disconnect, reconnect", async () => {
   );
   const disconnect = Lock();
   const reconnect = Lock();
-  nc.addEventListener(Events.RECONNECT, () => {
-    reconnect.unlock();
-  });
-  nc.addEventListener(Events.DISCONNECT, () => {
-    disconnect.unlock();
-  });
+
+  (async () => {
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case Events.DISCONNECT:
+          disconnect.unlock();
+          break;
+        case Events.RECONNECT:
+          reconnect.unlock();
+          break;
+      }
+    }
+  })().then();
 
   await cluster[0].stop();
   await Promise.all([disconnect, reconnect]);
@@ -68,13 +80,17 @@ Deno.test("events - update", async () => {
     },
   );
   const lock = Lock(1);
-  nc.addEventListener(
-    Events.UPDATE,
-    ((evt: CustomEvent) => {
-      assertEquals(evt.detail.added.length, 1);
-      lock.unlock();
-    }) as EventListener,
-  );
+  (async () => {
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case Events.UPDATE:
+          const u = s.data as ServersChanged;
+          assertEquals(u.added.length, 1);
+          lock.unlock();
+          break;
+      }
+    }
+  })().then();
 
   const s = await NatsServer.addClusterMember(cluster[0]);
   cluster.push(s);

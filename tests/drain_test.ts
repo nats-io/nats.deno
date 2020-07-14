@@ -19,7 +19,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
@@ -122,7 +122,7 @@ Deno.test("drain - subscription drain", async () => {
   assertEquals(c1 + c2, 10000);
   assert(c1 >= 1, "s1 got more than one message");
   assert(c2 >= 1, "s2 got more than one message");
-  assert(s1.isCancelled());
+  assert(s1.isClosed());
   await nc.close();
 });
 
@@ -272,7 +272,7 @@ Deno.test("drain - reject subscribe on draining", async () => {
 Deno.test("drain - reject subscription drain on closed sub", async () => {
   let nc = await connect({ url: u });
   let sub = nc.subscribe("foo");
-  await sub.drain();
+  sub.close();
   const err = await assertThrowsAsync((): Promise<any> => {
     return sub.drain();
   });
@@ -297,19 +297,15 @@ Deno.test("drain - reject subscription drain on closed", async () => {
   assertErrorCode(err, ErrorCode.CONNECTION_CLOSED);
 });
 
-Deno.test("drain - reject subscription drain on draining sub", async () => {
-  let nc = await connect({ url: u });
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    callback: async () => {
-      sub.drain();
-      const err = await assertThrowsAsync(() => {
-        return sub.drain();
-      });
-      await nc.close();
-      assertErrorCode(err, ErrorCode.SUB_DRAINING);
-    },
-  });
+Deno.test("drain - multiple sub drain returns same promise", async () => {
+  const nc = await connect({ url: u });
+  const subj = nuid.next();
+  const sub = nc.subscribe(subj);
+  const p1 = sub.drain();
+  const p2 = sub.drain();
+  assertEquals(p1, p2);
   nc.publish(subj);
   await nc.flush();
+  await p1;
+  await nc.close();
 });

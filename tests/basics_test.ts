@@ -3,7 +3,7 @@ import {
   assertEquals,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
   ErrorCode,
@@ -105,7 +105,7 @@ Deno.test("basics - subscribe and unsubscribe", async () => {
   assertEquals(nc.protocol.subscriptions.size(), 1);
   let s = nc.protocol.subscriptions.get(1);
   assert(s);
-  assertEquals(s.received, 0);
+  assertEquals(s.getReceived(), 0);
   assertEquals(s.subject, subj);
   assert(s.callback);
   assertEquals(s.max, 1000);
@@ -122,7 +122,7 @@ Deno.test("basics - subscribe and unsubscribe", async () => {
   await nc.flush();
   s = nc.protocol.subscriptions.get(1);
   assert(s);
-  assertEquals(s.received, 1);
+  assertEquals(s.getReceived(), 1);
 
   // verify cleanup
   sub.unsubscribe();
@@ -363,7 +363,7 @@ Deno.test("basics - request timeout", async () => {
   assert(timedOut);
 });
 
-Deno.test("basics - close listener is called", async () => {
+Deno.test("basics - close promise resolves", async () => {
   const lock = Lock();
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(() => {
@@ -373,7 +373,7 @@ Deno.test("basics - close listener is called", async () => {
   const nc = await connect(
     { port: cs.getPort(), reconnect: false },
   );
-  nc.status().then((err) => {
+  nc.closed().then((err) => {
     lock.unlock();
   });
 
@@ -382,7 +382,7 @@ Deno.test("basics - close listener is called", async () => {
   await nc.close();
 });
 
-Deno.test("basics - status returns error", async () => {
+Deno.test("basics - closed returns error", async () => {
   const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(async () => {
@@ -391,7 +391,7 @@ Deno.test("basics - status returns error", async () => {
   });
 
   const nc = await connect({ url: `127.0.0.1:${cs.getPort()}` });
-  await nc.status()
+  await nc.closed()
     .then((v) => {
       assertEquals((v as Error).message, "'here'");
       lock.unlock();

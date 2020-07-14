@@ -16,7 +16,7 @@ import { connect } from "../src/connect.ts";
 import { ErrorCode, NatsError, Nuid } from "../nats-base-client/mod.ts";
 import {
   assertEquals,
-} from "https://deno.land/std/testing/asserts.ts";
+} from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
@@ -28,7 +28,7 @@ Deno.test("iterators - return breaks and closes", async () => {
   const sub = nc.subscribe(subj);
   const done = (async () => {
     for await (const m of sub) {
-      if (sub.received > 1) {
+      if (sub.getReceived() > 1) {
         sub.return();
       }
     }
@@ -36,7 +36,7 @@ Deno.test("iterators - return breaks and closes", async () => {
   nc.publish(subj);
   nc.publish(subj);
   await done;
-  assertEquals(sub.received, 2);
+  assertEquals(sub.getReceived(), 2);
   await nc.close();
 });
 
@@ -54,7 +54,7 @@ Deno.test("iterators - autounsub breaks and closes", async () => {
   nc.publish(subj);
   await done;
   await lock;
-  assertEquals(sub.received, 2);
+  assertEquals(sub.getReceived(), 2);
   await nc.close();
 });
 
@@ -86,7 +86,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
   });
 
   await lock;
-  await nc.status().then((err) => {
+  await nc.closed().then((err) => {
     assertErrorCode(err as NatsError, ErrorCode.PERMISSIONS_VIOLATION);
   });
   await nc.close();
