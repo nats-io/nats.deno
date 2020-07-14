@@ -24,7 +24,7 @@ const nc = await connect({ url: "demo.nats.io:4222" });
 const sub = nc.subscribe("hello");
 (async () => {
   for await (const m of sub) {
-    console.log(`[${sub.getReceived()}]: ${m.data}`);
+    console.log(`[${sub.getProcessed()}]: ${m.data}`);
   }
   console.log("subscription closed");
 })();

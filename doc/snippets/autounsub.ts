@@ -29,20 +29,24 @@ const h2 = handler(msub);
 for (let i = 1; i < 6; i++) {
   nc.publish("hello", `hello-${i}`);
 }
+// insure all the messages have been delivered to the server
+// meaning that the subscription also processed them.
+await nc.flush();
+// unsub manually from the second subscription
+msub.unsubscribe();
 
 // await the handlers come back
 await Promise.all([h1, h2]);
 await nc.close();
 
 async function handler(s: Subscription) {
-  let processed = 0;
   console.log(
     `sub [${s.sid}] listening to ${s.subject} ${
       s.max ? "and will unsubscribe after " + s.max + " msgs" : ""
     }`,
   );
   for await (const m of s) {
-    console.log(`sub [${s.sid}] #${++processed}}: ${m.data}`);
+    console.log(`sub [${s.sid}] #${s.getProcessed()}}: ${m.data}`);
   }
   console.log(`sub [${s.sid}] is done.`);
 }

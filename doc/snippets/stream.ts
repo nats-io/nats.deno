@@ -29,5 +29,6 @@ let sequence = 0;
 setInterval(() => {
   sequence++;
   const uptime = Date.now() - start;
+  console.info(`publishing #${sequence}`);
   nc.publish("stream.demo", JSON.stringify({ sequence, uptime }));
 }, 1000);

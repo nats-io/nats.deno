@@ -45,13 +45,15 @@ async function createService(
 
 // simple handler for service requests
 async function handleRequest(name: string, s: Subscription) {
+  const p = 12 - name.length;
+  const pad = "".padEnd(p);
   for await (const m of s) {
     // respond returns true if the message had a reply subject, thus it could respond
     if (m.respond(m.data)) {
-      console.log(`[${name} - ${s.getReceived()}]: echoed ${m.data}`);
+      console.log(`[${name}]:${pad} #${s.getProcessed()} echoed ${m.data}`);
     } else {
       console.log(
-        `[${name} - ${s.getReceived()}]: ignoring request - no reply subject`,
+        `[${name}]:${pad} #${s.getProcessed()} ignoring request - no reply subject`,
       );
     }
   }

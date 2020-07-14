@@ -39,14 +39,12 @@ nc.closed()
     }
   });
 
-let count = 0;
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
-  count++;
   if (m.respond(argv.e ? m.data : payload)) {
-    console.log(`[${count}]: ${m.reply}: ${m.data}`);
+    console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.data}`);
   } else {
-    console.log(`[${count}]: ignored - no reply subject`);
+    console.log(`[${sub.getProcessed()}]: ignored - no reply subject`);
   }
 }

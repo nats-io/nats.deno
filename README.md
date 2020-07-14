@@ -114,7 +114,7 @@ const nc = await connect({ url: "demo.nats.io:4222" });
 const sub = nc.subscribe("hello");
 (async () => {
   for await (const m of sub) {
-    console.log(`[${sub.getReceived()}]: ${m.data}`);
+    console.log(`[${sub.getProcessed()}]: ${m.data}`);
   }
   console.log("subscription closed");
 })();
@@ -150,9 +150,9 @@ let sequence = 0;
 setInterval(() => {
   sequence++;
   const uptime = Date.now() - start;
+  console.info(`publishing #${sequence}`)
   nc.publish("stream.demo", JSON.stringify({ sequence, uptime }));
 }, 1000);
-
 ```
 
 ### Wildcard Subscriptions
@@ -178,12 +178,14 @@ const s2 = nc.subscribe("help.me.*");
 // '>' can only be specified at the end
 const s3 = nc.subscribe("help.>");
 
-async function printMsgs(s) {
+async function printMsgs(s: Subscription) {
   console.log(`listening for ${s.subject}`);
+  const c = (13 - s.subject.length);
+  const pad = "".padEnd(c);
   for await (const m of s) {
     console.log(
-      `[${s.getReceived()} - ${s.subject}] - ${m.subject} : ${
-        m.data ? "- " + m.data : ""
+      `[${s.subject}]${pad} #${s.getProcessed()} - ${m.subject} ${
+        m.data ? " " + m.data : ""
       }`,
     );
   }
@@ -338,13 +340,15 @@ async function createService(
 
 // simple handler for service requests
 async function handleRequest(name: string, s: Subscription) {
+  const p = 12 - name.length;
+  const pad = "".padEnd(p);
   for await (const m of s) {
     // respond returns true if the message had a reply subject, thus it could respond
     if (m.respond(m.data)) {
-      console.log(`[${name} - ${s.getReceived()}]: echoed ${m.data}`);
+      console.log(`[${name}]:${pad} #${s.getProcessed()} echoed ${m.data}`);
     } else {
       console.log(
-        `[${name} - ${s.getReceived()}]: ignoring request - no reply subject`,
+        `[${name}]:${pad} #${s.getProcessed()} ignoring request - no reply subject`,
       );
     }
   }
@@ -413,20 +417,28 @@ sub.clearTimeout()
 ```
 
 ### Lifecycle/Informational Events
+Clients can get notification on various event types:
+- `Events.DISCONNECT`
+- `Events.RECONNECT`
+- `Events.UPDATE`
+
+The first two fire when a client disconnects and reconnects respectively.
+The payload will be the server where the event took place.
+
+The `UPDATE` event notifies whenever the client receives a cluster configuration
+update. The `ServersChanged` interface provides two arrays: `added` and `deleted`
+listing the servers that were added or removed. 
+
 ```javascript
-// Clients can get notification on various event types:
-  nc.addEventListener(Events.RECONNECT, () => {
-    console.info("reconnected!!!")
-  });
-  nc.addEventListener(Events.DISCONNECT, () => {
-    console.error("disconnected!!!")
-  });
-  nc.addEventListener(Events.UPDATE, (evt) => {
-    // ServersChanged is a { added: string[], deleted: string[] }
-    const v = evt.detail;
-    console.log("servers changed");
-    console.table(v);
-  });
+const nc = await connect(opts);
+(async () => {
+  console.info(`connected ${nc.getServer()}`);
+  for await (const s of nc.status()) {
+    console.info(`${s.type}: ${s.data}`);
+  }
+})().then();
 
 ```
 
+To be aware of when a client closes, wait for the `closed()` promise to resolve.
+When it resolves, the client has finished and won't reconnect.

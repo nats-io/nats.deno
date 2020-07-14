@@ -37,5 +37,5 @@ nc.closed()
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
-  console.log(`[${sub.getReceived()}]: ${m.subject}: ${m.data}`);
+  console.log(`[${sub.getProcessed()}]: ${m.subject}: ${m.data}`);
 }
