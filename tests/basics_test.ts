@@ -363,7 +363,7 @@ Deno.test("basics - request timeout", async () => {
   assert(timedOut);
 });
 
-Deno.test("basics - close listener is called", async () => {
+Deno.test("basics - close promise resolves", async () => {
   const lock = Lock();
   const cs = new TestServer(false, (ca: Connection) => {
     setTimeout(() => {

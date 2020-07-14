@@ -20,7 +20,6 @@ import {
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
-  Events,
   Status,
   //@ts-ignore
 } from "./mod.ts";
@@ -34,20 +33,19 @@ import {
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { DebugEvents, defaultReq } from "./types.ts";
+import { defaultReq } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 
 export const nuid = new Nuid();
 
-export class NatsConnection extends EventTarget {
+export class NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean = false;
   listeners: QueuedIterator<Status>[] = [];
 
   private constructor(opts: ConnectionOptions) {
-    super();
     this.options = parseOptions(opts);
   }
 

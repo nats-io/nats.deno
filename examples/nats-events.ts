@@ -18,23 +18,12 @@ const argv = parse(
 const opts = { url: argv.s } as ConnectionOptions;
 
 const nc = await connect(opts);
-console.info(`connected ${nc.getServer()}`);
-
-nc.addEventListener(Events.DISCONNECT, () => {
-  console.info(`disconnected ${nc.getServer()}`);
-});
-
-nc.addEventListener(Events.RECONNECT, () => {
-  console.info(`reconnected ${nc.getServer()}`);
-});
-
-nc.addEventListener(
-  Events.UPDATE,
-  ((evt: CustomEvent) => {
-    console.info(`cluster updated`);
-    console.table(evt.detail);
-  }) as EventListener,
-);
+(async () => {
+  console.info(`connected ${nc.getServer()}`);
+  for await (const s of nc.status()) {
+    console.info(`${s.type}: ${s.data}`);
+  }
+})().then();
 
 await nc.closed()
   .then((err) => {
