@@ -29,5 +29,7 @@ export {
   INFO,
   Timeout,
   delay,
+  Deferred,
+  deferred
 } from "./util.ts";
 export { DataBuffer } from "./databuffer.ts";
