@@ -25,15 +25,16 @@ import {
 } from "./mod.ts";
 import {
   ProtocolHandler,
+  Request,
   RequestOptions,
-  Subscription,
+  SubscriptionImpl,
   //@ts-ignore
 } from "./protocol.ts";
 //@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 //@ts-ignore
 import { Nuid } from "./nuid.ts";
-import { defaultReq } from "./types.ts";
+import { Subscription } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 
@@ -114,8 +115,7 @@ export class NatsConnection {
       throw NatsError.errorForCode(ErrorCode.BAD_SUBJECT);
     }
 
-    const sub = new Subscription(this.protocol, subject);
-    extend(sub, opts);
+    const sub = new SubscriptionImpl(this.protocol, subject, opts);
     this.protocol.subscribe(sub);
     return sub;
   }
@@ -139,29 +139,22 @@ export class NatsConnection {
     if (subject.length === 0) {
       return Promise.reject(NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
     }
-    const d = deferred<Msg>();
-    const to = timeout<Msg>(timeoutMillis);
-    const r = defaultReq();
-    const opts = { max: 1 } as RequestOptions;
-    extend(r, opts);
-    r.token = nuid.next();
-    r.callback = (err: Error | null, msg: Msg) => {
-      to.cancel();
-      if (err) {
-        d.reject(msg);
-      } else {
-        d.resolve(msg);
-      }
-    };
-    const request = this.protocol.request(r);
+
+    const opts = {} as RequestOptions;
+    opts.timeout = timeoutMillis;
+
+    const r = new Request(this.protocol.muxSubscriptions, opts);
+    this.protocol.request(r);
+
     this.publish(
       subject,
       data,
       `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
     );
-    const p = Promise.race([to, d]);
+
+    const p = Promise.race([r.timer, r.deferred]);
     p.catch(() => {
-      request.cancel();
+      r.cancel();
     });
     return p;
   }

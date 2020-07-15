@@ -22,14 +22,14 @@ import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 const u = "demo.nats.io:4222";
 const nuid = new Nuid();
 
-Deno.test("iterators - return breaks and closes", async () => {
+Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   const sub = nc.subscribe(subj);
   const done = (async () => {
     for await (const m of sub) {
       if (sub.getReceived() > 1) {
-        sub.return();
+        sub.unsubscribe();
       }
     }
   })();
@@ -93,7 +93,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
   await ns.stop();
 });
 
-Deno.test("iterators - closing closes", async () => {
+Deno.test("iterators - unsubscribing closes", async () => {
   const nc = await connect(
     { url: u },
   );
@@ -107,7 +107,7 @@ Deno.test("iterators - closing closes", async () => {
   })();
   nc.publish(subj);
   await lock;
-  sub.close();
+  sub.unsubscribe();
   await done;
   await nc.close();
 });

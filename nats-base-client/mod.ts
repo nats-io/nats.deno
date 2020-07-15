@@ -7,10 +7,9 @@ export {
   ConnectionOptions,
   Msg,
   Payload,
-  Req,
   ServersChanged,
   SubscriptionOptions,
-  defaultReq,
+  Subscription,
 } from "./types.ts";
 export {
   Transport,
@@ -21,7 +20,8 @@ export {
   MuxSubscription,
   ParserState,
   ProtocolHandler,
-  Subscription,
+  SubscriptionImpl,
+  Request,
 } from "./protocol.ts";
 export {
   render,

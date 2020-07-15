@@ -107,6 +107,7 @@ export interface Msg {
 export interface SubscriptionOptions {
   queue?: string;
   max?: number;
+  timeout?: number;
   callback?: (err: NatsError | null, msg: Msg) => void;
 }
 
@@ -117,14 +118,6 @@ export interface Base {
   timeout?: number | null;
   max?: number | undefined;
   draining: boolean;
-}
-
-export interface Req extends Base {
-  token: string;
-}
-
-export function defaultReq(): Req {
-  return { token: "", subject: "", received: 0, max: 1 } as Req;
 }
 
 export interface ServerInfo {
@@ -144,4 +137,19 @@ export interface ServerInfo {
 export interface ServersChanged {
   readonly added: string[];
   readonly deleted: string[];
+}
+
+export interface Subscription extends AsyncIterable<Msg> {
+  unsubscribe(max?: number): void;
+  drain(): Promise<void>;
+  isDraining(): boolean;
+  isClosed(): boolean;
+  callback(err: NatsError | null, msg: Msg): void;
+  getSubject(): string;
+  getReceived(): number;
+  getProcessed(): number;
+  getID(): number;
+  getMax(): number | undefined;
+
+  cancelTimeout(): void;
 }
