@@ -374,7 +374,7 @@ Deno.test("basics - request cancel rejects", async () => {
   const s = nuid.next();
   const lock = Lock();
 
-  const r = nc.request(s, 1000, "test")
+  nc.request(s, 1000, "test")
     .then(() => {
       fail();
     })
