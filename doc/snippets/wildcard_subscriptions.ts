@@ -25,12 +25,13 @@ const s2 = nc.subscribe("help.me.*");
 const s3 = nc.subscribe("help.>");
 
 async function printMsgs(s: Subscription) {
-  console.log(`listening for ${s.subject}`);
-  const c = (13 - s.subject.length);
+  let subj = s.getSubject();
+  console.log(`listening for ${subj}`);
+  const c = (13 - subj.length);
   const pad = "".padEnd(c);
   for await (const m of s) {
     console.log(
-      `[${s.subject}]${pad} #${s.getProcessed()} - ${m.subject} ${
+      `[${subj}]${pad} #${s.getProcessed()} - ${m.subject} ${
         m.data ? " " + m.data : ""
       }`,
     );

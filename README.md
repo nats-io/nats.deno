@@ -399,21 +399,21 @@ nc.subscribe('foo', {max:10});
 
 ### Timeout Subscriptions
 ```javascript
-// subscriptions can specify attach a timeout
-// timeout will clear with first message
-const sub = nc.subscribe('foo', ()=> {})
-sub.setTimeout(300, ()=> {
-  console.log('no messages received')
-})
-
-// if 10 messages are not received, timeout fires
-const sub = nc.subscribe('foo', ()=> {}, {max:10})
-sub.setTimeout(300, ()=> {
-  console.log(`got ${sub.getReceived()} messages. Was expecting 10`)
-})
-
-// timeout can be cancelled
-sub.clearTimeout()
+// create subscription with a timeout, if no message arrives
+// within the timeout, the function running the iterator with
+// reject - depending on how you code it, you may need a
+// try/catch block.
+const sub = nc.subscribe("hello", { timeout: 1000 });
+(async () => {
+  for await (const m of sub) {
+  }
+})().catch((err) => {
+  if (err.code === ErrorCode.TIMEOUT) {
+    console.log(`sub timed out!`);
+  } else {
+    console.log(`sub iterator got an error!`);
+  }
+});
 ```
 
 ### Lifecycle/Informational Events

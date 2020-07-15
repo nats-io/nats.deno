@@ -41,7 +41,7 @@ await nc.closed().then((err?: void | Error) => {
 
 // this implements the public service, and just prints
 async function requestHandler(sub: Subscription) {
-  console.log(`listening for ${sub.subject} requests...`);
+  console.log(`listening for ${sub.getSubject()} requests...`);
   let serviced = 0;
   for await (const m of sub) {
     serviced++;
@@ -57,7 +57,7 @@ async function requestHandler(sub: Subscription) {
 
 // this implements the admin service
 async function adminHandler(sub: Subscription) {
-  console.log(`listening for ${sub.subject} requests [uptime | stop]`);
+  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
 
   // it would be very good to verify the origin of the request
   // before implementing something that allows your service to be managed.

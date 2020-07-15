@@ -272,7 +272,7 @@ Deno.test("drain - reject subscribe on draining", async () => {
 Deno.test("drain - reject subscription drain on closed sub", async () => {
   let nc = await connect({ url: u });
   let sub = nc.subscribe("foo");
-  sub.close();
+  sub.unsubscribe();
   const err = await assertThrowsAsync((): Promise<any> => {
     return sub.drain();
   });

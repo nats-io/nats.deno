@@ -16,12 +16,13 @@
 import {
   ConnectionOptions,
   ProtocolHandler,
-  defaultReq,
   Msg,
-  Subscription,
+  SubscriptionImpl,
+  Request,
+  ErrorCode,
 } from "../nats-base-client/mod.ts";
 
-import { Lock } from "./helpers/mod.ts";
+import { assertErrorCode, Lock } from "./helpers/mod.ts";
 
 import {
   assertEquals,
@@ -48,7 +49,7 @@ Deno.test("protocol - partial messages correctly", async () => {
     chunks.push(te.encode(data.charAt(i)));
   }
 
-  let s = {} as Subscription;
+  let s = {} as SubscriptionImpl;
   s.sid = 1;
   s.subject = "test.*";
   s.callback = ((_, msg) => {
@@ -72,17 +73,24 @@ Deno.test("protocol - partial messages correctly", async () => {
   await lock;
 });
 
-Deno.test("protocol - mux subscription unknown return null", () => {
+Deno.test("protocol - mux subscription unknown return null", async () => {
   let mux = new MuxSubscription();
   mux.init();
 
-  let r = defaultReq();
+  let r = new Request(mux);
   r.token = "alberto";
   mux.add(r);
   assertEquals(mux.size(), 1);
   assertEquals(mux.get("alberto"), r);
   assertEquals(mux.getToken({ subject: "" } as Msg), null);
-  mux.cancel(r);
+
+  const p = Promise.race([r.deferred, r.timer])
+    .catch((err) => {
+      assertErrorCode(err, ErrorCode.CANCELLED);
+    });
+
+  r.cancel();
+  await p;
   assertEquals(mux.size(), 0);
 });
 
@@ -92,31 +100,9 @@ Deno.test("protocol - bad dispatch is noop", () => {
   mux.dispatcher()(null, { subject: "foo" } as Msg);
 });
 
-Deno.test("protocol - dispatch without max", async () => {
-  let lock = Lock();
-  let mux = new MuxSubscription();
-  mux.init();
-  let r = defaultReq();
-  r.token = "foo";
-  // max in requests is supposed to be 1 - this just for coverage
-  r.max = 2;
-  r.callback = () => {
-    assertEquals(mux.size(), 1);
-    lock.unlock();
-  };
-  mux.add(r);
-
-  let m = {} as Msg;
-  m.subject = mux.baseInbox + "foo";
-  let f = mux.dispatcher();
-  f(null, m);
-  await lock;
-});
-
 Deno.test("protocol - subs all", () => {
   const subs = new Subscriptions();
-  const s = new Subscription({} as ProtocolHandler, "hello");
-  s.timeout = 1;
+  const s = new SubscriptionImpl({} as ProtocolHandler, "hello");
   subs.add(s);
   assertEquals(subs.size(), 1);
   assertEquals(s.sid, 1);
@@ -130,7 +116,7 @@ Deno.test("protocol - subs all", () => {
 
 Deno.test("protocol - cancel unknown sub", () => {
   const subs = new Subscriptions();
-  const s = new Subscription({} as ProtocolHandler, "hello");
+  const s = new SubscriptionImpl({} as ProtocolHandler, "hello");
   assertEquals(subs.size(), 0);
   subs.add(s);
   assertEquals(subs.size(), 1);

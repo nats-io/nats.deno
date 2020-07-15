@@ -12,12 +12,14 @@ import {
   Payload,
 } from "../src/mod.ts";
 import {
+  assertErrorCode,
   Connection,
   Lock,
   NatsServer,
   TestServer,
 } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
+import { SubscriptionImpl } from "../nats-base-client/mod.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -164,7 +166,7 @@ Deno.test("basics - subscriptions pass exact subject to cb", async () => {
 Deno.test("basics - subscribe returns Subscription", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  const sub = nc.subscribe(subj);
+  const sub = nc.subscribe(subj) as SubscriptionImpl;
   assertEquals(sub.sid, 1);
   await nc.close();
 });
@@ -288,7 +290,7 @@ Deno.test("basics - closed cannot subscribe", async () => {
 
 Deno.test("basics - close cannot request", async () => {
   let nc = await connect({ url: u });
-  nc.close();
+  await nc.close();
   let failed = false;
   try {
     await nc.request(nuid.next());
@@ -352,15 +354,40 @@ Deno.test("basics - request", async () => {
 Deno.test("basics - request timeout", async () => {
   const nc = await connect({ url: u });
   const s = nuid.next();
-  let timedOut = false;
-  try {
-    await nc.request(s, 100, "test");
-  } catch (err) {
-    assertEquals(err.code, ErrorCode.TIMEOUT);
-    timedOut = true;
-  }
+  const lock = Lock();
+
+  nc.request(s, 100, "test")
+    .then(() => {
+      fail();
+    })
+    .catch((err) => {
+      assertEquals(err.code, ErrorCode.TIMEOUT);
+      lock.unlock();
+    });
+
+  await lock;
   await nc.close();
-  assert(timedOut);
+});
+
+Deno.test("basics - request cancel rejects", async () => {
+  const nc = await connect({ url: u });
+  const s = nuid.next();
+  const lock = Lock();
+
+  nc.request(s, 1000, "test")
+    .then(() => {
+      fail();
+    })
+    .catch((err) => {
+      assertEquals(err.code, ErrorCode.CANCELLED);
+      lock.unlock();
+    });
+
+  nc.protocol.muxSubscriptions.reqs.forEach((v) => {
+    v.cancel();
+  });
+  await lock;
+  await nc.close();
 });
 
 Deno.test("basics - close promise resolves", async () => {
@@ -403,29 +430,30 @@ Deno.test("basics - closed returns error", async () => {
 Deno.test("basics - subscription with timeout", async () => {
   const lock = Lock(1);
   const nc = await connect({ url: u });
-  const sub = nc.subscribe(nuid.next(), { max: 1 });
-
-  sub.setTimeout(1000, () => {
+  const sub = nc.subscribe(nuid.next(), { max: 1, timeout: 250 });
+  (async () => {
+    for await (const m of sub) {}
+  })().catch((err) => {
+    assertErrorCode(err, ErrorCode.TIMEOUT);
     lock.unlock();
   });
-
-  await nc.flush();
   await lock;
   await nc.close();
 });
 
-Deno.test("basics - subscription expecting 2 fires timeout", async () => {
-  const lock = Lock();
+Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
-  let c = 0;
-  const sub = nc.subscribe(subj, { max: 2 });
-  sub.setTimeout(100, () => {
-    lock.unlock();
+  const sub = nc.subscribe(subj, { max: 2, timeout: 100 });
+  (async () => {
+    for await (const m of sub) {}
+  })().catch((err) => {
+    fail(err);
   });
+
   nc.publish(subj);
   await nc.flush();
-  await lock;
+
   assertEquals(1, sub.getReceived());
   await nc.close();
 });
@@ -434,34 +462,19 @@ Deno.test("basics - subscription timeout autocancels", async () => {
   const nc = await connect({ url: u });
   const subj = nuid.next();
   let c = 0;
-  const sub = nc.subscribe(subj, {
-    callback: () => {
+  const sub = nc.subscribe(subj, { max: 2, timeout: 300 });
+  (async () => {
+    for await (const m of sub) {
       c++;
-    },
-    max: 2,
+    }
+  })().catch((err) => {
+    fail(err);
   });
-  sub.setTimeout(300, () => {
-    fail();
-  });
+
   nc.publish(subj);
   nc.publish(subj);
   await delay(500);
   assertEquals(c, 2);
-  await nc.close();
-});
-
-Deno.test("basics - subscription timeout cancel", async () => {
-  const nc = await connect({ url: u });
-  const subj = nuid.next();
-  const sub = nc.subscribe(subj, { callback: () => {}, max: 2 });
-  sub.setTimeout(100, () => {
-    fail();
-  });
-  sub.cancelTimeout();
-  const lock = Lock(1, 300);
-  setTimeout(lock.unlock, 200);
-  await lock;
-  await nc.flush();
   await nc.close();
 });
 

@@ -40,13 +40,15 @@ await Promise.all([h1, h2]);
 await nc.close();
 
 async function handler(s: Subscription) {
+  const id = s.getID();
+  const max = s.getMax();
   console.log(
-    `sub [${s.sid}] listening to ${s.subject} ${
-      s.max ? "and will unsubscribe after " + s.max + " msgs" : ""
+    `sub [${id}] listening to ${s.getSubject()} ${
+      max ? "and will unsubscribe after " + max + " msgs" : ""
     }`,
   );
   for await (const m of s) {
-    console.log(`sub [${s.sid}] #${s.getProcessed()}}: ${m.data}`);
+    console.log(`sub [${id}] #${s.getProcessed()}}: ${m.data}`);
   }
-  console.log(`sub [${s.sid}] is done.`);
+  console.log(`sub [${id}] is done.`);
 }
