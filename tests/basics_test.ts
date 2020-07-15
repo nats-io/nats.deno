@@ -354,15 +354,40 @@ Deno.test("basics - request", async () => {
 Deno.test("basics - request timeout", async () => {
   const nc = await connect({ url: u });
   const s = nuid.next();
-  let timedOut = false;
-  try {
-    await nc.request(s, 100, "test");
-  } catch (err) {
-    assertEquals(err.code, ErrorCode.TIMEOUT);
-    timedOut = true;
-  }
+  const lock = Lock();
+
+  nc.request(s, 100, "test")
+    .then(() => {
+      fail();
+    })
+    .catch((err) => {
+      assertEquals(err.code, ErrorCode.TIMEOUT);
+      lock.unlock();
+    });
+
+  await lock;
   await nc.close();
-  assert(timedOut);
+});
+
+Deno.test("basics - request cancel rejects", async () => {
+  const nc = await connect({ url: u });
+  const s = nuid.next();
+  const lock = Lock();
+
+  const r = nc.request(s, 1000, "test")
+    .then(() => {
+      fail();
+    })
+    .catch((err) => {
+      assertEquals(err.code, ErrorCode.CANCELLED);
+      lock.unlock();
+    });
+
+  nc.protocol.muxSubscriptions.reqs.forEach((v) => {
+    v.cancel();
+  });
+  await lock;
+  await nc.close();
 });
 
 Deno.test("basics - close promise resolves", async () => {
@@ -407,15 +432,11 @@ Deno.test("basics - subscription with timeout", async () => {
   const nc = await connect({ url: u });
   const sub = nc.subscribe(nuid.next(), { max: 1, timeout: 250 });
   (async () => {
-    try {
-      for await (const m of sub) {}
-    } catch (err) {
-      assertErrorCode(err, ErrorCode.TIMEOUT);
-      lock.unlock();
-    }
-  })().then();
-
-  await nc.flush();
+    for await (const m of sub) {}
+  })().catch((err) => {
+    assertErrorCode(err, ErrorCode.TIMEOUT);
+    lock.unlock();
+  });
   await lock;
   await nc.close();
 });
@@ -454,23 +475,6 @@ Deno.test("basics - subscription timeout autocancels", async () => {
   nc.publish(subj);
   await delay(500);
   assertEquals(c, 2);
-  await nc.close();
-});
-
-Deno.test("basics - subscription timeout cancel", async () => {
-  const nc = await connect({ url: u });
-  const subj = nuid.next();
-  const sub = nc.subscribe(subj, { max: 2, timeout: 100 });
-  (async () => {
-    for await (const m of sub) {}
-  })().catch(() => {
-    fail();
-  });
-  sub.cancelTimeout();
-  const lock = Lock(1, 300);
-  setTimeout(lock.unlock, 200);
-  await lock;
-  await nc.flush();
   await nc.close();
 });
 
