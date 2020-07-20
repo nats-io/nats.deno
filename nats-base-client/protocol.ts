@@ -697,6 +697,15 @@ export class ProtocolHandler {
             if (updates) {
               this.dispatchStatus({ type: Events.UPDATE, data: updates });
             }
+            const ldm = info.ldm !== undefined ? info.ldm : false;
+            if (ldm) {
+              this.dispatchStatus(
+                {
+                  type: Events.LDM,
+                  data: this.servers.getCurrentServer().toString(),
+                },
+              );
+            }
           } else {
             return;
           }

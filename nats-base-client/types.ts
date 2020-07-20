@@ -20,6 +20,7 @@ export const Events = Object.freeze({
   DISCONNECT: "disconnect",
   RECONNECT: "reconnect",
   UPDATE: "update",
+  LDM: "ldm",
 });
 
 export interface Status {
