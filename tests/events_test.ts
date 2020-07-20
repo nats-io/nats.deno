@@ -79,7 +79,7 @@ Deno.test("events - update", async () => {
       url: `nats://127.0.0.1:${cluster[0].port}`,
     },
   );
-  const lock = Lock(1);
+  const lock = Lock(1, 5000);
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
@@ -94,7 +94,7 @@ Deno.test("events - update", async () => {
 
   const s = await NatsServer.addClusterMember(cluster[0]);
   cluster.push(s);
-  await nc.close();
   await lock;
+  await nc.close();
   await NatsServer.stopAll(cluster);
 });
