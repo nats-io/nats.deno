@@ -79,7 +79,11 @@ export class NatsConnection {
     await this.protocol.close();
   }
 
-  publish(subject: string, data: any = undefined, reply: string = ""): void {
+  publish(
+    subject: string,
+    data: any = undefined,
+    options?: { reply?: string },
+  ): void {
     subject = subject || "";
     if (subject.length === 0) {
       throw (NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
@@ -97,7 +101,7 @@ export class NatsConnection {
       data = new TextEncoder().encode(data);
     }
 
-    this.protocol.publish(subject, data, reply);
+    this.protocol.publish(subject, data, options);
   }
 
   subscribe(
@@ -149,7 +153,7 @@ export class NatsConnection {
     this.publish(
       subject,
       data,
-      `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+      { reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}` },
     );
 
     const p = Promise.race([r.timer, r.deferred]);

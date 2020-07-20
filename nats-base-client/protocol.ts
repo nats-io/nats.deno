@@ -105,7 +105,7 @@ export class Connect {
 }
 
 export interface Publisher {
-  publish(subject: string, data: any, reply: string): void;
+  publish(subject: string, data: any, options?: { reply?: string }): void;
 }
 
 export interface RequestOptions {
@@ -382,7 +382,7 @@ class msg implements Msg {
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
   respond(data?: any): boolean {
     if (this.reply) {
-      this.publisher.publish(this.reply, data, "");
+      this.publisher.publish(this.reply, data);
       return true;
     }
     return false;
@@ -779,7 +779,7 @@ export class ProtocolHandler {
     }
   }
 
-  publish(subject: string, data: Uint8Array, reply: string) {
+  publish(subject: string, data: Uint8Array, options?: { reply?: string }) {
     if (this.isClosed()) {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
     }
@@ -787,11 +787,12 @@ export class ProtocolHandler {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING);
     }
     let len = data.length;
-    reply = reply || "";
+    options = options || {};
+    options.reply = options.reply || "";
 
     let proto: string;
-    if (reply) {
-      proto = `PUB ${subject} ${reply} ${len}\r\n`;
+    if (options.reply) {
+      proto = `PUB ${subject} ${options.reply} ${len}\r\n`;
     } else {
       proto = `PUB ${subject} ${len}\r\n`;
     }

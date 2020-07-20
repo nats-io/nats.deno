@@ -249,7 +249,7 @@ Deno.test("basics - correct reply in message", async () => {
     },
   });
 
-  nc.publish(s, "", r);
+  nc.publish(s, "", { reply: r });
   await nc.flush();
   await nc.close();
   assertEquals(rsubj, r);
