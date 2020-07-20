@@ -1,22 +1,30 @@
 import * as path from "https://deno.land/std@0.61.0/path/mod.ts";
 import { check } from "./mod.ts";
+import { deferred, delay } from "../../nats-base-client/mod.ts";
+import { timeout } from "../../nats-base-client/util.ts";
+import { nuid } from "../../nats-base-client/nats.ts";
 
 export interface PortInfo {
   hostname: string;
   port: number;
   cluster?: number;
+  monitoring?: number;
 }
 
 export interface Ports {
   nats: string[];
-  cluster?: string;
+  cluster?: string[];
+  monitoring?: string[];
 }
 
 function parseHostport(s?: string) {
   if (!s) {
     return;
   }
-  s = s.toString().replace("nats://", "");
+  const idx = s.indexOf("://");
+  if (idx) {
+    s = s.slice(idx + 3);
+  }
   const [hostname, ps] = s.split(":");
   const port = parseInt(ps, 10);
 
@@ -24,17 +32,32 @@ function parseHostport(s?: string) {
 }
 
 function parsePorts(ports: Ports): PortInfo {
+  ports.monitoring = ports.monitoring || [];
+  ports.cluster = ports.cluster || [];
   const listen = parseHostport(ports.nats[0]);
   const p: PortInfo = {} as PortInfo;
+
   if (listen) {
     p.hostname = listen.hostname;
     p.port = listen.port;
   }
 
-  const cluster = parseHostport(ports.cluster);
-  if (cluster) {
-    p.cluster = cluster.port;
-  }
+  const cluster = ports.cluster.map((v) => {
+    if (v) {
+      return parseHostport(v)?.port;
+    }
+    return undefined;
+  });
+  p.cluster = cluster[0];
+
+  const monitoring = ports.monitoring.map((v) => {
+    if (v) {
+      return parseHostport(v)?.port;
+    }
+    return undefined;
+  });
+  p.monitoring = monitoring[0];
+
   return p;
 }
 
@@ -42,6 +65,7 @@ export class NatsServer implements PortInfo {
   hostname: string;
   port: number;
   cluster?: number;
+  monitoring?: number;
   process: Deno.Process;
   srvLog!: Uint8Array;
   err?: Promise<void>;
@@ -56,6 +80,7 @@ export class NatsServer implements PortInfo {
     this.hostname = info.hostname;
     this.port = info.port;
     this.cluster = info.cluster;
+    this.monitoring = info.monitoring;
     this.process = process;
     this.debug = debug;
 
@@ -109,6 +134,14 @@ export class NatsServer implements PortInfo {
     }
   }
 
+  async varz(): Promise<any> {
+    if (!this.monitoring) {
+      return Promise.reject(new Error("server is not monitoring"));
+    }
+    const resp = await fetch(`http://127.0.0.1:${this.monitoring}/varz`);
+    return await resp.json();
+  }
+
   static async cluster(
     count: number = 2,
     conf?: any,
@@ -117,6 +150,7 @@ export class NatsServer implements PortInfo {
     conf = conf || {};
     conf = Object.assign({}, conf);
     conf.cluster = conf.cluster || {};
+    conf.cluster.name = nuid.next();
     conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
 
     const ns = await NatsServer.start(conf, debug);
@@ -128,6 +162,44 @@ export class NatsServer implements PortInfo {
     }
 
     return cluster;
+  }
+
+  static async localClusterFormed(servers: NatsServer[]): Promise<void[]> {
+    const ports = servers.map((s) => s.port);
+
+    const fn = async function (s: NatsServer) {
+      const dp = deferred<void>();
+      const to = timeout<void>(5000);
+      let done = false;
+      to.catch((err) => {
+        done = true;
+        dp.reject(
+          new Error(
+            `${s.hostname}:${s.port} failed to resolve peers: ${err.toString}`,
+          ),
+        );
+      });
+
+      while (!done) {
+        const data = await s.varz();
+        if (data) {
+          const urls = data.connect_urls as string[];
+          const others = urls.map((s) => {
+            return parseHostport(s)?.port;
+          });
+
+          if (others.every((v) => ports.includes(v!))) {
+            dp.resolve();
+            to.cancel();
+            break;
+          }
+        }
+        await delay(100);
+      }
+      return dp;
+    };
+    const proms = servers.map((s) => fn(s));
+    return Promise.all(proms);
   }
 
   static async addClusterMember(
@@ -158,6 +230,7 @@ export class NatsServer implements PortInfo {
         conf.ports_file_dir = tmp;
         conf.host = conf.host || "127.0.0.1";
         conf.port = conf.port || -1;
+        conf.http = conf.http || "127.0.0.1:-1";
 
         const confFile = await Deno.makeTempFileSync();
         await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));

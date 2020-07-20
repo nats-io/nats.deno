@@ -35,7 +35,7 @@ try {
   );
   cluster.forEach((s) => {
     console.log(
-      `launched server [${s.process.pid}] at ${s.hostname}:${s.port}`,
+      `launched server [${s.process.pid}] at ${s.hostname}:${s.port} - monitor ${s.monitoring}`,
     );
   });
 

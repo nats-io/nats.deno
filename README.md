@@ -421,6 +421,7 @@ Clients can get notification on various event types:
 - `Events.DISCONNECT`
 - `Events.RECONNECT`
 - `Events.UPDATE`
+- `Events.LDM`
 
 The first two fire when a client disconnects and reconnects respectively.
 The payload will be the server where the event took place.
@@ -428,6 +429,11 @@ The payload will be the server where the event took place.
 The `UPDATE` event notifies whenever the client receives a cluster configuration
 update. The `ServersChanged` interface provides two arrays: `added` and `deleted`
 listing the servers that were added or removed. 
+
+The `LDM` event notifies that the current server has signaled that it
+is running in _Lame Duck Mode_ and will evict clients. Depending on the server
+configuration policy, the client may want to initiate an ordered shutdown, and
+initiate a new connection to a different server in the cluster.
 
 ```javascript
 const nc = await connect(opts);
