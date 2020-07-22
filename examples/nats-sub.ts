@@ -14,14 +14,24 @@ const argv = parse(
       s: "nats://127.0.0.1:4222",
       q: "",
     },
+    boolean: ["headers", "debug"],
+    string: ["server", "queue"],
   },
 );
 
 const opts = { url: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : ">";
 
+if (argv.debug) {
+  opts.debug = true;
+}
+
+if (argv.headers) {
+  opts.headers = true;
+}
+
 if (argv.h || argv.help || !subject) {
-  console.log("Usage: nats-sub [-s server] [-q queue] subject");
+  console.log("Usage: nats-sub [-s server] [-q queue] [--headers] subject");
   Deno.exit(1);
 }
 
@@ -38,4 +48,11 @@ const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
   console.log(`[${sub.getProcessed()}]: ${m.subject}: ${m.data}`);
+  if (argv.headers && m.headers) {
+    const h = [];
+    for (const [key, value] of m.headers) {
+      h.push(`${key}=${value}`);
+    }
+    console.log(`\t${h.join(";")}`);
+  }
 }

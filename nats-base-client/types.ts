@@ -86,6 +86,7 @@ export interface ConnectionOptions {
   nkey?: string;
   userCreds?: string;
   nkeyCreds?: string;
+  headers?: boolean;
 }
 
 export interface TlsOptions {
@@ -100,8 +101,9 @@ export interface Msg {
   sid: number;
   reply?: string;
   data?: any;
+  headers?: Headers;
 
-  respond(data?: any): boolean;
+  respond(data?: any, headers?: Headers): boolean;
 }
 
 export interface SubscriptionOptions {
@@ -126,6 +128,7 @@ export interface ServerInfo {
   connect_urls?: string[];
   max_payload: number;
   client_id: number;
+  headers?: boolean;
   proto: number;
   server_id: string;
   version: string;

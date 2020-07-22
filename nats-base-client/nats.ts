@@ -82,7 +82,7 @@ export class NatsConnection {
   publish(
     subject: string,
     data: any = undefined,
-    options?: { reply?: string },
+    options?: { reply?: string; headers?: Headers },
   ): void {
     subject = subject || "";
     if (subject.length === 0) {

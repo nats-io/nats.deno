@@ -128,9 +128,15 @@ export class DenoTransport implements Transport {
 
   checkOpts(info: object) {
     //@ts-ignore
-    const { proto } = info;
+    const { proto, headers } = info;
     if ((proto === undefined || proto < 1) && this.options.noEcho) {
       throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
+    }
+    if ((proto === undefined || proto < 1) && this.options.headers) {
+      throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+    }
+    if (this.options.headers && headers !== true) {
+      throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
     }
   }
 

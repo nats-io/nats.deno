@@ -18,6 +18,8 @@ import { ErrorCode, NatsError } from "./mod.ts";
 
 export const MSG =
   /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
+export const HMSG =
+  /^HMSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\s+(\d+)\r\n/i;
 export const OK = /^\+OK\s*\r\n/i;
 export const ERR = /^-ERR\s+('.+')?\r\n/i;
 export const PING = /^PING\r\n/i;
@@ -199,4 +201,32 @@ export function shuffle(a: any[]): any[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+export function encodeHeader(headers: Headers): Uint8Array {
+  let v = `NATS/1.0\r\n`;
+  for (const [key, value] of headers) {
+    v += `${key}: ${value}\r\n`;
+  }
+  v += `\r\n`;
+  return new TextEncoder().encode(v);
+}
+
+export function decodeHeaders(buf: Uint8Array): Headers {
+  const headers = new Headers();
+  const v = new TextDecoder("utf-8").decode(buf);
+  let raw = v.split("\r\n");
+  if (raw[0] === "NATS/1.0") {
+    raw = raw.slice(1);
+  }
+  for (const rh of raw) {
+    const sep = rh.indexOf(":");
+    if (sep < 0) {
+      continue;
+    }
+    const k = rh.slice(0, sep);
+    const v = rh.slice(sep + 1);
+    headers.set(k, v);
+  }
+  return headers;
 }

@@ -19,6 +19,8 @@ const argv = parse(
       i: 0,
       t: 1000,
     },
+    boolean: true,
+    string: ["server", "count", "interval", "headers"],
   },
 );
 
@@ -28,9 +30,17 @@ const payload = argv._[1] || "";
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
 const interval = argv.i;
 
+if (argv.headers) {
+  opts.headers = true;
+}
+
+if (argv.debug) {
+  opts.debug = true;
+}
+
 if (argv.h || argv.help || !subject) {
   console.log(
-    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] subject [msg]",
+    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] [--headers] subject [msg]",
   );
   console.log("to request forever, specify -c=-1 or --count=-1");
   Deno.exit(1);
@@ -48,6 +58,13 @@ for (let i = 1; i <= count; i++) {
   await nc.request(subject, argv.t, payload)
     .then((m) => {
       console.log(`[${i}]: ${m.data}`);
+      if (argv.headers && m.headers) {
+        const h = [];
+        for (const [key, value] of m.headers) {
+          h.push(`${key}=${value}`);
+        }
+        console.log(`\t${h.join(";")}`);
+      }
     })
     .catch((err) => {
       console.log(`[${i}]: request failed: ${err.message}`);
