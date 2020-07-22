@@ -819,6 +819,9 @@ export class ProtocolHandler {
 
     let hlen = 0;
     if (options.headers) {
+      if (!this.options.headers) {
+        throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+      }
       const h = encodeHeader(options.headers);
       data = DataBuffer.concat(h, data);
       len = data.length;
