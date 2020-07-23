@@ -13,33 +13,23 @@
  * limitations under the License.
  */
 
-// Heavily inspired by Golang https://golang.org/src/net/http/header.go
+// Heavily inspired by Golang's https://golang.org/src/net/http/header.go
 
-export class MsgHeaders {
+import { ErrorCode, NatsError } from "./error.ts";
+
+export interface Headers {
+  get(k: string): string;
+  set(k: string, v: string): void;
+  append(k: string, v: string): void;
+  has(k: string): boolean;
+  values(k: string): string[];
+  delete(k: string): void;
+}
+
+export class MsgHeaders implements Headers {
   static HEADER = "NATS/1.0";
-  static valid: boolean[];
-  errorStatus?: number;
+  error?: number;
   headers: Map<string, string[]> = new Map();
-
-  static init() {
-    if (!MsgHeaders.valid) {
-      MsgHeaders.valid = new Array(127);
-      for (let i = 0; i < MsgHeaders.valid.length; i++) {
-        MsgHeaders.valid[i] = false;
-      }
-      const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-      const lowerAlpha = alpha.toLowerCase();
-      const numbers = "0123456789";
-      const symbols = "!#$%&\'*+-.`|~";
-      const chars = [alpha, lowerAlpha, numbers, symbols];
-      chars.map((alphabet) => {
-        for (let j = 0; j < alphabet.length; j++) {
-          const c = alphabet.charCodeAt(j);
-          MsgHeaders.valid[c] = true;
-        }
-      });
-    }
-  }
 
   constructor() {}
 
@@ -54,7 +44,7 @@ export class MsgHeaders {
   equals(mh: MsgHeaders) {
     if (
       mh && this.headers.size === mh.headers.size &&
-      this.errorStatus === mh.errorStatus
+      this.error === mh.error
     ) {
       for (const [k, v] of this.headers) {
         const a = mh.values(k);
@@ -81,12 +71,12 @@ export class MsgHeaders {
     const h = lines[0];
     if (h !== MsgHeaders.HEADER) {
       const str = h.replace(MsgHeaders.HEADER, "");
-      mh.errorStatus = parseInt(str, 10);
+      mh.error = parseInt(str, 10);
     } else {
       lines.slice(1).map((s) => {
         if (s) {
           const [k, v] = s.split(":");
-          mh.add(k, v);
+          mh.append(k, v);
         }
       });
     }
@@ -110,22 +100,39 @@ export class MsgHeaders {
     return new TextEncoder().encode(this.toString());
   }
 
+  // https://www.ietf.org/rfc/rfc822.txt
+  // 3.1.2.  STRUCTURE OF HEADER FIELDS
+  //
+  // Once a field has been unfolded, it may be viewed as being com-
+  // posed of a field-name followed by a colon (":"), followed by a
+  // field-body, and  terminated  by  a  carriage-return/line-feed.
+  // The  field-name must be composed of printable ASCII characters
+  // (i.e., characters that  have  values  between  33.  and  126.,
+  // decimal, except colon).  The field-body may be composed of any
+  // ASCII characters, except CR or LF.  (While CR and/or LF may be
+  // present  in the actual text, they are removed by the action of
+  // unfolding the field.)
   static canonicalMIMEHeaderKey(k: string): string {
+    const a = 97;
     const A = 65;
     const Z = 90;
-    const a = 97;
     const z = 122;
     const dash = 45;
+    const colon = 58;
+    const start = 33;
+    const end = 126;
     const toLower = a - A;
 
     let upper = true;
     const buf: number[] = new Array(k.length);
     for (let i = 0; i < k.length; i++) {
       let c = k.charCodeAt(i);
-      if (!MsgHeaders.valid[c]) {
-        throw new Error(`'${c}' is not a valid character for a header key`);
+      if (c === colon || c < start || c > end) {
+        throw new NatsError(
+          `'${k[i]}' is not a valid character for a header key`,
+          ErrorCode.BAD_HEADER,
+        );
       }
-
       if (upper && a <= c && c <= z) {
         c -= toLower;
       } else if (!upper && A <= c && c <= Z) {
@@ -137,25 +144,42 @@ export class MsgHeaders {
     return String.fromCharCode(...buf);
   }
 
+  static validHeaderValue(k: string): string {
+    const inv = /[\r\n]/;
+    if (inv.test(k)) {
+      throw new NatsError(
+        "invalid header value - \\r and \\n are not allowed.",
+        ErrorCode.BAD_HEADER,
+      );
+    }
+    return k;
+  }
+
   get(k: string): string {
     const key = MsgHeaders.canonicalMIMEHeaderKey(k);
     const a = this.headers.get(key);
     return a ? a[0] : "";
   }
 
-  set(k: string, v: string): void {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
-    this.headers.set(key, [v]);
+  has(k: string): boolean {
+    return this.get(k) !== "";
   }
 
-  add(k: string, v: string): void {
+  set(k: string, v: string): void {
     const key = MsgHeaders.canonicalMIMEHeaderKey(k);
+    const value = MsgHeaders.validHeaderValue(v);
+    this.headers.set(key, [value]);
+  }
+
+  append(k: string, v: string): void {
+    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
+    const value = MsgHeaders.validHeaderValue(v);
     let a = this.headers.get(key);
     if (!a) {
       a = [];
       this.headers.set(key, a);
     }
-    a.push(v);
+    a.push(value);
   }
 
   values(k: string): string[] {
@@ -163,10 +187,8 @@ export class MsgHeaders {
     return this.headers.get(key) || [];
   }
 
-  del(k: string): void {
+  delete(k: string): void {
     const key = MsgHeaders.canonicalMIMEHeaderKey(k);
     this.headers.delete(key);
   }
 }
-
-MsgHeaders.init();
