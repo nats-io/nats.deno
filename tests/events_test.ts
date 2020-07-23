@@ -4,6 +4,7 @@ import {
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { ServerSignals } from "./helpers/launcher.ts";
+import { delay } from "../nats-base-client/mod.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -92,7 +93,7 @@ Deno.test("events - update", async () => {
       }
     }
   })().then();
-
+  await delay(250);
   const s = await NatsServer.addClusterMember(cluster[0]);
   cluster.push(s);
   await lock;

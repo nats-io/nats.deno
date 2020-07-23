@@ -18,6 +18,8 @@ import { ErrorCode, NatsError } from "./mod.ts";
 
 export const MSG =
   /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
+export const HMSG =
+  /^HMSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\s+(\d+)\r\n/i;
 export const OK = /^\+OK\s*\r\n/i;
 export const ERR = /^-ERR\s+('.+')?\r\n/i;
 export const PING = /^PING\r\n/i;

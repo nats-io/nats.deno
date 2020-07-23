@@ -17,24 +17,34 @@ const argv = parse(
       c: 1,
       i: 0,
     },
+    boolean: true,
+    string: ["server", "count", "interval", "headers"],
   },
 );
 
-const opts = { url: argv.s } as ConnectionOptions;
+const copts = { url: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
 const payload = argv._[1] || "";
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
 const interval = argv.i || 0;
 
+if (argv.headers) {
+  copts.headers = true;
+}
+
+if (argv.debug) {
+  copts.debug = true;
+}
+
 if (argv.h || argv.help || !subject) {
   console.log(
-    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] subject [msg]",
+    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] [--headers='k=v;k2=v2'] subject [msg]",
   );
   console.log("to publish forever, specify -c=-1 or --count=-1");
   Deno.exit(1);
 }
 
-const nc = await connect(opts);
+const nc = await connect(copts);
 nc.closed()
   .then((err) => {
     if (err) {
@@ -42,8 +52,18 @@ nc.closed()
     }
   });
 
+const pubopts = {} as { reply?: string; headers?: Headers };
+if (argv.headers) {
+  const headers = new Headers();
+  argv.headers.split(";").map((l: string) => {
+    const [k, v] = l.split("=");
+    headers.append(k, v);
+  });
+  pubopts.headers = headers;
+}
+
 for (let i = 1; i <= count; i++) {
-  nc.publish(subject, payload);
+  nc.publish(subject, payload, pubopts);
   console.log(`[${i}] ${subject}: ${payload}`);
   if (interval) {
     await delay(interval);

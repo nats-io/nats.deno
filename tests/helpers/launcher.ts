@@ -13,6 +13,7 @@ export const ServerSignals = Object.freeze({
 });
 
 export interface PortInfo {
+  clusterName?: string;
   hostname: string;
   port: number;
   cluster?: number;
@@ -71,6 +72,7 @@ function parsePorts(ports: Ports): PortInfo {
 
 export class NatsServer implements PortInfo {
   hostname: string;
+  clusterName?: string;
   port: number;
   cluster?: number;
   monitoring?: number;
@@ -88,6 +90,7 @@ export class NatsServer implements PortInfo {
     this.hostname = info.hostname;
     this.port = info.port;
     this.cluster = info.cluster;
+    this.clusterName = info.clusterName;
     this.monitoring = info.monitoring;
     this.process = process;
     this.debug = debug;
@@ -231,6 +234,7 @@ export class NatsServer implements PortInfo {
     conf = Object.assign({}, conf);
     conf.port = -1;
     conf.cluster = conf.cluster || {};
+    conf.cluster.name = ns.clusterName;
     conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
     conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
     return NatsServer.start(conf, debug);
@@ -292,6 +296,9 @@ export class NatsServer implements PortInfo {
         }
 
         const ports = parsePorts(pi as Ports);
+        if (conf.cluster?.name) {
+          ports.clusterName = conf.cluster.name;
+        }
         await check(
           async () => {
             try {
