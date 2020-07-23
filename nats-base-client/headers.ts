@@ -85,10 +85,9 @@ export class NatsHeaders implements MsgHdrs {
     } else {
       lines.slice(1).map((s) => {
         if (s) {
-          //
           const idx = s.indexOf(NatsHeaders.SEP);
           const k = s.slice(0, idx);
-          let v = s.slice(idx + 1);
+          const v = s.slice(idx + 1);
           mh.append(k, v);
         }
       });
@@ -165,7 +164,7 @@ export class NatsHeaders implements MsgHdrs {
         ErrorCode.BAD_HEADER,
       );
     }
-    return k;
+    return k.trim();
   }
 
   get(k: string): string {
