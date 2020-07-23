@@ -46,8 +46,6 @@ import {
   deferred,
   Deferred,
   Timeout,
-  encodeHeader,
-  decodeHeaders,
   delay,
   //@ts-ignore
 } from "./util.ts";
@@ -57,6 +55,7 @@ import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
+import { MsgHdrs, NatsHeaders } from "./headers.ts";
 
 const nuid = new Nuid();
 
@@ -116,7 +115,7 @@ export interface Publisher {
   publish(
     subject: string,
     data: any,
-    options?: { reply?: string; headers?: Headers },
+    options?: { reply?: string; headers?: MsgHdrs },
   ): void;
 }
 
@@ -146,7 +145,7 @@ export class Request {
       this.timer.cancel();
     }
     if (err) {
-      this.deferred.reject(msg);
+      this.deferred.reject(err);
     } else {
       this.deferred.resolve(msg);
     }
@@ -299,6 +298,15 @@ export class MuxSubscription {
       if (token) {
         let r = this.get(token);
         if (r) {
+          if (err === null && m.headers) {
+            const headers = m.headers as NatsHeaders;
+            if (headers.error) {
+              err = new NatsError(
+                headers.error.toString(),
+                ErrorCode.REQUEST_ERROR,
+              );
+            }
+          }
           r.resolver(err, m);
         }
       }
@@ -386,14 +394,14 @@ class msg implements Msg {
   sid!: number;
   reply?: string;
   data?: any;
-  headers?: Headers;
+  headers?: MsgHdrs;
 
   constructor(publisher: Publisher) {
     this.publisher = publisher;
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any, headers?: Headers): boolean {
+  respond(data?: any, headers?: MsgHdrs): boolean {
     if (this.reply) {
       this.publisher.publish(this.reply, data, { headers: headers });
       return true;
@@ -442,7 +450,7 @@ export class MsgBuffer {
         ? this.buf.slice(0, this.headerLen)
         : undefined;
       if (headers) {
-        this.msg.headers = decodeHeaders(headers);
+        this.msg.headers = NatsHeaders.decode(headers);
       }
       this.msg.data = this.buf.slice(this.headerLen, this.buf.length - 2);
 
@@ -809,7 +817,7 @@ export class ProtocolHandler {
   publish(
     subject: string,
     data: Uint8Array,
-    options?: { reply?: string; headers?: Headers },
+    options?: { reply?: string; headers?: MsgHdrs },
   ) {
     if (this.isClosed()) {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
@@ -827,7 +835,8 @@ export class ProtocolHandler {
       if (!this.options.headers) {
         throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
       }
-      const h = encodeHeader(options.headers);
+      const hdrs = options.headers as NatsHeaders;
+      const h = hdrs.encode();
       data = DataBuffer.concat(h, data);
       len = data.length;
       hlen = h.length;

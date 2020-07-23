@@ -32,5 +32,10 @@ export {
   Deferred,
   deferred,
 } from "./util.ts";
+export {
+  NatsHeaders,
+  MsgHdrs,
+  headers,
+} from "./headers.ts";
 export { DataBuffer } from "./databuffer.ts";
 export { checkOptions } from "./options.ts";

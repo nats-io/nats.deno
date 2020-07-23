@@ -202,37 +202,3 @@ export function shuffle(a: any[]): any[] {
   }
   return a;
 }
-
-export function encodeHeader(headers: Headers): Uint8Array {
-  let v = `NATS/1.0\r\n`;
-  for (const [key, value] of headers) {
-    v += `${key}: ${value}\r\n`;
-  }
-  v += `\r\n`;
-  return new TextEncoder().encode(v);
-}
-
-export function decodeHeaders(buf: Uint8Array): Headers {
-  const headers = new Headers();
-  const v = new TextDecoder("utf-8").decode(buf);
-  let raw = v.split("\r\n");
-  let proto = raw[0];
-  const code = proto.replace("NATS/1.0 ", "");
-  if (code !== "") {
-    // this is only currently a timeout
-  }
-
-  if (raw[0] === "NATS/1.0") {
-    raw = raw.slice(1);
-  }
-  for (const rh of raw) {
-    const sep = rh.indexOf(":");
-    if (sep < 0) {
-      continue;
-    }
-    const k = rh.slice(0, sep);
-    const v = rh.slice(sep + 1);
-    headers.set(k, v);
-  }
-  return headers;
-}

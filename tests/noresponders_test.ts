@@ -23,45 +23,59 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { assertErrorCode } from "./helpers/mod.ts";
 import { ErrorCode } from "../src/mod.ts";
-import { decodeHeaders, encodeHeader } from "../nats-base-client/util.ts";
+import { headers, NatsHeaders } from "../nats-base-client/headers.ts";
+import { nuid } from "../nats-base-client/nats.ts";
 
-// Deno.test("headers - option", async () => {
-//   const srv = await NatsServer.start();
-//   const nc = await connect(
-//     {
-//       url: `nats://127.0.0.1:${srv.port}`,
-//       headers: true,
-//       noResponders: true,
-//     },
-//   );
-//
-//   const lock = Lock();
-//   await nc.request("foo")
-//     .then((m) => {
-//       if(m.headers) {
-//         console.table(new TextDecoder().decode(encodeHeader(m.headers)));
-//         lock.unlock();
-//       }
-//     })
-//     .catch((err) => {
-//       console.log(err);
-//     });
-//
-//   await lock;
-//   await nc.close();
-//   await srv.stop();
-// });
+Deno.test("noresponders - option", async () => {
+  const srv = await NatsServer.start();
+  const nc = await connect(
+    {
+      url: `nats://127.0.0.1:${srv.port}`,
+      headers: true,
+      noResponders: true,
+    },
+  );
 
-Deno.test("headers - list", () => {
-  const h = new Headers();
-  h.append("a", "a");
-  h.append("a", "b");
+  const lock = Lock();
+  await nc.request(nuid.next())
+    .then((m) => {
+      fail("should have not resolved");
+    })
+    .catch((err) => {
+      assertErrorCode(err, ErrorCode.REQUEST_ERROR);
+      lock.unlock();
+    });
 
-  console.log(new TextDecoder().decode(encodeHeader(h)));
+  await lock;
+  await nc.close();
+  await srv.stop();
+});
 
-  const h2 = new Headers();
-  h2.set("a", "a");
-  h2.append("a", "b");
+Deno.test("noresponders - list", async () => {
+  const srv = await NatsServer.start();
+  const nc = await connect(
+    {
+      url: `nats://127.0.0.1:${srv.port}`,
+      headers: true,
+      noResponders: true,
+      debug: true,
+    },
+  );
 
-  console.log(new TextDecoder().decode(encodeHeader(h)));
+  const subj = nuid.next();
+  const sub = nc.subscribe(subj);
+  (async () => {
+    for await (const m of sub) {
+      const h = headers();
+      h.append("a", "b");
+      m.respond("", h);
+    }
+  })().then();
+  await nc.flush();
+
+  const msg = await nc.request(subj);
+  assert(msg.headers);
+  assertEquals(msg.headers.get("a"), "b");
+  await nc.close();
+  await srv.stop();
 });

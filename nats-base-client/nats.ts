@@ -37,6 +37,7 @@ import { Nuid } from "./nuid.ts";
 import { Subscription } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
+import { MsgHdrs } from "./headers.ts";
 
 export const nuid = new Nuid();
 
@@ -82,7 +83,7 @@ export class NatsConnection {
   publish(
     subject: string,
     data: any = undefined,
-    options?: { reply?: string; headers?: Headers },
+    options?: { reply?: string; headers?: MsgHdrs },
   ): void {
     subject = subject || "";
     if (subject.length === 0) {

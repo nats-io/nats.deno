@@ -15,6 +15,7 @@
 //@ts-ignore
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
+import { MsgHdrs, NatsHeaders } from "./headers.ts";
 
 export const Events = Object.freeze({
   DISCONNECT: "disconnect",
@@ -101,9 +102,9 @@ export interface Msg {
   sid: number;
   reply?: string;
   data?: any;
-  headers?: Headers;
+  headers?: MsgHdrs;
 
-  respond(data?: any, headers?: Headers): boolean;
+  respond(data?: any, headers?: MsgHdrs): boolean;
 }
 
 export interface SubscriptionOptions {

@@ -17,7 +17,7 @@
 
 import { ErrorCode, NatsError } from "./error.ts";
 
-export interface Headers {
+export interface MsgHdrs extends Iterable<[string, string[]]> {
   get(k: string): string;
   set(k: string, v: string): void;
   append(k: string, v: string): void;
@@ -26,12 +26,22 @@ export interface Headers {
   delete(k: string): void;
 }
 
-export class MsgHeaders implements Headers {
+export function headers(): MsgHdrs {
+  return new NatsHeaders();
+}
+
+export class NatsHeaders implements MsgHdrs {
+  static CRLF = "\r\n";
+  static SEP = ":";
   static HEADER = "NATS/1.0";
   error?: number;
   headers: Map<string, string[]> = new Map();
 
   constructor() {}
+
+  [Symbol.iterator]() {
+    return this.headers.entries();
+  }
 
   size(): number {
     let count = 0;
@@ -41,7 +51,7 @@ export class MsgHeaders implements Headers {
     return count;
   }
 
-  equals(mh: MsgHeaders) {
+  equals(mh: NatsHeaders) {
     if (
       mh && this.headers.size === mh.headers.size &&
       this.error === mh.error
@@ -64,18 +74,21 @@ export class MsgHeaders implements Headers {
     return false;
   }
 
-  static decode(a: Uint8Array): MsgHeaders {
-    const mh = new MsgHeaders();
+  static decode(a: Uint8Array): NatsHeaders {
+    const mh = new NatsHeaders();
     const s = new TextDecoder().decode(a);
-    const lines = s.split("\r\n");
+    const lines = s.split(NatsHeaders.CRLF);
     const h = lines[0];
-    if (h !== MsgHeaders.HEADER) {
-      const str = h.replace(MsgHeaders.HEADER, "");
+    if (h !== NatsHeaders.HEADER) {
+      const str = h.replace(NatsHeaders.HEADER, "");
       mh.error = parseInt(str, 10);
     } else {
       lines.slice(1).map((s) => {
         if (s) {
-          const [k, v] = s.split(":");
+          //
+          const idx = s.indexOf(NatsHeaders.SEP);
+          const k = s.slice(0, idx);
+          let v = s.slice(idx + 1);
           mh.append(k, v);
         }
       });
@@ -87,7 +100,7 @@ export class MsgHeaders implements Headers {
     if (this.headers.size === 0) {
       return "";
     }
-    let s = MsgHeaders.HEADER;
+    let s = NatsHeaders.HEADER;
     for (const [k, v] of this.headers) {
       for (let i = 0; i < v.length; i++) {
         s = `${s}\r\n${k}:${v[i]}`;
@@ -156,7 +169,7 @@ export class MsgHeaders implements Headers {
   }
 
   get(k: string): string {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
+    const key = NatsHeaders.canonicalMIMEHeaderKey(k);
     const a = this.headers.get(key);
     return a ? a[0] : "";
   }
@@ -166,14 +179,14 @@ export class MsgHeaders implements Headers {
   }
 
   set(k: string, v: string): void {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
-    const value = MsgHeaders.validHeaderValue(v);
+    const key = NatsHeaders.canonicalMIMEHeaderKey(k);
+    const value = NatsHeaders.validHeaderValue(v);
     this.headers.set(key, [value]);
   }
 
   append(k: string, v: string): void {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
-    const value = MsgHeaders.validHeaderValue(v);
+    const key = NatsHeaders.canonicalMIMEHeaderKey(k);
+    const value = NatsHeaders.validHeaderValue(v);
     let a = this.headers.get(key);
     if (!a) {
       a = [];
@@ -183,12 +196,12 @@ export class MsgHeaders implements Headers {
   }
 
   values(k: string): string[] {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
+    const key = NatsHeaders.canonicalMIMEHeaderKey(k);
     return this.headers.get(key) || [];
   }
 
   delete(k: string): void {
-    const key = MsgHeaders.canonicalMIMEHeaderKey(k);
+    const key = NatsHeaders.canonicalMIMEHeaderKey(k);
     this.headers.delete(key);
   }
 }
