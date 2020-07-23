@@ -216,6 +216,12 @@ export function decodeHeaders(buf: Uint8Array): Headers {
   const headers = new Headers();
   const v = new TextDecoder("utf-8").decode(buf);
   let raw = v.split("\r\n");
+  let proto = raw[0];
+  const code = proto.replace("NATS/1.0 ", "");
+  if (code !== "") {
+    // this is only currently a timeout
+  }
+
   if (raw[0] === "NATS/1.0") {
     raw = raw.slice(1);
   }

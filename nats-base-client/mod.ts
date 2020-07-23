@@ -33,3 +33,4 @@ export {
   deferred,
 } from "./util.ts";
 export { DataBuffer } from "./databuffer.ts";
+export { checkOptions } from "./options.ts";

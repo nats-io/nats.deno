@@ -19,12 +19,11 @@ import Conn = Deno.Conn;
 import {
   ConnectionOptions,
   DataBuffer,
-  ErrorCode,
   extractProtocolMessage,
   INFO,
-  NatsError,
   render,
   Transport,
+  checkOptions,
 } from "../nats-base-client/mod.ts";
 
 const VERSION = "0.0.1";
@@ -72,8 +71,7 @@ export class DenoTransport implements Transport {
     try {
       this.conn = await Deno.connect(hp);
       const info = await this.peekInfo();
-      this.checkOpts(info);
-
+      checkOptions(info, this.options);
       // @ts-ignore
       const { tls_required } = info;
       if (tls_required) {
@@ -124,20 +122,6 @@ export class DenoTransport implements Transport {
       return Promise.reject(new Error("unexpected response from server"));
     }
     return Promise.resolve(JSON.parse(m[1]));
-  }
-
-  checkOpts(info: object) {
-    //@ts-ignore
-    const { proto, headers } = info;
-    if ((proto === undefined || proto < 1) && this.options.noEcho) {
-      throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
-    }
-    if ((proto === undefined || proto < 1) && this.options.headers) {
-      throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
-    }
-    if (this.options.headers && headers !== true) {
-      throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
-    }
   }
 
   async startTLS(hostname: string): Promise<void> {

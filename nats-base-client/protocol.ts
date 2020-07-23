@@ -36,6 +36,7 @@ import {
   PING,
   PONG,
   INFO,
+  HMSG,
   CR_LF,
   CR_LF_LEN,
   buildMessage,
@@ -45,9 +46,9 @@ import {
   deferred,
   Deferred,
   Timeout,
-  HMSG,
   encodeHeader,
   decodeHeaders,
+  delay,
   //@ts-ignore
 } from "./util.ts";
 //@ts-ignore
@@ -55,7 +56,6 @@ import { Nuid } from "./nuid.ts";
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
-import { delay } from "./util.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 
 const nuid = new Nuid();
@@ -85,6 +85,7 @@ export class Connect {
   verbose: boolean = false;
   version!: string;
   headers?: boolean;
+  no_responders?: boolean;
 
   constructor(
     transport: { version: string; lang: string },
@@ -103,6 +104,9 @@ export class Connect {
       } else {
         this.jwt = opts.userJWT;
       }
+    }
+    if (opts.noResponders) {
+      this.no_responders = true;
     }
     extend(this, opts, transport);
   }
@@ -405,6 +409,7 @@ export class MsgBuffer {
   buf?: Uint8Array | null;
   payload: string;
   err: NatsError | null = null;
+  status: number = 0;
 
   constructor(
     publisher: Publisher,

@@ -86,3 +86,27 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
 
   return options;
 }
+
+export function checkOptions(info: object, options: ConnectionOptions) {
+  //@ts-ignore
+  const { proto, headers } = info;
+  if ((proto === undefined || proto < 1) && options.noEcho) {
+    throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
+  }
+  if ((proto === undefined || proto < 1) && options.headers) {
+    throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+  }
+  if (options.headers && headers !== true) {
+    throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+  }
+
+  if ((proto === undefined || proto < 1) && options.noResponders) {
+    throw new NatsError("noResponders", ErrorCode.SERVER_OPTION_NA);
+  }
+  if ((!headers) && options.noResponders) {
+    throw new NatsError(
+      "noResponders - requires headers",
+      ErrorCode.SERVER_OPTION_NA,
+    );
+  }
+}

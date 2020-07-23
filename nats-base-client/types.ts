@@ -57,36 +57,36 @@ export enum Payload {
 
 export interface ConnectionOptions {
   debug?: boolean;
+  headers?: boolean;
+  maxPingOut?: number;
+  maxReconnectAttempts?: number;
   name?: string;
+  nkey?: string;
+  nkeyCreds?: string;
   noEcho?: boolean;
+  nonceSigner?: (nonce: string) => Uint8Array;
+  noRandomize?: boolean;
+  noResponders?: boolean;
   pass?: string;
   payload?: Payload;
   pedantic?: boolean;
   pingInterval?: number;
+  port?: number;
+  reconnect?: boolean;
+  reconnectDelayHandler?: () => number;
+  reconnectJitter?: number;
+  reconnectJitterTLS?: number;
+  reconnectTimeWait?: number;
+  servers?: Array<string>;
   timeout?: number;
+  tls?: boolean | TlsOptions;
   token?: string;
   url?: string;
   user?: string;
+  userCreds?: string;
   userJWT?: (() => string) | string;
   verbose?: boolean;
-
-  maxPingOut?: number;
-  maxReconnectAttempts?: number;
-  noRandomize?: boolean;
-  port?: number;
-  reconnect?: boolean;
-  reconnectTimeWait?: number;
-  reconnectJitter?: number;
-  reconnectJitterTLS?: number;
-  reconnectDelayHandler?: () => number;
-  servers?: Array<string>;
-  tls?: boolean | TlsOptions;
   waitOnFirstConnect?: boolean;
-  nonceSigner?: (nonce: string) => Uint8Array;
-  nkey?: string;
-  userCreds?: string;
-  nkeyCreds?: string;
-  headers?: boolean;
 }
 
 export interface TlsOptions {
