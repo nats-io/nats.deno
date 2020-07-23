@@ -58,7 +58,6 @@ Deno.test("noresponders - list", async () => {
       url: `nats://127.0.0.1:${srv.port}`,
       headers: true,
       noResponders: true,
-      debug: true,
     },
   );
 

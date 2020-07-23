@@ -732,7 +732,7 @@ export class ProtocolHandler {
             if (updates) {
               this.dispatchStatus({ type: Events.UPDATE, data: updates });
             }
-            const ldm = info.ldm !== undefined ? info.ldm : false;
+            const ldm = this.info.ldm !== undefined ? this.info.ldm : false;
             if (ldm) {
               this.dispatchStatus(
                 {
