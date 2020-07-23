@@ -177,7 +177,7 @@ Deno.test("autounsub - manual request receives expected count with multiple help
   });
 
   // publish the request
-  nc.publish(requestSubject, "", replySubj);
+  nc.publish(requestSubject, "", { reply: replySubj });
   await nc.flush();
   await lock;
   await nc.close();

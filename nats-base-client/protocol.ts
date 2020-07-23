@@ -36,6 +36,7 @@ import {
   PING,
   PONG,
   INFO,
+  HMSG,
   CR_LF,
   CR_LF_LEN,
   buildMessage,
@@ -45,6 +46,7 @@ import {
   deferred,
   Deferred,
   Timeout,
+  delay,
   //@ts-ignore
 } from "./util.ts";
 //@ts-ignore
@@ -52,8 +54,8 @@ import { Nuid } from "./nuid.ts";
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
-import { delay } from "./util.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
+import { MsgHdrs, NatsHeaders } from "./headers.ts";
 
 const nuid = new Nuid();
 
@@ -81,6 +83,8 @@ export class Connect {
   user?: string;
   verbose: boolean = false;
   version!: string;
+  headers?: boolean;
+  no_responders?: boolean;
 
   constructor(
     transport: { version: string; lang: string },
@@ -100,12 +104,19 @@ export class Connect {
         this.jwt = opts.userJWT;
       }
     }
+    if (opts.noResponders) {
+      this.no_responders = true;
+    }
     extend(this, opts, transport);
   }
 }
 
 export interface Publisher {
-  publish(subject: string, data: any, reply: string): void;
+  publish(
+    subject: string,
+    data: any,
+    options?: { reply?: string; headers?: MsgHdrs },
+  ): void;
 }
 
 export interface RequestOptions {
@@ -134,7 +145,7 @@ export class Request {
       this.timer.cancel();
     }
     if (err) {
-      this.deferred.reject(msg);
+      this.deferred.reject(err);
     } else {
       this.deferred.resolve(msg);
     }
@@ -287,6 +298,15 @@ export class MuxSubscription {
       if (token) {
         let r = this.get(token);
         if (r) {
+          if (err === null && m.headers) {
+            const headers = m.headers as NatsHeaders;
+            if (headers.error) {
+              err = new NatsError(
+                headers.error.toString(),
+                ErrorCode.REQUEST_ERROR,
+              );
+            }
+          }
           r.resolver(err, m);
         }
       }
@@ -374,15 +394,16 @@ class msg implements Msg {
   sid!: number;
   reply?: string;
   data?: any;
+  headers?: MsgHdrs;
 
   constructor(publisher: Publisher) {
     this.publisher = publisher;
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any): boolean {
+  respond(data?: any, headers?: MsgHdrs): boolean {
     if (this.reply) {
-      this.publisher.publish(this.reply, data, "");
+      this.publisher.publish(this.reply, data, { headers: headers });
       return true;
     }
     return false;
@@ -392,9 +413,11 @@ class msg implements Msg {
 export class MsgBuffer {
   msg: Msg;
   length: number;
+  headerLen: number;
   buf?: Uint8Array | null;
   payload: string;
   err: NatsError | null = null;
+  status: number = 0;
 
   constructor(
     publisher: Publisher,
@@ -405,7 +428,12 @@ export class MsgBuffer {
     this.msg.subject = chunks[1];
     this.msg.sid = parseInt(chunks[2], 10);
     this.msg.reply = chunks[4];
-    this.length = parseInt(chunks[5], 10) + CR_LF_LEN;
+    this.length =
+      (chunks.length === 7
+        ? parseInt(chunks[6], 10)
+        : parseInt(chunks[5], 10)) + CR_LF_LEN;
+    this.headerLen = (chunks.length === 7 ? parseInt(chunks[5], 10) : 0);
+
     this.payload = payload;
   }
 
@@ -418,7 +446,14 @@ export class MsgBuffer {
     this.length -= data.length;
 
     if (this.length === 0) {
-      this.msg.data = this.buf.slice(0, this.buf.length - 2);
+      const headers = this.headerLen
+        ? this.buf.slice(0, this.headerLen)
+        : undefined;
+      if (headers) {
+        this.msg.headers = NatsHeaders.decode(headers);
+      }
+      this.msg.data = this.buf.slice(this.headerLen, this.buf.length - 2);
+
       switch (this.payload) {
         case Payload.JSON:
           this.msg.data = new TextDecoder("utf-8").decode(this.msg.data);
@@ -443,6 +478,7 @@ export class ProtocolHandler {
   connected: boolean = false;
   inbound: DataBuffer;
   infoReceived: boolean = false;
+  info?: any;
   muxSubscriptions: MuxSubscription;
   options: ConnectionOptions;
   outbound: DataBuffer;
@@ -657,8 +693,7 @@ export class ProtocolHandler {
         case ParserState.AWAITING_CONTROL: {
           let raw = this.inbound.peek();
           let buf = extractProtocolMessage(raw);
-
-          if ((m = MSG.exec(buf))) {
+          if ((m = MSG.exec(buf)) || (m = HMSG.exec(buf))) {
             this.payload = new MsgBuffer(
               this.publisher,
               m,
@@ -679,8 +714,8 @@ export class ProtocolHandler {
           } else if ((m = PING.exec(buf))) {
             this.transport.send(buildMessage(`PONG ${CR_LF}`));
           } else if ((m = INFO.exec(buf))) {
-            const info = JSON.parse(m[1]);
-            const updates = this.servers.update(info);
+            this.info = JSON.parse(m[1]);
+            const updates = this.servers.update(this.info);
             if (!this.infoReceived) {
               // send connect
               const { version, lang } = this.transport;
@@ -779,21 +814,47 @@ export class ProtocolHandler {
     }
   }
 
-  publish(subject: string, data: Uint8Array, reply: string) {
+  publish(
+    subject: string,
+    data: Uint8Array,
+    options?: { reply?: string; headers?: MsgHdrs },
+  ) {
     if (this.isClosed()) {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
     }
     if (this.noMorePublishing) {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING);
     }
+
     let len = data.length;
-    reply = reply || "";
+    options = options || {};
+    options.reply = options.reply || "";
+
+    let hlen = 0;
+    if (options.headers) {
+      if (!this.options.headers) {
+        throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+      }
+      const hdrs = options.headers as NatsHeaders;
+      const h = hdrs.encode();
+      data = DataBuffer.concat(h, data);
+      len = data.length;
+      hlen = h.length;
+    }
 
     let proto: string;
-    if (reply) {
-      proto = `PUB ${subject} ${reply} ${len}\r\n`;
+    if (options.headers) {
+      if (options.reply) {
+        proto = `HPUB ${subject} ${options.reply} ${hlen} ${len}\r\n`;
+      } else {
+        proto = `HPUB ${subject} ${hlen} ${len}\r\n`;
+      }
     } else {
-      proto = `PUB ${subject} ${len}\r\n`;
+      if (options.reply) {
+        proto = `PUB ${subject} ${options.reply} ${len}\r\n`;
+      } else {
+        proto = `PUB ${subject} ${len}\r\n`;
+      }
     }
 
     this.sendCommand(buildMessage(proto, data));

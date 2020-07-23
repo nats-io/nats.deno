@@ -15,6 +15,7 @@
 //@ts-ignore
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
+import { MsgHdrs, NatsHeaders } from "./headers.ts";
 
 export const Events = Object.freeze({
   DISCONNECT: "disconnect",
@@ -57,35 +58,36 @@ export enum Payload {
 
 export interface ConnectionOptions {
   debug?: boolean;
+  headers?: boolean;
+  maxPingOut?: number;
+  maxReconnectAttempts?: number;
   name?: string;
+  nkey?: string;
+  nkeyCreds?: string;
   noEcho?: boolean;
+  nonceSigner?: (nonce: string) => Uint8Array;
+  noRandomize?: boolean;
+  noResponders?: boolean;
   pass?: string;
   payload?: Payload;
   pedantic?: boolean;
   pingInterval?: number;
+  port?: number;
+  reconnect?: boolean;
+  reconnectDelayHandler?: () => number;
+  reconnectJitter?: number;
+  reconnectJitterTLS?: number;
+  reconnectTimeWait?: number;
+  servers?: Array<string>;
   timeout?: number;
+  tls?: boolean | TlsOptions;
   token?: string;
   url?: string;
   user?: string;
+  userCreds?: string;
   userJWT?: (() => string) | string;
   verbose?: boolean;
-
-  maxPingOut?: number;
-  maxReconnectAttempts?: number;
-  noRandomize?: boolean;
-  port?: number;
-  reconnect?: boolean;
-  reconnectTimeWait?: number;
-  reconnectJitter?: number;
-  reconnectJitterTLS?: number;
-  reconnectDelayHandler?: () => number;
-  servers?: Array<string>;
-  tls?: boolean | TlsOptions;
   waitOnFirstConnect?: boolean;
-  nonceSigner?: (nonce: string) => Uint8Array;
-  nkey?: string;
-  userCreds?: string;
-  nkeyCreds?: string;
 }
 
 export interface TlsOptions {
@@ -100,8 +102,9 @@ export interface Msg {
   sid: number;
   reply?: string;
   data?: any;
+  headers?: MsgHdrs;
 
-  respond(data?: any): boolean;
+  respond(data?: any, headers?: MsgHdrs): boolean;
 }
 
 export interface SubscriptionOptions {
@@ -126,6 +129,7 @@ export interface ServerInfo {
   connect_urls?: string[];
   max_payload: number;
   client_id: number;
+  headers?: boolean;
   proto: number;
   server_id: string;
   version: string;
