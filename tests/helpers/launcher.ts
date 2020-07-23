@@ -4,6 +4,14 @@ import { deferred, delay } from "../../nats-base-client/mod.ts";
 import { timeout } from "../../nats-base-client/util.ts";
 import { nuid } from "../../nats-base-client/nats.ts";
 
+export const ServerSignals = Object.freeze({
+  QUIT: Deno.Signal.SIGQUIT,
+  STOP: Deno.Signal.SIGSTOP,
+  REOPEN: Deno.Signal.SIGUSR1,
+  RELOAD: Deno.Signal.SIGHUP,
+  LDM: Deno.Signal.SIGUSR2,
+});
+
 export interface PortInfo {
   clusterName?: string;
   hostname: string;
@@ -134,6 +142,15 @@ export class NatsServer implements PortInfo {
       if (this.err) {
         await this.err;
       }
+    }
+  }
+
+  signal(signal: Deno.MacOSSignal | Deno.LinuxSignal): Promise<void> {
+    if (signal === Deno.Signal.SIGKILL) {
+      return this.stop();
+    } else {
+      this.process.kill(signal);
+      return Promise.resolve();
     }
   }
 
