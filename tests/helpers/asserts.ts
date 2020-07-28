@@ -1,21 +1,20 @@
-import { AssertionError } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { NatsError } from "../../src/mod.ts";
+import { assert, fail } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
-export function assertErrorCode(err: Error, ...code: string[]) {
-  if (!(Object.getPrototypeOf(err) === NatsError.prototype)) {
-    throw new AssertionError(
-      `Expected error to be instance of NatsError but got "${err.name}"`,
-    );
-  }
-  const ne = err as NatsError;
+export function assertErrorCode(err: Error, ...codes: string[]) {
+  const { code } = err as { code?: string };
+  assert(code);
 
-  if (code) {
-    if (code.indexOf(ne.code) === -1) {
-      throw new AssertionError(
-        `Expected error message to include "${
-          code.join(" ")
-        }", but got "${ne.code}"`,
-      );
-    }
+  const ok = codes.find((c) => {
+    return code.indexOf(c) !== -1;
+  });
+  assert(ok);
+}
+
+export function assertThrowsErrorCode(fn: () => any, ...codes: string[]) {
+  try {
+    fn();
+    fail("failed to throw error");
+  } catch (err) {
+    assertErrorCode(err, ...codes);
   }
 }
