@@ -2,7 +2,7 @@
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
 import { ConnectionOptions, connect } from "../src/mod.ts";
-import { delay } from "../nats-base-client/mod.ts";
+import { delay, headers, MsgHdrs } from "../nats-base-client/mod.ts";
 
 const argv = parse(
   Deno.args,
@@ -52,14 +52,14 @@ nc.closed()
     }
   });
 
-const pubopts = {} as { reply?: string; headers?: Headers };
+const pubopts = {} as { reply?: string; headers?: MsgHdrs };
 if (argv.headers) {
-  const headers = new Headers();
+  const hdrs = headers();
   argv.headers.split(";").map((l: string) => {
     const [k, v] = l.split("=");
-    headers.append(k, v);
+    hdrs.append(k, v);
   });
-  pubopts.headers = headers;
+  pubopts.headers = hdrs;
 }
 
 for (let i = 1; i <= count; i++) {

@@ -39,3 +39,10 @@ export {
 } from "./headers.ts";
 export { DataBuffer } from "./databuffer.ts";
 export { checkOptions } from "./options.ts";
+
+export {
+  Authenticator,
+  nkeyAuthenticator,
+  jwtAuthenticator,
+  credsAuthenticator,
+} from "./authenticator.ts";

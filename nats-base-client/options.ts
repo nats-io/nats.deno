@@ -27,6 +27,7 @@ import {
   DEFAULT_URI,
   Payload,
 } from "./types.ts";
+import { buildAuthenticator } from "./authenticator.ts";
 
 export function defaultOptions(): ConnectionOptions {
   return {
@@ -51,18 +52,29 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
   if (opts.port) {
     opts.url = DEFAULT_PRE + opts.port;
   }
+  const options = extend(defaultOptions(), opts);
 
-  let options = extend(defaultOptions(), opts);
-  if (options.user && options.token) {
+  // tokens don't get users
+  if (opts.user && opts.token) {
     throw NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION);
   }
+
+  // if authenticator, no other options allowed
+  if (
+    opts.authenticator && (
+      opts.token || opts.user || opts.pass
+    )
+  ) {
+    throw NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION);
+  }
+  options.authenticator = buildAuthenticator(options);
 
   let payloadTypes = [Payload.JSON, Payload.STRING, Payload.BINARY];
   if (opts.payload && !payloadTypes.includes(opts.payload)) {
     throw NatsError.errorForCode(ErrorCode.INVALID_PAYLOAD_TYPE);
   }
 
-  ["nonceSigner", "reconnectDelayHandler"].forEach((n) => {
+  ["reconnectDelayHandler", "authenticator"].forEach((n) => {
     if (options[n] && typeof options[n] !== "function") {
       throw new NatsError(
         `${n} option should be a function`,

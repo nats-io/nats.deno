@@ -24,7 +24,7 @@ import { ErrorCode } from "../nats-base-client/mod.ts";
 
 const conf = { authorization: { token: "tokenxxxx" } };
 
-Deno.test("token empty", async () => {
+Deno.test("token - empty", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
@@ -41,7 +41,7 @@ Deno.test("token empty", async () => {
   await ns.stop();
 });
 
-Deno.test("token bad", async () => {
+Deno.test("token - bad", async () => {
   const ns = await NatsServer.start(conf);
   try {
     const nc = await connect(
@@ -55,7 +55,7 @@ Deno.test("token bad", async () => {
   await ns.stop();
 });
 
-Deno.test("token ok", async () => {
+Deno.test("token - ok", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
     { port: ns.port, token: "tokenxxxx" },

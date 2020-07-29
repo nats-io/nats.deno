@@ -25,6 +25,8 @@ import {
   Payload,
   Connect,
 } from "../nats-base-client/mod.ts";
+import { buildAuthenticator } from "../nats-base-client/authenticator.ts";
+import { extend } from "../nats-base-client/util.ts";
 
 const { version, lang } = new DenoTransport();
 
@@ -52,7 +54,7 @@ Deno.test("properties - default connect properties", () => {
   assertEquals(c.name, undefined);
 });
 
-Deno.test("properties - configured options", () => {
+Deno.test("properties - configured options", async () => {
   let opts = {} as ConnectionOptions;
   opts.url = "nats://127.0.0.1:4222";
   opts.payload = Payload.BINARY;
@@ -62,8 +64,12 @@ Deno.test("properties - configured options", () => {
   opts.token = "abc";
   opts.pedantic = true;
   opts.verbose = true;
+  // simulate the authenticator - as 'token' is mapped to 'auth_token'
+  opts.authenticator = buildAuthenticator(opts);
+  const auth = await opts.authenticator();
+  opts = extend(opts, auth);
 
-  let c = new Connect({ version, lang }, opts);
+  const c = new Connect({ version, lang }, opts);
   assertEquals(c.verbose, opts.verbose);
   assertEquals(c.pedantic, opts.pedantic);
   assertEquals(c.name, opts.name);

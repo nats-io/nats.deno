@@ -19,6 +19,7 @@ export enum ErrorCode {
   BAD_JSON = "BAD_JSON",
   BAD_SUBJECT = "BAD_SUBJECT",
   BAD_HEADER = "BAD_HEADER",
+  BAD_CREDS = "BAD_CREDS",
   CANCELLED = "CANCELLED",
   CONNECTION_CLOSED = "CONNECTION_CLOSED",
   CONNECTION_DRAINING = "CONNECTION_DRAINING",
@@ -48,10 +49,6 @@ export class Messages {
   constructor() {
     this.messages = new Map<string, string>();
 
-    this.messages.set(
-      ErrorCode.BAD_AUTHENTICATION,
-      "User and Token can not both be provided",
-    );
     this.messages.set(
       ErrorCode.INVALID_PAYLOAD_TYPE,
       "Invalid payload type - payloads can be 'binary', 'string', or 'json'",
