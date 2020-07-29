@@ -40,7 +40,7 @@ if (argv.debug) {
 
 if (argv.h || argv.help || !subject) {
   console.log(
-    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] [--headers] subject [msg]",
+    "Usage: nats-pub [-s server] [-c <count>=1] [-t <timeout>=1000] [-i <interval>=0] [--headers] subject [msg]",
   );
   console.log("to request forever, specify -c=-1 or --count=-1");
   Deno.exit(1);

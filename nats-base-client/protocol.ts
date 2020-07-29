@@ -72,12 +72,8 @@ export function createInbox(): string {
 }
 
 export class Connect {
-  auth_token?: string;
   echo?: boolean;
-  jwt?: string;
   lang!: string;
-  name?: string;
-  pass?: string;
   pedantic: boolean = false;
   protocol: number = 1;
   user?: string;
@@ -86,28 +82,26 @@ export class Connect {
   headers?: boolean;
   no_responders?: boolean;
 
+  name?: string;
+  pass?: string;
+  auth_token?: string;
+  jwt?: string;
+  nkey?: string;
+  sig?: string;
+
   constructor(
     transport: { version: string; lang: string },
-    opts?: ConnectionOptions,
+    opts: ConnectionOptions,
+    nonce?: string,
   ) {
-    opts = opts || {} as ConnectionOptions;
-    if (opts.token) {
-      this.auth_token = opts.token;
-    }
     if (opts.noEcho) {
       this.echo = false;
-    }
-    if (opts.userJWT) {
-      if (typeof opts.userJWT === "function") {
-        this.jwt = opts.userJWT();
-      } else {
-        this.jwt = opts.userJWT;
-      }
     }
     if (opts.noResponders) {
       this.no_responders = true;
     }
-    extend(this, opts, transport);
+    const creds = (opts.authenticator ? opts.authenticator(nonce) : {}) || {};
+    extend(this, opts, transport, creds);
   }
 }
 
@@ -719,9 +713,13 @@ export class ProtocolHandler {
             if (!this.infoReceived) {
               // send connect
               const { version, lang } = this.transport;
-              let cs = JSON.stringify(
-                new Connect({ version, lang }, this.options),
+              const c = new Connect(
+                { version, lang },
+                this.options,
+                this.info.nonce,
               );
+
+              const cs = JSON.stringify(c);
               this.transport.send(
                 buildMessage(`CONNECT ${cs}${CR_LF}`),
               );

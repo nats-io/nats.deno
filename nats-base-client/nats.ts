@@ -13,26 +13,21 @@
  * limitations under the License.
  */
 
-//@ts-ignore
-import { deferred, extend, isUint8Array, timeout } from "./util.ts";
+import { isUint8Array } from "./util.ts";
 import {
   Payload,
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
   Status,
-  //@ts-ignore
 } from "./mod.ts";
 import {
   ProtocolHandler,
   Request,
   RequestOptions,
   SubscriptionImpl,
-  //@ts-ignore
 } from "./protocol.ts";
-//@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
-//@ts-ignore
 import { Nuid } from "./nuid.ts";
 import { Subscription } from "./types.ts";
 import { parseOptions } from "./options.ts";

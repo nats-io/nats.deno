@@ -15,7 +15,8 @@
 //@ts-ignore
 import { NatsConnection } from "./nats.ts";
 import { NatsError } from "./mod.ts";
-import { MsgHdrs, NatsHeaders } from "./headers.ts";
+import { MsgHdrs } from "./headers.ts";
+import { Authenticator } from "./authenticator.ts";
 
 export const Events = Object.freeze({
   DISCONNECT: "disconnect",
@@ -63,13 +64,10 @@ export interface ConnectionOptions {
   maxPingOut?: number;
   maxReconnectAttempts?: number;
   name?: string;
-  nkey?: string;
-  nkeyCreds?: string;
   noEcho?: boolean;
-  nonceSigner?: (nonce: string) => Uint8Array;
+
   noRandomize?: boolean;
   noResponders?: boolean;
-  pass?: string;
   payload?: Payload;
   pedantic?: boolean;
   pingInterval?: number;
@@ -82,11 +80,13 @@ export interface ConnectionOptions {
   servers?: Array<string>;
   timeout?: number;
   tls?: boolean | TlsOptions;
-  token?: string;
   url?: string;
+
   user?: string;
-  userCreds?: string;
-  userJWT?: (() => string) | string;
+  pass?: string;
+  token?: string;
+  authenticator?: Authenticator;
+
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
 }
