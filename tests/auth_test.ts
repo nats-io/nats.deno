@@ -260,3 +260,22 @@ Deno.test("auth - jwt", async () => {
   await nc.close();
   await ns.stop();
 });
+
+Deno.test("auth - custom error", async () => {
+  const ns = await NatsServer.start(conf);
+  const authenticator = (nonce?: string) => {
+    throw new Error("user code exploded");
+  };
+  const nc = await connect(
+    {
+      port: ns.port,
+      maxReconnectAttempts: 1,
+      authenticator: authenticator,
+    },
+  ).then(() => {
+    fail("shouldn't have connected");
+  }).catch((err) => {
+    assertErrorCode(err, ErrorCode.BAD_AUTHENTICATION);
+  });
+  await ns.stop();
+});

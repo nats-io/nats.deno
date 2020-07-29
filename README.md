@@ -375,9 +375,8 @@ await Promise.all(a);
 // `token` options in the NatsConnectionOptions
 import { connect } from "src/mod.ts";
 
-const nc1 = await connect({url: "nats://127.0.0.1:4222", user: "me", pass: "secret"});
-const nc2 = await connect({url: "localhost:8080", user: "jenny", token: "867-5309"});
-const nc3 = await connect({port: 4222, token: "t0pS3cret!"});
+const nc1 = await connect({url: "nats://127.0.0.1:4222", user: "jenny", pass: "867-5309"});
+const nc2 = await connect({port: 4222, token: "t0pS3cret!"});
 ```
 
 ### Flush

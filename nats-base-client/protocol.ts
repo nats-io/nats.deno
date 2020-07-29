@@ -713,19 +713,25 @@ export class ProtocolHandler {
             if (!this.infoReceived) {
               // send connect
               const { version, lang } = this.transport;
-              const c = new Connect(
-                { version, lang },
-                this.options,
-                this.info.nonce,
-              );
+              try {
+                const c = new Connect(
+                  { version, lang },
+                  this.options,
+                  this.info.nonce,
+                );
 
-              const cs = JSON.stringify(c);
-              this.transport.send(
-                buildMessage(`CONNECT ${cs}${CR_LF}`),
-              );
-              this.transport.send(
-                buildMessage(`PING ${CR_LF}`),
-              );
+                const cs = JSON.stringify(c);
+                this.transport.send(
+                  buildMessage(`CONNECT ${cs}${CR_LF}`),
+                );
+                this.transport.send(
+                  buildMessage(`PING ${CR_LF}`),
+                );
+              } catch (err) {
+                this._close(
+                  NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION, err),
+                );
+              }
             }
             if (updates) {
               this.dispatchStatus({ type: Events.UPDATE, data: updates });

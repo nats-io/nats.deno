@@ -50,10 +50,6 @@ export class Messages {
     this.messages = new Map<string, string>();
 
     this.messages.set(
-      ErrorCode.BAD_AUTHENTICATION,
-      "User and Token can not both be provided",
-    );
-    this.messages.set(
       ErrorCode.INVALID_PAYLOAD_TYPE,
       "Invalid payload type - payloads can be 'binary', 'string', or 'json'",
     );
