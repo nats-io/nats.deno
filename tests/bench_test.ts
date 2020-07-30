@@ -15,18 +15,17 @@
 
 import {
   connect,
-  Nuid,
+  createInbox,
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 
 const u = "nats://demo.nats.io:4222";
-const nuid = new Nuid();
 
 let max = 1000;
 Deno.test(`bench - pubsub`, async () => {
   const lock = Lock(max, 30000);
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   nc.subscribe(subj, {
     callback: () => {
       lock.unlock();
@@ -48,7 +47,7 @@ Deno.test(`bench - pubsub`, async () => {
 
 Deno.test(`bench - pubonly`, async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
 
   for (let i = 0; i < max; i++) {
     nc.publish(subj);

@@ -156,3 +156,7 @@ export interface Subscription extends AsyncIterable<Msg> {
   getID(): number;
   getMax(): number | undefined;
 }
+
+export interface RequestOptions {
+  timeout: number;
+}

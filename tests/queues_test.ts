@@ -15,74 +15,63 @@
 
 import {
   connect,
-  Nuid,
+  createInbox,
+  Subscription,
 } from "../src/mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
-const nuid = new Nuid();
 
 Deno.test("queues - deliver to single queue", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const subs = [];
-
-  let count = 0;
   for (let i = 0; i < 5; i++) {
-    const s = nc.subscribe(subj, {
-      callback: () => {
-        count++;
-      },
-      queue: "a",
-    });
+    const s = nc.subscribe(subj, { queue: "a" });
     subs.push(s);
   }
-  await Promise.all(subs);
-
   nc.publish(subj);
   await nc.flush();
+  const received = subs.map((s) => s.getReceived());
+  const sum = received.reduce((p, c) => p + c);
+  assertEquals(sum, 1);
   await nc.close();
 });
 
 Deno.test("queues - deliver to multiple queues", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
-  const subs = [];
-  let queue1 = 0;
-  for (let i = 0; i < 5; i++) {
-    let s = nc.subscribe(subj, {
-      callback: () => {
-        queue1++;
-      },
-      queue: "a",
-    });
-    subs.push(s);
-  }
+  const subj = createInbox();
 
-  let queue2 = 0;
-  for (let i = 0; i < 5; i++) {
-    let s = nc.subscribe(subj, {
-      callback: () => {
-        queue2++;
-      },
-      queue: "b",
-    });
-    subs.push(s);
-  }
-  await Promise.all(subs);
+  const fn = (queue: string) => {
+    const subs = [];
+    for (let i = 0; i < 5; i++) {
+      const s = nc.subscribe(subj, { queue: queue });
+      subs.push(s);
+    }
+    return subs;
+  };
+
+  const subsa = fn("a");
+  const subsb = fn("b");
 
   nc.publish(subj);
   await nc.flush();
-  assertEquals(queue1, 1);
-  assertEquals(queue2, 1);
+
+  const mc = (subs: Subscription[]): number => {
+    const received = subs.map((s) => s.getReceived());
+    return received.reduce((p, c) => p + c);
+  };
+
+  assertEquals(mc(subsa), 1);
+  assertEquals(mc(subsb), 1);
   await nc.close();
 });
 
 Deno.test("queues - queues and subs independent", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const subs = [];
   let queueCount = 0;
   for (let i = 0; i < 5; i++) {

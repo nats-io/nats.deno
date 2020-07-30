@@ -20,24 +20,27 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
-  ErrorCode,
+  createInbox,
   Events,
+  ErrorCode,
 } from "../src/mod.ts";
 import {
   assertErrorCode,
   Lock,
   NatsServer,
 } from "./helpers/mod.ts";
-import { nuid } from "../nats-base-client/nats.ts";
-import { DebugEvents } from "../nats-base-client/types.ts";
+import {
+  deferred,
+  DebugEvents,
+} from "../nats-base-client/internal_mod.ts";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
   const servers = ["nats://127.0.0.1:7", "demo.nats.io:4222"];
   const nc = await connect({ servers: servers, noRandomize: true });
-  const subj = nuid.next();
+  const subj = createInbox();
   await nc.subscribe(subj, {
-    callback: (err, msg) => {
+    callback: () => {
       lock.unlock();
     },
   });
@@ -120,17 +123,20 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
   // @ts-ignore
   const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
 
-  (async () => {
+  const dt = deferred<number>();
+  const _ = (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
         case DebugEvents.RECONNECTING:
           const elapsed = Date.now() - serverLastConnect;
-          assert(elapsed >= 500 && elapsed <= 600);
+          dt.resolve(elapsed);
           break;
       }
     }
-  })().then();
+  })();
   await srv.stop();
+  const elapsed = await dt;
+  assert(elapsed >= 500 && elapsed <= 700, `elapsed was ${elapsed}`);
   await nc.closed();
 });
 
@@ -189,7 +195,7 @@ Deno.test("reconnect - jitter", async () => {
     return 15;
   };
 
-  let hasDefaultFn = false;
+  let hasDefaultFn: boolean;
   let dc = await connect({
     port: srv.port,
     reconnect: false,

@@ -13,18 +13,13 @@
  * limitations under the License.
  */
 
-import { connect } from "../src/connect.ts";
-import { NatsServer } from "./helpers/launcher.ts";
-import { Lock } from "./helpers/lock.ts";
+import { connect, createInbox, ErrorCode, headers } from "../src/mod.ts";
+import { NatsServer, Lock, assertErrorCode } from "./helpers/mod.ts";
 import {
   assertEquals,
   assert,
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { assertErrorCode } from "./helpers/mod.ts";
-import { ErrorCode } from "../src/mod.ts";
-import { headers, NatsHeaders } from "../nats-base-client/headers.ts";
-import { nuid } from "../nats-base-client/nats.ts";
 
 Deno.test("noresponders - option", async () => {
   const srv = await NatsServer.start();
@@ -37,8 +32,8 @@ Deno.test("noresponders - option", async () => {
   );
 
   const lock = Lock();
-  await nc.request(nuid.next())
-    .then((m) => {
+  await nc.request(createInbox())
+    .then(() => {
       fail("should have not resolved");
     })
     .catch((err) => {
@@ -61,7 +56,7 @@ Deno.test("noresponders - list", async () => {
     },
   );
 
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj);
   (async () => {
     for await (const m of sub) {

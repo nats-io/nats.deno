@@ -23,16 +23,17 @@ import {
 } from "./mod.ts";
 import {
   ProtocolHandler,
-  Request,
-  RequestOptions,
-  SubscriptionImpl,
 } from "./protocol.ts";
+import {
+  SubscriptionImpl,
+} from "./subscription.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import { Nuid } from "./nuid.ts";
-import { Subscription } from "./types.ts";
+import { Subscription, RequestOptions } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { MsgHdrs } from "./headers.ts";
+import { Request } from "./request.ts";
 
 export const nuid = new Nuid();
 

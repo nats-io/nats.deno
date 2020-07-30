@@ -12,54 +12,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-//@ts-ignore
 import {
   ConnectionOptions,
-  Msg,
-  Payload,
   Events,
   Status,
   DebugEvents,
   DEFAULT_RECONNECT_TIME_WAIT,
-  Base,
   Subscription,
-  SubscriptionOptions,
 } from "./types.ts";
-//@ts-ignore
 import { Transport, newTransport } from "./transport.ts";
-//@ts-ignore
 import { ErrorCode, NatsError } from "./error.ts";
 import {
-  MSG,
-  OK,
-  ERR,
-  PING,
-  PONG,
-  INFO,
-  HMSG,
   CR_LF,
-  CR_LF_LEN,
   buildMessage,
   extend,
   extractProtocolMessage,
   timeout,
   deferred,
   Deferred,
-  Timeout,
   delay,
-  //@ts-ignore
 } from "./util.ts";
-//@ts-ignore
 import { Nuid } from "./nuid.ts";
-//@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { MsgHdrs, NatsHeaders } from "./headers.ts";
+import { SubscriptionImpl } from "./subscription.ts";
+import { Subscriptions } from "./subscriptions.ts";
+import { MuxSubscription } from "./muxsubscription.ts";
+import { Request } from "./request.ts";
+import { MsgBuffer } from "./msgbuffer.ts";
 
 const nuid = new Nuid();
 
 const FLUSH_THRESHOLD = 1024 * 8;
+
+const MSG =
+  /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
+const HMSG =
+  /^HMSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\s+(\d+)\r\n/i;
+const OK = /^\+OK\s*\r\n/i;
+const ERR = /^-ERR\s+('.+')?\r\n/i;
+const PING = /^PING\r\n/i;
+const PONG = /^PONG\r\n/i;
+export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
 export enum ParserState {
   CLOSED = -1,
@@ -111,361 +107,6 @@ export interface Publisher {
     data: any,
     options?: { reply?: string; headers?: MsgHdrs },
   ): void;
-}
-
-export interface RequestOptions {
-  timeout: number;
-}
-
-export class Request {
-  token: string;
-  received: number = 0;
-  deferred: Deferred<Msg> = deferred();
-  timer: Timeout<Msg>;
-  private mux: MuxSubscription;
-
-  constructor(
-    mux: MuxSubscription,
-    opts: RequestOptions = { timeout: 1000 },
-  ) {
-    this.mux = mux;
-    this.token = nuid.next();
-    extend(this, opts);
-    this.timer = timeout<Msg>(opts.timeout);
-  }
-
-  resolver(err: Error | null, msg: Msg): void {
-    if (this.timer) {
-      this.timer.cancel();
-    }
-    if (err) {
-      this.deferred.reject(err);
-    } else {
-      this.deferred.resolve(msg);
-    }
-    this.cancel();
-  }
-
-  cancel(): void {
-    if (this.timer) {
-      this.timer.cancel();
-    }
-    this.mux.cancel(this);
-    this.deferred.reject(NatsError.errorForCode(ErrorCode.CANCELLED));
-  }
-}
-
-export class SubscriptionImpl extends QueuedIterator<Msg>
-  implements Base, Subscription {
-  sid!: number;
-  queue?: string;
-  draining: boolean = false;
-  max?: number;
-  subject: string;
-  drained?: Promise<void>;
-  protocol: ProtocolHandler;
-  timer?: Timeout<void>;
-
-  constructor(
-    protocol: ProtocolHandler,
-    subject: string,
-    opts: SubscriptionOptions = {},
-  ) {
-    super();
-    extend(this, opts);
-    this.protocol = protocol;
-    this.subject = subject;
-    if (opts.timeout) {
-      this.timer = timeout<void>(opts.timeout);
-      this.timer
-        .then(() => {
-          // timer was cancelled
-          this.timer = undefined;
-        })
-        .catch((err) => {
-          // timer fired
-          this.stop(err);
-        });
-    }
-  }
-
-  callback(err: NatsError | null, msg: Msg) {
-    this.cancelTimeout();
-    err ? this.stop(err) : this.push(msg);
-  }
-
-  close(): void {
-    if (!this.isClosed()) {
-      this.cancelTimeout();
-      this.stop();
-    }
-  }
-
-  unsubscribe(max?: number): void {
-    this.protocol.unsubscribe(this, max);
-  }
-
-  cancelTimeout(): void {
-    if (this.timer) {
-      this.timer.cancel();
-      this.timer = undefined;
-    }
-  }
-
-  drain(): Promise<void> {
-    if (this.protocol.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
-    }
-    if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.SUB_CLOSED);
-    }
-    if (!this.drained) {
-      this.protocol.unsub(this);
-      this.drained = this.protocol.flush(deferred<void>());
-      this.drained.then(() => {
-        this.protocol.subscriptions.cancel(this);
-      });
-    }
-    return this.drained;
-  }
-
-  isDraining(): boolean {
-    return this.draining;
-  }
-
-  isClosed(): boolean {
-    return this.done;
-  }
-
-  getSubject(): string {
-    return this.subject;
-  }
-
-  getMax(): number | undefined {
-    return this.max;
-  }
-
-  getID(): number {
-    return this.sid;
-  }
-}
-
-export class MuxSubscription {
-  baseInbox!: string;
-  reqs: Map<string, Request> = new Map<string, Request>();
-
-  size(): number {
-    return this.reqs.size;
-  }
-
-  init(): string {
-    this.baseInbox = `${createInbox()}.`;
-    return this.baseInbox;
-  }
-
-  add(r: Request) {
-    if (!isNaN(r.received)) {
-      r.received = 0;
-    }
-    this.reqs.set(r.token, r);
-  }
-
-  get(token: string): Request | undefined {
-    return this.reqs.get(token);
-  }
-
-  cancel(r: Request): void {
-    this.reqs.delete(r.token);
-  }
-
-  getToken(m: Msg): string | null {
-    let s = m.subject || "";
-    if (s.indexOf(this.baseInbox) === 0) {
-      return s.substring(this.baseInbox.length);
-    }
-    return null;
-  }
-
-  dispatcher() {
-    return (err: NatsError | null, m: Msg) => {
-      let token = this.getToken(m);
-      if (token) {
-        let r = this.get(token);
-        if (r) {
-          if (err === null && m.headers) {
-            const headers = m.headers as NatsHeaders;
-            if (headers.error) {
-              err = new NatsError(
-                headers.error.toString(),
-                ErrorCode.REQUEST_ERROR,
-              );
-            }
-          }
-          r.resolver(err, m);
-        }
-      }
-    };
-  }
-
-  close() {
-    const err = NatsError.errorForCode(ErrorCode.TIMEOUT);
-    this.reqs.forEach((req) => {
-      req.resolver(err, {} as Msg);
-    });
-  }
-}
-
-export class Subscriptions {
-  mux!: SubscriptionImpl;
-  subs: Map<number, SubscriptionImpl> = new Map<number, SubscriptionImpl>();
-  sidCounter: number = 0;
-
-  size(): number {
-    return this.subs.size;
-  }
-
-  add(s: SubscriptionImpl): SubscriptionImpl {
-    this.sidCounter++;
-    s.sid = this.sidCounter;
-    this.subs.set(s.sid, s as SubscriptionImpl);
-    return s;
-  }
-
-  setMux(s: SubscriptionImpl): SubscriptionImpl {
-    this.mux = s;
-    return s;
-  }
-
-  getMux(): SubscriptionImpl | null {
-    return this.mux;
-  }
-
-  get(sid: number): (SubscriptionImpl | undefined) {
-    return this.subs.get(sid);
-  }
-
-  all(): (SubscriptionImpl)[] {
-    let buf = [];
-    for (let s of this.subs.values()) {
-      buf.push(s);
-    }
-    return buf;
-  }
-
-  cancel(s: SubscriptionImpl): void {
-    if (s) {
-      s.close();
-      this.subs.delete(s.sid);
-    }
-  }
-
-  handleError(err?: NatsError) {
-    if (err) {
-      const re = /^'Permissions Violation for Subscription to "(\S+)"'/i;
-      const ma = re.exec(err.message);
-      if (ma) {
-        const subj = ma[1];
-        this.subs.forEach((sub) => {
-          if (subj == sub.subject) {
-            sub.callback(err, {} as Msg);
-            sub.close();
-          }
-        });
-      }
-    }
-  }
-
-  close() {
-    this.subs.forEach((sub) => {
-      sub.close();
-    });
-  }
-}
-
-class msg implements Msg {
-  publisher: Publisher;
-  subject!: string;
-  sid!: number;
-  reply?: string;
-  data?: any;
-  headers?: MsgHdrs;
-
-  constructor(publisher: Publisher) {
-    this.publisher = publisher;
-  }
-
-  // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any, headers?: MsgHdrs): boolean {
-    if (this.reply) {
-      this.publisher.publish(this.reply, data, { headers: headers });
-      return true;
-    }
-    return false;
-  }
-}
-
-export class MsgBuffer {
-  msg: Msg;
-  length: number;
-  headerLen: number;
-  buf?: Uint8Array | null;
-  payload: string;
-  err: NatsError | null = null;
-  status: number = 0;
-
-  constructor(
-    publisher: Publisher,
-    chunks: RegExpExecArray,
-    payload: "string" | "json" | "binary" = "string",
-  ) {
-    this.msg = new msg(publisher);
-    this.msg.subject = chunks[1];
-    this.msg.sid = parseInt(chunks[2], 10);
-    this.msg.reply = chunks[4];
-    this.length =
-      (chunks.length === 7
-        ? parseInt(chunks[6], 10)
-        : parseInt(chunks[5], 10)) + CR_LF_LEN;
-    this.headerLen = (chunks.length === 7 ? parseInt(chunks[5], 10) : 0);
-
-    this.payload = payload;
-  }
-
-  fill(data: Uint8Array) {
-    if (!this.buf) {
-      this.buf = data;
-    } else {
-      this.buf = DataBuffer.concat(this.buf, data);
-    }
-    this.length -= data.length;
-
-    if (this.length === 0) {
-      const headers = this.headerLen
-        ? this.buf.slice(0, this.headerLen)
-        : undefined;
-      if (headers) {
-        this.msg.headers = NatsHeaders.decode(headers);
-      }
-      this.msg.data = this.buf.slice(this.headerLen, this.buf.length - 2);
-
-      switch (this.payload) {
-        case Payload.JSON:
-          this.msg.data = new TextDecoder("utf-8").decode(this.msg.data);
-          try {
-            this.msg.data = JSON.parse(this.msg.data);
-          } catch (err) {
-            this.err = NatsError.errorForCode(ErrorCode.BAD_JSON, err);
-          }
-          break;
-        case Payload.STRING:
-          this.msg.data = new TextDecoder("utf-8").decode(this.msg.data);
-          break;
-        case Payload.BINARY:
-          break;
-      }
-      this.buf = null;
-    }
-  }
 }
 
 export class ProtocolHandler {

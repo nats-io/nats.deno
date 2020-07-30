@@ -18,42 +18,32 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
-  Nuid,
   Payload,
   Msg,
-  NatsError,
+  createInbox,
 } from "../src/mod.ts";
-import { Lock } from "./helpers/mod.ts";
+import {
+  deferred,
+} from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
-const nuid = new Nuid();
 
 function macro(input: any) {
   return async () => {
-    const lock = Lock();
-    const subj = nuid.next();
+    const subj = createInbox();
     const nc = await connect({ url: u, payload: Payload.BINARY });
-    let err!: NatsError | null;
-    let msg!: Msg;
-
-    nc.subscribe(subj, {
-      callback: (e, m: Msg) => {
-        err = e;
-        msg = m;
-        lock.unlock();
-      },
-      max: 1,
-    });
+    const dm = deferred<Msg>();
+    const sub = nc.subscribe(subj, { max: 1 });
+    const _ = (async () => {
+      for await (const m of sub) {
+        dm.resolve(m);
+      }
+    })();
 
     nc.publish(subj, input);
-    await nc.flush();
-    await lock;
-    await nc.close();
-
-    // noinspection JSUnusedAssignment
-    assertEquals(null, err);
-    // noinspection JSUnusedAssignment
+    const msg = await dm;
     assertEquals(msg.data, input);
+    await nc.close();
   };
 }
 

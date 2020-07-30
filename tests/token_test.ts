@@ -15,12 +15,11 @@
 import {
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { connect } from "../src/mod.ts";
+import { connect, ErrorCode } from "../src/mod.ts";
 import {
   assertErrorCode,
   NatsServer,
 } from "./helpers/mod.ts";
-import { ErrorCode } from "../nats-base-client/mod.ts";
 
 const conf = { authorization: { token: "tokenxxxx" } };
 

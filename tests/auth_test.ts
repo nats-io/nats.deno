@@ -19,6 +19,9 @@ import {
 import {
   connect,
   ErrorCode,
+  credsAuthenticator,
+  jwtAuthenticator,
+  nkeyAuthenticator,
 } from "../src/mod.ts";
 import {
   assertErrorCode,
@@ -30,11 +33,6 @@ import {
   fromSeed,
   encode,
 } from "https://raw.githubusercontent.com/nats-io/nkeys.js/main/modules/esm/mod.ts";
-import {
-  credsAuthenticator,
-  jwtAuthenticator,
-  nkeyAuthenticator,
-} from "../nats-base-client/mod.ts";
 
 const conf = {
   authorization: {
@@ -99,11 +97,12 @@ Deno.test("auth - sub permissions", async () => {
     lock.unlock();
   });
 
-  nc.subscribe("foo", {
-    callback: (err) => {
-      lock.unlock();
-      assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
-    },
+  const sub = nc.subscribe("foo");
+  (async () => {
+    for await (const m of sub) {}
+  })().catch((err) => {
+    lock.unlock();
+    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
   });
 
   nc.publish("foo");
@@ -123,15 +122,17 @@ Deno.test("auth - pub perm", async () => {
     lock.unlock();
   });
 
-  nc.subscribe("bar", {
-    callback: () => {
+  const sub = nc.subscribe("bar");
+  const iter = (async () => {
+    for await (const m of sub) {
       fail("should not have been called");
-    },
-  });
+    }
+  })();
 
   nc.publish("bar");
 
   await lock;
+  await iter;
   await ns.stop();
 });
 
@@ -263,10 +264,10 @@ Deno.test("auth - jwt", async () => {
 
 Deno.test("auth - custom error", async () => {
   const ns = await NatsServer.start(conf);
-  const authenticator = (nonce?: string) => {
+  const authenticator = () => {
     throw new Error("user code exploded");
   };
-  const nc = await connect(
+  await connect(
     {
       port: ns.port,
       maxReconnectAttempts: 1,

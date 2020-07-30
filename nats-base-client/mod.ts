@@ -1,48 +1,20 @@
-export { NatsConnection } from "./nats.ts";
-export { Nuid } from "./nuid.ts";
-export { ErrorCode, NatsError } from "./error.ts";
-export {
-  Events,
-  Status,
-  ConnectionOptions,
-  Msg,
-  Payload,
-  ServersChanged,
-  SubscriptionOptions,
-  Subscription,
-} from "./types.ts";
-export {
-  Transport,
-  setTransportFactory,
-} from "./transport.ts";
-export {
-  Connect,
-  MuxSubscription,
-  ParserState,
-  ProtocolHandler,
-  SubscriptionImpl,
-  Request,
-} from "./protocol.ts";
-export {
-  render,
-  extractProtocolMessage,
-  INFO,
-  Timeout,
-  delay,
-  Deferred,
-  deferred,
-} from "./util.ts";
-export {
-  NatsHeaders,
-  MsgHdrs,
-  headers,
-} from "./headers.ts";
-export { DataBuffer } from "./databuffer.ts";
-export { checkOptions } from "./options.ts";
-
 export {
   Authenticator,
-  nkeyAuthenticator,
-  jwtAuthenticator,
+  ConnectionOptions,
+  createInbox,
   credsAuthenticator,
-} from "./authenticator.ts";
+  ErrorCode,
+  Events,
+  headers,
+  jwtAuthenticator,
+  Msg,
+  NatsConnection,
+  NatsError,
+  NatsHeaders,
+  nkeyAuthenticator,
+  Payload,
+  ServersChanged,
+  Status,
+  Subscription,
+  SubscriptionOptions,
+} from "./internal_mod.ts";

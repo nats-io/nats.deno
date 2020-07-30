@@ -20,13 +20,17 @@ import {
   assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { connect, ErrorCode, Nuid, Msg } from "../src/mod.ts";
+import {
+  connect,
+  createInbox,
+  ErrorCode,
+  Msg,
+} from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
-import { deferred } from "../nats-base-client/util.ts";
+import { deferred } from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
-const nuid = new Nuid();
 
 Deno.test("drain - connection drains when no subs", async () => {
   let nc = await connect({ url: u });
@@ -37,7 +41,7 @@ Deno.test("drain - connection drains when no subs", async () => {
 Deno.test("drain - connection drain", async () => {
   const max = 1000;
   const lock = Lock(max);
-  const subj = nuid.next();
+  const subj = createInbox();
 
   const nc1 = await connect({ url: u });
   let first = true;
@@ -85,7 +89,7 @@ Deno.test("drain - connection drain", async () => {
 Deno.test("drain - subscription drain", async () => {
   let lock = Lock();
   let nc = await connect({ url: u });
-  let subj = nuid.next();
+  let subj = createInbox();
   let c1 = 0;
   let s1 = nc.subscribe(subj, {
     callback: () => {
@@ -128,7 +132,7 @@ Deno.test("drain - subscription drain", async () => {
 
 Deno.test("drain - publisher drain", async () => {
   const lock = Lock();
-  const subj = nuid.next();
+  const subj = createInbox();
 
   const nc1 = await connect({ url: u });
   let c1 = 0;
@@ -180,7 +184,7 @@ Deno.test("drain - publisher drain", async () => {
 });
 
 Deno.test("drain - publish after drain fails", async () => {
-  const subj = nuid.next();
+  const subj = createInbox();
   const nc = await connect({ url: u });
   nc.subscribe(subj);
   await nc.drain();
@@ -197,7 +201,7 @@ Deno.test("drain - publish after drain fails", async () => {
 
 Deno.test("drain - reject reqrep during connection drain", async () => {
   let lock = Lock();
-  let subj = nuid.next();
+  let subj = createInbox();
   // start a service for replies
   let nc1 = await connect({ url: u });
   await nc1.subscribe(subj, {
@@ -299,7 +303,7 @@ Deno.test("drain - reject subscription drain on closed", async () => {
 
 Deno.test("drain - multiple sub drain returns same promise", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj);
   const p1 = sub.drain();
   const p2 = sub.drain();

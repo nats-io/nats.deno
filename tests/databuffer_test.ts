@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { assertEquals } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { DataBuffer } from "../nats-base-client/mod.ts";
+import { DataBuffer } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("databuffer - empty", () => {
   let buf = new DataBuffer();

@@ -13,183 +13,140 @@
  * limitations under the License.
  */
 import {
-  assert,
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
 import {
   ErrorCode,
-  Nuid,
   connect,
+  Subscription,
+  createInbox,
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
 
-const nuid = new Nuid();
-
 Deno.test("autounsub - max option", async () => {
-  let nc = await connect({ url: u });
-
-  let count = 0;
-  let subj = nuid.next();
-  nc.subscribe(subj, {
-    max: 10,
-    callback: () => {
-      count++;
-    },
-  });
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 10 });
   for (let i = 0; i < 20; i++) {
     nc.publish(subj);
   }
   await nc.flush();
-  assertEquals(count, 10);
+  assertEquals(sub.getReceived(), 10);
   await nc.close();
 });
 
 Deno.test("autounsub - unsubscribe", async () => {
-  let nc = await connect({ url: u });
-
-  let count = 0;
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    max: 10,
-    callback: () => {
-      count++;
-    },
-  });
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 10 });
   sub.unsubscribe(11);
   for (let i = 0; i < 20; i++) {
     nc.publish(subj);
   }
-
   await nc.flush();
-  assertEquals(count, 11);
+  assertEquals(sub.getReceived(), 11);
   await nc.close();
 });
 
 Deno.test("autounsub - can unsub from auto-unsubscribed", async () => {
-  let nc = await connect({ url: u });
-
-  let count = 0;
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    max: 1,
-    callback: () => {
-      count++;
-    },
-  });
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1 });
   for (let i = 0; i < 20; i++) {
     nc.publish(subj);
   }
   await nc.flush();
-  assertEquals(count, 1);
+  assertEquals(sub.getReceived(), 1);
   sub.unsubscribe();
   await nc.close();
 });
 
-Deno.test("autounsub - can change auto-unsub to a lesser value", async () => {
-  let nc = await connect({ url: u });
-
-  let count = 0;
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    callback: () => {
-      count++;
-      sub.unsubscribe(1);
-    },
-  });
-  sub.unsubscribe(20);
+Deno.test("autounsub - can break to unsub", async () => {
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 20 });
+  const iter = (async () => {
+    for await (const m of sub) {
+      break;
+    }
+  })();
   for (let i = 0; i < 20; i++) {
     nc.publish(subj);
   }
   await nc.flush();
-  assertEquals(count, 1);
+  await iter;
+  assertEquals(sub.getProcessed(), 1);
   await nc.close();
 });
 
 Deno.test("autounsub - can change auto-unsub to a higher value", async () => {
-  let nc = await connect({ url: u });
-
-  let count = 0;
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    callback: () => {
-      count++;
-    },
-  });
-  sub.unsubscribe(1);
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1 });
   sub.unsubscribe(10);
   for (let i = 0; i < 20; i++) {
     nc.publish(subj);
   }
   await nc.flush();
-  assertEquals(count, 10);
+  assertEquals(sub.getReceived(), 10);
   await nc.close();
 });
 
 Deno.test("autounsub - request receives expected count with multiple helpers", async () => {
-  let nc = await connect({ url: u });
-  let subj = nuid.next();
+  const nc = await connect({ url: u });
+  const subj = createInbox();
 
-  let answers = 0;
+  const fn = (async (sub: Subscription) => {
+    for await (const m of sub) {
+      m.respond();
+    }
+  });
+  const subs: Subscription[] = [];
   for (let i = 0; i < 5; i++) {
-    nc.subscribe(subj, {
-      callback: (_, msg) => {
-        if (msg.reply) {
-          msg.respond();
-          answers++;
-        }
-      },
-    });
+    const sub = nc.subscribe(subj);
+    const _ = fn(sub);
+    subs.push(sub);
   }
-  await nc.flush();
+  await nc.request(subj);
+  await nc.drain();
 
-  let answer = await nc.request(subj);
-  await nc.flush();
-  assertEquals(answers, 5);
-  assert(answer);
-  await nc.close();
+  let counts = subs.map((s) => {
+    return s.getReceived();
+  });
+  const count = counts.reduce((a, v) => a + v);
+  assertEquals(count, 5);
 });
 
 Deno.test("autounsub - manual request receives expected count with multiple helpers", async () => {
-  let nc = await connect({ url: u });
-  let requestSubject = nuid.next();
+  const nc = await connect({ url: u });
+  const subj = createInbox();
+  const lock = Lock(5);
 
-  const lock = Lock(6);
-  for (let i = 0; i < 5; i++) {
-    nc.subscribe(requestSubject, {
-      callback: (_, msg) => {
-        if (msg.reply) {
-          msg.respond();
-          lock.unlock();
-        }
-      },
-    });
-  }
-
-  let replySubj = nuid.next();
-  nc.subscribe(replySubj, {
-    max: 1,
-    callback: () => {
+  const fn = (async (sub: Subscription) => {
+    for await (const m of sub) {
+      m.respond();
       lock.unlock();
-    },
+    }
   });
-
-  // publish the request
-  nc.publish(requestSubject, "", { reply: replySubj });
-  await nc.flush();
+  for (let i = 0; i < 5; i++) {
+    const sub = nc.subscribe(subj);
+    const _ = fn(sub);
+  }
+  const replySubj = createInbox();
+  const sub = nc.subscribe(replySubj);
+  nc.publish(subj, "", { reply: replySubj });
   await lock;
-  await nc.close();
+  await nc.drain();
+  assertEquals(sub.getReceived(), 5);
 });
 
 Deno.test("autounsub - check subscription leaks", async () => {
   let nc = await connect({ url: u });
-  let subj = nuid.next();
-  let sub = nc.subscribe(subj, {
-    callback: () => {
-    },
-  });
+  let subj = createInbox();
+  let sub = nc.subscribe(subj);
   sub.unsubscribe();
   assertEquals(nc.protocol.subscriptions.size(), 0);
   await nc.close();
@@ -197,18 +154,17 @@ Deno.test("autounsub - check subscription leaks", async () => {
 
 Deno.test("autounsub - check request leaks", async () => {
   let nc = await connect({ url: u });
-  let subj = nuid.next();
+  let subj = createInbox();
 
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
-  let sub = nc.subscribe(subj, {
-    callback: (_, msg) => {
-      if (msg.reply) {
-        msg.respond();
-      }
-    },
-  });
+  let sub = nc.subscribe(subj);
+  const _ = (async () => {
+    for await (const m of sub) {
+      m.respond();
+    }
+  })();
 
   // should have one subscription
   assertEquals(nc.protocol.subscriptions.size(), 1);
@@ -233,7 +189,7 @@ Deno.test("autounsub - check request leaks", async () => {
 
 Deno.test("autounsub - check cancelled request leaks", async () => {
   let nc = await connect({ url: u });
-  let subj = nuid.next();
+  let subj = createInbox();
 
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);

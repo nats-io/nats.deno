@@ -16,17 +16,16 @@
 import { assertEquals } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
+  createInbox,
   ErrorCode,
   Msg,
   NatsError,
-  Nuid,
   Payload,
 } from "../src/mod.ts";
 
 import { Lock } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
-const nuid = new Nuid();
 
 Deno.test("json - connect no json propagates options", async () => {
   let nc = await connect({ url: u });
@@ -66,7 +65,7 @@ function macro(input: any) {
   return async () => {
     const nc = await connect({ url: u, payload: Payload.JSON });
     let lock = Lock();
-    let subj = nuid.next();
+    let subj = createInbox();
     nc.subscribe(subj, {
       callback: (err: NatsError | null, msg: Msg) => {
         assertEquals(null, err);

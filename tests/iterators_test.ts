@@ -12,19 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { connect } from "../src/connect.ts";
-import { ErrorCode, NatsError, Nuid } from "../nats-base-client/mod.ts";
+import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
-const nuid = new Nuid();
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
     for await (const m of sub) {
@@ -42,7 +40,7 @@ Deno.test("iterators - unsubscribe breaks and closes", async () => {
 
 Deno.test("iterators - autounsub breaks and closes", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 2 });
   const lock = Lock(2);
   const done = (async () => {
@@ -97,7 +95,7 @@ Deno.test("iterators - unsubscribing closes", async () => {
   const nc = await connect(
     { url: u },
   );
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj);
   const lock = Lock();
   const done = (async () => {
@@ -116,7 +114,7 @@ Deno.test("iterators - connection close closes", async () => {
   const nc = await connect(
     { url: u },
   );
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj);
   const lock = Lock();
   const done = (async () => {
