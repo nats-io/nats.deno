@@ -24,7 +24,7 @@ import {
   ConnectionOptions,
   Payload,
   Connect,
-} from "../nats-base-client/mod.ts";
+} from "../nats-base-client/internal_mod.ts";
 import { buildAuthenticator } from "../nats-base-client/authenticator.ts";
 import { extend } from "../nats-base-client/util.ts";
 

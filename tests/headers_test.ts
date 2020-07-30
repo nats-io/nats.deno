@@ -1,15 +1,12 @@
-import { connect } from "../src/connect.ts";
+import { connect, ErrorCode, headers } from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
-import { Lock } from "./helpers/lock.ts";
+import { Lock, assertErrorCode } from "./helpers/mod.ts";
 import {
   assertEquals,
   assertArrayContains,
   assert,
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { assertErrorCode } from "./helpers/mod.ts";
-import { ErrorCode } from "../src/mod.ts";
-import { headers, NatsHeaders } from "../nats-base-client/headers.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();

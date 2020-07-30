@@ -6,10 +6,11 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
-  ErrorCode,
-  NatsConnection,
-  Nuid,
   Payload,
+  NatsConnection,
+  Msg,
+  ErrorCode,
+  createInbox,
 } from "../src/mod.ts";
 import {
   assertErrorCode,
@@ -18,34 +19,35 @@ import {
   NatsServer,
   TestServer,
 } from "./helpers/mod.ts";
-import { delay } from "../nats-base-client/util.ts";
-import { SubscriptionImpl } from "../nats-base-client/mod.ts";
+import {
+  deferred,
+  delay,
+  SubscriptionImpl,
+} from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
 
-const nuid = new Nuid();
-
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
-  let nc = await connect({ port: ns.port });
+  const nc = await connect({ port: ns.port });
   await nc.close();
   await ns.stop();
 });
 
 Deno.test("basics - connect default", async () => {
   const ns = await NatsServer.start({ port: 4222 });
-  let nc = await connect({});
+  const nc = await connect({});
   await nc.close();
   await ns.stop();
 });
 
 Deno.test("basics - connect host", async () => {
-  let nc = await connect({ url: "demo.nats.io" });
+  const nc = await connect({ url: "demo.nats.io" });
   await nc.close();
 });
 
 Deno.test("basics - connect hostport", async () => {
-  let nc = await connect({ url: "demo.nats.io:4222" });
+  const nc = await connect({ url: "demo.nats.io:4222" });
   await nc.close();
 });
 
@@ -62,7 +64,7 @@ Deno.test("basics - fail connect", async () => {
 
 Deno.test("basics - publish", async () => {
   const nc = await connect({ url: u });
-  nc.publish(nuid.next());
+  nc.publish(createInbox());
   await nc.flush();
   await nc.close();
 });
@@ -80,28 +82,25 @@ Deno.test("basics - no publish without subject", async () => {
 });
 
 Deno.test("basics - pubsub", async () => {
-  const lock = Lock();
-  const subj = nuid.next();
-  connect({ url: u })
-    .then((nc) => {
-      nc.subscribe(subj, {
-        callback: async () => {
-          await nc.close();
-          lock.unlock();
-        },
-      });
-      nc.publish(subj);
-    });
-  await lock;
+  const subj = createInbox();
+  const nc = await connect({ url: u });
+  const sub = nc.subscribe(subj);
+  const iter = (async () => {
+    for await (const m of sub) {
+      break;
+    }
+  })();
+
+  nc.publish(subj);
+  await iter;
+  assertEquals(sub.getProcessed(), 1);
+  await nc.close();
 });
 
 Deno.test("basics - subscribe and unsubscribe", async () => {
-  const subj = nuid.next();
+  const subj = createInbox();
   const nc = await connect({ url: u });
-  const sub = nc.subscribe(
-    subj,
-    { max: 1000, queue: "aaa", callback: () => {} },
-  );
+  const sub = nc.subscribe(subj, { max: 1000, queue: "aaa" });
 
   // check the subscription
   assertEquals(nc.protocol.subscriptions.size(), 1);
@@ -132,15 +131,16 @@ Deno.test("basics - subscribe and unsubscribe", async () => {
   await nc.close();
 });
 
-Deno.test("basics - subscriptions fire callbacks", async () => {
+Deno.test("basics - subscriptions iterate", async () => {
   const lock = Lock();
   const nc = await connect({ url: u });
-  const subj = nuid.next();
-  nc.subscribe(subj, {
-    callback: () => {
+  const subj = createInbox();
+  const sub = nc.subscribe(subj);
+  const _ = (async () => {
+    for await (const m of sub) {
       lock.unlock();
-    },
-  });
+    }
+  })();
   nc.publish(subj);
   await nc.flush();
   await nc.close();
@@ -148,56 +148,41 @@ Deno.test("basics - subscriptions fire callbacks", async () => {
 });
 
 Deno.test("basics - subscriptions pass exact subject to cb", async () => {
-  const s = nuid.next();
+  const s = createInbox();
   const subj = `${s}.foo.bar.baz`;
   const nc = await connect({ url: u });
-  let received = "";
-  nc.subscribe(`${s}.*.*.*`, {
-    callback: (err, msg) => {
-      received = msg.subject;
-    },
-  });
+  const sub = nc.subscribe(`${s}.*.*.*`);
+  const sp = deferred<string>();
+  const _ = (async () => {
+    for await (const m of sub) {
+      sp.resolve(m.subject);
+      break;
+    }
+  })();
   nc.publish(subj);
-  await nc.flush();
+  assertEquals(await sp, subj);
   await nc.close();
-  assertEquals(received, subj);
 });
 
 Deno.test("basics - subscribe returns Subscription", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   const sub = nc.subscribe(subj) as SubscriptionImpl;
   assertEquals(sub.sid, 1);
   await nc.close();
 });
 
 Deno.test("basics - wildcard subscriptions", async () => {
-  let single = 3;
-  let partial = 2;
-  let full = 5;
-
-  let singleCounter = 0;
-  let partialCounter = 0;
-  let fullCounter = 0;
+  const single = 3;
+  const partial = 2;
+  const full = 5;
 
   let nc = await connect({ url: u });
+  const s = createInbox();
 
-  let s = nuid.next();
-  nc.subscribe(`${s}.*`, {
-    callback: () => {
-      singleCounter++;
-    },
-  });
-  nc.subscribe(`${s}.foo.bar.*`, {
-    callback: () => {
-      partialCounter++;
-    },
-  });
-  nc.subscribe(`${s}.foo.>`, {
-    callback: () => {
-      fullCounter++;
-    },
-  });
+  const sub = nc.subscribe(`${s}.*`);
+  const sub2 = nc.subscribe(`${s}.foo.bar.*`);
+  const sub3 = nc.subscribe(`${s}.foo.>`);
 
   nc.publish(`${s}.bar`);
   nc.publish(`${s}.baz`);
@@ -208,71 +193,65 @@ Deno.test("basics - wildcard subscriptions", async () => {
   nc.publish(`${s}.foo.baz`);
   nc.publish(`${s}.foo`);
 
-  await nc.flush();
-  assertEquals(singleCounter, single);
-  assertEquals(partialCounter, partial);
-  assertEquals(fullCounter, full);
-
-  await nc.close();
+  await nc.drain();
+  assertEquals(sub.getReceived(), single, "single");
+  assertEquals(sub2.getReceived(), partial, "partial");
+  assertEquals(sub3.getReceived(), full, "full");
 });
 
 Deno.test("basics - correct data in message", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
-
-  let called = false;
-  nc.subscribe(subj, {
-    callback: (_, m) => {
-      called = true;
-      assertEquals(m.subject, subj);
-      assertEquals(m.data, subj);
-      assertEquals(m.reply, undefined);
-    },
-    max: 1,
-  });
+  const subj = createInbox();
+  const mp = deferred<Msg>();
+  const sub = nc.subscribe(subj);
+  const _ = (async () => {
+    for await (const m of sub) {
+      mp.resolve(m);
+      break;
+    }
+  })();
 
   nc.publish(subj, subj);
-  await nc.flush();
+  const m = await mp;
+  assertEquals(m.subject, subj);
+  assertEquals(m.data, subj);
+  assertEquals(m.reply, undefined);
   await nc.close();
-  assert(called);
 });
 
 Deno.test("basics - correct reply in message", async () => {
-  let nc = await connect({ url: u });
-  let s = nuid.next();
-  let r = nuid.next();
+  const nc = await connect({ url: u });
+  const s = createInbox();
+  const r = createInbox();
 
-  let rsubj = null;
-  nc.subscribe(s, {
-    callback: (_, m) => {
-      rsubj = m.reply;
-    },
-  });
-
+  const rp = deferred<string>();
+  const sub = nc.subscribe(s);
+  const _ = (async () => {
+    for await (const m of sub) {
+      rp.resolve(m.reply);
+      break;
+    }
+  })();
   nc.publish(s, "", { reply: r });
-  await nc.flush();
+  assertEquals(await rp, r);
   await nc.close();
-  assertEquals(rsubj, r);
 });
 
 Deno.test("basics - respond returns false if no reply subject set", async () => {
   let nc = await connect({ url: u });
-  let s = nuid.next();
-
-  let called = false;
-  nc.subscribe(s, {
-    callback: (_, m) => {
-      if (m.respond()) {
-        fail("should have not been able to respond");
-      }
-      called = true;
-    },
-  });
-
+  let s = createInbox();
+  const dr = deferred<boolean>();
+  const sub = nc.subscribe(s);
+  const _ = (async () => {
+    for await (const m of sub) {
+      dr.resolve(m.respond());
+      break;
+    }
+  })();
   nc.publish(s);
-  await nc.flush();
+  const failed = await dr;
+  assert(!failed);
   await nc.close();
-  assert(called);
 });
 
 Deno.test("basics - closed cannot subscribe", async () => {
@@ -280,7 +259,7 @@ Deno.test("basics - closed cannot subscribe", async () => {
   await nc.close();
   let failed = false;
   try {
-    nc.subscribe(nuid.next());
+    nc.subscribe(createInbox());
     fail("should have not been able to subscribe");
   } catch (err) {
     failed = true;
@@ -293,7 +272,7 @@ Deno.test("basics - close cannot request", async () => {
   await nc.close();
   let failed = false;
   try {
-    await nc.request(nuid.next());
+    await nc.request(createInbox());
     fail("should have not been able to request");
   } catch (err) {
     failed = true;
@@ -313,18 +292,17 @@ Deno.test("basics - flush returns promise", async () => {
 
 Deno.test("basics - unsubscribe after close", async () => {
   let nc = await connect({ url: u });
-  let sub = nc.subscribe(nuid.next());
+  let sub = nc.subscribe(createInbox());
   await nc.close();
   sub.unsubscribe();
 });
 
 Deno.test("basics - unsubscribe stops messages", async () => {
-  let received = 0;
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
+  // in this case we use a callback otherwise messages are buffered.
   const sub = nc.subscribe(subj, {
     callback: () => {
-      received++;
       sub.unsubscribe();
     },
   });
@@ -334,26 +312,27 @@ Deno.test("basics - unsubscribe stops messages", async () => {
   nc.publish(subj);
 
   await nc.flush();
-  assertEquals(received, 1);
+  assertEquals(sub.getReceived(), 1);
   await nc.close();
 });
 
 Deno.test("basics - request", async () => {
   let nc = await connect({ url: u });
-  let s = nuid.next();
-  nc.subscribe(s, {
-    callback: (_, msg) => {
-      msg.respond("foo");
-    },
-  });
-  let msg = await nc.request(s, 1000, "test");
+  let s = createInbox();
+  const sub = nc.subscribe(s);
+  const _ = (async () => {
+    for await (const m of sub) {
+      m.respond("foo");
+    }
+  })();
+  let msg = await nc.request(s);
   await nc.close();
   assertEquals(msg.data, "foo");
 });
 
 Deno.test("basics - request timeout", async () => {
   const nc = await connect({ url: u });
-  const s = nuid.next();
+  const s = createInbox();
   const lock = Lock();
 
   nc.request(s, 100, "test")
@@ -371,7 +350,7 @@ Deno.test("basics - request timeout", async () => {
 
 Deno.test("basics - request cancel rejects", async () => {
   const nc = await connect({ url: u });
-  const s = nuid.next();
+  const s = createInbox();
   const lock = Lock();
 
   nc.request(s, 1000, "test")
@@ -400,7 +379,7 @@ Deno.test("basics - close promise resolves", async () => {
   const nc = await connect(
     { port: cs.getPort(), reconnect: false },
   );
-  nc.closed().then((err) => {
+  nc.closed().then(() => {
     lock.unlock();
   });
 
@@ -430,7 +409,7 @@ Deno.test("basics - closed returns error", async () => {
 Deno.test("basics - subscription with timeout", async () => {
   const lock = Lock(1);
   const nc = await connect({ url: u });
-  const sub = nc.subscribe(nuid.next(), { max: 1, timeout: 250 });
+  const sub = nc.subscribe(createInbox(), { max: 1, timeout: 250 });
   (async () => {
     for await (const m of sub) {}
   })().catch((err) => {
@@ -443,8 +422,8 @@ Deno.test("basics - subscription with timeout", async () => {
 
 Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
-  const sub = nc.subscribe(subj, { max: 2, timeout: 100 });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 2, timeout: 500 });
   (async () => {
     for await (const m of sub) {}
   })().catch((err) => {
@@ -453,14 +432,15 @@ Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => 
 
   nc.publish(subj);
   await nc.flush();
+  await delay(1000);
 
   assertEquals(1, sub.getReceived());
   await nc.close();
 });
 
-Deno.test("basics - subscription timeout autocancels", async () => {
+Deno.test("basics - subscription timeout auto cancels", async () => {
   const nc = await connect({ url: u });
-  const subj = nuid.next();
+  const subj = createInbox();
   let c = 0;
   const sub = nc.subscribe(subj, { max: 2, timeout: 300 });
   (async () => {
@@ -475,23 +455,6 @@ Deno.test("basics - subscription timeout autocancels", async () => {
   nc.publish(subj);
   await delay(500);
   assertEquals(c, 2);
-  await nc.close();
-});
-
-Deno.test("basics - subscription received", async () => {
-  const lock = Lock(3);
-  const nc = await connect({ url: u });
-  const subj = nuid.next();
-  nc.subscribe(subj, {
-    callback: () => {
-      lock.unlock();
-    },
-  });
-  nc.publish(subj);
-  nc.publish(subj);
-  nc.publish(subj);
-
-  await lock;
   await nc.close();
 });
 

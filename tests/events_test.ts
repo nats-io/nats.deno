@@ -1,10 +1,9 @@
-import { NatsServer, Lock } from "../tests/helpers/mod.ts";
+import { NatsServer, Lock, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { ServerSignals } from "./helpers/launcher.ts";
-import { delay } from "../nats-base-client/mod.ts";
+import { delay } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();

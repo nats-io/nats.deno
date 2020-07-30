@@ -4,7 +4,7 @@ import {
   ConnectionOptions,
   setTransportFactory,
   Transport,
-} from "../nats-base-client/mod.ts";
+} from "../nats-base-client/internal_mod.ts";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
   setTransportFactory((): Transport => {

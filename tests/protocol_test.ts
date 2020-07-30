@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import {
   ConnectionOptions,
   ProtocolHandler,
@@ -20,18 +19,14 @@ import {
   SubscriptionImpl,
   Request,
   ErrorCode,
-} from "../nats-base-client/mod.ts";
-
+  Subscriptions,
+  MuxSubscription,
+} from "../nats-base-client/internal_mod.ts";
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
-
 import {
   assertEquals,
   equal,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import {
-  MuxSubscription,
-  Subscriptions,
-} from "../nats-base-client/protocol.ts";
 
 Deno.test("protocol - partial messages correctly", async () => {
   let lock = Lock(1, 3);

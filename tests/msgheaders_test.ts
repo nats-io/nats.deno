@@ -12,14 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsHeaders } from "../nats-base-client/headers.ts";
 import {
   assert,
   assertEquals,
   assertThrows,
   assertArrayContains,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { NatsError } from "../src/mod.ts";
+import { NatsError, NatsHeaders } from "../src/mod.ts";
 
 Deno.test("msgheaders - basics", () => {
   const h = new NatsHeaders();

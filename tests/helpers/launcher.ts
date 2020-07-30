@@ -1,8 +1,13 @@
 import * as path from "https://deno.land/std@0.61.0/path/mod.ts";
 import { check } from "./mod.ts";
-import { deferred, delay } from "../../nats-base-client/mod.ts";
-import { timeout } from "../../nats-base-client/util.ts";
-import { nuid } from "../../nats-base-client/nats.ts";
+import {
+  deferred,
+  delay,
+  timeout,
+  Nuid,
+} from "../../nats-base-client/internal_mod.ts";
+
+const nuid = new Nuid();
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,

@@ -15,7 +15,7 @@
 
 import { connect } from "../src/mod.ts";
 import { Lock, NatsServer } from "./helpers/mod.ts";
-import { ParserState } from "../nats-base-client/mod.ts";
+import { ParserState } from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";

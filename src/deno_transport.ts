@@ -24,7 +24,7 @@ import {
   render,
   Transport,
   checkOptions,
-} from "../nats-base-client/mod.ts";
+} from "../nats-base-client/internal_mod.ts";
 
 const VERSION = "0.0.1";
 const LANG = "nats.deno";
@@ -95,7 +95,7 @@ export class DenoTransport implements Transport {
     while (true) {
       let c = await this.conn.read(this.buf);
       if (c) {
-        if (null === c) {
+        if (c === null) {
           // EOF
           return Promise.reject(
             new Error("socket closed while expecting INFO"),

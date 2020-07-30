@@ -16,16 +16,6 @@
 import { DataBuffer } from "./databuffer.ts";
 import { ErrorCode, NatsError } from "./mod.ts";
 
-export const MSG =
-  /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
-export const HMSG =
-  /^HMSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\s+(\d+)\r\n/i;
-export const OK = /^\+OK\s*\r\n/i;
-export const ERR = /^-ERR\s+('.+')?\r\n/i;
-export const PING = /^PING\r\n/i;
-export const PONG = /^PONG\r\n/i;
-export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
-
 export const CR_LF = "\r\n";
 export const CR_LF_LEN = CR_LF.length;
 export const CRLF = DataBuffer.fromAscii(CR_LF);

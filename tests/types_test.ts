@@ -15,12 +15,15 @@
 
 import {
   connect,
-  Nuid,
+  createInbox,
   Payload,
   Msg,
+  NatsConnection,
 } from "../src/mod.ts";
-import { Lock } from "./helpers/mod.ts";
-import { DataBuffer } from "../nats-base-client/mod.ts";
+import {
+  DataBuffer,
+  deferred,
+} from "../nats-base-client/internal_mod.ts";
 import {
   assert,
   assertEquals,
@@ -28,114 +31,71 @@ import {
 
 const u = "demo.nats.io:4222";
 
-const nuid = new Nuid();
+function mh(nc: NatsConnection, subj: string): Promise<Msg> {
+  const dm = deferred<Msg>();
+  const sub = nc.subscribe(subj, { max: 1 });
+  const _ = (async () => {
+    for await (const m of sub) {
+      dm.resolve(m);
+    }
+  })();
+  return dm;
+}
 
 Deno.test("types - json types", async () => {
-  let lock = Lock();
-  let nc = await connect({ url: u, payload: Payload.JSON });
-  let subj = nuid.next();
-  nc.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      assertEquals(typeof msg.data, "number");
-      assertEquals(msg.data, 6691);
-      lock.unlock();
-    },
-    max: 1,
-  });
-
+  const nc = await connect({ url: u, payload: Payload.JSON });
+  const subj = createInbox();
+  const dm = mh(nc, subj);
   nc.publish(subj, 6691);
-  nc.flush();
-  await lock;
+  const msg = await dm;
+  assertEquals(typeof msg.data, "number");
+  assertEquals(msg.data, 6691);
   await nc.close();
 });
 
 Deno.test("types - string types", async () => {
-  let lock = Lock();
-  let nc = await connect({ url: u, payload: Payload.STRING });
-  let subj = nuid.next();
-  nc.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      assertEquals(typeof msg.data, "string");
-      assertEquals(msg.data, "hello world");
-      lock.unlock();
-    },
-    max: 1,
-  });
-
+  const nc = await connect({ url: u, payload: Payload.STRING });
+  const subj = createInbox();
+  const dm = mh(nc, subj);
   nc.publish(subj, DataBuffer.fromAscii("hello world"));
-  nc.flush();
-  await lock;
+  const msg = await dm;
+  assertEquals(typeof msg.data, "string");
+  assertEquals(msg.data, "hello world");
   await nc.close();
 });
 
 Deno.test("types - binary types", async () => {
-  let lock = Lock();
-  let nc = await connect({ url: u, payload: Payload.BINARY });
-  let subj = nuid.next();
-  let m1!: Msg;
-  nc.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      assert(msg.data instanceof Uint8Array);
-      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-      lock.unlock();
-    },
-    max: 1,
-  });
-
+  const nc = await connect({ url: u, payload: Payload.BINARY });
+  const subj = createInbox();
+  const dm = mh(nc, subj);
   nc.publish(subj, DataBuffer.fromAscii("hello world"));
-  nc.flush();
-  await lock;
+  const msg = await dm;
+  assert(msg.data instanceof Uint8Array);
+  assertEquals(DataBuffer.toAscii(msg.data), "hello world");
   await nc.close();
 });
 
 Deno.test("types - binary encoded per client", async () => {
-  let lock = Lock(2);
-  let nc1 = await connect({ url: u, payload: Payload.BINARY });
-  let nc2 = await connect({ url: u, payload: Payload.STRING });
-  let subj = nuid.next();
+  const nc1 = await connect({ url: u, payload: Payload.BINARY });
+  const nc2 = await connect({ url: u, payload: Payload.STRING });
+  const subj = createInbox();
 
-  nc1.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      lock.unlock();
-      assert(msg.data instanceof Uint8Array);
-      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-    },
-    max: 1,
-  });
+  const mhb = mh(nc1, subj);
+  const mhs = mh(nc2, subj);
 
-  nc2.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      lock.unlock();
-      assertEquals(typeof msg.data, "string");
-      assertEquals(msg.data, "hello world");
-    },
-    max: 1,
-  });
   await nc1.flush();
   await nc2.flush();
 
   nc2.publish(subj, "hello world");
-  await nc2.flush();
-  await lock;
+
+  const bm = await mhb;
+  assert(bm.data instanceof Uint8Array);
+  assertEquals(DataBuffer.toAscii(bm.data), "hello world");
+
+  const sm = await mhs;
+  assertEquals(typeof sm.data, "string");
+  assertEquals(sm.data, "hello world");
+
   await nc1.close();
   await nc2.close();
-});
-
-Deno.test("types - binary client gets binary", async () => {
-  let lock = Lock();
-  let nc = await connect({ url: u, payload: Payload.BINARY });
-  let subj = nuid.next();
-  nc.subscribe(subj, {
-    callback: (_, msg: Msg) => {
-      assert(msg.data instanceof Uint8Array);
-      assertEquals(DataBuffer.toAscii(msg.data), "hello world");
-      lock.unlock();
-    },
-    max: 1,
-  });
-
-  nc.publish(subj, "hello world");
-  await nc.flush();
-  await lock;
-  await nc.close();
 });
