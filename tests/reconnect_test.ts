@@ -214,3 +214,40 @@ Deno.test("reconnect - jitter", async () => {
   assert(called);
   assert(hasDefaultFn);
 });
+
+Deno.test("reconnect - internal disconnect forces reconnect", async () => {
+  const srv = await NatsServer.start();
+  const nc = await connect({
+    port: srv.port,
+    reconnect: true,
+    reconnectTimeWait: 200,
+  });
+
+  let stale = false;
+  let disconnect = false;
+  const lock = Lock();
+  (async () => {
+    for await (const e of nc.status()) {
+      switch (e.type) {
+        case DebugEvents.STALE_CONNECTION:
+          stale = true;
+          break;
+        case Events.DISCONNECT:
+          disconnect = true;
+          break;
+        case Events.RECONNECT:
+          lock.unlock();
+          break;
+      }
+    }
+  })().then();
+
+  nc.protocol.disconnect();
+  await lock;
+
+  assert(disconnect, "disconnect");
+  assert(stale, "stale");
+
+  await nc.close();
+  await srv.stop();
+});

@@ -32,6 +32,8 @@ export interface Status {
 
 export const DebugEvents = Object.freeze({
   RECONNECTING: "reconnecting",
+  PING_TIMER: "pingTimer",
+  STALE_CONNECTION: "staleConnection",
 });
 
 export const DEFAULT_PORT = 4222;
@@ -62,6 +64,7 @@ export interface ConnectionOptions {
   authenticator?: Authenticator;
   debug?: boolean;
   headers?: boolean;
+  maxPingOut?: number;
   maxReconnectAttempts?: number;
   name?: string;
   noEcho?: boolean;
@@ -70,6 +73,7 @@ export interface ConnectionOptions {
   pass?: string;
   payload?: Payload;
   pedantic?: boolean;
+  pingInterval?: number;
   port?: number;
   reconnect?: boolean;
   reconnectDelayHandler?: () => number;
@@ -82,11 +86,8 @@ export interface ConnectionOptions {
   token?: string;
   url?: string;
   user?: string;
-  waitOnFirstConnect?: boolean;
   verbose?: boolean;
-
-  maxPingOut?: number;
-  pingInterval?: number;
+  waitOnFirstConnect?: boolean;
 }
 
 export interface TlsOptions {
