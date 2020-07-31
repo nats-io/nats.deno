@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] Refactor core to share with nats.ws as a separate module
+- [X] Refactor core to share with nats.ws as a separate module
 - [X] Remove callback from flush()
 - [ ] Add timeout from subscription as option
 - [ ] Subscription timeouts not notified via callback to the subscription
@@ -9,6 +9,7 @@
 - [X] Remove argument from flush()
 - [X] Binary apis changed to be Uint8Array
 - [X] Subscriptions as iterators
+- [X] Stale connection
 
 
 
@@ -19,5 +20,5 @@
 - [X] Transform all urls to something deno can handle
 - [X] Implement reconnect
 - [X] TLS support
-- [ ] NKey signing support
+- [X] NKey signing support
 

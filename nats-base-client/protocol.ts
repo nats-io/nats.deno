@@ -19,6 +19,8 @@ import {
   DebugEvents,
   DEFAULT_RECONNECT_TIME_WAIT,
   Subscription,
+  DEFAULT_PING_INTERVAL,
+  DEFAULT_MAX_PING_OUT,
 } from "./types.ts";
 import { Transport, newTransport } from "./transport.ts";
 import { ErrorCode, NatsError } from "./error.ts";
@@ -42,6 +44,7 @@ import { Subscriptions } from "./subscriptions.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
 import { Request } from "./request.ts";
 import { MsgBuffer } from "./msgbuffer.ts";
+import { Heartbeat, PH } from "./heartbeats.ts";
 
 const nuid = new Nuid();
 
@@ -69,21 +72,8 @@ export function createInbox(): string {
 
 export class Connect {
   echo?: boolean;
-  lang!: string;
-  pedantic: boolean = false;
-  protocol: number = 1;
-  user?: string;
-  verbose: boolean = false;
-  version!: string;
-  headers?: boolean;
   no_responders?: boolean;
-
-  name?: string;
-  pass?: string;
-  auth_token?: string;
-  jwt?: string;
-  nkey?: string;
-  sig?: string;
+  protocol: number = 1;
 
   constructor(
     transport: { version: string; lang: string },
@@ -96,7 +86,7 @@ export class Connect {
     if (opts.noResponders) {
       this.no_responders = true;
     }
-    const creds = (opts.authenticator ? opts.authenticator(nonce) : {}) || {};
+    const creds = (opts?.authenticator ? opts.authenticator(nonce) : {}) || {};
     extend(this, opts, transport, creds);
   }
 }
@@ -128,6 +118,7 @@ export class ProtocolHandler {
   publisher: Publisher;
   closed: Deferred<Error | void>;
   listeners: QueuedIterator<Status>[] = [];
+  heartbeats: Heartbeat;
 
   private servers: Servers;
   private server!: Server;
@@ -146,9 +137,15 @@ export class ProtocolHandler {
       this.options.url,
     );
     this.closed = deferred<Error | void>();
+
+    this.heartbeats = new Heartbeat(
+      this as PH,
+      this.options.pingInterval || DEFAULT_PING_INTERVAL,
+      this.options.maxPingOut || DEFAULT_MAX_PING_OUT,
+    );
   }
 
-  private resetOutbound(): void {
+  resetOutbound(): void {
     this.pongs.forEach((p) => {
       p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
     });
@@ -158,7 +155,7 @@ export class ProtocolHandler {
     this.infoReceived = false;
   }
 
-  private dispatchStatus(status: Status): void {
+  dispatchStatus(status: Status): void {
     this.listeners.forEach((q) => {
       q.push(status);
     });
@@ -192,6 +189,11 @@ export class ProtocolHandler {
       });
 
     return pong;
+  }
+
+  public disconnect(): void {
+    this.dispatchStatus({ type: DebugEvents.STALE_CONNECTION, data: "" });
+    this.transport.disconnect();
   }
 
   async disconnected(err?: Error): Promise<void> {
@@ -250,6 +252,7 @@ export class ProtocolHandler {
         this.server.reconnects = 0;
         this.infoReceived = true;
         this.flushPending();
+        this.heartbeats.start();
       })
       .catch((err) => {
         timer.cancel();
@@ -347,7 +350,7 @@ export class ProtocolHandler {
               cb.resolve();
             }
           } else if ((m = PING.exec(buf))) {
-            this.transport.send(buildMessage(`PONG ${CR_LF}`));
+            this.transport.send(buildMessage(`PONG${CR_LF}`));
           } else if ((m = INFO.exec(buf))) {
             this.info = JSON.parse(m[1]);
             const updates = this.servers.update(this.info);
@@ -366,7 +369,7 @@ export class ProtocolHandler {
                   buildMessage(`CONNECT ${cs}${CR_LF}`),
                 );
                 this.transport.send(
-                  buildMessage(`PING ${CR_LF}`),
+                  buildMessage(`PING${CR_LF}`),
                 );
               } catch (err) {
                 this._close(
@@ -551,10 +554,10 @@ export class ProtocolHandler {
 
   flush(p?: Deferred<void>): Promise<void> {
     if (!p) {
-      p = deferred();
+      p = deferred<void>();
     }
     this.pongs.push(p);
-    this.sendCommand(`PING ${CR_LF}`);
+    this.sendCommand(`PING${CR_LF}`);
     return p;
   }
 
@@ -583,6 +586,7 @@ export class ProtocolHandler {
     if (this.state === ParserState.CLOSED) {
       return Promise.resolve();
     }
+    this.heartbeats.cancel();
     if (this.connectError) {
       this.connectError(err);
       this.connectError = undefined;

@@ -205,6 +205,11 @@ export class DenoTransport implements Transport {
     return this._closed(err, false);
   }
 
+  disconnect() {
+    this._closed(undefined, true)
+      .then().catch();
+  }
+
   private async _closed(err?: Error, internal: boolean = true): Promise<void> {
     if (this.done) return;
     this.closeError = err;
@@ -215,7 +220,7 @@ export class DenoTransport implements Transport {
         await this.enqueue(new TextEncoder().encode("+OK\r\n"));
       } catch (err) {
         if (this.options.debug) {
-          console.log("nats close terminated with an error", err);
+          console.log("transport close terminated with an error", err);
         }
       }
     }

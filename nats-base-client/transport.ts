@@ -50,5 +50,7 @@ export interface Transport extends AsyncIterable<Uint8Array> {
 
   close(err?: Error): Promise<void>;
 
+  disconnect(): void;
+
   closed(): Promise<void | Error>;
 }

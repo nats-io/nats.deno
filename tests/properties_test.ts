@@ -27,6 +27,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { buildAuthenticator } from "../nats-base-client/authenticator.ts";
 import { extend } from "../nats-base-client/util.ts";
+import { defaultOptions } from "../nats-base-client/options.ts";
 
 const { version, lang } = new DenoTransport();
 
@@ -39,23 +40,27 @@ Deno.test("properties - connect is a function", () => {
 });
 
 Deno.test("properties - default connect properties", () => {
-  let c = new Connect(
+  const opts = defaultOptions();
+  opts.url = "nats://127.0.0.1:4222";
+  const c = new Connect(
     { version, lang },
-    { url: "nats://127.0.0.1:4222" } as ConnectionOptions,
+    opts,
   );
-  assertEquals(c.lang, lang);
-  assert(c.version);
-  assertEquals(c.verbose, false);
-  assertEquals(c.pedantic, false);
-  assertEquals(c.protocol, 1);
-  assertEquals(c.user, undefined);
-  assertEquals(c.pass, undefined);
-  assertEquals(c.auth_token, undefined);
-  assertEquals(c.name, undefined);
+  const cc = JSON.parse(JSON.stringify(c));
+
+  assertEquals(cc.lang, lang, "lang");
+  assert(cc.version);
+  assertEquals(cc.verbose, false, "verbose");
+  assertEquals(cc.pedantic, false, "pedantic");
+  assertEquals(cc.protocol, 1, "protocol");
+  assertEquals(cc.user, undefined, "user");
+  assertEquals(cc.pass, undefined, "pass");
+  assertEquals(cc.auth_token, undefined, "auth_token");
+  assertEquals(cc.name, undefined, "name");
 });
 
 Deno.test("properties - configured options", async () => {
-  let opts = {} as ConnectionOptions;
+  let opts = defaultOptions();
   opts.url = "nats://127.0.0.1:4222";
   opts.payload = Payload.BINARY;
   opts.name = "test";
@@ -70,10 +75,12 @@ Deno.test("properties - configured options", async () => {
   opts = extend(opts, auth);
 
   const c = new Connect({ version, lang }, opts);
-  assertEquals(c.verbose, opts.verbose);
-  assertEquals(c.pedantic, opts.pedantic);
-  assertEquals(c.name, opts.name);
-  assertEquals(c.user, opts.user);
-  assertEquals(c.pass, opts.pass);
-  assertEquals(c.auth_token, opts.token);
+  const cc = JSON.parse(JSON.stringify(c));
+
+  assertEquals(cc.verbose, opts.verbose);
+  assertEquals(cc.pedantic, opts.pedantic);
+  assertEquals(cc.name, opts.name);
+  assertEquals(cc.user, opts.user);
+  assertEquals(cc.pass, opts.pass);
+  assertEquals(cc.auth_token, opts.token);
 });

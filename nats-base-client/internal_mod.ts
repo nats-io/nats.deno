@@ -44,6 +44,7 @@ export {
   MsgHdrs,
   headers,
 } from "./headers.ts";
+export { Heartbeat, PH } from "./heartbeats.ts";
 export { MuxSubscription } from "./muxsubscription.ts";
 export { DataBuffer } from "./databuffer.ts";
 export { checkOptions } from "./options.ts";
