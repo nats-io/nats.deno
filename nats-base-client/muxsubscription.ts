@@ -15,7 +15,7 @@
 import { Request } from "./request.ts";
 import { Msg } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { NatsHeaders } from "./headers.ts";
+import { MsgHdrsImpl } from "./headers.ts";
 import { createInbox } from "./protocol.ts";
 
 export class MuxSubscription {
@@ -61,7 +61,7 @@ export class MuxSubscription {
         let r = this.get(token);
         if (r) {
           if (err === null && m.headers) {
-            const headers = m.headers as NatsHeaders;
+            const headers = m.headers as MsgHdrsImpl;
             if (headers.error) {
               err = new NatsError(
                 headers.error.toString(),

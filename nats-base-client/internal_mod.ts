@@ -14,6 +14,9 @@ export {
   ServerInfo,
 } from "./types.ts";
 export {
+  MsgImpl,
+} from "./msg.ts";
+export {
   SubscriptionImpl,
 } from "./subscription.ts";
 export {
@@ -40,7 +43,7 @@ export {
   timeout,
 } from "./util.ts";
 export {
-  NatsHeaders,
+  MsgHdrsImpl,
   MsgHdrs,
   headers,
 } from "./headers.ts";

@@ -2,7 +2,7 @@
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
 import { ConnectionOptions, connect } from "../src/mod.ts";
-import { delay } from "../nats-base-client/mod.ts";
+import { delay } from "../nats-base-client/internal_mod.ts";
 
 const argv = parse(
   Deno.args,

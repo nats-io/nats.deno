@@ -38,7 +38,7 @@ import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
-import { MsgHdrs, NatsHeaders } from "./headers.ts";
+import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 import { Subscriptions } from "./subscriptions.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
@@ -492,7 +492,7 @@ export class ProtocolHandler {
       if (!this.options.headers) {
         throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
       }
-      const hdrs = options.headers as NatsHeaders;
+      const hdrs = options.headers as MsgHdrsImpl;
       const h = hdrs.encode();
       data = DataBuffer.concat(h, data);
       len = data.length;

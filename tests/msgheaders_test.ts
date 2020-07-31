@@ -18,10 +18,10 @@ import {
   assertThrows,
   assertArrayContains,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { NatsError, NatsHeaders } from "../src/mod.ts";
+import { NatsError, MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("msgheaders - basics", () => {
-  const h = new NatsHeaders();
+  const h = new MsgHdrsImpl();
   assertEquals(h.size(), 0);
   assert(!h.has("foo"));
   h.append("foo", "bar");
@@ -34,7 +34,7 @@ Deno.test("msgheaders - basics", () => {
   h.delete("bar-foo");
   assertEquals(h.size(), 3);
 
-  let header = NatsHeaders.canonicalMIMEHeaderKey("foo");
+  let header = MsgHdrsImpl.canonicalMIMEHeaderKey("foo");
   assertEquals("Foo", header);
   assert(h.has("Foo"));
   assert(h.has("foo"));
@@ -43,14 +43,14 @@ Deno.test("msgheaders - basics", () => {
   assertArrayContains(foos, ["bar", "bam"]);
   assert(foos.indexOf("baz") === -1);
 
-  header = NatsHeaders.canonicalMIMEHeaderKey("foo-bar");
+  header = MsgHdrsImpl.canonicalMIMEHeaderKey("foo-bar");
   assertEquals("Foo-Bar", header);
   const foobars = h.values(header);
   assertEquals(1, foobars.length);
   assertArrayContains(foobars, ["baz"]);
 
   const a = h.encode();
-  const hh = NatsHeaders.decode(a);
+  const hh = MsgHdrsImpl.decode(a);
   assert(h.equals(hh));
 
   hh.set("foo-bar-baz", "fbb");
@@ -58,7 +58,7 @@ Deno.test("msgheaders - basics", () => {
 });
 
 Deno.test("msgheaders - illegal key", () => {
-  const h = new NatsHeaders();
+  const h = new MsgHdrsImpl();
   ["bad:", "bad ", String.fromCharCode(127)].forEach((v) => {
     assertThrows(() => {
       h.set(v, "aaa");
