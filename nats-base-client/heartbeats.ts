@@ -35,22 +35,21 @@ export class Heartbeat {
   }
 
   // api to start the heartbeats, since this can be
-  // spuriously called from dial, insure we don't
+  // spuriously called from dial, ensure we don't
   // leak timers
   start() {
     this.cancel();
     this._schedule();
   }
 
-  // api for canceling the heartbeats, if a string is
-  // provided, client will raise an error
+  // api for canceling the heartbeats, if stale is
+  // true it will initiate a client disconnect
   cancel(stale?: boolean) {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = undefined;
     }
     this._reset();
-    // canceling because of error
     if (stale) {
       this.ph.disconnect();
     }
