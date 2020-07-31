@@ -14,10 +14,10 @@
  */
 import { Msg, Payload } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { MsgImpl } from "./msgImpl.ts";
+import { MsgImpl } from "./msg.ts";
 import { CR_LF_LEN } from "./util.ts";
 import { DataBuffer } from "./databuffer.ts";
-import { NatsHeaders } from "./headers.ts";
+import { MsgHdrsImpl } from "./headers.ts";
 import { Publisher } from "./protocol.ts";
 
 export class MsgBuffer {
@@ -60,7 +60,7 @@ export class MsgBuffer {
         ? this.buf.slice(0, this.headerLen)
         : undefined;
       if (headers) {
-        this.msg.headers = NatsHeaders.decode(headers);
+        this.msg.headers = MsgHdrsImpl.decode(headers);
       }
       this.msg.data = this.buf.slice(this.headerLen, this.buf.length - 2);
 

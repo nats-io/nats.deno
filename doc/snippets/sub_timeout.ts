@@ -31,6 +31,7 @@ const sub = nc.subscribe("hello", { timeout: 1000 });
   } else {
     console.log(`sub iterator got an error!`);
   }
+  nc.close();
 });
 
 await nc.closed();
