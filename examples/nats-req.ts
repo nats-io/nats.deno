@@ -55,7 +55,7 @@ nc.closed()
   });
 
 for (let i = 1; i <= count; i++) {
-  await nc.request(subject, argv.t, payload)
+  await nc.request(subject, payload, { timeout: argv.t })
     .then((m) => {
       console.log(`[${i}]: ${m.data}`);
       if (argv.headers && m.headers) {

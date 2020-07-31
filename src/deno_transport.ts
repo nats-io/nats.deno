@@ -93,14 +93,13 @@ export class DenoTransport implements Transport {
     const inbound = new DataBuffer();
     let pm: string;
     while (true) {
-      let c = await this.conn.read(this.buf);
-      if (c) {
-        if (c === null) {
-          // EOF
-          return Promise.reject(
-            new Error("socket closed while expecting INFO"),
-          );
-        }
+      const c = await this.conn.read(this.buf);
+      if (c === null) {
+        // EOF
+        return Promise.reject(
+          new Error("socket closed while expecting INFO"),
+        );
+      } else if (c) {
         const frame = this.buf.slice(0, c);
         if (this.options.debug) {
           console.info(`> ${render(frame)}`);

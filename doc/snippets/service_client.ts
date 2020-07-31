@@ -22,7 +22,7 @@ const nc = await connect({ url: "demo.nats.io:4222" });
 // a client makes a request and receives a promise for a message
 // by default the request times out after 1s (1000 millis) and has
 // no payload.
-await nc.request("time", 1000, "hello!")
+await nc.request("time", "hello!", { timeout: 1000 })
   .then((m) => {
     console.log(`got response: ${m.data}`);
   })

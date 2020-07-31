@@ -123,8 +123,8 @@ export class NatsConnection {
 
   request(
     subject: string,
-    timeoutMillis: number = 1000,
     data: any = undefined,
+    opts: RequestOptions = { timeout: 1000 },
   ): Promise<Msg> {
     if (this.isClosed()) {
       return Promise.reject(
@@ -140,9 +140,10 @@ export class NatsConnection {
     if (subject.length === 0) {
       return Promise.reject(NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
     }
-
-    const opts = {} as RequestOptions;
-    opts.timeout = timeoutMillis;
+    opts.timeout = opts.timeout || 1000;
+    if (opts.timeout < 1) {
+      return Promise.reject(new NatsError("timeout", ErrorCode.INVALID_OPTION));
+    }
 
     const r = new Request(this.protocol.muxSubscriptions, opts);
     this.protocol.request(r);
@@ -150,7 +151,10 @@ export class NatsConnection {
     this.publish(
       subject,
       data,
-      { reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}` },
+      {
+        reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+        headers: opts.headers,
+      },
     );
 
     const p = Promise.race([r.timer, r.deferred]);
@@ -161,7 +165,7 @@ export class NatsConnection {
   }
 
   /***
-     * Flushes to the server. If a callback is provided, the callback is c
+     * Flushes to the server. Promise resolves when round-trip completes.
      * @returns {Promise<void>}
      */
   flush(): Promise<void> {

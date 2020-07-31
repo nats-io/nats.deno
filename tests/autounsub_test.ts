@@ -194,7 +194,7 @@ Deno.test("autounsub - check cancelled request leaks", async () => {
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
-  let rp = nc.request(subj, 100);
+  let rp = nc.request(subj, "", { timeout: 100 });
 
   assertEquals(nc.protocol.subscriptions.size(), 1);
   assertEquals(nc.protocol.muxSubscriptions.size(), 1);

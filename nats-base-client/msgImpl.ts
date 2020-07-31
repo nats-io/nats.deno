@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { Msg } from "./types.ts";
-import { MsgHdrs } from "./headers.ts";
+import { NatsHeaders } from "./headers.ts";
 import { Publisher } from "./protocol.ts";
 
 export class MsgImpl implements Msg {
@@ -22,14 +22,14 @@ export class MsgImpl implements Msg {
   sid!: number;
   reply?: string;
   data?: any;
-  headers?: MsgHdrs;
+  headers?: NatsHeaders;
 
   constructor(publisher: Publisher) {
     this.publisher = publisher;
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any, headers?: MsgHdrs): boolean {
+  respond(data?: any, headers?: NatsHeaders): boolean {
     if (this.reply) {
       this.publisher.publish(this.reply, data, { headers: headers });
       return true;
