@@ -1,4 +1,4 @@
-import { connect, ErrorCode, headers } from "../src/mod.ts";
+import { connect, createInbox, ErrorCode, headers } from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
 import { Lock, assertErrorCode } from "./helpers/mod.ts";
 import {
@@ -7,6 +7,7 @@ import {
   assert,
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
+import { RequestOptions } from "../nats-base-client/types.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();
@@ -81,4 +82,27 @@ Deno.test("headers - client fails to connect if headers not available", async ()
 
   await lock;
   await srv.stop();
+});
+
+Deno.test("headers - request headers", async () => {
+  const srv = await NatsServer.start();
+  const nc = await connect({
+    url: `nats://127.0.0.1:${srv.port}`,
+    headers: true,
+  });
+  const s = createInbox();
+  const sub = nc.subscribe(s);
+  const _ = (async () => {
+    for await (const m of sub) {
+      m.respond("foo", m.headers);
+    }
+  })();
+  const opts = {} as RequestOptions;
+  opts.headers = headers();
+  opts.headers.set("x", s);
+  const msg = await nc.request(s, "", opts);
+  await nc.close();
+  await srv.stop();
+  assertEquals(msg.data, "foo");
+  assertEquals(msg.headers?.get("x"), s);
 });

@@ -317,15 +317,15 @@ Deno.test("basics - unsubscribe stops messages", async () => {
 });
 
 Deno.test("basics - request", async () => {
-  let nc = await connect({ url: u });
-  let s = createInbox();
+  const nc = await connect({ url: u });
+  const s = createInbox();
   const sub = nc.subscribe(s);
   const _ = (async () => {
     for await (const m of sub) {
       m.respond("foo");
     }
   })();
-  let msg = await nc.request(s);
+  const msg = await nc.request(s);
   await nc.close();
   assertEquals(msg.data, "foo");
 });
@@ -335,7 +335,7 @@ Deno.test("basics - request timeout", async () => {
   const s = createInbox();
   const lock = Lock();
 
-  nc.request(s, 100, "test")
+  nc.request(s, "test", { timeout: 100 })
     .then(() => {
       fail();
     })
@@ -353,7 +353,7 @@ Deno.test("basics - request cancel rejects", async () => {
   const s = createInbox();
   const lock = Lock();
 
-  nc.request(s, 1000, "test")
+  nc.request(s, "test", { timeout: 1000 })
     .then(() => {
       fail();
     })

@@ -59,18 +59,17 @@ export enum Payload {
 }
 
 export interface ConnectionOptions {
+  authenticator?: Authenticator;
   debug?: boolean;
   headers?: boolean;
-  maxPingOut?: number;
   maxReconnectAttempts?: number;
   name?: string;
   noEcho?: boolean;
-
   noRandomize?: boolean;
   noResponders?: boolean;
+  pass?: string;
   payload?: Payload;
   pedantic?: boolean;
-  pingInterval?: number;
   port?: number;
   reconnect?: boolean;
   reconnectDelayHandler?: () => number;
@@ -80,15 +79,14 @@ export interface ConnectionOptions {
   servers?: Array<string>;
   timeout?: number;
   tls?: boolean | TlsOptions;
-  url?: string;
-
-  user?: string;
-  pass?: string;
   token?: string;
-  authenticator?: Authenticator;
-
-  verbose?: boolean;
+  url?: string;
+  user?: string;
   waitOnFirstConnect?: boolean;
+  verbose?: boolean;
+
+  maxPingOut?: number;
+  pingInterval?: number;
 }
 
 export interface TlsOptions {
@@ -159,4 +157,5 @@ export interface Subscription extends AsyncIterable<Msg> {
 
 export interface RequestOptions {
   timeout: number;
+  headers?: MsgHdrs;
 }

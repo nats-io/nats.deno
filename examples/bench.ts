@@ -63,7 +63,7 @@ if (argv.req) {
   if (argv.async) {
     const a = [];
     for (; i < count; i++) {
-      a.push(nc.request(subj, 20000));
+      a.push(nc.request(subj, "", { timeout: 20000 }));
     }
     await Promise.all(a);
   } else {

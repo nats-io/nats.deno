@@ -226,7 +226,7 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
           });
         try {
           // should fail
-          await nc2.request(subj + "a", 1000);
+          await nc2.request(subj + "a", "", { timeout: 1000 });
           fail("shouldn't have been able to request");
           lock.unlock();
         } catch (err) {
