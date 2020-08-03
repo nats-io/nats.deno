@@ -14,7 +14,7 @@
  */
 
 // import the connect function
-import { connect, Subscription } from "../../src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 
 // create a connection
 const nc = await connect({ url: "demo.nats.io:4222" });
@@ -25,9 +25,10 @@ const sub = nc.subscribe("hello", { max: 3 });
 const h1 = handler(sub);
 const msub = nc.subscribe("hello");
 const h2 = handler(msub);
+const sc = StringCodec();
 
 for (let i = 1; i < 6; i++) {
-  nc.publish("hello", `hello-${i}`);
+  nc.publish("hello", sc.encode(`hello-${i}`));
 }
 // insure all the messages have been delivered to the server
 // meaning that the subscription also processed them.
@@ -48,7 +49,7 @@ async function handler(s: Subscription) {
     }`,
   );
   for await (const m of s) {
-    console.log(`sub [${id}] #${s.getProcessed()}}: ${m.data}`);
+    console.log(`sub [${id}] #${s.getProcessed()}: ${sc.decode(m.data)}`);
   }
   console.log(`sub [${id}] is done.`);
 }

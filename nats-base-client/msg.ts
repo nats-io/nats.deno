@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Msg } from "./types.ts";
+import { Empty, Msg } from "./types.ts";
 import { MsgHdrsImpl } from "./headers.ts";
 import { Publisher } from "./protocol.ts";
 
@@ -21,7 +21,7 @@ export class MsgImpl implements Msg {
   subject!: string;
   sid!: number;
   reply?: string;
-  data?: any;
+  data!: Uint8Array;
   headers?: MsgHdrsImpl;
 
   constructor(publisher: Publisher) {
@@ -29,7 +29,7 @@ export class MsgImpl implements Msg {
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data?: any, headers?: MsgHdrsImpl): boolean {
+  respond(data: Uint8Array = Empty, headers?: MsgHdrsImpl): boolean {
     if (this.reply) {
       this.publisher.publish(this.reply, data, { headers: headers });
       return true;

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { connect, createInbox, ErrorCode, headers } from "../src/mod.ts";
+import { connect, createInbox, Empty, ErrorCode, headers } from "../src/mod.ts";
 import { NatsServer, Lock, assertErrorCode } from "./helpers/mod.ts";
 import {
   assertEquals,
@@ -62,7 +62,7 @@ Deno.test("noresponders - list", async () => {
     for await (const m of sub) {
       const h = headers();
       h.append("a", "b");
-      m.respond("", h);
+      m.respond(Empty, h);
     }
   })().then();
   await nc.flush();

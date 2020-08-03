@@ -25,7 +25,6 @@ import {
   DEFAULT_PRE,
   DEFAULT_RECONNECT_TIME_WAIT,
   DEFAULT_URI,
-  Payload,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
 
@@ -34,7 +33,6 @@ export function defaultOptions(): ConnectionOptions {
     maxPingOut: DEFAULT_MAX_PING_OUT,
     maxReconnectAttempts: DEFAULT_MAX_RECONNECT_ATTEMPTS,
     noRandomize: false,
-    payload: Payload.STRING,
     pedantic: false,
     pingInterval: DEFAULT_PING_INTERVAL,
     reconnect: true,
@@ -68,11 +66,6 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
     throw NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION);
   }
   options.authenticator = buildAuthenticator(options);
-
-  let payloadTypes = [Payload.JSON, Payload.STRING, Payload.BINARY];
-  if (opts.payload && !payloadTypes.includes(opts.payload)) {
-    throw NatsError.errorForCode(ErrorCode.INVALID_PAYLOAD_TYPE);
-  }
 
   ["reconnectDelayHandler", "authenticator"].forEach((n) => {
     if (options[n] && typeof options[n] !== "function") {

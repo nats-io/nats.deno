@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Msg, Payload } from "./types.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import { Msg } from "./types.ts";
+import { NatsError } from "./error.ts";
 import { MsgImpl } from "./msg.ts";
 import { CR_LF_LEN } from "./util.ts";
 import { DataBuffer } from "./databuffer.ts";
@@ -25,14 +25,12 @@ export class MsgBuffer {
   length: number;
   headerLen: number;
   buf?: Uint8Array | null;
-  payload: string;
   err: NatsError | null = null;
   status: number = 0;
 
   constructor(
     publisher: Publisher,
     chunks: RegExpExecArray,
-    payload: "string" | "json" | "binary" = "string",
   ) {
     this.msg = new MsgImpl(publisher);
     this.msg.subject = chunks[1];
@@ -43,8 +41,6 @@ export class MsgBuffer {
         ? parseInt(chunks[6], 10)
         : parseInt(chunks[5], 10)) + CR_LF_LEN;
     this.headerLen = (chunks.length === 7 ? parseInt(chunks[5], 10) : 0);
-
-    this.payload = payload;
   }
 
   fill(data: Uint8Array) {
@@ -63,22 +59,6 @@ export class MsgBuffer {
         this.msg.headers = MsgHdrsImpl.decode(headers);
       }
       this.msg.data = this.buf.slice(this.headerLen, this.buf.length - 2);
-
-      switch (this.payload) {
-        case Payload.JSON:
-          this.msg.data = new TextDecoder("utf-8").decode(this.msg.data);
-          try {
-            this.msg.data = JSON.parse(this.msg.data);
-          } catch (err) {
-            this.err = NatsError.errorForCode(ErrorCode.BAD_JSON, err);
-          }
-          break;
-        case Payload.STRING:
-          this.msg.data = new TextDecoder("utf-8").decode(this.msg.data);
-          break;
-        case Payload.BINARY:
-          break;
-      }
       this.buf = null;
     }
   }

@@ -6,11 +6,11 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
-  Payload,
-  NatsConnection,
   Msg,
   ErrorCode,
   createInbox,
+  Empty,
+  StringCodec,
 } from "../src/mod.ts";
 import {
   assertErrorCode,
@@ -200,6 +200,7 @@ Deno.test("basics - wildcard subscriptions", async () => {
 });
 
 Deno.test("basics - correct data in message", async () => {
+  const sc = StringCodec();
   const nc = await connect({ url: u });
   const subj = createInbox();
   const mp = deferred<Msg>();
@@ -211,10 +212,10 @@ Deno.test("basics - correct data in message", async () => {
     }
   })();
 
-  nc.publish(subj, subj);
+  nc.publish(subj, sc.encode(subj));
   const m = await mp;
   assertEquals(m.subject, subj);
-  assertEquals(m.data, subj);
+  assertEquals(sc.decode(m.data), subj);
   assertEquals(m.reply, undefined);
   await nc.close();
 });
@@ -232,7 +233,7 @@ Deno.test("basics - correct reply in message", async () => {
       break;
     }
   })();
-  nc.publish(s, "", { reply: r });
+  nc.publish(s, Empty, { reply: r });
   assertEquals(await rp, r);
   await nc.close();
 });
@@ -317,17 +318,18 @@ Deno.test("basics - unsubscribe stops messages", async () => {
 });
 
 Deno.test("basics - request", async () => {
+  const sc = StringCodec();
   const nc = await connect({ url: u });
   const s = createInbox();
   const sub = nc.subscribe(s);
   const _ = (async () => {
     for await (const m of sub) {
-      m.respond("foo");
+      m.respond(sc.encode("foo"));
     }
   })();
   const msg = await nc.request(s);
   await nc.close();
-  assertEquals(msg.data, "foo");
+  assertEquals(sc.decode(msg.data), "foo");
 });
 
 Deno.test("basics - request timeout", async () => {
@@ -335,7 +337,7 @@ Deno.test("basics - request timeout", async () => {
   const s = createInbox();
   const lock = Lock();
 
-  nc.request(s, "test", { timeout: 100 })
+  nc.request(s, Empty, { timeout: 100 })
     .then(() => {
       fail();
     })
@@ -353,7 +355,7 @@ Deno.test("basics - request cancel rejects", async () => {
   const s = createInbox();
   const lock = Lock();
 
-  nc.request(s, "test", { timeout: 1000 })
+  nc.request(s, Empty, { timeout: 1000 })
     .then(() => {
       fail();
     })
@@ -456,30 +458,4 @@ Deno.test("basics - subscription timeout auto cancels", async () => {
   await delay(500);
   assertEquals(c, 2);
   await nc.close();
-});
-
-Deno.test("basics - json payload", async () => {
-  const nc = await connect({ url: u, payload: Payload.JSON });
-  await nc.close();
-});
-
-Deno.test("basics - binary payload", async () => {
-  const nc = await connect({ url: u, payload: Payload.BINARY });
-  await nc.close();
-});
-
-Deno.test("basics - string payload", async () => {
-  const nc = await connect({ url: u, payload: Payload.STRING });
-  await nc.close();
-});
-
-Deno.test("basics - bad payload option", async () => {
-  await connect({ url: u, payload: "TEXT" as Payload })
-    .then((nc: NatsConnection) => {
-      fail("didn't expect to connect with bad payload");
-      nc.close();
-    })
-    .catch(() => {
-      // this is expected
-    });
 });

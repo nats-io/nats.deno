@@ -18,7 +18,6 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 import {
   connect,
-  Payload,
   Msg,
   createInbox,
 } from "../src/mod.ts";
@@ -31,7 +30,7 @@ const u = "demo.nats.io:4222";
 function macro(input: any) {
   return async () => {
     const subj = createInbox();
-    const nc = await connect({ url: u, payload: Payload.BINARY });
+    const nc = await connect({ url: u });
     const dm = deferred<Msg>();
     const sub = nc.subscribe(subj, { max: 1 });
     const _ = (async () => {

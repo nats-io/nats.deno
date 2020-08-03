@@ -25,6 +25,7 @@ import {
   createInbox,
   ErrorCode,
   Msg,
+  StringCodec,
 } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
@@ -200,14 +201,15 @@ Deno.test("drain - publish after drain fails", async () => {
 });
 
 Deno.test("drain - reject reqrep during connection drain", async () => {
-  let lock = Lock();
-  let subj = createInbox();
+  const lock = Lock();
+  const subj = createInbox();
+  const sc = StringCodec();
   // start a service for replies
   let nc1 = await connect({ url: u });
   await nc1.subscribe(subj, {
     callback: (_, msg: Msg) => {
       if (msg.reply) {
-        msg.respond("ok");
+        msg.respond(sc.encode("ok"));
       }
     },
   });
@@ -226,7 +228,7 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
           });
         try {
           // should fail
-          await nc2.request(subj + "a", "", { timeout: 1000 });
+          await nc2.request(subj + "a");
           fail("shouldn't have been able to request");
           lock.unlock();
         } catch (err) {
@@ -237,7 +239,7 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
     },
   });
   // publish a trigger for the drain and requests
-  nc2.publish(subj, "here");
+  nc2.publish(subj);
   await nc2.flush();
   await lock;
   await nc1.close();

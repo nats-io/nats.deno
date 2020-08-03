@@ -18,6 +18,8 @@ import { NatsError } from "./mod.ts";
 import { MsgHdrs } from "./headers.ts";
 import { Authenticator } from "./authenticator.ts";
 
+export const Empty = new Uint8Array(0);
+
 export const Events = Object.freeze({
   DISCONNECT: "disconnect",
   RECONNECT: "reconnect",
@@ -54,12 +56,6 @@ export interface ConnectFn {
   (opts: ConnectionOptions): Promise<NatsConnection>;
 }
 
-export enum Payload {
-  STRING = "string",
-  JSON = "json",
-  BINARY = "binary",
-}
-
 export interface ConnectionOptions {
   authenticator?: Authenticator;
   debug?: boolean;
@@ -71,7 +67,6 @@ export interface ConnectionOptions {
   noRandomize?: boolean;
   noResponders?: boolean;
   pass?: string;
-  payload?: Payload;
   pedantic?: boolean;
   pingInterval?: number;
   port?: number;
@@ -101,10 +96,10 @@ export interface Msg {
   subject: string;
   sid: number;
   reply?: string;
-  data?: any;
+  data: Uint8Array;
   headers?: MsgHdrs;
 
-  respond(data?: any, headers?: MsgHdrs): boolean;
+  respond(data?: Uint8Array, headers?: MsgHdrs): boolean;
 }
 
 export interface SubscriptionOptions {

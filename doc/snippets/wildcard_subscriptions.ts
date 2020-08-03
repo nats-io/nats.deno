@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-import { connect, Subscription } from "../../src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 const nc = await connect({ url: "demo.nats.io:4222" });
+const sc = StringCodec();
 
 // subscriptions can have wildcard subjects
 // the '*' matches any string in the specified token position
@@ -32,7 +33,7 @@ async function printMsgs(s: Subscription) {
   for await (const m of s) {
     console.log(
       `[${subj}]${pad} #${s.getProcessed()} - ${m.subject} ${
-        m.data ? " " + m.data : ""
+        m.data ? " " + sc.decode(m.data) : ""
       }`,
     );
   }

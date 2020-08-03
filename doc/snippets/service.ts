@@ -14,10 +14,13 @@
  */
 
 // import the connect function
-import { connect, Subscription } from "../../src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 
 // create a connection
 const nc = await connect({ url: "demo.nats.io" });
+
+// create a codec
+const sc = StringCodec();
 
 // A service is a subscriber that listens for messages, and responds
 const started = Date.now();
@@ -47,7 +50,7 @@ async function requestHandler(sub: Subscription) {
     serviced++;
     if (m.respond(new Date().toISOString())) {
       console.info(
-        `[${serviced}] handled ${m.data ? "- " + m.data : ""}`,
+        `[${serviced}] handled ${m.data ? "- " + sc.decode(m.data) : ""}`,
       );
     } else {
       console.log(`[${serviced}] ignored - no reply subject`);
@@ -68,7 +71,7 @@ async function adminHandler(sub: Subscription) {
     switch (chunks[1]) {
       case "uptime":
         // send the number of millis since up
-        m.respond(`${Date.now() - started}`);
+        m.respond(sc.encode(`${Date.now() - started}`));
         break;
       case "stop":
         m.respond("stopping....");

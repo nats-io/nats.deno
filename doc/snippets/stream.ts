@@ -14,10 +14,13 @@
  */
 
 // import the connect function
-import { connect } from "../../src/mod.ts";
+import { connect, JSONCodec } from "../../src/mod.ts";
 
 // to create a connection to a nats-server:
 const nc = await connect({ url: "demo.nats.io" });
+
+// create a codec
+const jc = JSONCodec();
 
 console.info("enter the following command to get messages from the stream");
 console.info(
@@ -30,5 +33,5 @@ setInterval(() => {
   sequence++;
   const uptime = Date.now() - start;
   console.info(`publishing #${sequence}`);
-  nc.publish("stream.demo", JSON.stringify({ sequence, uptime }));
+  nc.publish("stream.demo", jc.encode({ sequence, uptime }));
 }, 1000);

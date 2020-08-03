@@ -1,4 +1,13 @@
-import { connect, createInbox, ErrorCode, headers } from "../src/mod.ts";
+import {
+  connect,
+  createInbox,
+  Empty,
+  ErrorCode,
+  headers,
+  RequestOptions,
+  JSONCodec,
+  StringCodec,
+} from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
 import { Lock, assertErrorCode } from "./helpers/mod.ts";
 import {
@@ -7,7 +16,6 @@ import {
   assert,
   fail,
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
-import { RequestOptions } from "../nats-base-client/types.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();
@@ -22,11 +30,13 @@ Deno.test("headers - option", async () => {
   h.set("a", "aa");
   h.set("b", "bb");
 
+  const sc = StringCodec();
+
   const lock = Lock();
   const sub = nc.subscribe("foo");
   (async () => {
     for await (const m of sub) {
-      assertEquals("bar", m.data);
+      assertEquals("bar", sc.decode(m.data));
       assert(m.headers);
       for (const [k, v] of m.headers) {
         assert(k);
@@ -38,7 +48,7 @@ Deno.test("headers - option", async () => {
     }
   })().then();
 
-  nc.publish("foo", "bar", { headers: h });
+  nc.publish("foo", sc.encode("bar"), { headers: h });
   await nc.flush();
   await lock;
   await nc.close();
@@ -57,7 +67,7 @@ Deno.test("headers - pub throws if not enabled", async () => {
   h.set("a", "a");
 
   try {
-    nc.publish("foo", "", { headers: h });
+    nc.publish("foo", Empty, { headers: h });
     fail("shouldn't have been able to publish");
   } catch (err) {
     assertErrorCode(err, ErrorCode.SERVER_OPTION_NA);
@@ -85,6 +95,7 @@ Deno.test("headers - client fails to connect if headers not available", async ()
 });
 
 Deno.test("headers - request headers", async () => {
+  const sc = StringCodec();
   const srv = await NatsServer.start();
   const nc = await connect({
     url: `nats://127.0.0.1:${srv.port}`,
@@ -94,15 +105,15 @@ Deno.test("headers - request headers", async () => {
   const sub = nc.subscribe(s);
   const _ = (async () => {
     for await (const m of sub) {
-      m.respond("foo", m.headers);
+      m.respond(sc.encode("foo"), m.headers);
     }
   })();
   const opts = {} as RequestOptions;
   opts.headers = headers();
   opts.headers.set("x", s);
-  const msg = await nc.request(s, "", opts);
+  const msg = await nc.request(s, Empty, opts);
   await nc.close();
   await srv.stop();
-  assertEquals(msg.data, "foo");
+  assertEquals(sc.decode(msg.data), "foo");
   assertEquals(msg.headers?.get("x"), s);
 });

@@ -16,9 +16,10 @@
 import {
   connect,
   createInbox,
-  Payload,
   Msg,
   NatsConnection,
+  StringCodec,
+  JSONCodec,
 } from "../src/mod.ts";
 import {
   DataBuffer,
@@ -43,59 +44,36 @@ function mh(nc: NatsConnection, subj: string): Promise<Msg> {
 }
 
 Deno.test("types - json types", async () => {
-  const nc = await connect({ url: u, payload: Payload.JSON });
+  const jc = JSONCodec();
+  const nc = await connect({ url: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
-  nc.publish(subj, 6691);
+  nc.publish(subj, jc.encode(6691));
   const msg = await dm;
-  assertEquals(typeof msg.data, "number");
-  assertEquals(msg.data, 6691);
+  assertEquals(typeof jc.decode(msg.data), "number");
+  assertEquals(jc.decode(msg.data), 6691);
   await nc.close();
 });
 
 Deno.test("types - string types", async () => {
-  const nc = await connect({ url: u, payload: Payload.STRING });
+  const sc = StringCodec();
+  const nc = await connect({ url: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
-  nc.publish(subj, DataBuffer.fromAscii("hello world"));
+  nc.publish(subj, sc.encode("hello world"));
   const msg = await dm;
-  assertEquals(typeof msg.data, "string");
-  assertEquals(msg.data, "hello world");
+  assertEquals(sc.decode(msg.data), "hello world");
   await nc.close();
 });
 
 Deno.test("types - binary types", async () => {
-  const nc = await connect({ url: u, payload: Payload.BINARY });
+  const nc = await connect({ url: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
-  nc.publish(subj, DataBuffer.fromAscii("hello world"));
+  const payload = DataBuffer.fromAscii("hello world");
+  nc.publish(subj, payload);
   const msg = await dm;
   assert(msg.data instanceof Uint8Array);
-  assertEquals(DataBuffer.toAscii(msg.data), "hello world");
+  assertEquals(msg.data, payload);
   await nc.close();
-});
-
-Deno.test("types - binary encoded per client", async () => {
-  const nc1 = await connect({ url: u, payload: Payload.BINARY });
-  const nc2 = await connect({ url: u, payload: Payload.STRING });
-  const subj = createInbox();
-
-  const mhb = mh(nc1, subj);
-  const mhs = mh(nc2, subj);
-
-  await nc1.flush();
-  await nc2.flush();
-
-  nc2.publish(subj, "hello world");
-
-  const bm = await mhb;
-  assert(bm.data instanceof Uint8Array);
-  assertEquals(DataBuffer.toAscii(bm.data), "hello world");
-
-  const sm = await mhs;
-  assertEquals(typeof sm.data, "string");
-  assertEquals(sm.data, "hello world");
-
-  await nc1.close();
-  await nc2.close();
 });

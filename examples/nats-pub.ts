@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
+import { ConnectionOptions, connect, Empty, StringCodec } from "../src/mod.ts";
 import { headers, MsgHdrs } from "../nats-base-client/mod.ts";
 import { delay } from "../nats-base-client/internal_mod.ts";
 
@@ -25,7 +25,7 @@ const argv = parse(
 
 const copts = { url: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
-const payload = argv._[1] || "";
+const payload = argv._[1] || Empty;
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
 const interval = argv.i || 0;
 
@@ -64,7 +64,7 @@ if (argv.headers) {
 }
 
 for (let i = 1; i <= count; i++) {
-  nc.publish(subject, payload, pubopts);
+  nc.publish(subject, sc.encode(payload), pubopts);
   console.log(`[${i}] ${subject}: ${payload}`);
   if (interval) {
     await delay(interval);

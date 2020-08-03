@@ -21,6 +21,7 @@ import {
   connect,
   Subscription,
   createInbox,
+  Empty,
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 
@@ -137,7 +138,7 @@ Deno.test("autounsub - manual request receives expected count with multiple help
   }
   const replySubj = createInbox();
   const sub = nc.subscribe(replySubj);
-  nc.publish(subj, "", { reply: replySubj });
+  nc.publish(subj, Empty, { reply: replySubj });
   await lock;
   await nc.drain();
   assertEquals(sub.getReceived(), 5);
@@ -194,7 +195,7 @@ Deno.test("autounsub - check cancelled request leaks", async () => {
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
-  let rp = nc.request(subj, "", { timeout: 100 });
+  let rp = nc.request(subj, Empty, { timeout: 100 });
 
   assertEquals(nc.protocol.subscriptions.size(), 1);
   assertEquals(nc.protocol.muxSubscriptions.size(), 1);
