@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
+import { ConnectionOptions, connect, StringCodec } from "../src/mod.ts";
 import { headers } from "../nats-base-client/mod.ts";
 
 const argv = parse(
@@ -49,6 +49,7 @@ nc.closed()
     }
   });
 
+const sc = StringCodec();
 const hdrs = argv.headers ? headers() : undefined;
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
@@ -57,8 +58,7 @@ for await (const m of sub) {
     hdrs.set("sequence", sub.getProcessed().toString());
     hdrs.set("time", Date.now().toString());
   }
-  debugger;
-  if (m.respond(argv.e ? m.data : payload, hdrs)) {
+  if (m.respond(argv.e ? m.data : sc.encode(payload), hdrs)) {
     console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.data}`);
   } else {
     console.log(`[${sub.getProcessed()}]: ignored - no reply subject`);

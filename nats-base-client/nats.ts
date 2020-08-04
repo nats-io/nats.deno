@@ -15,7 +15,6 @@
 
 import { isUint8Array } from "./util.ts";
 import {
-  Payload,
   ConnectionOptions,
   Msg,
   SubscriptionOptions,
@@ -29,7 +28,7 @@ import {
 } from "./subscription.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import { Nuid } from "./nuid.ts";
-import { Subscription, RequestOptions } from "./types.ts";
+import { Subscription, RequestOptions, Empty } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { MsgHdrs } from "./headers.ts";
@@ -78,26 +77,17 @@ export class NatsConnection {
 
   publish(
     subject: string,
-    data: any = undefined,
+    data: Uint8Array = Empty,
     options?: { reply?: string; headers?: MsgHdrs },
   ): void {
     subject = subject || "";
     if (subject.length === 0) {
-      throw (NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
+      throw NatsError.errorForCode(ErrorCode.BAD_SUBJECT);
     }
-    // we take string, object to JSON and Uint8Array - if argument is not
-    // Uint8Array, then process the payload
-    if (!isUint8Array(data)) {
-      if (this.options.payload !== Payload.JSON) {
-        data = data || "";
-      } else {
-        data = data === undefined ? null : data;
-        data = JSON.stringify(data);
-      }
-      // here we are a string
-      data = new TextEncoder().encode(data);
+    // if argument is not undefined/null and not a Uint8Array, toss
+    if (data && !isUint8Array(data)) {
+      throw NatsError.errorForCode(ErrorCode.BAD_PAYLOAD);
     }
-
     this.protocol.publish(subject, data, options);
   }
 
@@ -123,7 +113,7 @@ export class NatsConnection {
 
   request(
     subject: string,
-    data: any = undefined,
+    data: Uint8Array = Empty,
     opts: RequestOptions = { timeout: 1000 },
   ): Promise<Msg> {
     if (this.isClosed()) {

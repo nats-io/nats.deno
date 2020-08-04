@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
+import { ConnectionOptions, connect, StringCodec } from "../src/mod.ts";
 import { headers, MsgHdrs } from "../nats-base-client/mod.ts";
 import { delay } from "../nats-base-client/internal_mod.ts";
 
@@ -63,8 +63,10 @@ if (argv.headers) {
   pubopts.headers = hdrs;
 }
 
+const sc = StringCodec();
+
 for (let i = 1; i <= count; i++) {
-  nc.publish(subject, payload, pubopts);
+  nc.publish(subject, sc.encode(String(payload)), pubopts);
   console.log(`[${i}] ${subject}: ${payload}`);
   if (interval) {
     await delay(interval);

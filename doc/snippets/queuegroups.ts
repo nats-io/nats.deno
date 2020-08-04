@@ -12,7 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { connect, NatsConnection, Subscription } from "../../src/mod.ts";
+import {
+  connect,
+  NatsConnection,
+  StringCodec,
+  Subscription,
+} from "../../src/mod.ts";
 
 async function createService(
   name: string,
@@ -43,6 +48,8 @@ async function createService(
   return conns;
 }
 
+const sc = StringCodec();
+
 // simple handler for service requests
 async function handleRequest(name: string, s: Subscription) {
   const p = 12 - name.length;
@@ -50,7 +57,9 @@ async function handleRequest(name: string, s: Subscription) {
   for await (const m of s) {
     // respond returns true if the message had a reply subject, thus it could respond
     if (m.respond(m.data)) {
-      console.log(`[${name}]:${pad} #${s.getProcessed()} echoed ${m.data}`);
+      console.log(
+        `[${name}]:${pad} #${s.getProcessed()} echoed ${sc.decode(m.data)}`,
+      );
     } else {
       console.log(
         `[${name}]:${pad} #${s.getProcessed()} ignoring request - no reply subject`,

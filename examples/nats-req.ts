@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
+import { ConnectionOptions, connect, StringCodec } from "../src/mod.ts";
 import { delay } from "../nats-base-client/internal_mod.ts";
 
 const argv = parse(
@@ -46,6 +46,7 @@ if (argv.h || argv.help || !subject) {
   Deno.exit(1);
 }
 
+const sc = StringCodec();
 const nc = await connect(opts);
 nc.closed()
   .then((err) => {
@@ -55,9 +56,9 @@ nc.closed()
   });
 
 for (let i = 1; i <= count; i++) {
-  await nc.request(subject, payload, { timeout: argv.t })
+  await nc.request(subject, sc.encode(payload), { timeout: argv.t })
     .then((m) => {
-      console.log(`[${i}]: ${m.data}`);
+      console.log(`[${i}]: ${sc.decode(m.data)}`);
       if (argv.headers && m.headers) {
         const h = [];
         for (const [key, value] of m.headers) {

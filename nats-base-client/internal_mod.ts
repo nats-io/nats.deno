@@ -2,16 +2,17 @@ export { NatsConnection } from "./nats.ts";
 export { Nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
-  Events,
-  DebugEvents,
-  Status,
   ConnectionOptions,
+  DebugEvents,
+  Empty,
+  Events,
   Msg,
-  Payload,
-  ServersChanged,
-  SubscriptionOptions,
-  Subscription,
+  RequestOptions,
   ServerInfo,
+  ServersChanged,
+  Status,
+  Subscription,
+  SubscriptionOptions,
 } from "./types.ts";
 export {
   MsgImpl,
@@ -58,3 +59,9 @@ export {
   jwtAuthenticator,
   credsAuthenticator,
 } from "./authenticator.ts";
+export {
+  Codec,
+  JSONCodec,
+  StringCodec,
+} from "./codec.ts";
+export * from "./nkeys.ts";

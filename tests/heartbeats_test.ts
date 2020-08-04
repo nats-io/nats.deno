@@ -22,7 +22,6 @@ import {
   DebugEvents,
   deferred,
   delay,
-  ErrorCode,
   Heartbeat,
   PH,
   Status,

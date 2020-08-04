@@ -52,10 +52,11 @@ if (argv.sub) {
   })();
 }
 
+const payload = new TextEncoder().encode("ok");
 let i = 0;
 if (argv.pub) {
   for (; i < count; i++) {
-    nc.publish(subj, "ok");
+    nc.publish(subj, payload);
   }
 }
 

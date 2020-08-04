@@ -105,22 +105,32 @@ and publish to `send` messages. A subscription works as an async
 iterator where you process messages in a loop until the subscription
 closes.
 
+NATS is payload agnostic, this means that payloads are `Uint8Arrays`.
+You can easily send JSON or strings by using a `StringCodec` or a
+`JSONCodec`, or create a Codec of your own that handles the type
+of your data as necessary.
+
 ```typescript
-import { connect } from "src/mod.ts";
+// import the connect function
+import { connect, StringCodec } from "../../src/mod.ts";
+
+// to create a connection to a nats-server:
 const nc = await connect({ url: "demo.nats.io:4222" });
 
+// create a codec
+const sc = StringCodec();
 // create a simple subscriber and iterate over messages
 // matching the subscription
 const sub = nc.subscribe("hello");
 (async () => {
   for await (const m of sub) {
-    console.log(`[${sub.getProcessed()}]: ${m.data}`);
+    console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
   }
   console.log("subscription closed");
 })();
 
-nc.publish("hello", "world");
-nc.publish("hello", "again");
+nc.publish("hello", sc.encode("world"));
+nc.publish("hello", sc.encode("again"));
 
 // we want to insure that messages that are in flight
 // get processed, so we are going to drain the
@@ -137,8 +147,13 @@ To get the messages, you simply subscribe to them. To stop
 getting the messages you unsubscribe.
 
 ```typescript
-import { connect } from "src/mod.ts";
+import { connect, JSONCodec } from "../../src/mod.ts";
+
+// to create a connection to a nats-server:
 const nc = await connect({ url: "demo.nats.io" });
+
+// create a codec
+const jc = JSONCodec();
 
 console.info("enter the following command to get messages from the stream");
 console.info(
@@ -150,8 +165,8 @@ let sequence = 0;
 setInterval(() => {
   sequence++;
   const uptime = Date.now() - start;
-  console.info(`publishing #${sequence}`)
-  nc.publish("stream.demo", JSON.stringify({ sequence, uptime }));
+  console.info(`publishing #${sequence}`);
+  nc.publish("stream.demo", jc.encode({ sequence, uptime }));
 }, 1000);
 ```
 
@@ -167,8 +182,9 @@ the subject you use matches one or more of them, they all
 will get a chance at processing the message.
 
 ```javascript
-import { connect, Subscription } from "src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 const nc = await connect({ url: "demo.nats.io:4222" });
+const sc = StringCodec();
 
 // subscriptions can have wildcard subjects
 // the '*' matches any string in the specified token position
@@ -179,13 +195,14 @@ const s2 = nc.subscribe("help.me.*");
 const s3 = nc.subscribe("help.>");
 
 async function printMsgs(s: Subscription) {
-  console.log(`listening for ${s.subject}`);
-  const c = (13 - s.subject.length);
+  let subj = s.getSubject();
+  console.log(`listening for ${subj}`);
+  const c = (13 - subj.length);
   const pad = "".padEnd(c);
   for await (const m of s) {
     console.log(
-      `[${s.subject}]${pad} #${s.getProcessed()} - ${m.subject} ${
-        m.data ? " " + m.data : ""
+      `[${subj}]${pad} #${s.getProcessed()} - ${m.subject} ${
+        m.data ? " " + sc.decode(m.data) : ""
       }`,
     );
   }
@@ -197,6 +214,7 @@ printMsgs(s3);
 
 // don't exit until the client closes
 await nc.closed();
+
 ```
 
 
@@ -209,21 +227,23 @@ This example is a bit complicated, because we are going to use NATS
 not only to provide a service, but also to control the service.
 
 ```typescript
-import { connect, Subscription } from "src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/mod.ts";
+
+// create a connection
 const nc = await connect({ url: "demo.nats.io" });
 
-// A service is a subscriber that listens for requests
-// for the current time and responds
+// create a codec
+const sc = StringCodec();
+
+// A service is a subscriber that listens for messages, and responds
 const started = Date.now();
 const sub = nc.subscribe("time");
-// this function will handle requests for time
 requestHandler(sub);
 
 // If you wanted to manage a service - well NATS is awesome
 // for just that - setup another subscription where admin
 // messages can be sent
 const msub = nc.subscribe("admin.*");
-// this function will handle management requests
 adminHandler(msub);
 
 // wait for the client to close here.
@@ -235,15 +255,15 @@ await nc.closed().then((err?: void | Error) => {
   console.log(m);
 });
 
-// this implements the handler for time requests
+// this implements the public service, and just prints
 async function requestHandler(sub: Subscription) {
-  console.log(`listening for ${sub.subject} requests...`);
+  console.log(`listening for ${sub.getSubject()} requests...`);
   let serviced = 0;
   for await (const m of sub) {
     serviced++;
     if (m.respond(new Date().toISOString())) {
       console.info(
-        `[${serviced}] handled ${m.data ? "- " + m.data : ""}`,
+        `[${serviced}] handled ${m.data ? "- " + sc.decode(m.data) : ""}`,
       );
     } else {
       console.log(`[${serviced}] ignored - no reply subject`);
@@ -251,21 +271,20 @@ async function requestHandler(sub: Subscription) {
   }
 }
 
-// this implements the admin service, I use wildcards to handle
-// the requests consicely here
+// this implements the admin service
 async function adminHandler(sub: Subscription) {
-  console.log(`listening for ${sub.subject} requests [uptime | stop]`);
-  // it would be very good to verify the origin of the
-  // request - before implementing something that allows your service
-  // to be managed.
+  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
+
+  // it would be very good to verify the origin of the request
+  // before implementing something that allows your service to be managed.
+  // NATS can limit which client can send or receive on what subjects.
   for await (const m of sub) {
     const chunks = m.subject.split(".");
     console.info(`[admin] handling ${chunks[1]}`);
     switch (chunks[1]) {
       case "uptime":
-        // send the number of millis since the service started
-        const uptime = Date.now() - started
-        m.respond(JSON.stringify({uptime}));
+        // send the number of millis since up
+        m.respond(sc.encode(`${Date.now() - started}`));
         break;
       case "stop":
         m.respond("stopping....");
@@ -283,21 +302,27 @@ async function adminHandler(sub: Subscription) {
 
 ### Making Requests
 ```typescript
-import { connect } from "src/mod.ts";
+import { connect, StringCodec } from "../../src/mod.ts";
+
+// create a connection
 const nc = await connect({ url: "demo.nats.io:4222" });
+
+// create an encoder
+const sc = StringCodec();
 
 // a client makes a request and receives a promise for a message
 // by default the request times out after 1s (1000 millis) and has
 // no payload.
-await nc.request("time", "hello!", { timeout: 1000 })
+await nc.request("time", sc.encode("hello!"), { timeout: 1000 })
   .then((m) => {
-    console.log(`got response: ${m.data}`);
+    console.log(`got response: ${sc.decode(m.data)}`);
   })
   .catch((err) => {
     console.log(`problem with request: ${err.message}`);
   });
 
 await nc.close();
+
 ```
 
 ### Queue Groups
@@ -307,7 +332,12 @@ only a single client in a queue group will receive it. There can be multiple que
 groups, and each is treated as an independent group. Non-queue subscriptions are
 also independent.
 ```typescript
-import { connect, NatsConnection, Subscription } from "src/mod.ts";
+import {
+  connect,
+  NatsConnection,
+  StringCodec,
+  Subscription,
+} from "../../src/mod.ts";
 
 async function createService(
   name: string,
@@ -338,6 +368,8 @@ async function createService(
   return conns;
 }
 
+const sc = StringCodec();
+
 // simple handler for service requests
 async function handleRequest(name: string, s: Subscription) {
   const p = 12 - name.length;
@@ -345,7 +377,9 @@ async function handleRequest(name: string, s: Subscription) {
   for await (const m of s) {
     // respond returns true if the message had a reply subject, thus it could respond
     if (m.respond(m.data)) {
-      console.log(`[${name}]:${pad} #${s.getProcessed()} echoed ${m.data}`);
+      console.log(
+        `[${name}]:${pad} #${s.getProcessed()} echoed ${sc.decode(m.data)}`,
+      );
     } else {
       console.log(
         `[${name}]:${pad} #${s.getProcessed()} ignoring request - no reply subject`,

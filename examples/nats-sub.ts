@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.61.0/flags/mod.ts";
-import { ConnectionOptions, connect } from "../src/mod.ts";
+import { ConnectionOptions, connect, StringCodec } from "../src/mod.ts";
 
 const argv = parse(
   Deno.args,
@@ -44,10 +44,11 @@ nc.closed()
     }
   });
 
+const sc = StringCodec();
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
-  console.log(`[${sub.getProcessed()}]: ${m.subject}: ${m.data}`);
+  console.log(`[${sub.getProcessed()}]: ${m.subject}: ${sc.decode(m.data)}`);
   if (argv.headers && m.headers) {
     const h = [];
     for (const [key, value] of m.headers) {

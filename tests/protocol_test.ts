@@ -21,6 +21,7 @@ import {
   ErrorCode,
   Subscriptions,
   MuxSubscription,
+  StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
 import {
@@ -29,17 +30,18 @@ import {
 } from "https://deno.land/std@0.61.0/testing/asserts.ts";
 
 Deno.test("protocol - partial messages correctly", async () => {
-  let lock = Lock(1, 3);
-  let protocol = new ProtocolHandler(
+  const sc = StringCodec();
+  const lock = Lock(3);
+  const protocol = new ProtocolHandler(
     {} as ConnectionOptions,
     { publish: (subject, data1, reply) => {} },
   );
   protocol.infoReceived = true;
   // feed the inbound with arrays of 1 byte at a time
-  let data =
+  const data =
     "MSG test.foo 1 11\r\nHello World\r\nMSG test.bar 1 11\r\nHello World\r\nMSG test.baz 1 11\r\nHello World\r\nPONG\r\n";
-  let chunks: Uint8Array[] = [];
-  let te = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  const te = new TextEncoder();
   for (let i = 0; i < data.length; i++) {
     chunks.push(te.encode(data.charAt(i)));
   }
@@ -48,7 +50,7 @@ Deno.test("protocol - partial messages correctly", async () => {
   s.sid = 1;
   s.subject = "test.*";
   s.callback = ((_, msg) => {
-    assertEquals(msg.data, "Hello World");
+    assertEquals(sc.decode(msg.data), "Hello World");
     lock.unlock();
   });
 

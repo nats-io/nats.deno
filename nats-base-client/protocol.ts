@@ -335,7 +335,6 @@ export class ProtocolHandler {
             this.payload = new MsgBuffer(
               this.publisher,
               m,
-              this.options.payload,
             );
             this.state = ParserState.AWAITING_MSG_PAYLOAD;
           } else if ((m = OK.exec(buf))) {
@@ -443,7 +442,7 @@ export class ProtocolHandler {
     sub.received += 1;
 
     if (sub.callback) {
-      sub.callback(m.err, m.msg);
+      sub.callback(null, m.msg);
     }
 
     if (sub.max !== undefined && sub.received >= sub.max) {

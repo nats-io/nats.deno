@@ -21,8 +21,6 @@ import {
 import { connect } from "../src/mod.ts";
 import { DenoTransport } from "../src/deno_transport.ts";
 import {
-  ConnectionOptions,
-  Payload,
   Connect,
 } from "../nats-base-client/internal_mod.ts";
 import { buildAuthenticator } from "../nats-base-client/authenticator.ts";
@@ -62,7 +60,6 @@ Deno.test("properties - default connect properties", () => {
 Deno.test("properties - configured options", async () => {
   let opts = defaultOptions();
   opts.url = "nats://127.0.0.1:4222";
-  opts.payload = Payload.BINARY;
   opts.name = "test";
   opts.pass = "secret";
   opts.user = "me";

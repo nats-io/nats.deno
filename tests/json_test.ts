@@ -18,52 +18,31 @@ import {
   connect,
   createInbox,
   ErrorCode,
+  JSONCodec,
   Msg,
   NatsError,
-  Payload,
 } from "../src/mod.ts";
 
 import { Lock } from "./helpers/mod.ts";
+import { assertThrowsErrorCode } from "./helpers/asserts.ts";
 
 const u = "demo.nats.io:4222";
-
-Deno.test("json - connect no json propagates options", async () => {
-  let nc = await connect({ url: u });
-  await nc.close();
-  assertEquals(nc.options.payload, Payload.STRING, "nc options");
-  assertEquals(nc.protocol.options.payload, Payload.STRING, "protocol");
-});
-
-Deno.test("json - connect json propagates options", async () => {
-  let nc = await connect({ url: u, payload: Payload.JSON });
-  assertEquals(nc.options.payload, Payload.JSON, "nc options");
-  assertEquals(nc.protocol.options.payload, Payload.JSON, "protocol");
-  await nc.close();
-});
 
 Deno.test("json - bad json error in callback", async () => {
   let o = {};
   //@ts-ignore
   o.a = o;
-  let jc = await connect({ url: u, payload: Payload.JSON });
-  jc.subscribe("bad_json", {
-    callback: (err) => {
-      assertEquals(err?.code, ErrorCode.BAD_JSON);
-    },
-  });
-  await jc.flush();
 
-  let nc = await connect({ url: u });
-  nc.publish("bad_json", "");
-  await nc.flush();
-  await jc.flush();
-  await jc.close();
-  await nc.close();
+  const jc = JSONCodec();
+  assertThrowsErrorCode(() => {
+    jc.encode(o);
+  }, ErrorCode.BAD_JSON);
 });
 
 function macro(input: any) {
   return async () => {
-    const nc = await connect({ url: u, payload: Payload.JSON });
+    const jc = JSONCodec();
+    const nc = await connect({ url: u });
     let lock = Lock();
     let subj = createInbox();
     nc.subscribe(subj, {
@@ -73,13 +52,13 @@ function macro(input: any) {
         if (input === undefined) {
           input = null;
         }
-        assertEquals(msg.data, input);
+        assertEquals(jc.decode(msg.data), input);
         lock.unlock();
       },
       max: 1,
     });
 
-    nc.publish(subj, input);
+    nc.publish(subj, jc.encode(input));
     await nc.flush();
     await lock;
     await nc.close();
