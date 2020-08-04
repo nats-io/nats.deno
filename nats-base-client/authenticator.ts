@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 import {
-  fromSeed,
-  encode,
-} from "https://raw.githubusercontent.com/nats-io/nkeys.js/main/modules/esm/mod.ts";
+  nkeys,
+} from "./nkeys.ts";
 import { ConnectionOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./mod.ts";
 
@@ -107,11 +106,11 @@ export function nkeyAuthenticator(
 ): Authenticator {
   return (nonce?: string): NKeyAuth => {
     seed = typeof seed === "function" ? seed() : seed;
-    const kp = seed ? fromSeed(seed) : undefined;
+    const kp = seed ? nkeys.fromSeed(seed) : undefined;
     const nkey = kp ? kp.getPublicKey() : "";
     const challenge = new TextEncoder().encode(nonce || "");
     const sigBytes = kp !== undefined && nonce ? kp.sign(challenge) : undefined;
-    const sig = sigBytes ? encode(sigBytes) : "";
+    const sig = sigBytes ? nkeys.encode(sigBytes) : "";
     return { nkey, sig };
   };
 }

@@ -64,3 +64,4 @@ export {
   JSONCodec,
   StringCodec,
 } from "./codec.ts";
+export * from "./nkeys.ts";

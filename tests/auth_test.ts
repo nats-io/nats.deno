@@ -29,10 +29,8 @@ import {
   NatsServer,
 } from "./helpers/mod.ts";
 import {
-  createUser,
-  fromSeed,
-  encode,
-} from "https://raw.githubusercontent.com/nats-io/nkeys.js/main/modules/esm/mod.ts";
+  nkeys,
+} from "../nats-base-client/internal_mod.ts";
 
 const conf = {
   authorization: {
@@ -148,7 +146,7 @@ Deno.test("auth - user and token is rejected", async () => {
 });
 
 Deno.test("auth - nkey", async () => {
-  const kp = createUser();
+  const kp = nkeys.createUser();
   const pk = kp.getPublicKey();
   const seed = kp.getSeed();
   const conf = {
@@ -218,10 +216,10 @@ Deno.test("auth - custom", async () => {
   };
   const ns = await NatsServer.start(conf);
   const authenticator = (nonce?: string) => {
-    const seed = fromSeed(new TextEncoder().encode(useed));
+    const seed = nkeys.fromSeed(new TextEncoder().encode(useed));
     const nkey = seed.getPublicKey();
     const hash = seed.sign(new TextEncoder().encode(nonce));
-    const sig = encode(hash);
+    const sig = nkeys.encode(hash);
 
     return { nkey, sig, jwt };
   };

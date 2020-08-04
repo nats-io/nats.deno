@@ -16,10 +16,10 @@ export {
   NatsError,
   nkeyAuthenticator,
   Nuid,
+  RequestOptions,
   ServersChanged,
   Status,
   StringCodec,
   Subscription,
   SubscriptionOptions,
-  RequestOptions,
 } from "./internal_mod.ts";

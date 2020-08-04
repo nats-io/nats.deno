@@ -1,11 +1,11 @@
 import { ErrorCode, NatsError } from "./error.ts";
 
-export interface Codec {
-  encode(d: any): Uint8Array;
-  decode(a: Uint8Array): any;
+export interface Codec<T> {
+  encode(d: T): Uint8Array;
+  decode(a: Uint8Array): T;
 }
 
-export function StringCodec(): Codec {
+export function StringCodec(): Codec<string> {
   const te = new TextEncoder();
   const td = new TextDecoder();
   return {
@@ -18,7 +18,7 @@ export function StringCodec(): Codec {
   };
 }
 
-export function JSONCodec(): Codec {
+export function JSONCodec(): Codec<any> {
   const te = new TextEncoder();
   const td = new TextDecoder();
   return {
