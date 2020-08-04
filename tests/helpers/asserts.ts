@@ -1,4 +1,4 @@
-import { assert, fail } from "https://deno.land/std@0.61.0/testing/asserts.ts";
+import { assert, fail } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 
 export function assertErrorCode(err: Error, ...codes: string[]) {
   const { code } = err as { code?: string };

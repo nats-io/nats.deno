@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        deno-version: [1.2.0]
+        deno-version: [1.2.2]
 
     steps:
       - name: Git Checkout Deno Module
@@ -36,9 +36,6 @@ jobs:
           wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
           unzip tmp.zip
           mv nats-server-$NATS_VERSION-linux-amd64 nats-server
-
-      - name: ls
-        run: ls -lg
 
       - name: Lint Deno Module
         run: deno fmt --check

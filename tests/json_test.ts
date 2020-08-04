@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { assertEquals } from "https://deno.land/std@0.61.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 import {
   connect,
   createInbox,

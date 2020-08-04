@@ -14,7 +14,7 @@
  */
 import {
   fail,
-} from "https://deno.land/std@0.61.0/testing/asserts.ts";
+} from "https://deno.land/std@0.63.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
 import {
   assertErrorCode,
