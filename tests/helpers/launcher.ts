@@ -92,6 +92,7 @@ export class NatsServer implements PortInfo {
   port: number;
   cluster?: number;
   monitoring?: number;
+  websocket?: number;
   process: Deno.Process;
   srvLog!: Uint8Array;
   err?: Promise<void>;
@@ -106,8 +107,9 @@ export class NatsServer implements PortInfo {
     this.hostname = info.hostname;
     this.port = info.port;
     this.cluster = info.cluster;
-    this.clusterName = info.clusterName;
     this.monitoring = info.monitoring;
+    this.websocket = info.websocket;
+    this.clusterName = info.clusterName;
     this.process = process;
     this.debug = debug;
 
