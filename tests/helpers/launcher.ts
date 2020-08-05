@@ -23,12 +23,14 @@ export interface PortInfo {
   port: number;
   cluster?: number;
   monitoring?: number;
+  websocket?: number;
 }
 
 export interface Ports {
   nats: string[];
   cluster?: string[];
   monitoring?: string[];
+  websocket?: string[];
 }
 
 function parseHostport(s?: string) {
@@ -48,6 +50,7 @@ function parseHostport(s?: string) {
 function parsePorts(ports: Ports): PortInfo {
   ports.monitoring = ports.monitoring || [];
   ports.cluster = ports.cluster || [];
+  ports.websocket = ports.websocket || [];
   const listen = parseHostport(ports.nats[0]);
   const p: PortInfo = {} as PortInfo;
 
@@ -71,6 +74,14 @@ function parsePorts(ports: Ports): PortInfo {
     return undefined;
   });
   p.monitoring = monitoring[0];
+
+  const websocket = ports.websocket.map((v) => {
+    if (v) {
+      return parseHostport(v)?.port;
+    }
+    return undefined;
+  });
+  p.websocket = websocket[0];
 
   return p;
 }
