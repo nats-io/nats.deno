@@ -31,7 +31,7 @@ jobs:
 
       - name: Set NATS Server Version
         run: echo '::set-env name=NATS_VERSION::v2.1.7'
-      - name: Get nats-server
+      - name: Get nats-servers
         run: |
           wget "https://github.com/nats-io/nats-server/releases/download/$NATS_VERSION/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
           unzip tmp.zip

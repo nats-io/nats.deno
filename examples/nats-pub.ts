@@ -14,7 +14,7 @@ const argv = parse(
       "i": ["interval"],
     },
     default: {
-      s: "nats://127.0.0.1:4222",
+      s: "127.0.0.1:4222",
       c: 1,
       i: 0,
     },
@@ -23,7 +23,7 @@ const argv = parse(
   },
 );
 
-const copts = { url: argv.s } as ConnectionOptions;
+const copts = { servers: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
 const payload = argv._[1] || "";
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;

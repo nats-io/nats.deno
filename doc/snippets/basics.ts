@@ -17,7 +17,7 @@
 import { connect, StringCodec } from "../../src/mod.ts";
 
 // to create a connection to a nats-server:
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 
 // create a codec
 const sc = StringCodec();

@@ -22,9 +22,9 @@ import {
   DEFAULT_MAX_PING_OUT,
   DEFAULT_MAX_RECONNECT_ATTEMPTS,
   DEFAULT_PING_INTERVAL,
-  DEFAULT_PRE,
+  DEFAULT_HOST,
   DEFAULT_RECONNECT_TIME_WAIT,
-  DEFAULT_URI,
+  DEFAULT_HOSTPORT,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
 
@@ -46,9 +46,15 @@ export function defaultOptions(): ConnectionOptions {
 }
 
 export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
-  opts = opts || { url: DEFAULT_URI };
+  opts = opts || { servers: [DEFAULT_HOSTPORT] };
   if (opts.port) {
-    opts.url = DEFAULT_PRE + opts.port;
+    opts.servers = [`${DEFAULT_HOST}:${opts.port}`];
+  }
+  if (typeof opts.servers === "string") {
+    opts.servers = [opts.servers];
+  }
+  if (opts.servers && opts.servers.length === 0) {
+    opts.servers = [DEFAULT_HOSTPORT];
   }
   const options = extend(defaultOptions(), opts);
 

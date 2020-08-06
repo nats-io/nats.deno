@@ -42,7 +42,7 @@ Deno.test("json - bad json error in callback", async () => {
 function macro(input: any) {
   return async () => {
     const jc = JSONCodec();
-    const nc = await connect({ url: u });
+    const nc = await connect({ servers: u });
     let lock = Lock();
     let subj = createInbox();
     nc.subscribe(subj, {

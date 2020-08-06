@@ -28,7 +28,7 @@ async function createService(
   for (let i = 1; i <= count; i++) {
     const n = queue ? `${name}-${i}` : name;
     const nc = await connect(
-      { url: "demo.nats.io:4222", name: `${n}` },
+      { servers: "demo.nats.io:4222", name: `${n}` },
     );
     nc.closed()
       .then((err) => {

@@ -10,12 +10,12 @@ const argv = parse(
       "s": ["server"],
     },
     default: {
-      s: "nats://127.0.0.1:4222",
+      s: "127.0.0.1:4222",
     },
   },
 );
 
-const opts = { url: argv.s } as ConnectionOptions;
+const opts = { servers: argv.s } as ConnectionOptions;
 
 const nc = await connect(opts);
 (async () => {

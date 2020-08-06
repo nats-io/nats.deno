@@ -135,7 +135,7 @@ Deno.test("auth - pub perm", async () => {
 });
 
 Deno.test("auth - user and token is rejected", async () => {
-  connect({ url: "nats://127.0.0.1:4222", user: "derek", token: "foobar" })
+  connect({ servers: "127.0.0.1:4222", user: "derek", token: "foobar" })
     .then(async (nc) => {
       await nc.close();
       fail("should not have connected");

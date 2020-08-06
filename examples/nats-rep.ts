@@ -13,7 +13,7 @@ const argv = parse(
       "e": ["echo"],
     },
     default: {
-      s: "nats://127.0.0.1:4222",
+      s: "127.0.0.1:4222",
       q: "",
     },
     boolean: ["echo", "headers", "debug"],
@@ -21,7 +21,7 @@ const argv = parse(
   },
 );
 
-const opts = { url: argv.s } as ConnectionOptions;
+const opts = { servers: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : "";
 const payload = argv._[1] || "";
 

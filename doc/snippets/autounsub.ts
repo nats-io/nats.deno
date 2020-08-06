@@ -17,7 +17,7 @@
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 
 // create a connection
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 
 // create a simple subscriber that listens for only one message
 // and then auto unsubscribes, ending the async iterator

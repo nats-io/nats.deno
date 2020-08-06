@@ -39,8 +39,8 @@ export const DebugEvents = Object.freeze({
 });
 
 export const DEFAULT_PORT = 4222;
-export const DEFAULT_PRE = "nats://127.0.0.1:";
-export const DEFAULT_URI = DEFAULT_PRE + DEFAULT_PORT;
+export const DEFAULT_HOST = "127.0.0.1";
+export const DEFAULT_HOSTPORT = `${DEFAULT_HOST}:${DEFAULT_PORT}`;
 
 // DISCONNECT Parameters, 2 sec wait, 10 tries
 export const DEFAULT_RECONNECT_TIME_WAIT = 2 * 1000;
@@ -93,11 +93,10 @@ export interface ConnectionOptions {
   reconnectJitter?: number;
   reconnectJitterTLS?: number;
   reconnectTimeWait?: number;
-  servers?: Array<string>;
+  servers?: Array<string> | string;
   timeout?: number;
   tls?: boolean | TlsOptions;
   token?: string;
-  url?: string;
   user?: string;
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
