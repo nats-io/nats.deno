@@ -4,6 +4,7 @@ import {
   ConnectionOptions,
   setTransportFactory,
   Transport,
+  NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
@@ -11,5 +12,5 @@ export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     return new DenoTransport();
   });
 
-  return NatsConnection.connect(opts);
+  return NatsConnectionImpl.connect(opts);
 }

@@ -16,6 +16,7 @@ export {
   NatsError,
   nkeyAuthenticator,
   Nuid,
+  PublishOptions,
   RequestOptions,
   ServersChanged,
   Status,

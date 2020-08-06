@@ -15,12 +15,6 @@
 
 import { isUint8Array } from "./util.ts";
 import {
-  ConnectionOptions,
-  Msg,
-  SubscriptionOptions,
-  Status,
-} from "./mod.ts";
-import {
   ProtocolHandler,
 } from "./protocol.ts";
 import {
@@ -28,15 +22,24 @@ import {
 } from "./subscription.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import { Nuid } from "./nuid.ts";
-import { Subscription, RequestOptions, Empty } from "./types.ts";
+import {
+  ConnectionOptions,
+  Subscription,
+  RequestOptions,
+  Empty,
+  PublishOptions,
+  Msg,
+  SubscriptionOptions,
+  Status,
+  NatsConnection,
+} from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
-import { MsgHdrs } from "./headers.ts";
 import { Request } from "./request.ts";
 
 export const nuid = new Nuid();
 
-export class NatsConnection {
+export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean = false;
@@ -48,7 +51,7 @@ export class NatsConnection {
 
   public static connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     return new Promise<NatsConnection>((resolve, reject) => {
-      let nc = new NatsConnection(opts);
+      let nc = new NatsConnectionImpl(opts);
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;
@@ -78,7 +81,7 @@ export class NatsConnection {
   publish(
     subject: string,
     data: Uint8Array = Empty,
-    options?: { reply?: string; headers?: MsgHdrs },
+    options?: PublishOptions,
   ): void {
     subject = subject || "";
     if (subject.length === 0) {

@@ -56,6 +56,24 @@ export interface ConnectFn {
   (opts: ConnectionOptions): Promise<NatsConnection>;
 }
 
+export interface NatsConnection {
+  closed(): Promise<void | Error>;
+  close(): Promise<void>;
+  publish(subject: string, data?: Uint8Array, options?: PublishOptions): void;
+  subscribe(subject: string, opts?: SubscriptionOptions): Subscription;
+  request(
+    subject: string,
+    data?: Uint8Array,
+    opts?: RequestOptions,
+  ): Promise<Msg>;
+  flush(): Promise<void>;
+  drain(): Promise<void>;
+  isClosed(): boolean;
+  isDraining(): boolean;
+  getServer(): string;
+  status(): AsyncIterable<Status>;
+}
+
 export interface ConnectionOptions {
   authenticator?: Authenticator;
   debug?: boolean;
@@ -153,5 +171,10 @@ export interface Subscription extends AsyncIterable<Msg> {
 
 export interface RequestOptions {
   timeout: number;
+  headers?: MsgHdrs;
+}
+
+export interface PublishOptions {
+  reply?: string;
   headers?: MsgHdrs;
 }
