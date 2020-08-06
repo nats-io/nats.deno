@@ -24,6 +24,7 @@ import {
   Empty,
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -145,7 +146,7 @@ Deno.test("autounsub - manual request receives expected count with multiple help
 });
 
 Deno.test("autounsub - check subscription leaks", async () => {
-  let nc = await connect({ url: u });
+  let nc = await connect({ url: u }) as NatsConnectionImpl;
   let subj = createInbox();
   let sub = nc.subscribe(subj);
   sub.unsubscribe();
@@ -154,7 +155,7 @@ Deno.test("autounsub - check subscription leaks", async () => {
 });
 
 Deno.test("autounsub - check request leaks", async () => {
-  let nc = await connect({ url: u });
+  let nc = await connect({ url: u }) as NatsConnectionImpl;
   let subj = createInbox();
 
   // should have no subscriptions
@@ -189,7 +190,7 @@ Deno.test("autounsub - check request leaks", async () => {
 });
 
 Deno.test("autounsub - check cancelled request leaks", async () => {
-  let nc = await connect({ url: u });
+  let nc = await connect({ url: u }) as NatsConnectionImpl;
   let subj = createInbox();
 
   // should have no subscriptions

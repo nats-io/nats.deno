@@ -32,6 +32,7 @@ import {
 import {
   deferred,
   DebugEvents,
+  NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
@@ -199,7 +200,7 @@ Deno.test("reconnect - jitter", async () => {
   let dc = await connect({
     port: srv.port,
     reconnect: false,
-  });
+  }) as NatsConnectionImpl;
   hasDefaultFn = typeof dc.options.reconnectDelayHandler === "function";
 
   let nc = await connect({
@@ -221,7 +222,7 @@ Deno.test("reconnect - internal disconnect forces reconnect", async () => {
     port: srv.port,
     reconnect: true,
     reconnectTimeWait: 200,
-  });
+  }) as NatsConnectionImpl;
 
   let stale = false;
   let disconnect = false;

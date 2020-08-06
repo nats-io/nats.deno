@@ -22,6 +22,7 @@ import {
 import {
   deferred,
   delay,
+  NatsConnectionImpl,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 
@@ -99,7 +100,7 @@ Deno.test("basics - pubsub", async () => {
 
 Deno.test("basics - subscribe and unsubscribe", async () => {
   const subj = createInbox();
-  const nc = await connect({ url: u });
+  const nc = await connect({ url: u }) as NatsConnectionImpl;
   const sub = nc.subscribe(subj, { max: 1000, queue: "aaa" });
 
   // check the subscription
@@ -351,7 +352,7 @@ Deno.test("basics - request timeout", async () => {
 });
 
 Deno.test("basics - request cancel rejects", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ url: u }) as NatsConnectionImpl;
   const s = createInbox();
   const lock = Lock();
 

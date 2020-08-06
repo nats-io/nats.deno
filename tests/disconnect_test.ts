@@ -15,7 +15,10 @@
 
 import { connect } from "../src/mod.ts";
 import { Lock, NatsServer } from "./helpers/mod.ts";
-import { ParserState } from "../nats-base-client/internal_mod.ts";
+import {
+  NatsConnectionImpl,
+  ParserState,
+} from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
@@ -39,7 +42,7 @@ Deno.test("disconnect - close process inbound ignores", async () => {
   let lock = Lock(1);
   let nc = await connect(
     { port: ns.port, reconnect: false },
-  );
+  ) as NatsConnectionImpl;
   nc.closed().then(() => {
     assertEquals(ParserState.CLOSED, nc.protocol.state);
     lock.unlock();

@@ -1,4 +1,4 @@
-export { NatsConnection } from "./nats.ts";
+export { NatsConnectionImpl } from "./nats.ts";
 export { Nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
@@ -7,6 +7,8 @@ export {
   Empty,
   Events,
   Msg,
+  NatsConnection,
+  PublishOptions,
   RequestOptions,
   ServerInfo,
   ServersChanged,

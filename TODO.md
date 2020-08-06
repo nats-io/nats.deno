@@ -10,7 +10,7 @@
 - [X] Binary apis changed to be Uint8Array
 - [X] Subscriptions as iterators
 - [X] Stale connection
-- [ ] Remove encoders from client, changing payload signatures to Uint8Arrays only.
+- [X] Remove encoders from client, changing payload signatures to Uint8Arrays only.
 - [ ] Package nuidjs as its own project
 - [ ] Move nats-base-client to its own project
 - [ ] Transport send batching
