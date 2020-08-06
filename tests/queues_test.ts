@@ -25,7 +25,7 @@ import {
 const u = "demo.nats.io:4222";
 
 Deno.test("queues - deliver to single queue", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const subs = [];
   for (let i = 0; i < 5; i++) {
@@ -41,7 +41,7 @@ Deno.test("queues - deliver to single queue", async () => {
 });
 
 Deno.test("queues - deliver to multiple queues", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
 
   const fn = (queue: string) => {
@@ -70,7 +70,7 @@ Deno.test("queues - deliver to multiple queues", async () => {
 });
 
 Deno.test("queues - queues and subs independent", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const subs = [];
   let queueCount = 0;

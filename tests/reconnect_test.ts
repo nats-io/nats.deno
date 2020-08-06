@@ -37,7 +37,7 @@ import {
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
-  const servers = ["nats://127.0.0.1:7", "demo.nats.io:4222"];
+  const servers = ["127.0.0.1:7", "demo.nats.io:4222"];
   const nc = await connect({ servers: servers, noRandomize: true });
   const subj = createInbox();
   await nc.subscribe(subj, {

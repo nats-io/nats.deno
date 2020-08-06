@@ -29,7 +29,7 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 const u = "demo.nats.io:4222";
 
 Deno.test("autounsub - max option", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 10 });
   for (let i = 0; i < 20; i++) {
@@ -41,7 +41,7 @@ Deno.test("autounsub - max option", async () => {
 });
 
 Deno.test("autounsub - unsubscribe", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 10 });
   sub.unsubscribe(11);
@@ -54,7 +54,7 @@ Deno.test("autounsub - unsubscribe", async () => {
 });
 
 Deno.test("autounsub - can unsub from auto-unsubscribed", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 });
   for (let i = 0; i < 20; i++) {
@@ -67,7 +67,7 @@ Deno.test("autounsub - can unsub from auto-unsubscribed", async () => {
 });
 
 Deno.test("autounsub - can break to unsub", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 20 });
   const iter = (async () => {
@@ -85,7 +85,7 @@ Deno.test("autounsub - can break to unsub", async () => {
 });
 
 Deno.test("autounsub - can change auto-unsub to a higher value", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 });
   sub.unsubscribe(10);
@@ -98,7 +98,7 @@ Deno.test("autounsub - can change auto-unsub to a higher value", async () => {
 });
 
 Deno.test("autounsub - request receives expected count with multiple helpers", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
 
   const fn = (async (sub: Subscription) => {
@@ -123,7 +123,7 @@ Deno.test("autounsub - request receives expected count with multiple helpers", a
 });
 
 Deno.test("autounsub - manual request receives expected count with multiple helpers", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const lock = Lock(5);
 
@@ -146,7 +146,7 @@ Deno.test("autounsub - manual request receives expected count with multiple help
 });
 
 Deno.test("autounsub - check subscription leaks", async () => {
-  let nc = await connect({ url: u }) as NatsConnectionImpl;
+  let nc = await connect({ servers: u }) as NatsConnectionImpl;
   let subj = createInbox();
   let sub = nc.subscribe(subj);
   sub.unsubscribe();
@@ -155,7 +155,7 @@ Deno.test("autounsub - check subscription leaks", async () => {
 });
 
 Deno.test("autounsub - check request leaks", async () => {
-  let nc = await connect({ url: u }) as NatsConnectionImpl;
+  let nc = await connect({ servers: u }) as NatsConnectionImpl;
   let subj = createInbox();
 
   // should have no subscriptions
@@ -190,7 +190,7 @@ Deno.test("autounsub - check request leaks", async () => {
 });
 
 Deno.test("autounsub - check cancelled request leaks", async () => {
-  let nc = await connect({ url: u }) as NatsConnectionImpl;
+  let nc = await connect({ servers: u }) as NatsConnectionImpl;
   let subj = createInbox();
 
   // should have no subscriptions

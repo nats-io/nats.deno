@@ -39,7 +39,7 @@ Deno.test("properties - connect is a function", () => {
 
 Deno.test("properties - default connect properties", () => {
   const opts = defaultOptions();
-  opts.url = "nats://127.0.0.1:4222";
+  opts.servers = "127.0.0.1:4222";
   const c = new Connect(
     { version, lang },
     opts,
@@ -59,7 +59,7 @@ Deno.test("properties - default connect properties", () => {
 
 Deno.test("properties - configured options", async () => {
   let opts = defaultOptions();
-  opts.url = "nats://127.0.0.1:4222";
+  opts.servers = "127.0.0.1:4222";
   opts.name = "test";
   opts.pass = "secret";
   opts.user = "me";

@@ -14,7 +14,7 @@
  */
 
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 const sc = StringCodec();
 
 // subscriptions can have wildcard subjects

@@ -3,7 +3,7 @@
 import { parse } from "https://deno.land/std@0.63.0/flags/mod.ts";
 import { connect, Nuid } from "../src/mod.ts";
 const defaults = {
-  s: "nats://127.0.0.1:4222",
+  s: "127.0.0.1:4222",
   c: 1000000,
 };
 
@@ -30,7 +30,7 @@ const server = String(argv.server);
 const count = parseInt(String(argv.count));
 const subj = String(argv.subj) || new Nuid().next();
 
-const nc = await connect({ url: server, debug: argv.debug });
+const nc = await connect({ servers: server, debug: argv.debug });
 const start = Date.now();
 
 if (argv.req) {

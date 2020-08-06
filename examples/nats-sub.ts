@@ -11,7 +11,7 @@ const argv = parse(
       "q": ["queue"],
     },
     default: {
-      s: "nats://127.0.0.1:4222",
+      s: "127.0.0.1:4222",
       q: "",
     },
     boolean: ["headers", "debug"],
@@ -19,7 +19,7 @@ const argv = parse(
   },
 );
 
-const opts = { url: argv.s } as ConnectionOptions;
+const opts = { servers: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : ">";
 
 if (argv.debug) {

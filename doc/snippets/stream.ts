@@ -17,7 +17,7 @@
 import { connect, JSONCodec } from "../../src/mod.ts";
 
 // to create a connection to a nats-server:
-const nc = await connect({ url: "demo.nats.io" });
+const nc = await connect({ servers: "demo.nats.io" });
 
 // create a codec
 const jc = JSONCodec();

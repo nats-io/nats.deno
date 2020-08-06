@@ -133,8 +133,8 @@ export class ProtocolHandler {
     this.pongs = [];
     this.servers = new Servers(
       !options.noRandomize,
-      this.options.servers,
-      this.options.url,
+      //@ts-ignore
+      options.servers,
     );
     this.closed = deferred<Error | void>();
 

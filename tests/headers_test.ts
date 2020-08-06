@@ -21,7 +21,7 @@ Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${srv.port}`,
+      servers: `127.0.0.1:${srv.port}`,
       headers: true,
     },
   );
@@ -59,7 +59,7 @@ Deno.test("headers - pub throws if not enabled", async () => {
   const srv = await NatsServer.start();
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${srv.port}`,
+      servers: `127.0.0.1:${srv.port}`,
     },
   );
 
@@ -82,7 +82,7 @@ Deno.test("headers - client fails to connect if headers not available", async ()
   const lock = Lock();
   await connect(
     {
-      url: `nats://127.0.0.1:${srv.port}`,
+      servers: `127.0.0.1:${srv.port}`,
       headers: true,
     },
   ).catch((err) => {
@@ -98,7 +98,7 @@ Deno.test("headers - request headers", async () => {
   const sc = StringCodec();
   const srv = await NatsServer.start();
   const nc = await connect({
-    url: `nats://127.0.0.1:${srv.port}`,
+    servers: `nats://127.0.0.1:${srv.port}`,
     headers: true,
   });
   const s = createInbox();

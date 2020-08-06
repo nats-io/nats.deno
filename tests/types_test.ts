@@ -45,7 +45,7 @@ function mh(nc: NatsConnection, subj: string): Promise<Msg> {
 
 Deno.test("types - json types", async () => {
   const jc = JSONCodec();
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
   nc.publish(subj, jc.encode(6691));
@@ -57,7 +57,7 @@ Deno.test("types - json types", async () => {
 
 Deno.test("types - string types", async () => {
   const sc = StringCodec();
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
   nc.publish(subj, sc.encode("hello world"));
@@ -67,7 +67,7 @@ Deno.test("types - string types", async () => {
 });
 
 Deno.test("types - binary types", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const dm = mh(nc, subj);
   const payload = DataBuffer.fromAscii("hello world");

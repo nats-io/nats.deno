@@ -30,7 +30,7 @@ const u = "demo.nats.io:4222";
 function macro(input: any) {
   return async () => {
     const subj = createInbox();
-    const nc = await connect({ url: u });
+    const nc = await connect({ servers: u });
     const dm = deferred<Msg>();
     const sub = nc.subscribe(subj, { max: 1 });
     const _ = (async () => {

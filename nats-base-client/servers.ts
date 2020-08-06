@@ -15,7 +15,7 @@
  */
 import {
   DEFAULT_PORT,
-  DEFAULT_URI,
+  DEFAULT_HOSTPORT,
   ServerInfo,
   ServersChanged,
 } from "./types.ts";
@@ -34,19 +34,14 @@ export class Server {
   gossiped: boolean;
 
   constructor(u: string, gossiped = false) {
-    // remove any of the standard protocols we are used to seeing
-    u = u.replace("tls://", "");
-    u = u.replace("ws://", "");
-    u = u.replace("wss://", "");
-    u = u.replace("nats://", "");
-
+    // remove any protocol that may have been provided
+    if (u.match(/^(.*:\/\/)(.*)/m)) {
+      u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
+    }
     // in web environments, URL may not be a living standard
     // that means that protocols other than HTTP/S are not
     // parsable correctly.
-    if (!/^.*:\/\/.*/.test(u)) {
-      u = `http://${u}`;
-    }
-    let url = new URL(u);
+    let url = new URL(`http://${u}`);
     if (!url.port) {
       url.port = `${DEFAULT_PORT}`;
     }
@@ -103,7 +98,7 @@ export class Servers {
       }
     } else {
       if (this.servers.length === 0) {
-        this.addServer(DEFAULT_URI, false);
+        this.addServer(DEFAULT_HOSTPORT, false);
       }
     }
     this.currentServer = this.servers[0];

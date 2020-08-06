@@ -25,7 +25,7 @@ Deno.test("noresponders - option", async () => {
   const srv = await NatsServer.start();
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${srv.port}`,
+      servers: `127.0.0.1:${srv.port}`,
       headers: true,
       noResponders: true,
     },
@@ -50,7 +50,7 @@ Deno.test("noresponders - list", async () => {
   const srv = await NatsServer.start();
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${srv.port}`,
+      servers: `nats://127.0.0.1:${srv.port}`,
       headers: true,
       noResponders: true,
     },

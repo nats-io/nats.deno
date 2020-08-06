@@ -21,7 +21,7 @@ import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 const u = "demo.nats.io:4222";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
@@ -39,7 +39,7 @@ Deno.test("iterators - unsubscribe breaks and closes", async () => {
 });
 
 Deno.test("iterators - autounsub breaks and closes", async () => {
-  const nc = await connect({ url: u });
+  const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 2 });
   const lock = Lock(2);
@@ -93,7 +93,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
 
 Deno.test("iterators - unsubscribing closes", async () => {
   const nc = await connect(
-    { url: u },
+    { servers: u },
   );
   const subj = createInbox();
   const sub = nc.subscribe(subj);
@@ -112,7 +112,7 @@ Deno.test("iterators - unsubscribing closes", async () => {
 
 Deno.test("iterators - connection close closes", async () => {
   const nc = await connect(
-    { url: u },
+    { servers: u },
   );
   const subj = createInbox();
   const sub = nc.subscribe(subj);

@@ -54,8 +54,8 @@ import { connect, NatsConnection } from "src/mod.ts";
 // common options that you could pass look like:
 const localhostAtStandardPort = {};
 const localPort = { port: 4222 };
-const hostAtStdPort = { url: "demo.nats.io" };
-const hostPort = { url: "demo.nats.io:4222" };
+const hostAtStdPort = { servers: "demo.nats.io" };
+const hostPort = { servers: "demo.nats.io:4222" };
 
 // let's try to connect to all the above, some may fail
 const dials: Promise<NatsConnection>[] = [];
@@ -115,7 +115,7 @@ of your data as necessary.
 import { connect, StringCodec } from "../../src/mod.ts";
 
 // to create a connection to a nats-server:
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 
 // create a codec
 const sc = StringCodec();
@@ -150,7 +150,7 @@ getting the messages you unsubscribe.
 import { connect, JSONCodec } from "../../src/mod.ts";
 
 // to create a connection to a nats-server:
-const nc = await connect({ url: "demo.nats.io" });
+const nc = await connect({ servers: "demo.nats.io" });
 
 // create a codec
 const jc = JSONCodec();
@@ -183,7 +183,7 @@ will get a chance at processing the message.
 
 ```javascript
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 const sc = StringCodec();
 
 // subscriptions can have wildcard subjects
@@ -230,7 +230,7 @@ not only to provide a service, but also to control the service.
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
 
 // create a connection
-const nc = await connect({ url: "demo.nats.io" });
+const nc = await connect({ servers: "demo.nats.io" });
 
 // create a codec
 const sc = StringCodec();
@@ -305,7 +305,7 @@ async function adminHandler(sub: Subscription) {
 import { connect, StringCodec } from "../../src/mod.ts";
 
 // create a connection
-const nc = await connect({ url: "demo.nats.io:4222" });
+const nc = await connect({ servers: "demo.nats.io:4222" });
 
 // create an encoder
 const sc = StringCodec();
@@ -348,7 +348,7 @@ async function createService(
   for (let i = 1; i <= count; i++) {
     const n = queue ? `${name}-${i}` : name;
     const nc = await connect(
-      { url: "demo.nats.io:4222", name: `${n}` },
+      { servers: "demo.nats.io:4222", name: `${n}` },
     );
     nc.closed()
       .then((err) => {
@@ -409,15 +409,15 @@ await Promise.all(a);
 // `token` options in the NatsConnectionOptions
 import { connect } from "src/mod.ts";
 
-const nc1 = await connect({url: "nats://127.0.0.1:4222", user: "jenny", pass: "867-5309"});
+const nc1 = await connect({servers: "127.0.0.1:4222", user: "jenny", pass: "867-5309"});
 const nc2 = await connect({port: 4222, token: "t0pS3cret!"});
 ```
 
 ### Flush
 ```javascript
-// flush sends a PING request to the server and returns a promise
-// when the server responds with a PONG. The flush guarantees that
-// things you published have been delivered to the server. Typically
+// flush sends a PING request to the servers and returns a promise
+// when the servers responds with a PONG. The flush guarantees that
+// things you published have been delivered to the servers. Typically
 // it is not necessary to use flush, but on tests it can be invaluable.
 nc.publish('foo');
 nc.publish('bar');

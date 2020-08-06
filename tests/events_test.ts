@@ -46,7 +46,7 @@ Deno.test("events - disconnect, reconnect", async () => {
   const cluster = await NatsServer.cluster();
   const nc = await connect(
     {
-      url: `${cluster[0].hostname}:${cluster[0].port}`,
+      servers: `${cluster[0].hostname}:${cluster[0].port}`,
       maxReconnectAttempts: 1,
       reconnectTimeWait: 0,
     },
@@ -77,7 +77,7 @@ Deno.test("events - update", async () => {
   const cluster = await NatsServer.cluster(1);
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${cluster[0].port}`,
+      servers: `127.0.0.1:${cluster[0].port}`,
     },
   );
   const lock = Lock(1, 5000);
@@ -104,7 +104,7 @@ Deno.test("events - ldm", async () => {
   const cluster = await NatsServer.cluster(2);
   const nc = await connect(
     {
-      url: `nats://127.0.0.1:${cluster[0].port}`,
+      servers: `127.0.0.1:${cluster[0].port}`,
     },
   );
   const lock = Lock(1, 5000);
