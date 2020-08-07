@@ -25,6 +25,7 @@ import {
   Transport,
   checkOptions,
 } from "../nats-base-client/internal_mod.ts";
+import { TlsOptions } from "../nats-base-client/types.ts";
 
 const VERSION = "0.0.1";
 const LANG = "nats.deno";
@@ -124,7 +125,11 @@ export class DenoTransport implements Transport {
   }
 
   async startTLS(hostname: string): Promise<void> {
-    this.conn = await Deno.startTls(this.conn, { hostname });
+    const tls = this.options?.tls || {} as TlsOptions;
+    this.conn = await Deno.startTls(
+      this.conn,
+      { hostname, certFile: tls.caFile },
+    );
     this.encrypted = true;
     this.writer = new BufWriter(this.conn);
     return Promise.resolve();

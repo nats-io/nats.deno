@@ -33,6 +33,7 @@ import {
   deferred,
   Deferred,
   delay,
+  render,
 } from "./util.ts";
 import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
@@ -58,6 +59,7 @@ const OK = /^\+OK\s*\r\n/i;
 const ERR = /^-ERR\s+('.+')?\r\n/i;
 const PING = /^PING\r\n/i;
 const PONG = /^PONG\r\n/i;
+const SUBRE = /^SUB\s+([^\r\n]+)\r\n/i;
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
 export enum ParserState {
@@ -101,6 +103,7 @@ export interface Publisher {
 
 export class ProtocolHandler {
   connected: boolean = false;
+  connectedOnce: boolean = false;
   inbound: DataBuffer;
   infoReceived: boolean = false;
   info?: any;
@@ -146,12 +149,31 @@ export class ProtocolHandler {
   }
 
   resetOutbound(): void {
-    this.pongs.forEach((p) => {
+    const pending = this.outbound;
+    this.outbound = new DataBuffer();
+    // strip any pings/pongs/subs we have
+    pending.buffers.forEach((buf) => {
+      const m = extractProtocolMessage(buf);
+      if (PING.exec(m)) {
+        return;
+      }
+      if (SUBRE.exec(m)) {
+        return;
+      }
+      if (PONG.exec(m)) {
+        return;
+      }
+      this.outbound.fill(buf);
+    });
+
+    const pongs = this.pongs;
+    this.pongs = [];
+    // reject the pongs
+    pongs.forEach((p) => {
       p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
     });
-    this.pongs.length = 0;
+
     this.state = ParserState.AWAITING_CONTROL;
-    this.outbound = new DataBuffer();
     this.infoReceived = false;
   }
 
@@ -182,6 +204,7 @@ export class ProtocolHandler {
     this.transport = newTransport();
     this.transport.closed()
       .then(async (err?) => {
+        this.connected = false;
         if (this.state !== ParserState.CLOSED) {
           await this.disconnected(this.transport.closeError);
           return;
@@ -243,11 +266,10 @@ export class ProtocolHandler {
     return Promise.race([timer, pong])
       .then(() => {
         timer.cancel();
-        this.connectError = undefined;
-        if (this.connected) {
-          this.sendSubscriptions();
-        }
         this.connected = true;
+        this.connectError = undefined;
+        this.sendSubscriptions();
+        this.connectedOnce = true;
         this.server.didConnect = true;
         this.server.reconnects = 0;
         this.infoReceived = true;
@@ -283,7 +305,7 @@ export class ProtocolHandler {
           break;
         } catch (err) {
           lastError = err;
-          if (!this.connected) {
+          if (!this.connectedOnce) {
             if (!this.options.waitOnFirstConnect) {
               this.servers.removeCurrentServer();
             }
@@ -457,9 +479,7 @@ export class ProtocolHandler {
     } else {
       buf = cmd as Uint8Array;
     }
-    if (cmd) {
-      this.outbound.fill(buf);
-    }
+    this.outbound.fill(buf);
 
     if (this.outbound.length() === 1) {
       setTimeout(() => {
@@ -607,7 +627,7 @@ export class ProtocolHandler {
   }
 
   isClosed(): boolean {
-    return this.transport.isClosed;
+    return this.state === ParserState.CLOSED;
   }
 
   drain(): Promise<void> {
@@ -627,13 +647,13 @@ export class ProtocolHandler {
   }
 
   private flushPending() {
-    if (!this.infoReceived) {
+    if (!this.infoReceived || !this.connected) {
       return;
     }
 
     if (this.outbound.size()) {
       let d = this.outbound.drain();
-      this.transport.send(new Uint8Array(d));
+      this.transport.send(d);
     }
   }
 
