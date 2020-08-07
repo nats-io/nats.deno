@@ -22,9 +22,9 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const tlsconfig = {
     tls: {
-      cert_file: resolve(join(cwd, "./tests/mycerts/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/mycerts/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/mycerts/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./tests/certs/server.pem")),
+      key_file: resolve(join(cwd, "./tests/certs/key.pem")),
+      ca_file: resolve(join(cwd, "./tests/certs/ca.pem")),
     },
   };
 
@@ -43,7 +43,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const cert = {
     tls: {
-      caFile: resolve(join(cwd, "./tests/mycerts/RootCA.crt")),
+      caFile: resolve(join(cwd, "./tests/certs/ca.pem")),
     },
   };
   if (tls) {
