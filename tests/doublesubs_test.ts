@@ -18,13 +18,13 @@ import { join, resolve } from "https://deno.land/std@0.63.0/path/mod.ts";
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();
 
-  let opts = { trace: true, host: "localhost" };
+  let opts = { trace: true, host: "0.0.0.0" };
 
   const tlsconfig = {
     tls: {
-      cert_file: resolve(join(cwd, "./tests/mycerts/cert.pem")),
-      key_file: resolve(join(cwd, "./tests/mycerts/key.pem")),
-      ca_file: resolve(join(cwd, "./tests/mycerts/rootCA.pem")),
+      cert_file: resolve(join(cwd, "./tests/mycerts/localhost.crt")),
+      key_file: resolve(join(cwd, "./tests/mycerts/localhost.key")),
+      ca_file: resolve(join(cwd, "./tests/mycerts/RootCA.crt")),
     },
   };
 
@@ -43,7 +43,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const cert = {
     tls: {
-      caFile: resolve(join(cwd, "./tests/mycerts/rootCA.pem")),
+      caFile: resolve(join(cwd, "./tests/mycerts/RootCA.crt")),
     },
   };
   if (tls) {
