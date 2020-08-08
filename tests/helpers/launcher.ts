@@ -1,11 +1,16 @@
 import * as path from "https://deno.land/std@0.63.0/path/mod.ts";
+import { TextProtoReader } from "https://deno.land/std@0.63.0/textproto/mod.ts";
+import { BufReader } from "https://deno.land/std@0.63.0/io/mod.ts";
 import { check } from "./mod.ts";
 import {
   deferred,
   delay,
   timeout,
   Nuid,
+  DataBuffer,
+  Deferred,
 } from "../../nats-base-client/internal_mod.ts";
+import { assert } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 
 const nuid = new Nuid();
 
@@ -94,16 +99,19 @@ export class NatsServer implements PortInfo {
   monitoring?: number;
   websocket?: number;
   process: Deno.Process;
-  srvLog!: Uint8Array;
-  err?: Promise<void>;
-  debug: boolean;
+  logBuffer: string[] = [];
   stopped: boolean = false;
+  done!: Deferred<void>;
+  debug: boolean;
+  config: any;
 
-  constructor(
-    info: PortInfo,
-    process: Deno.Process,
-    debug: boolean,
-  ) {
+  constructor(opts: {
+    info: PortInfo;
+    process: Deno.Process;
+    debug?: boolean;
+    config: any;
+  }) {
+    const { info, process, debug, config } = opts;
     this.hostname = info.hostname;
     this.port = info.port;
     this.cluster = info.cluster;
@@ -111,36 +119,43 @@ export class NatsServer implements PortInfo {
     this.websocket = info.websocket;
     this.clusterName = info.clusterName;
     this.process = process;
-    this.debug = debug;
+    this.debug = debug || false;
+    this.done = deferred<void>();
+    this.config = config;
 
-    //@ts-ignore
-    this.err = this.drain(process.stderr as Deno.Reader);
-  }
-
-  async drain(r: Deno.Reader): Promise<void> {
-    const buf = new Uint8Array(1024 * 8);
-    while (true) {
-      try {
-        let c = await r.read(buf);
-        if (c === null) {
+    (async () => {
+      assert(process.stderr != null);
+      const td = new TextDecoder();
+      const buf = new Uint8Array(1024 * 8);
+      while (true) {
+        try {
+          const c = await process.stderr.read(buf);
+          if (c === null) {
+            break;
+          }
+          if (c) {
+            const t = td.decode(buf.slice(0, c));
+            this.logBuffer.push(t);
+            if (debug) {
+              console.log(t);
+            }
+          }
+        } catch (err) {
           break;
         }
-        if (c && this.debug) {
-          console.log(new TextDecoder().decode(buf.slice(0, c)));
-        }
-      } catch (err) {
-        break;
       }
-    }
-    return Promise.resolve();
+      this.done.resolve();
+    })();
   }
 
   restart(): Promise<NatsServer> {
-    return NatsServer.start({ port: this.port });
+    const conf = JSON.parse(JSON.stringify(this.config));
+    conf.port = this.port;
+    return NatsServer.start(conf, this.debug);
   }
 
-  log() {
-    console.log(new TextDecoder().decode(this.srvLog));
+  getLog(): string {
+    return this.logBuffer.join("");
   }
 
   static stopAll(cluster: NatsServer[]): Promise<void[]> {
@@ -155,12 +170,11 @@ export class NatsServer implements PortInfo {
   async stop(): Promise<void> {
     if (!this.stopped) {
       this.stopped = true;
+      this.process.stderr?.close();
       this.process.kill(Deno.Signal.SIGKILL);
       this.process.close();
-      if (this.err) {
-        await this.err;
-      }
     }
+    await this.done;
   }
 
   signal(signal: Deno.MacOSSignal | Deno.LinuxSignal): Promise<void> {
@@ -279,7 +293,7 @@ export class NatsServer implements PortInfo {
         srv = await Deno.run(
           {
             cmd: [exe, "-c", confFile],
-            stderr: debug ? "piped" : "null",
+            stderr: "piped",
             stdout: "null",
             stdin: "null",
           },
@@ -333,7 +347,11 @@ export class NatsServer implements PortInfo {
           5000,
           { name: "wait for server" },
         );
-        resolve(new NatsServer(ports, srv, debug));
+        resolve(
+          new NatsServer(
+            { info: ports, process: srv, debug: debug, config: conf },
+          ),
+        );
       } catch (err) {
         if (srv) {
           try {

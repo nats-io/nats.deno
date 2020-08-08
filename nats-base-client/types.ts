@@ -95,16 +95,16 @@ export interface ConnectionOptions {
   reconnectTimeWait?: number;
   servers?: Array<string> | string;
   timeout?: number;
-  tls?: boolean | TlsOptions;
+  tls?: TlsOptions;
   token?: string;
   user?: string;
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
 }
 
+// these may not be supported on all environments
 export interface TlsOptions {
   certFile?: string;
-  // these may not be supported on all environments
   caFile?: string;
   keyFile?: string;
 }
@@ -171,6 +171,7 @@ export interface Subscription extends AsyncIterable<Msg> {
 export interface RequestOptions {
   timeout: number;
   headers?: MsgHdrs;
+  noMux?: boolean;
 }
 
 export interface PublishOptions {

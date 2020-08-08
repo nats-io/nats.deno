@@ -460,3 +460,44 @@ Deno.test("basics - subscription timeout auto cancels", async () => {
   assertEquals(c, 2);
   await nc.close();
 });
+
+Deno.test("basics - no mux requests create normal subs", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const _ = nc.request(createInbox(), Empty, { timeout: 1000, noMux: true });
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  assertEquals(nc.protocol.muxSubscriptions.size(), 0);
+  const sub = nc.protocol.subscriptions.get(1);
+  assert(sub);
+  assertEquals(sub.max, 1);
+  sub.unsubscribe();
+  assertEquals(nc.protocol.subscriptions.size(), 0);
+  await nc.close();
+});
+
+Deno.test("basics - no mux requests timeout", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const lock = Lock();
+  nc.request(createInbox(), Empty, { timeout: 250, noMux: true })
+    .catch((err) => {
+      assertErrorCode(err, ErrorCode.TIMEOUT);
+      lock.unlock();
+    });
+  await lock;
+  await nc.close();
+});
+
+Deno.test("basics - no mux requests", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+  const sub = nc.subscribe(subj);
+  const data = Uint8Array.from([1234]);
+  (async () => {
+    for await (const m of sub) {
+      m.respond(data);
+    }
+  })().then();
+
+  const m = await nc.request(subj, Empty, { timeout: 1000, noMux: true });
+  assertEquals(m.data, data);
+  await nc.close();
+});

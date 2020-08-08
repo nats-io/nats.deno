@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-import { isUint8Array } from "./util.ts";
+import { deferred, isUint8Array } from "./util.ts";
 import {
+  createInbox,
   ProtocolHandler,
 } from "./protocol.ts";
 import {
@@ -117,7 +118,7 @@ export class NatsConnectionImpl implements NatsConnection {
   request(
     subject: string,
     data: Uint8Array = Empty,
-    opts: RequestOptions = { timeout: 1000 },
+    opts: RequestOptions = { timeout: 1000, noMux: false },
   ): Promise<Msg> {
     if (this.isClosed()) {
       return Promise.reject(
@@ -138,23 +139,39 @@ export class NatsConnectionImpl implements NatsConnection {
       return Promise.reject(new NatsError("timeout", ErrorCode.INVALID_OPTION));
     }
 
-    const r = new Request(this.protocol.muxSubscriptions, opts);
-    this.protocol.request(r);
+    if (opts.noMux) {
+      const inbox = createInbox();
+      const sub = this.subscribe(inbox, { max: 1, timeout: opts.timeout });
+      this.publish(subject, data, { reply: inbox });
+      const d = deferred<Msg>();
+      (async () => {
+        for await (const msg of sub) {
+          d.resolve(msg);
+          break;
+        }
+      })().catch((err) => {
+        d.reject(err);
+      });
+      return d;
+    } else {
+      const r = new Request(this.protocol.muxSubscriptions, opts);
+      this.protocol.request(r);
 
-    this.publish(
-      subject,
-      data,
-      {
-        reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
-        headers: opts.headers,
-      },
-    );
+      this.publish(
+        subject,
+        data,
+        {
+          reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+          headers: opts.headers,
+        },
+      );
 
-    const p = Promise.race([r.timer, r.deferred]);
-    p.catch(() => {
-      r.cancel();
-    });
-    return p;
+      const p = Promise.race([r.timer, r.deferred]);
+      p.catch(() => {
+        r.cancel();
+      });
+      return p;
+    }
   }
 
   /***
