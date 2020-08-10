@@ -1,10 +1,11 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.63.0/flags/mod.ts";
-import { connect, Nuid } from "../src/mod.ts";
+import { connect, Empty, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "127.0.0.1:4222",
   c: 1000000,
+  p: 0,
 };
 
 const argv = parse(
@@ -14,6 +15,7 @@ const argv = parse(
       "s": ["server"],
       "c": ["count"],
       "d": ["debug"],
+      "p": ["payload"],
     },
     default: defaults,
   },
@@ -21,7 +23,7 @@ const argv = parse(
 
 if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   console.log(
-    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--server server]\n",
+    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>] [--server server]\n",
   );
   Deno.exit(0);
 }
@@ -29,6 +31,8 @@ if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
 const server = String(argv.server);
 const count = parseInt(String(argv.count));
 const subj = String(argv.subj) || new Nuid().next();
+const bytes = parseInt(String(argv.payload));
+const payload = bytes ? new Uint8Array(bytes) : Empty;
 
 const nc = await connect({ servers: server, debug: argv.debug });
 const start = Date.now();
@@ -37,7 +41,7 @@ if (argv.req) {
   const sub = nc.subscribe(subj);
   (async () => {
     for await (const m of sub) {
-      m.respond("ok");
+      m.respond(payload);
     }
   })();
 }
@@ -48,15 +52,20 @@ if (argv.sub) {
   (async () => {
     for await (const m of sub) {
       j++;
+      if (j % 1000) {
+        console.log(">");
+      }
     }
   })();
 }
 
-const payload = new TextEncoder().encode("ok");
 let i = 0;
 if (argv.pub) {
   for (; i < count; i++) {
     nc.publish(subj, payload);
+    if (i % 1000) {
+      console.log("<");
+    }
   }
 }
 
@@ -64,7 +73,7 @@ if (argv.req) {
   if (argv.async) {
     const a = [];
     for (; i < count; i++) {
-      a.push(nc.request(subj, "", { timeout: 20000 }));
+      a.push(nc.request(subj, payload, { timeout: 20000 }));
     }
     await Promise.all(a);
   } else {

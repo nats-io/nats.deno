@@ -1,6 +1,10 @@
 import { deferred, Deferred } from "./util.ts";
 
-export class QueuedIterator<T> {
+export interface Dispatcher<T> {
+  push(v: T): void;
+}
+
+export class QueuedIterator<T> implements Dispatcher<T> {
   processed = 0;
   received = 0; // this is updated by the protocol
   protected done: boolean = false;
