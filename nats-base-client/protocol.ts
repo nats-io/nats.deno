@@ -38,25 +38,26 @@ import {
 import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
+import { Dispatcher, QueuedIterator } from "./queued_iterator.ts";
 import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 import { Subscriptions } from "./subscriptions.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
 import { Request } from "./request.ts";
-import { MsgBuffer } from "./msgbuffer.ts";
 import { Heartbeat, PH } from "./heartbeats.ts";
+import {
+  describe,
+  Kind,
+  MsgArg,
+  Parser,
+  ParserEvent,
+} from "./parser.ts";
+import { MsgImpl } from "./msg.ts";
 
 const nuid = new Nuid();
 
 const FLUSH_THRESHOLD = 1024 * 8;
 
-const MSG =
-  /^MSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\r\n/i;
-const HMSG =
-  /^HMSG\s+([^\s\r\n]+)\s+([^\s\r\n]+)\s+(([^\s\r\n]+)[^\S\r\n]+)?(\d+)\s+(\d+)\r\n/i;
-const OK = /^\+OK\s*\r\n/i;
-const ERR = /^-ERR\s+('.+')?\r\n/i;
 const PING = /^PING\r\n/i;
 const PONG = /^PONG\r\n/i;
 const SUBRE = /^SUB\s+([^\r\n]+)\r\n/i;
@@ -101,19 +102,16 @@ export interface Publisher {
   ): void;
 }
 
-export class ProtocolHandler {
+export class ProtocolHandler implements Dispatcher<ParserEvent> {
   connected: boolean = false;
   connectedOnce: boolean = false;
-  inbound: DataBuffer;
   infoReceived: boolean = false;
   info?: any;
   muxSubscriptions: MuxSubscription;
   options: ConnectionOptions;
   outbound: DataBuffer;
-  payload: MsgBuffer | null = null;
   pongs: Array<Deferred<void>>;
   pout: number = 0;
-  state: ParserState = ParserState.AWAITING_CONTROL;
   subscriptions: Subscriptions;
   transport!: Transport;
   noMorePublishing: boolean = false;
@@ -122,6 +120,7 @@ export class ProtocolHandler {
   closed: Deferred<Error | void>;
   listeners: QueuedIterator<Status>[] = [];
   heartbeats: Heartbeat;
+  parser: Parser;
 
   private servers: Servers;
   private server!: Server;
@@ -131,7 +130,6 @@ export class ProtocolHandler {
     this.publisher = publisher;
     this.subscriptions = new Subscriptions();
     this.muxSubscriptions = new MuxSubscription();
-    this.inbound = new DataBuffer();
     this.outbound = new DataBuffer();
     this.pongs = [];
     this.servers = new Servers(
@@ -140,6 +138,7 @@ export class ProtocolHandler {
       options.servers,
     );
     this.closed = deferred<Error | void>();
+    this.parser = new Parser(this);
 
     this.heartbeats = new Heartbeat(
       this as PH,
@@ -172,8 +171,7 @@ export class ProtocolHandler {
     pongs.forEach((p) => {
       p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
     });
-
-    this.state = ParserState.AWAITING_CONTROL;
+    this.parser = new Parser(this);
     this.infoReceived = false;
   }
 
@@ -205,7 +203,7 @@ export class ProtocolHandler {
     this.transport.closed()
       .then(async (err?) => {
         this.connected = false;
-        if (this.state !== ParserState.CLOSED) {
+        if (!this.parser.closed()) {
           await this.disconnected(this.transport.closeError);
           return;
         }
@@ -252,8 +250,7 @@ export class ProtocolHandler {
         (async () => {
           try {
             for await (const b of this.transport) {
-              this.inbound.fill(b);
-              this.processInbound();
+              this.parser.parse(b);
             }
           } catch (err) {
             console.log("reader closed", err);
@@ -344,131 +341,105 @@ export class ProtocolHandler {
     }
   }
 
-  processInbound(): void {
-    let m: RegExpExecArray | null = null;
-    while (this.inbound.size()) {
-      switch (this.state) {
-        case ParserState.CLOSED:
-          return;
-        case ParserState.AWAITING_CONTROL: {
-          let raw = this.inbound.peek();
-          let buf = extractProtocolMessage(raw);
-          if ((m = MSG.exec(buf)) || (m = HMSG.exec(buf))) {
-            this.payload = new MsgBuffer(
-              this.publisher,
-              m,
-            );
-            this.state = ParserState.AWAITING_MSG_PAYLOAD;
-          } else if ((m = OK.exec(buf))) {
-            // ignored
-          } else if ((m = ERR.exec(buf))) {
-            this.processError(m[1]);
-            return;
-          } else if ((m = PONG.exec(buf))) {
-            this.pout = 0;
-            const cb = this.pongs.shift();
-            if (cb) {
-              cb.resolve();
-            }
-          } else if ((m = PING.exec(buf))) {
-            this.transport.send(buildMessage(`PONG${CR_LF}`));
-          } else if ((m = INFO.exec(buf))) {
-            this.info = JSON.parse(m[1]);
-            const updates = this.servers.update(this.info);
-            if (!this.infoReceived) {
-              // send connect
-              const { version, lang } = this.transport;
-              try {
-                const c = new Connect(
-                  { version, lang },
-                  this.options,
-                  this.info.nonce,
-                );
-
-                const cs = JSON.stringify(c);
-                this.transport.send(
-                  buildMessage(`CONNECT ${cs}${CR_LF}`),
-                );
-                this.transport.send(
-                  buildMessage(`PING${CR_LF}`),
-                );
-              } catch (err) {
-                this._close(
-                  NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION, err),
-                );
-              }
-            }
-            if (updates) {
-              this.dispatchStatus({ type: Events.UPDATE, data: updates });
-            }
-            const ldm = this.info.ldm !== undefined ? this.info.ldm : false;
-            if (ldm) {
-              this.dispatchStatus(
-                {
-                  type: Events.LDM,
-                  data: this.servers.getCurrentServer().toString(),
-                },
-              );
-            }
-          } else {
-            return;
-          }
-          break;
-        }
-        case ParserState.AWAITING_MSG_PAYLOAD: {
-          if (!this.payload) {
-            break;
-          }
-          // drain what we have collected
-          if (this.inbound.size() < this.payload.length) {
-            let d = this.inbound.drain();
-            this.payload.fill(d);
-            return;
-          }
-          // drain the number of bytes we need
-          let dd = this.inbound.drain(this.payload.length);
-          this.payload.fill(dd);
-          try {
-            this.processMsg();
-          } catch (ex) {
-            // ignore exception in client handling
-          }
-          this.state = ParserState.AWAITING_CONTROL;
-          this.payload = null;
-          break;
-        }
-      }
-      if (m) {
-        let psize = m[0].length;
-        if (psize >= this.inbound.size()) {
-          this.inbound.drain();
-        } else {
-          this.inbound.drain(psize);
-        }
-        m = null;
-      }
-    }
-  }
-
-  processMsg() {
-    if (!this.payload || !this.subscriptions.sidCounter) {
+  processMsg(msg: MsgArg, data: Uint8Array) {
+    if (!this.subscriptions.sidCounter) {
       return;
     }
 
-    let m = this.payload;
-
-    let sub = this.subscriptions.get(m.msg.sid) as SubscriptionImpl;
+    let sub = this.subscriptions.get(msg.sid) as SubscriptionImpl;
     if (!sub) {
       return;
     }
     sub.received += 1;
 
     if (sub.callback) {
-      sub.callback(null, m.msg);
+      sub.callback(null, new MsgImpl(msg, data, this));
     }
 
     if (sub.max !== undefined && sub.received >= sub.max) {
       sub.unsubscribe();
+    }
+  }
+
+  async processError(m: Uint8Array) {
+    const s = new TextDecoder().decode(m);
+    const err = ProtocolHandler.toError(s);
+    this.subscriptions.handleError(err);
+    await this._close(err);
+  }
+
+  processPing() {
+    this.transport.send(buildMessage(`PONG${CR_LF}`));
+  }
+
+  processPong() {
+    this.pout = 0;
+    const cb = this.pongs.shift();
+    if (cb) {
+      cb.resolve();
+    }
+  }
+
+  processInfo(m: Uint8Array) {
+    this.info = JSON.parse(new TextDecoder().decode(m));
+    const updates = this.servers.update(this.info);
+    if (!this.infoReceived) {
+      // send connect
+      const { version, lang } = this.transport;
+      try {
+        const c = new Connect(
+          { version, lang },
+          this.options,
+          this.info.nonce,
+        );
+
+        const cs = JSON.stringify(c);
+        this.transport.send(
+          buildMessage(`CONNECT ${cs}${CR_LF}`),
+        );
+        this.transport.send(
+          buildMessage(`PING${CR_LF}`),
+        );
+      } catch (err) {
+        this._close(
+          NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION, err),
+        );
+      }
+    }
+    if (updates) {
+      this.dispatchStatus({ type: Events.UPDATE, data: updates });
+    }
+    const ldm = this.info.ldm !== undefined ? this.info.ldm : false;
+    if (ldm) {
+      this.dispatchStatus(
+        {
+          type: Events.LDM,
+          data: this.servers.getCurrentServer().toString(),
+        },
+      );
+    }
+  }
+
+  push(e: ParserEvent): void {
+    switch (e.kind) {
+      case Kind.MSG:
+        const { msg, data } = e;
+        this.processMsg(msg!, data!);
+        break;
+      case Kind.OK:
+        break;
+      case Kind.ERR:
+        this.processError(e.data!);
+        break;
+      case Kind.PING:
+        this.processPing();
+        break;
+      case Kind.PONG:
+        this.processPong();
+        break;
+      case Kind.INFO:
+        this.processInfo(e.data!);
+        break;
     }
   }
 
@@ -549,6 +520,9 @@ export class ProtocolHandler {
     } else {
       this.sendCommand(`SUB ${s.subject} ${s.sid}\r\n`);
     }
+    if (s.max) {
+      this.unsubscribe(s, s.max);
+    }
     return s;
   }
 
@@ -580,12 +554,6 @@ export class ProtocolHandler {
     return p;
   }
 
-  async processError(s: string) {
-    let err = ProtocolHandler.toError(s);
-    this.subscriptions.handleError(err);
-    await this._close(err);
-  }
-
   sendSubscriptions() {
     let cmds: string[] = [];
     this.subscriptions.all().forEach((s) => {
@@ -602,7 +570,7 @@ export class ProtocolHandler {
   }
 
   private _close(err?: Error): Promise<void> {
-    if (this.state === ParserState.CLOSED) {
+    if (this.parser.closed()) {
       return Promise.resolve();
     }
     this.heartbeats.cancel();
@@ -615,7 +583,7 @@ export class ProtocolHandler {
     this.listeners.forEach((l) => {
       l.stop();
     });
-    this.state = ParserState.CLOSED;
+    this.parser.close();
     return this.transport.close(err)
       .then(() => {
         return this.closed.resolve(err);
@@ -627,7 +595,7 @@ export class ProtocolHandler {
   }
 
   isClosed(): boolean {
-    return this.state === ParserState.CLOSED;
+    return this.parser.closed();
   }
 
   drain(): Promise<void> {

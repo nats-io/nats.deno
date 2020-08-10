@@ -6,6 +6,7 @@ const defaults = {
   s: "127.0.0.1:4222",
   c: 1000000,
   p: 0,
+  subj: new Nuid().next(),
 };
 
 const argv = parse(
@@ -18,6 +19,9 @@ const argv = parse(
       "p": ["payload"],
     },
     default: defaults,
+    string: [
+      "subj",
+    ],
   },
 );
 
@@ -28,18 +32,18 @@ if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   Deno.exit(0);
 }
 
-const server = String(argv.server);
-const count = parseInt(String(argv.count));
-const subj = String(argv.subj) || new Nuid().next();
-const bytes = parseInt(String(argv.payload));
+const server = argv.server;
+const count = parseInt(argv.count);
+const subj = argv.subj;
+const bytes = parseInt(argv.payload);
 const payload = bytes ? new Uint8Array(bytes) : Empty;
 
 const nc = await connect({ servers: server, debug: argv.debug });
 const start = Date.now();
 
 if (argv.req) {
-  const sub = nc.subscribe(subj);
-  (async () => {
+  const sub = nc.subscribe(subj, { max: count });
+  const iter = (async () => {
     for await (const m of sub) {
       m.respond(payload);
     }
@@ -48,14 +52,10 @@ if (argv.req) {
 
 let j = 0;
 if (argv.sub) {
-  const sub = nc.subscribe(subj);
-  (async () => {
-    for await (const m of sub) {
-      j++;
-      if (j % 1000) {
-        console.log(">");
-      }
-    }
+  const sub = nc.subscribe(subj, { max: count });
+  const iter = (async () => {
+    for await (const m of sub) {}
+    console.log("sub done");
   })();
 }
 
@@ -63,9 +63,6 @@ let i = 0;
 if (argv.pub) {
   for (; i < count; i++) {
     nc.publish(subj, payload);
-    if (i % 1000) {
-      console.log("<");
-    }
   }
 }
 

@@ -13,46 +13,59 @@
  * limitations under the License.
  */
 
-import { Err, Info, Msg, Parser, ParserEvents, State } from "./parser.ts";
+import {
+  Kind,
+  Parser,
+  ParserEvent,
+  State,
+  Dispatcher,
+  headers,
+  MsgHdrsImpl,
+} from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
   assertThrows,
   assert,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
-import { Dispatcher } from "./queued_iterator.ts";
 
 let te = new TextEncoder();
 const td = new TextDecoder();
 
-class NoopDispatcher implements Dispatcher<ParserEvents> {
-  push(a: ParserEvents): void {}
+class NoopDispatcher implements Dispatcher<ParserEvent> {
+  push(a: ParserEvent): void {}
 }
 
-class TestDispatcher implements Dispatcher<ParserEvents> {
+class TestDispatcher implements Dispatcher<ParserEvent> {
   count = 0;
   pings = 0;
   pongs = 0;
   ok = 0;
-  errs: Err[] = [];
-  infos: Info[] = [];
-  msgs: Msg[] = [];
+  errs: ParserEvent[] = [];
+  infos: ParserEvent[] = [];
+  msgs: ParserEvent[] = [];
 
-  push(a: ParserEvents): void {
+  push(a: ParserEvent): void {
     this.count++;
-    if (typeof a === "object" && "msg" in a) {
-      this.msgs.push(a);
-    } else if (typeof a === "object" && "info" in a) {
-      this.infos.push(a);
-    } else if (typeof a === "object" && "message" in a) {
-      this.errs.push(a);
-    } else if (a === "ping") {
-      this.pings++;
-    } else if (a === "pong") {
-      this.pongs++;
-    } else if (a === "ok") {
-      this.ok++;
-    } else {
-      throw new Error(`unknown parser evert ${a}`);
+    switch (a.kind) {
+      case Kind.OK:
+        this.ok++;
+        break;
+      case Kind.ERR:
+        this.errs.push(a);
+        break;
+      case Kind.MSG:
+        this.msgs.push(a);
+        break;
+      case Kind.INFO:
+        this.infos.push(a);
+        break;
+      case Kind.PING:
+        this.pings++;
+        break;
+      case Kind.PONG:
+        this.pongs++;
+      default:
+        throw new Error(`unknown parser evert ${JSON.stringify(a)}`);
     }
   }
 }
@@ -130,7 +143,7 @@ Deno.test("parser - err", () => {
   assertEquals(results.states, states);
   assertEquals(results.dispatcher.errs.length, 1);
   assertEquals(results.dispatcher.count, 1);
-  assertEquals(results.dispatcher.errs[0].message, `'234 6789'`);
+  assertEquals(td.decode(results.dispatcher.errs[0].data), `'234 6789'`);
 
   const events = new TestDispatcher();
   const p = new Parser(events);
@@ -138,7 +151,7 @@ Deno.test("parser - err", () => {
   assertEquals(p.state, State.OP_START);
   assertEquals(events.errs.length, 1);
   assertEquals(events.count, 1);
-  assertEquals(events.errs[0].message, `'Any error'`);
+  assertEquals(td.decode(events.errs[0].data), `'Any error'`);
 });
 
 Deno.test("parser - ok", () => {
@@ -249,7 +262,7 @@ Deno.test("parser - split msg", () => {
   p.parse(te.encode("oo\r\n"));
   assertEquals(d.count, 1);
   assertEquals(d.msgs.length, 1);
-  assertEquals(td.decode(d.msgs[0].msg.subject), "a");
+  assertEquals(td.decode(d.msgs[0].msg?.subject), "a");
   assertEquals(td.decode(d.msgs[0].data), "foo");
   assertEquals(p.msgBuf, undefined);
 
@@ -295,7 +308,7 @@ Deno.test("parser - split msg", () => {
   assertEquals(p.state, State.OP_START);
   assertEquals(p.msgBuf, undefined);
   assertEquals(d.msgs.length, 4);
-  const db = d.msgs[3].data;
+  const db = d.msgs[3].data!;
   assertEquals(td.decode(db.subarray(0, 3)), "foo");
   const gen = db.subarray(3);
   for (let k = 0; k < 100; k++) {
@@ -337,7 +350,7 @@ Deno.test("parser - info arg", () => {
   assertEquals(d.infos.length, 1);
   assertEquals(d.count, 1);
 
-  const arg2 = JSON.parse(td.decode(d.infos[0].info));
+  const arg2 = JSON.parse(td.decode(d.infos[0]?.data));
   assertEquals(arg2, arg);
 
   const good = [
@@ -369,4 +382,26 @@ Deno.test("parser - info arg", () => {
     });
   });
   assertEquals(count, bad.length);
+});
+
+Deno.test("parser - header", () => {
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  const h = headers() as MsgHdrsImpl;
+  h.set("x", "y");
+  const hdr = h.encode();
+
+  p.parse(te.encode(`HMSG a 1 ${hdr.length} ${hdr.length + 3}\r\n`));
+  p.parse(hdr);
+  assertEquals(p.ma.size, hdr.length + 3, "size");
+  assertEquals(p.ma.sid, 1, "sid");
+  assertEquals(p.ma.subject, te.encode("a"), "subject");
+  assert(p.msgBuf, "should message buffer");
+  p.parse(te.encode("bar\r\n"));
+
+  assertEquals(d.msgs.length, 1);
+  const payload = d.msgs[0].data;
+  const h2 = MsgHdrsImpl.decode(payload!.subarray(0, d.msgs[0].msg?.hdr));
+  assert(h2.equals(h));
+  assertEquals(td.decode(payload!.subarray(d.msgs[0].msg?.hdr)), "bar");
 });

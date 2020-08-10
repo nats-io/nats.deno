@@ -16,21 +16,49 @@
 import { Dispatcher } from "./queued_iterator.ts";
 import { Buffer } from "./buffer.ts";
 
-export type PING = "ping";
-export type PONG = "pong";
-export type OK = "ok";
-export interface Err {
-  message: string;
-}
-export interface Info {
-  info: Uint8Array;
-}
-export interface Msg {
-  msg: MsgArg;
-  data: Uint8Array;
+export enum Kind {
+  OK,
+  ERR,
+  MSG,
+  INFO,
+  PING,
+  PONG,
 }
 
-export type ParserEvents = PING | PONG | OK | Err | Info | Msg;
+export interface ParserEvent {
+  kind: Kind;
+  msg?: MsgArg;
+  data?: Uint8Array;
+}
+
+export function describe(e: ParserEvent): string {
+  const td = new TextDecoder();
+  let ks: string;
+  let data = "";
+
+  switch (e.kind) {
+    case Kind.MSG:
+      ks = "MSG";
+      break;
+    case Kind.OK:
+      ks = "OK";
+      break;
+    case Kind.ERR:
+      ks = "ERR";
+      data = td.decode(e.data);
+      break;
+    case Kind.PING:
+      ks = "PING";
+      break;
+    case Kind.PONG:
+      ks = "PONG";
+      break;
+    case Kind.INFO:
+      ks = "INFO";
+      data = td.decode(e.data);
+  }
+  return `${ks}: ${data}`;
+}
 
 export interface MsgArg {
   subject: Uint8Array;
@@ -45,7 +73,7 @@ const td = new TextDecoder();
 // This is an almost verbatim port of the Go NATS parser
 // https://github.com/nats-io/nats.go/blob/master/parser.go
 export class Parser {
-  dispatcher: Dispatcher<ParserEvents>;
+  dispatcher: Dispatcher<ParserEvent>;
   state = State.OP_START;
   as = 0;
   drop = 0;
@@ -55,10 +83,18 @@ export class Parser {
   msgBuf?: Buffer;
   scratch: Buffer;
 
-  constructor(dispatcher: Dispatcher<ParserEvents>) {
+  constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
     this.state = State.OP_START;
     this.scratch = new Buffer();
+  }
+
+  close(): void {
+    this.state = State.CLOSED;
+  }
+
+  closed(): boolean {
+    return this.state === State.CLOSED;
   }
 
   parse(buf: Uint8Array): void {
@@ -66,6 +102,8 @@ export class Parser {
     for (i = 0; i < buf.length; i++) {
       const b = buf[i];
       switch (this.state) {
+        case State.CLOSED:
+          return;
         case State.OP_START:
           switch (b) {
             case cc.M:
@@ -176,7 +214,9 @@ export class Parser {
           if (this.msgBuf) {
             if (this.msgBuf.length >= this.ma.size) {
               const data = this.msgBuf.bytes({ copy: false });
-              this.dispatcher.push({ msg: this.ma, data: data });
+              this.dispatcher.push(
+                { kind: Kind.MSG, msg: this.ma, data: data },
+              );
               this.argBuf = undefined;
               this.msgBuf = undefined;
               this.state = State.MSG_END;
@@ -197,7 +237,7 @@ export class Parser {
             }
           } else if (i - this.as >= this.ma.size) {
             this.dispatcher.push(
-              { msg: this.ma, data: buf.subarray(this.as, i) },
+              { kind: Kind.MSG, msg: this.ma, data: buf.subarray(this.as, i) },
             );
             this.argBuf = undefined;
             this.msgBuf = undefined;
@@ -238,7 +278,7 @@ export class Parser {
         case State.OP_PLUS_OK:
           switch (b) {
             case cc.NL:
-              this.dispatcher.push("ok");
+              this.dispatcher.push({ kind: Kind.OK });
               this.drop = 0;
               this.state = State.OP_START;
               break;
@@ -307,7 +347,7 @@ export class Parser {
               } else {
                 arg = buf.subarray(this.as, i - this.drop);
               }
-              this.dispatcher.push({ message: td.decode(arg) });
+              this.dispatcher.push({ kind: Kind.ERR, data: arg });
               this.drop = 0;
               this.as = i + 1;
               this.state = State.OP_START;
@@ -355,7 +395,7 @@ export class Parser {
         case State.OP_PONG:
           switch (b) {
             case cc.NL:
-              this.dispatcher.push("pong");
+              this.dispatcher.push({ kind: Kind.PONG });
               this.drop = 0;
               this.state = State.OP_START;
               break;
@@ -384,7 +424,7 @@ export class Parser {
         case State.OP_PING:
           switch (b) {
             case cc.NL:
-              this.dispatcher.push("ping");
+              this.dispatcher.push({ kind: Kind.PING });
               this.drop = 0;
               this.state = State.OP_START;
               break;
@@ -453,7 +493,7 @@ export class Parser {
               } else {
                 arg = buf.subarray(this.as, i - this.drop);
               }
-              this.dispatcher.push({ info: arg });
+              this.dispatcher.push({ kind: Kind.INFO, data: arg });
               this.drop = 0;
               this.as = i + 1;
               this.state = State.OP_START;
@@ -480,7 +520,6 @@ export class Parser {
       if (!this.argBuf) {
         this.cloneMsgArg();
       }
-      // FIXME - need to have buffers to grow and reuse space
       this.msgBuf = new Buffer(buf.subarray(this.as));
     }
   }
@@ -581,7 +620,7 @@ export class Parser {
           break;
         default:
           if (start < 0) {
-            start = 0;
+            start = i;
           }
       }
     }
@@ -609,7 +648,7 @@ export class Parser {
     }
 
     if (this.ma.sid < 0) {
-      throw this.fail(arg, "ProcessHeaderMsgArgs Bad or Missing Sid Error");
+      throw this.fail(arg, "processHeaderMsgArgs Bad or Missing Sid Error");
     }
     if (this.ma.hdr < 0 || this.ma.hdr > this.ma.size) {
       throw this.fail(
@@ -667,6 +706,7 @@ export enum State {
   OP_INFO,
   OP_INFO_SPC,
   INFO_ARG,
+  CLOSED,
 }
 
 enum cc {

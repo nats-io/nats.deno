@@ -12,7 +12,12 @@ import {
   assert,
   assertThrows,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
-import { Buffer, MAX_SIZE, readAll, writeAll } from "./buffer.ts";
+import {
+  Buffer,
+  MAX_SIZE,
+  readAll,
+  writeAll,
+} from "../nats-base-client/internal_mod.ts";
 
 // N controls how many iterations of certain checks are performed.
 const N = 100;

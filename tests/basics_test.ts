@@ -399,7 +399,9 @@ Deno.test("basics - closed returns error", async () => {
     }, 500);
   });
 
-  const nc = await connect({ servers: `127.0.0.1:${cs.getPort()}` });
+  const nc = await connect(
+    { servers: `127.0.0.1:${cs.getPort()}` },
+  );
   await nc.closed()
     .then((v) => {
       assertEquals((v as Error).message, "'here'");
