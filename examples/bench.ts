@@ -6,7 +6,7 @@ const defaults = {
   s: "127.0.0.1:4222",
   c: 1000000,
   p: 0,
-  subj: new Nuid().next(),
+  subject: new Nuid().next(),
 };
 
 const argv = parse(
@@ -20,64 +20,90 @@ const argv = parse(
     },
     default: defaults,
     string: [
-      "subj",
+      "subject",
+    ],
+    boolean: [
+      "async",
     ],
   },
 );
 
 if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   console.log(
-    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>] [--server server]\n",
+    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>] [--server server] [--subject <subj>]\n",
   );
   Deno.exit(0);
 }
 
 const server = argv.server;
 const count = parseInt(argv.count);
-const subj = argv.subj;
 const bytes = parseInt(argv.payload);
 const payload = bytes ? new Uint8Array(bytes) : Empty;
 
 const nc = await connect({ servers: server, debug: argv.debug });
-const start = Date.now();
+const jobs: Promise<void>[] = [];
+const p = new Performance();
 
 if (argv.req) {
-  const sub = nc.subscribe(subj, { max: count });
-  (async () => {
+  const sub = nc.subscribe(argv.subject, { max: count });
+  const job = (async () => {
     for await (const m of sub) {
       m.respond(payload);
     }
   })();
+  jobs.push(job);
 }
 
-let j = 0;
 if (argv.sub) {
-  const sub = nc.subscribe(subj, { max: count });
-  (async () => {
-    for await (const m of sub) {}
-    console.log("sub done");
+  let first = false;
+  const sub = nc.subscribe(argv.subject, { max: count });
+  const job = (async () => {
+    for await (const m of sub) {
+      if (!first) {
+        p.mark("subStart");
+        first = true;
+      }
+    }
+    p.mark("subStop");
+    p.measure("sub", "subStart", "subStop");
   })();
+  jobs.push(job);
 }
 
-let i = 0;
 if (argv.pub) {
-  for (; i < count; i++) {
-    nc.publish(subj, payload);
-  }
+  const job = (async () => {
+    p.mark("pubStart");
+    for (let i = 0; i < count; i++) {
+      nc.publish(argv.subject, payload);
+    }
+    await nc.flush();
+    p.mark("pubStop");
+    p.measure("pub", "pubStart", "pubStop");
+  })();
+  jobs.push(job);
 }
 
 if (argv.req) {
-  if (argv.async) {
-    const a = [];
-    for (; i < count; i++) {
-      a.push(nc.request(subj, payload, { timeout: 20000 }));
+  const job = (async () => {
+    if (argv.async) {
+      p.mark("reqStart");
+      const a = [];
+      for (let i = 0; i < count; i++) {
+        a.push(nc.request(argv.subject, payload, { timeout: 20000 }));
+      }
+      await Promise.all(a);
+      p.mark("reqStop");
+      p.measure("req", "reqStart", "reqStop");
+    } else {
+      p.mark("reqStart");
+      for (let i = 0; i < count; i++) {
+        await nc.request(argv.subject);
+      }
+      p.mark("reqStop");
+      p.measure("req", "reqStart", "reqStop");
     }
-    await Promise.all(a);
-  } else {
-    for (; i < count; i++) {
-      await nc.request(subj);
-    }
-  }
+  })();
+  jobs.push(job);
 }
 
 nc.closed()
@@ -87,21 +113,33 @@ nc.closed()
     }
   });
 
-await nc.drain();
-const millis = Date.now() - start;
-const secs = millis / 1000;
+await Promise.all(jobs);
+const measures = p.getEntries();
+const req = measures.find((m) => m.name === "req");
+const pub = measures.find((m) => m.name === "pub");
+const sub = measures.find((m) => m.name === "sub");
 
-if ((argv.pub && !argv.sub) || (argv.sub && !argv.pub)) {
-  console.log(`${Math.round(i / secs)} msgs/sec - ${millis} millis`);
-} else {
-  console.log(
-    `${Math.round((argv.c * 2) / secs)} msgs/sec - ${millis} millis - ${j}`,
-  );
+if (pub && sub) {
+  const sec = (pub.duration + sub.duration) / 1000;
+  const mps = Math.round((argv.c * 2) / sec);
+  console.log(`pubsub ${mps} msgs/sec - [${sec} secs]`);
+}
+if (pub) {
+  const sec = pub.duration / 1000;
+  const mps = Math.round(argv.c / sec);
+  console.log(`pub    ${mps} msgs/sec - [${sec} secs]`);
+}
+if (sub) {
+  const sec = sub.duration / 1000;
+  const mps = Math.round(argv.c / sec);
+  console.log(`sub    ${mps} msgs/sec - [${sec} secs]`);
 }
 
-if (argv.req) {
-  const rps = parseInt(String(argv.c / secs), 10);
-  console.log(`${rps} req-resp/sec - ${millis} millis - ${j}`);
-  const lat = Math.round((millis * 1000) / (argv.c * 2));
-  console.log(`average latency ${lat} µs`);
+if (req) {
+  const sec = req.duration / 1000;
+  const mps = Math.round((argv.c * 2) / req.duration);
+  const label = argv.async ? "async" : "serial";
+  console.log(`req ${label} ${mps} msgs/sec - [${sec} secs]`);
 }
+
+await nc.close();
