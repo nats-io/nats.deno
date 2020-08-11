@@ -103,20 +103,21 @@ export interface Publisher {
 }
 
 export class ProtocolHandler implements Dispatcher<ParserEvent> {
-  connected: boolean = false;
-  connectedOnce: boolean = false;
-  infoReceived: boolean = false;
+  connected = false;
+  connectedOnce = false;
+  infoReceived = false;
   info?: any;
   muxSubscriptions: MuxSubscription;
   options: ConnectionOptions;
   outbound: DataBuffer;
   pongs: Array<Deferred<void>>;
-  pout: number = 0;
+  pout = 0;
   subscriptions: Subscriptions;
   transport!: Transport;
-  noMorePublishing: boolean = false;
+  noMorePublishing = false;
   connectError?: Function;
   publisher: Publisher;
+  _closed = false;
   closed: Deferred<Error | void>;
   listeners: QueuedIterator<Status>[] = [];
   heartbeats: Heartbeat;
@@ -138,6 +139,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       options.servers,
     );
     this.closed = deferred<Error | void>();
+    this.closed.then(() => {
+      this._closed = true;
+    });
     this.parser = new Parser(this);
 
     this.heartbeats = new Heartbeat(
@@ -203,7 +207,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.transport.closed()
       .then(async (err?) => {
         this.connected = false;
-        if (!this.parser.closed()) {
+        if (!this.isClosed()) {
           await this.disconnected(this.transport.closeError);
           return;
         }
@@ -570,7 +574,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   private _close(err?: Error): Promise<void> {
-    if (this.parser.closed()) {
+    if (this.isClosed()) {
       return Promise.resolve();
     }
     this.heartbeats.cancel();
@@ -583,7 +587,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.listeners.forEach((l) => {
       l.stop();
     });
-    this.parser.close();
     return this.transport.close(err)
       .then(() => {
         return this.closed.resolve(err);
@@ -595,7 +598,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   isClosed(): boolean {
-    return this.parser.closed();
+    return this._closed;
   }
 
   drain(): Promise<void> {

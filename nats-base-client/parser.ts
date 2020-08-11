@@ -89,21 +89,11 @@ export class Parser {
     this.scratch = new Buffer();
   }
 
-  close(): void {
-    this.state = State.CLOSED;
-  }
-
-  closed(): boolean {
-    return this.state === State.CLOSED;
-  }
-
   parse(buf: Uint8Array): void {
     let i: number;
     for (i = 0; i < buf.length; i++) {
       const b = buf[i];
       switch (this.state) {
-        case State.CLOSED:
-          return;
         case State.OP_START:
           switch (b) {
             case cc.M:
@@ -706,7 +696,6 @@ export enum State {
   OP_INFO,
   OP_INFO_SPC,
   INFO_ARG,
-  CLOSED,
 }
 
 enum cc {

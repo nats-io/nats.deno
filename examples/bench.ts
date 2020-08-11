@@ -43,7 +43,7 @@ const start = Date.now();
 
 if (argv.req) {
   const sub = nc.subscribe(subj, { max: count });
-  const iter = (async () => {
+  (async () => {
     for await (const m of sub) {
       m.respond(payload);
     }
@@ -53,7 +53,7 @@ if (argv.req) {
 let j = 0;
 if (argv.sub) {
   const sub = nc.subscribe(subj, { max: count });
-  const iter = (async () => {
+  (async () => {
     for await (const m of sub) {}
     console.log("sub done");
   })();

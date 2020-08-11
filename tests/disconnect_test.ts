@@ -42,7 +42,6 @@ Deno.test("disconnect - close process inbound ignores", async () => {
     { port: ns.port, reconnect: false },
   ) as NatsConnectionImpl;
   nc.closed().then(() => {
-    assert(nc.protocol.parser.closed());
     lock.unlock();
   });
 
