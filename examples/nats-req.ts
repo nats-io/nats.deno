@@ -26,7 +26,7 @@ const argv = parse(
 
 const opts = { servers: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
-const payload = argv._[1] || "";
+const payload = String(argv._[1]) || "";
 const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
 const interval = argv.i;
 

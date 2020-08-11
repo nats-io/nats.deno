@@ -67,3 +67,9 @@ export {
   StringCodec,
 } from "./codec.ts";
 export * from "./nkeys.ts";
+export {
+  Dispatcher,
+  QueuedIterator,
+} from "./queued_iterator.ts";
+export { Kind, Parser, ParserEvent, State } from "./parser.ts";
+export { Buffer, MAX_SIZE, readAll, writeAll } from "./buffer.ts";

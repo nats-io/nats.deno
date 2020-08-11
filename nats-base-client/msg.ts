@@ -13,19 +13,90 @@
  * limitations under the License.
  */
 import { Empty, Msg } from "./types.ts";
-import { MsgHdrsImpl } from "./headers.ts";
+import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { Publisher } from "./protocol.ts";
+import { MsgArg } from "./parser.ts";
+
+const td = new TextDecoder();
 
 export class MsgImpl implements Msg {
   publisher: Publisher;
-  subject!: string;
-  sid!: number;
+  subject: string;
   reply?: string;
-  data!: Uint8Array;
-  headers?: MsgHdrsImpl;
+  sid: number;
+  headers?: MsgHdrs;
+  data: Uint8Array;
 
-  constructor(publisher: Publisher) {
+  constructor(msg: MsgArg, data: Uint8Array, publisher: Publisher) {
     this.publisher = publisher;
+    this.subject = td.decode(msg.subject);
+    this.reply = msg.reply ? td.decode(msg.reply) : undefined;
+    this.sid = msg.sid;
+    this.headers = msg.hdr > -1
+      ? MsgHdrsImpl.decode(data.subarray(0, msg.hdr))
+      : undefined;
+    this.data = msg.hdr > -1 ? data.subarray(msg.hdr) : data;
+  }
+
+  // eslint-ignore-next-line @typescript-eslint/no-explicit-any
+  respond(data: Uint8Array = Empty, headers?: MsgHdrsImpl): boolean {
+    if (this.reply) {
+      this.publisher.publish(this.reply, data, { headers: headers });
+      return true;
+    }
+    return false;
+  }
+}
+
+export class LazyMsgImpl implements Msg {
+  _headers?: MsgHdrs;
+  _msg: MsgArg;
+  _rdata: Uint8Array;
+  _reply!: string;
+  _subject!: string;
+  publisher: Publisher;
+
+  constructor(msg: MsgArg, data: Uint8Array, publisher: Publisher) {
+    this._msg = msg;
+    this._rdata = data;
+    this.publisher = publisher;
+  }
+
+  get subject(): string {
+    if (this._subject) {
+      return this._subject;
+    }
+    this._subject = td.decode(this._msg.subject);
+    return this._subject;
+  }
+
+  get reply(): string {
+    if (this._reply) {
+      return this._reply;
+    }
+    this._reply = td.decode(this._msg.reply);
+    return this._reply;
+  }
+
+  get sid(): number {
+    return this._msg.sid;
+  }
+
+  get headers(): (MsgHdrs | undefined) {
+    if (this._msg.hdr > -1 && !this._headers) {
+      const buf = this._rdata.subarray(0, this._msg.hdr);
+      this._headers = MsgHdrsImpl.decode(buf);
+    }
+    return this._headers;
+  }
+
+  get data(): Uint8Array {
+    if (!this._rdata) {
+      return new Uint8Array(0);
+    }
+    return this._msg.hdr > -1
+      ? this._rdata.subarray(this._msg.hdr)
+      : this._rdata;
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any

@@ -29,47 +29,6 @@ import {
   equal,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 
-Deno.test("protocol - partial messages correctly", async () => {
-  const sc = StringCodec();
-  const lock = Lock(3);
-  const protocol = new ProtocolHandler(
-    {} as ConnectionOptions,
-    { publish: (subject, data1, reply) => {} },
-  );
-  protocol.infoReceived = true;
-  // feed the inbound with arrays of 1 byte at a time
-  const data =
-    "MSG test.foo 1 11\r\nHello World\r\nMSG test.bar 1 11\r\nHello World\r\nMSG test.baz 1 11\r\nHello World\r\nPONG\r\n";
-  const chunks: Uint8Array[] = [];
-  const te = new TextEncoder();
-  for (let i = 0; i < data.length; i++) {
-    chunks.push(te.encode(data.charAt(i)));
-  }
-
-  let s = {} as SubscriptionImpl;
-  s.sid = 1;
-  s.subject = "test.*";
-  s.callback = ((_, msg) => {
-    assertEquals(sc.decode(msg.data), "Hello World");
-    lock.unlock();
-  });
-
-  protocol.subscriptions.add(s);
-
-  function f(i: number) {
-    setTimeout(() => {
-      protocol.inbound.fill(chunks[i]);
-      protocol.processInbound();
-    });
-  }
-
-  for (let i = 0; i < chunks.length; i++) {
-    f(i);
-  }
-
-  await lock;
-});
-
 Deno.test("protocol - mux subscription unknown return null", async () => {
   let mux = new MuxSubscription();
   mux.init();

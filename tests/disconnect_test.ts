@@ -19,9 +19,7 @@ import {
   NatsConnectionImpl,
   ParserState,
 } from "../nats-base-client/internal_mod.ts";
-import {
-  assertEquals,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+import { assert } from "../nats-base-client/buffer.ts";
 
 Deno.test("disconnect - close handler is called on close", async () => {
   const ns = await NatsServer.start();
@@ -44,7 +42,6 @@ Deno.test("disconnect - close process inbound ignores", async () => {
     { port: ns.port, reconnect: false },
   ) as NatsConnectionImpl;
   nc.closed().then(() => {
-    assertEquals(ParserState.CLOSED, nc.protocol.state);
     lock.unlock();
   });
 
