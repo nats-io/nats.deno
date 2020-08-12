@@ -485,6 +485,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       hlen = h.length;
     }
 
+    if ((len + hlen) > this.info.max_payload) {
+      throw NatsError.errorForCode((ErrorCode.MAX_PAYLOAD_EXCEEDED));
+    }
+
     let proto: string;
     if (options.headers) {
       if (options.reply) {
