@@ -157,14 +157,18 @@ export class NatsConnectionImpl implements NatsConnection {
       const r = new Request(this.protocol.muxSubscriptions, opts);
       this.protocol.request(r);
 
-      this.publish(
-        subject,
-        data,
-        {
-          reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
-          headers: opts.headers,
-        },
-      );
+      try {
+        this.publish(
+          subject,
+          data,
+          {
+            reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+            headers: opts.headers,
+          },
+        );
+      } catch (err) {
+        r.cancel(err);
+      }
 
       const p = Promise.race([r.timer, r.deferred]);
       p.catch(() => {

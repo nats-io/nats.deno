@@ -17,9 +17,7 @@ import { connect } from "../src/mod.ts";
 import { Lock, NatsServer } from "./helpers/mod.ts";
 import {
   NatsConnectionImpl,
-  ParserState,
 } from "../nats-base-client/internal_mod.ts";
-import { assert } from "../nats-base-client/buffer.ts";
 
 Deno.test("disconnect - close handler is called on close", async () => {
   const ns = await NatsServer.start();

@@ -47,11 +47,13 @@ export class Request {
     this.cancel();
   }
 
-  cancel(): void {
+  cancel(err?: NatsError): void {
     if (this.timer) {
       this.timer.cancel();
     }
     this.mux.cancel(this);
-    this.deferred.reject(NatsError.errorForCode(ErrorCode.CANCELLED));
+    this.deferred.reject(
+      err ? err : NatsError.errorForCode(ErrorCode.CANCELLED),
+    );
   }
 }

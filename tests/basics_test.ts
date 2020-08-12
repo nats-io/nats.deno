@@ -503,3 +503,42 @@ Deno.test("basics - no mux requests", async () => {
   assertEquals(m.data, data);
   await nc.close();
 });
+
+Deno.test("basics - no max_payload messages", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  assert(nc.protocol.info.max_payload);
+  const big = new Uint8Array(nc.protocol.info.max_payload + 1);
+
+  const subj = createInbox();
+  try {
+    nc.publish(subj, big);
+    fail();
+  } catch (err) {
+    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+  }
+
+  try {
+    const _ = await nc.request(subj, big);
+    fail();
+  } catch (err) {
+    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+  }
+
+  const sub = nc.subscribe(subj);
+  (async () => {
+    for await (const m of sub) {
+      m.respond(big);
+      fail();
+    }
+  })().catch((err) => {
+    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+  });
+
+  await nc.request(subj).then(() => {
+    fail();
+  }).catch((err) => {
+    assertErrorCode(err, ErrorCode.TIMEOUT);
+  });
+
+  await nc.close();
+});
