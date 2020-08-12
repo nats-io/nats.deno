@@ -39,11 +39,11 @@ function init(): void {
 
 function check(buf: Buffer, s: string): void {
   const bytes = buf.bytes();
-  assertEquals(buf.length(), bytes.byteLength);
+  assertEquals(buf.length, bytes.byteLength);
   const decoder = new TextDecoder();
   const bytesStr = decoder.decode(bytes);
   assertEquals(bytesStr, s);
-  assertEquals(buf.length(), s.length);
+  assertEquals(buf.length, s.length);
 }
 
 // Fill buf through n writes of byte slice fub.
@@ -158,8 +158,8 @@ Deno.test("buffer - write string", () => {
 Deno.test("buffer - write empty string", () => {
   const buf = new Buffer();
   buf.writeString("");
-  assertEquals(buf.length(), 0);
-  assertEquals(buf.capacity(), 0);
+  assertEquals(buf.length, 0);
+  assertEquals(buf.capacity, 0);
 });
 
 Deno.test("buffer - read empty at EOF", () => {
@@ -238,7 +238,7 @@ Deno.test("buffer - grow read close to max buffer", () => {
     const buf = new Buffer();
     buf.readFrom(reader);
 
-    assertEquals(buf.length(), capacity);
+    assertEquals(buf.length, capacity);
   }
 });
 
@@ -249,7 +249,7 @@ Deno.test("buffer - read close to max buffer with initial grow", () => {
     const buf = new Buffer();
     buf.grow(MAX_SIZE);
     buf.readFrom(reader);
-    assertEquals(buf.length(), capacity);
+    assertEquals(buf.length, capacity);
   }
 });
 
@@ -268,7 +268,7 @@ Deno.test("buffer - large byte reads", () => {
 
 Deno.test("buffer - cap with pre allocated slice", () => {
   const buf = new Buffer(new ArrayBuffer(10));
-  assertEquals(buf.capacity(), 10);
+  assertEquals(buf.capacity, 10);
 });
 
 Deno.test("buffer - read from sync", () => {
