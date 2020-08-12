@@ -94,11 +94,11 @@ export class Buffer implements Reader, Writer {
     return this._buf.byteLength <= this._off;
   }
 
-  get length(): number {
+  length(): number {
     return this._buf.byteLength - this._off;
   }
 
-  get capacity(): number {
+  capacity(): number {
     return this._buf.buffer.byteLength;
   }
 
@@ -107,7 +107,7 @@ export class Buffer implements Reader, Writer {
       this.reset();
       return;
     }
-    if (n < 0 || n > this.length) {
+    if (n < 0 || n > this.length()) {
       throw Error("bytes.Buffer: truncation out of range");
     }
     this._reslice(this._off + n);
@@ -120,7 +120,7 @@ export class Buffer implements Reader, Writer {
 
   _tryGrowByReslice = (n: number): number => {
     const l = this._buf.byteLength;
-    if (n <= this.capacity - l) {
+    if (n <= this.capacity() - l) {
       this._reslice(l + n);
       return l;
     }
@@ -169,7 +169,7 @@ export class Buffer implements Reader, Writer {
   }
 
   _grow = (n: number): number => {
-    const m = this.length;
+    const m = this.length();
     // If buffer is empty, reset to recover space.
     if (m === 0 && this._off !== 0) {
       this.reset();
@@ -179,7 +179,7 @@ export class Buffer implements Reader, Writer {
     if (i >= 0) {
       return i;
     }
-    const c = this.capacity;
+    const c = this.capacity();
     if (n <= Math.floor(c / 2) - m) {
       // We can slide things down instead of allocating a new
       // ArrayBuffer. We only need m+n <= c to slide, but
@@ -212,12 +212,12 @@ export class Buffer implements Reader, Writer {
     let n = 0;
     const tmp = new Uint8Array(MIN_READ);
     while (true) {
-      const shouldGrow = this.capacity - this.length < MIN_READ;
+      const shouldGrow = this.capacity() - this.length() < MIN_READ;
       // read into tmp buffer if there's not enough room
       // otherwise read directly into the internal buffer
       const buf = shouldGrow
         ? tmp
-        : new Uint8Array(this._buf.buffer, this.length);
+        : new Uint8Array(this._buf.buffer, this.length());
 
       const nread = r.read(buf);
       if (nread === null) {
@@ -226,7 +226,7 @@ export class Buffer implements Reader, Writer {
 
       // write will grow if needed
       if (shouldGrow) this.write(buf.subarray(0, nread));
-      else this._reslice(this.length + nread);
+      else this._reslice(this.length() + nread);
 
       n += nread;
     }
