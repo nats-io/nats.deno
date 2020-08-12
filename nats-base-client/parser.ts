@@ -113,7 +113,7 @@ export class Parser {
             case cc.h:
               this.state = State.OP_H;
               this.hdr = 0;
-              this.ma.hdr = 0;
+              this.ma = newMsgArg();
               break;
             case cc.P:
             case cc.p:

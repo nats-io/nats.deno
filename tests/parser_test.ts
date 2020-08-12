@@ -21,12 +21,17 @@ import {
   Dispatcher,
   headers,
   MsgHdrsImpl,
+  Buffer,
+  Empty,
+  Msg,
+  MsgImpl,
 } from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
   assertThrows,
   assert,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
+import { Publisher } from "../nats-base-client/protocol.ts";
 
 let te = new TextEncoder();
 const td = new TextDecoder();
@@ -405,3 +410,107 @@ Deno.test("parser - header", () => {
   assert(h2.equals(h));
   assertEquals(td.decode(payload!.subarray(d.msgs[0].msg?.hdr)), "bar");
 });
+
+Deno.test("parser - msg buffers don't clobber", () => {
+  parserClobberTest(false);
+});
+
+Deno.test("parser - hmsg buffers don't clobber", () => {
+  parserClobberTest(true);
+});
+
+function parserClobberTest(hdrs: boolean = false): void {
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+
+  const a = "a".charCodeAt(0);
+  const fill = (n: number, b: Uint8Array) => {
+    const v = n % 26 + a;
+    for (let i = 0; i < b.length; i++) {
+      b[i] = v;
+    }
+  };
+
+  const code = (n: number): number => {
+    return n % 26 + a;
+  };
+
+  const subj = new Uint8Array(26);
+  const reply = new Uint8Array(26);
+  const payload = new Uint8Array(1024 * 1024);
+  const kv = new Uint8Array(12);
+
+  const check = (n: number, m: Msg) => {
+    const s = code(n + 1);
+    assertEquals(m.subject.length, subj.length);
+    te.encode(m.subject).forEach((c) => {
+      assertEquals(c, s, "subject char");
+    });
+
+    const r = code(n + 2);
+    assertEquals(m.reply?.length, reply.length);
+    te.encode(m.reply).forEach((c) => {
+      assertEquals(r, c, "reply char");
+    });
+    assertEquals(m.data.length, payload.length);
+    const pc = code(n);
+    m.data.forEach((c) => {
+      assertEquals(c, pc);
+    }, "payload");
+
+    if (hdrs) {
+      assert(m.headers);
+      fill(n + 3, kv);
+      const hv = td.decode(kv);
+      assertEquals(m.headers.get(hv), hv);
+    }
+  };
+
+  const buf = new Buffer();
+  const N = 100;
+  for (let i = 0; i < N; i++) {
+    buf.reset();
+    fill(i, payload);
+    fill(i + 1, subj);
+    fill(i + 2, reply);
+    let hdrdata = Empty;
+    if (hdrs) {
+      fill(i + 3, kv);
+      const h = headers() as MsgHdrsImpl;
+      const kvs = td.decode(kv);
+      h.set(kvs, kvs);
+      hdrdata = h.encode();
+    }
+    const len = hdrdata.length + payload.length;
+
+    if (hdrs) {
+      buf.writeString("HMSG ");
+    } else {
+      buf.writeString("MSG ");
+    }
+    buf.write(subj);
+    buf.writeString(` 1`);
+    if (reply) {
+      buf.writeString(" ");
+      buf.write(reply);
+    }
+    if (hdrs) {
+      buf.writeString(` ${hdrdata.length}`);
+    }
+    buf.writeString(` ${len}\r\n`);
+    if (hdrs) {
+      buf.write(hdrdata);
+    }
+    buf.write(payload);
+    buf.writeString(`\r\n`);
+
+    p.parse(buf.bytes());
+  }
+
+  assertEquals(d.msgs.length, 100);
+  for (let i = 0; i < 100; i++) {
+    const e = d.msgs[i];
+    const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
+    check(i, m);
+  }
+}
