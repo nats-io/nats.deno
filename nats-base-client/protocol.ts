@@ -485,7 +485,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       hlen = h.length;
     }
 
-    if ((len + hlen) > this.info.max_payload) {
+    if (len > this.info.max_payload) {
       throw NatsError.errorForCode((ErrorCode.MAX_PAYLOAD_EXCEEDED));
     }
 

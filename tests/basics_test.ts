@@ -217,7 +217,7 @@ Deno.test("basics - correct data in message", async () => {
   const m = await mp;
   assertEquals(m.subject, subj);
   assertEquals(sc.decode(m.data), subj);
-  assertEquals(m.reply, undefined);
+  assertEquals(m.reply, "");
   await nc.close();
 });
 
@@ -541,4 +541,76 @@ Deno.test("basics - no max_payload messages", async () => {
   });
 
   await nc.close();
+});
+
+Deno.test("basics - empty message", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const mp = deferred<Msg>();
+  const sub = nc.subscribe(subj);
+  const _ = (async () => {
+    for await (const m of sub) {
+      mp.resolve(m);
+      break;
+    }
+  })();
+
+  nc.publish(subj);
+  const m = await mp;
+  assertEquals(m.subject, subj);
+  assertEquals(m.data.length, 0);
+  await nc.close();
+});
+
+Deno.test("basics - msg buffers dont overwrite", async () => {
+  const N = 100;
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port }) as NatsConnectionImpl;
+  const sub = nc.subscribe(">");
+  const msgs: Msg[] = [];
+  const _ = (async () => {
+    for await (const m of sub) {
+      msgs.push(m);
+    }
+  })();
+
+  const a = "a".charCodeAt(0);
+  const fill = (n: number, b: Uint8Array) => {
+    const v = n % 26 + a;
+    for (let i = 0; i < b.length; i++) {
+      b[i] = v;
+    }
+  };
+  const td = new TextDecoder();
+  const buf = new Uint8Array(nc.protocol.info.max_payload);
+  for (let i = 0; i < N; i++) {
+    fill(i, buf);
+    const subj = td.decode(buf.subarray(0, 26));
+    nc.publish(subj, buf, { reply: subj });
+    await nc.flush();
+  }
+
+  await nc.drain();
+  await ns.stop();
+
+  const check = (n: number, m: Msg) => {
+    const v = n % 26 + a;
+    assertEquals(m.data.length, nc.protocol.info.max_payload);
+    for (let i = 0; i < m.data.length; i++) {
+      if (m.data[i] !== v) {
+        fail(
+          `failed on iteration ${i} - expected ${String.fromCharCode(v)} got ${
+            String.fromCharCode(m.data[i])
+          }`,
+        );
+      }
+    }
+    assertEquals(m.subject, td.decode(m.data.subarray(0, 26)), "subject check");
+    assertEquals(m.reply, td.decode(m.data.subarray(0, 26)), "reply check");
+  };
+
+  assertEquals(msgs.length, N);
+  for (let i = 0; i < N; i++) {
+    check(i, msgs[i]);
+  }
 });
