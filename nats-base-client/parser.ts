@@ -68,6 +68,15 @@ export interface MsgArg {
   size: number;
 }
 
+function newMsgArg(): MsgArg {
+  const ma = {} as MsgArg;
+  ma.sid = -1;
+  ma.hdr = -1;
+  ma.size = -1;
+
+  return ma;
+}
+
 const td = new TextDecoder();
 
 // This is an almost verbatim port of the Go NATS parser
@@ -78,15 +87,13 @@ export class Parser {
   as = 0;
   drop = 0;
   hdr = 0;
-  ma: MsgArg = {} as MsgArg;
+  ma!: MsgArg;
   argBuf?: Buffer;
   msgBuf?: Buffer;
-  scratch: Buffer;
 
   constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
     this.state = State.OP_START;
-    this.scratch = new Buffer();
   }
 
   parse(buf: Uint8Array): void {
@@ -100,7 +107,7 @@ export class Parser {
             case cc.m:
               this.state = State.OP_M;
               this.hdr = -1;
-              this.ma.hdr = -1;
+              this.ma = newMsgArg();
               break;
             case cc.H:
             case cc.h:

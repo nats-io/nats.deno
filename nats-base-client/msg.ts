@@ -20,35 +20,6 @@ import { MsgArg } from "./parser.ts";
 const td = new TextDecoder();
 
 export class MsgImpl implements Msg {
-  publisher: Publisher;
-  subject: string;
-  reply?: string;
-  sid: number;
-  headers?: MsgHdrs;
-  data: Uint8Array;
-
-  constructor(msg: MsgArg, data: Uint8Array, publisher: Publisher) {
-    this.publisher = publisher;
-    this.subject = td.decode(msg.subject);
-    this.reply = msg.reply ? td.decode(msg.reply) : undefined;
-    this.sid = msg.sid;
-    this.headers = msg.hdr > -1
-      ? MsgHdrsImpl.decode(data.subarray(0, msg.hdr))
-      : undefined;
-    this.data = msg.hdr > -1 ? data.subarray(msg.hdr) : data;
-  }
-
-  // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data: Uint8Array = Empty, headers?: MsgHdrsImpl): boolean {
-    if (this.reply) {
-      this.publisher.publish(this.reply, data, { headers: headers });
-      return true;
-    }
-    return false;
-  }
-}
-
-export class LazyMsgImpl implements Msg {
   _headers?: MsgHdrs;
   _msg: MsgArg;
   _rdata: Uint8Array;
