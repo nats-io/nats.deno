@@ -33,7 +33,6 @@ import {
   deferred,
   Deferred,
   delay,
-  render,
 } from "./util.ts";
 import { Nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
@@ -46,7 +45,6 @@ import { MuxSubscription } from "./muxsubscription.ts";
 import { Request } from "./request.ts";
 import { Heartbeat, PH } from "./heartbeats.ts";
 import {
-  describe,
   Kind,
   MsgArg,
   Parser,
@@ -62,12 +60,6 @@ const PING = /^PING\r\n/i;
 const PONG = /^PONG\r\n/i;
 const SUBRE = /^SUB\s+([^\r\n]+)\r\n/i;
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
-
-export enum ParserState {
-  CLOSED = -1,
-  AWAITING_CONTROL = 0,
-  AWAITING_MSG_PAYLOAD = 1,
-}
 
 export function createInbox(): string {
   return `_INBOX.${nuid.next()}`;
