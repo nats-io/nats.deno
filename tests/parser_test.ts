@@ -303,7 +303,7 @@ Deno.test("parser - split msg", () => {
   p.parse(payload);
   assertEquals(p.state, State.MSG_PAYLOAD);
   assertEquals(p.ma.size, 103);
-  assertEquals(p.msgBuf.length, 103);
+  assertEquals(p.msgBuf.length(), 103);
   p.parse(te.encode("\r\n"));
   assertEquals(p.state, State.OP_START);
   assertEquals(p.msgBuf, undefined);

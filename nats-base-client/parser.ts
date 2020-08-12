@@ -81,12 +81,10 @@ export class Parser {
   ma: MsgArg = {} as MsgArg;
   argBuf?: Buffer;
   msgBuf?: Buffer;
-  scratch: Buffer;
 
   constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
     this.state = State.OP_START;
-    this.scratch = new Buffer();
   }
 
   parse(buf: Uint8Array): void {
@@ -202,7 +200,7 @@ export class Parser {
           break;
         case State.MSG_PAYLOAD:
           if (this.msgBuf) {
-            if (this.msgBuf.length >= this.ma.size) {
+            if (this.msgBuf.length() >= this.ma.size) {
               const data = this.msgBuf.bytes({ copy: false });
               this.dispatcher.push(
                 { kind: Kind.MSG, msg: this.ma, data: data },
@@ -211,7 +209,7 @@ export class Parser {
               this.msgBuf = undefined;
               this.state = State.MSG_END;
             } else {
-              let toCopy = this.ma.size - this.msgBuf.length;
+              let toCopy = this.ma.size - this.msgBuf.length();
               const avail = buf.length - i;
 
               if (avail < toCopy) {
