@@ -31,7 +31,6 @@ export {
 } from "./transport.ts";
 export {
   Connect,
-  ParserState,
   ProtocolHandler,
   INFO,
   createInbox,
