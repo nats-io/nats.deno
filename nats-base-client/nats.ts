@@ -22,7 +22,6 @@ import {
   SubscriptionImpl,
 } from "./subscription.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { Nuid } from "./nuid.ts";
 import {
   ConnectionOptions,
   Subscription,
@@ -37,8 +36,6 @@ import {
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
-
-export const nuid = new Nuid();
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;

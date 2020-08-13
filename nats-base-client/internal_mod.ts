@@ -1,5 +1,5 @@
 export { NatsConnectionImpl } from "./nats.ts";
-export { Nuid } from "./nuid.ts";
+export { Nuid, nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export {
   ConnectionOptions,

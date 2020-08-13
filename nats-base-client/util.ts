@@ -14,7 +14,7 @@
  */
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
-import { ErrorCode, NatsError } from "./mod.ts";
+import { ErrorCode, NatsError } from "./error.ts";
 
 export const CR_LF = "\r\n";
 export const CR_LF_LEN = CR_LF.length;
@@ -181,7 +181,6 @@ export function deferred<T>(): Deferred<T> {
   const p = new Promise<T>((resolve, reject): void => {
     methods = { resolve, reject };
   });
-  //@ts-ignore
   return Object.assign(p, methods) as Deferred<T>;
 }
 

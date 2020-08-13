@@ -1,18 +1,13 @@
 import * as path from "https://deno.land/std@0.63.0/path/mod.ts";
-import { TextProtoReader } from "https://deno.land/std@0.63.0/textproto/mod.ts";
-import { BufReader } from "https://deno.land/std@0.63.0/io/mod.ts";
 import { check } from "./mod.ts";
 import {
   deferred,
   delay,
   timeout,
-  Nuid,
-  DataBuffer,
+  nuid,
   Deferred,
 } from "../../nats-base-client/internal_mod.ts";
 import { assert } from "https://deno.land/std@0.63.0/testing/asserts.ts";
-
-const nuid = new Nuid();
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,

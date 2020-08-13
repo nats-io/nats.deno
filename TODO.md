@@ -13,8 +13,9 @@
 - [X] Remove encoders from client, changing payload signatures to Uint8Arrays only.
 - [ ] Package nuidjs as its own project
 - [ ] Move nats-base-client to its own project
-- [ ] Transport send batching
-- [ ] Transport certificate authentication
+- [-] Transport send batching (current batching seems to perform best)
+- [X] Protocol rewrite
+- [X] Transport certificate authentication (CA is the only currently supported in Deno)
 
 ## BUGS
 

@@ -34,7 +34,7 @@ import {
   Deferred,
   delay,
 } from "./util.ts";
-import { Nuid } from "./nuid.ts";
+import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { Dispatcher, QueuedIterator } from "./queued_iterator.ts";
@@ -51,8 +51,6 @@ import {
   ParserEvent,
 } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
-
-const nuid = new Nuid();
 
 const FLUSH_THRESHOLD = 1024 * 8;
 

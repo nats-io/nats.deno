@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 //@ts-ignore
-import { NatsConnection } from "./nats.ts";
-import { NatsError } from "./mod.ts";
+import { NatsError } from "./error.ts";
 import { MsgHdrs } from "./headers.ts";
 import { Authenticator } from "./authenticator.ts";
 

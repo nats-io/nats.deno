@@ -134,3 +134,5 @@ export class Nuid {
     this.init();
   }
 }
+
+export const nuid = new Nuid();
