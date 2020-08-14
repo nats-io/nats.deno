@@ -154,6 +154,8 @@ export function timeout<T>(ms: number): Timeout<T> {
       }
     };
     methods = { cancel };
+    // node is not a number
+    // @ts-ignore
     timer = setTimeout(() => {
       reject(NatsError.errorForCode(ErrorCode.TIMEOUT));
     }, ms);
@@ -177,7 +179,7 @@ export interface Deferred<T> extends Promise<T> {
 }
 
 export function deferred<T>(): Deferred<T> {
-  let methods;
+  let methods = {};
   const p = new Promise<T>((resolve, reject): void => {
     methods = { resolve, reject };
   });

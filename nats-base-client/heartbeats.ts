@@ -56,6 +56,8 @@ export class Heartbeat {
   }
 
   _schedule() {
+    // node is not a number - we treat this opaquely
+    // @ts-ignore
     this.timer = setTimeout(() => {
       this.ph.dispatchStatus(
         { type: DebugEvents.PING_TIMER, data: `${this.pendings.length + 1}` },
