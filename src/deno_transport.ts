@@ -24,6 +24,8 @@ import {
   render,
   Transport,
   checkOptions,
+  NatsError,
+  ErrorCode,
 } from "../nats-base-client/internal_mod.ts";
 import { TlsOptions } from "../nats-base-client/types.ts";
 
@@ -82,6 +84,9 @@ export class DenoTransport implements Transport {
       }
       return Promise.resolve();
     } catch (err) {
+      err = err.name === "ConnectionRefused"
+        ? NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
+        : err;
       return Promise.reject(err);
     }
   }

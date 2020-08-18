@@ -1,7 +1,20 @@
+/*
+ * Copyright 2020 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import {
   assert,
   assertEquals,
-  assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 import {
@@ -58,9 +71,13 @@ Deno.test("basics - connect servers", async () => {
 });
 
 Deno.test("basics - fail connect", async () => {
-  await assertThrowsAsync(async (): Promise<void> => {
-    await connect({ servers: `127.0.0.1:32001` });
-  });
+  await connect({ servers: `127.0.0.1:32001` })
+    .then(() => {
+      fail();
+    })
+    .catch((err) => {
+      assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
+    });
 });
 
 Deno.test("basics - publish", async () => {
@@ -144,8 +161,8 @@ Deno.test("basics - subscriptions iterate", async () => {
   })();
   nc.publish(subj);
   await nc.flush();
-  await nc.close();
   await lock;
+  await nc.close();
 });
 
 Deno.test("basics - subscriptions pass exact subject to cb", async () => {
@@ -439,7 +456,7 @@ Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => 
   await nc.flush();
   await delay(1000);
 
-  assertEquals(1, sub.getReceived());
+  assertEquals(sub.getReceived(), 1);
   await nc.close();
 });
 

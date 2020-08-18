@@ -145,6 +145,14 @@ Deno.test("auth - user and token is rejected", async () => {
     });
 });
 
+Deno.test("auth - token", async () => {
+  const ns = await NatsServer.start({ authorization: { token: "foo" } });
+  const nc = await connect({ port: ns.port, token: "foo" });
+  await nc.flush();
+  await nc.close();
+  await ns.stop();
+});
+
 Deno.test("auth - nkey", async () => {
   const kp = nkeys.createUser();
   const pk = kp.getPublicKey();
