@@ -100,7 +100,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
 
 export function checkOptions(info: object, options: ConnectionOptions) {
   //@ts-ignore
-  const { proto, headers } = info;
+  const { proto, headers, tls_required } = info;
   if ((proto === undefined || proto < 1) && options.noEcho) {
     throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
   }
@@ -119,5 +119,8 @@ export function checkOptions(info: object, options: ConnectionOptions) {
       "noResponders - requires headers",
       ErrorCode.SERVER_OPTION_NA,
     );
+  }
+  if (options.tls && !tls_required) {
+    throw new NatsError("tls", ErrorCode.SERVER_OPTION_NA);
   }
 }
