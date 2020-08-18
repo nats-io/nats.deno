@@ -23,7 +23,9 @@ const argv = parse(
 
 const opts = { servers: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : "";
-const payload = argv._[1] || "";
+const sc = StringCodec();
+const ps = argv._[1] || "";
+const payload = sc.encode(String(ps));
 
 if (argv.headers) {
   opts.headers = true;
@@ -49,7 +51,6 @@ nc.closed()
     }
   });
 
-const sc = StringCodec();
 const hdrs = argv.headers ? headers() : undefined;
 const sub = nc.subscribe(subject, { queue: argv.q });
 console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
@@ -58,7 +59,7 @@ for await (const m of sub) {
     hdrs.set("sequence", sub.getProcessed().toString());
     hdrs.set("time", Date.now().toString());
   }
-  if (m.respond(argv.e ? m.data : sc.encode(payload), hdrs)) {
+  if (m.respond(argv.e ? m.data : payload, hdrs)) {
     console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.data}`);
   } else {
     console.log(`[${sub.getProcessed()}]: ignored - no reply subject`);

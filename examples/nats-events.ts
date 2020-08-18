@@ -21,7 +21,7 @@ const nc = await connect(opts);
 (async () => {
   console.info(`connected ${nc.getServer()}`);
   for await (const s of nc.status()) {
-    console.info(`${s.type}: ${s.data}`);
+    console.info(`${s.type}: ${JSON.stringify(s.data)}`);
   }
 })().then();
 
