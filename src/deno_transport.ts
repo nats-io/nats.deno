@@ -225,9 +225,9 @@ export class DenoTransport implements Transport {
     this.closeError = err;
     if (!err) {
       try {
-        // this is a noop for the server, but gives us a place to hang
+        // this is a noop but gives us a place to hang
         // a close and ensure that we sent all before closing
-        await this.enqueue(new TextEncoder().encode("+OK\r\n"));
+        await this.enqueue(new TextEncoder().encode(""));
       } catch (err) {
         if (this.options.debug) {
           console.log("transport close terminated with an error", err);

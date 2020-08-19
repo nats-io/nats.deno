@@ -129,9 +129,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       options.servers,
     );
     this.closed = deferred<Error | void>();
-    this.closed.then(() => {
-      this._closed = true;
-    });
     this.parser = new Parser(this);
 
     this.heartbeats = new Heartbeat(
@@ -568,7 +565,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   private _close(err?: Error): Promise<void> {
-    if (this.isClosed()) {
+    if (this._closed) {
       return Promise.resolve();
     }
     this.heartbeats.cancel();
@@ -581,6 +578,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.listeners.forEach((l) => {
       l.stop();
     });
+    this._closed = true;
     return this.transport.close(err)
       .then(() => {
         return this.closed.resolve(err);
