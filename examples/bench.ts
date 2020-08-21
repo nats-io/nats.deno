@@ -4,8 +4,8 @@ import { parse } from "https://deno.land/std@0.63.0/flags/mod.ts";
 import { connect, Empty, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "127.0.0.1:4222",
-  c: 1000000,
-  p: 0,
+  c: 100000,
+  p: 128,
   subject: new Nuid().next(),
 };
 
@@ -30,7 +30,7 @@ const argv = parse(
 
 if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   console.log(
-    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>] [--server server] [--subject <subj>]\n",
+    "usage: bench.ts [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>=128] [--server server] [--subject <subj>]\n",
   );
   Deno.exit(0);
 }
@@ -119,27 +119,68 @@ const req = measures.find((m) => m.name === "req");
 const pub = measures.find((m) => m.name === "pub");
 const sub = measures.find((m) => m.name === "sub");
 
+const stats = nc.stats();
+
 if (pub && sub) {
   const sec = (pub.duration + sub.duration) / 1000;
   const mps = Math.round((argv.c * 2) / sec);
-  console.log(`pubsub ${mps} msgs/sec - [${sec} secs]`);
+  console.log(
+    `pubsub ${humanizeNumber(mps)} msgs/sec - [${sec.toFixed(2)} secs] ~ ${
+      throughput(stats.inBytes + stats.outBytes, sec)
+    }`,
+  );
 }
 if (pub) {
   const sec = pub.duration / 1000;
   const mps = Math.round(argv.c / sec);
-  console.log(`pub    ${mps} msgs/sec - [${sec} secs]`);
+  console.log(
+    `pub    ${humanizeNumber(mps)} msgs/sec - [${sec.toFixed(2)} secs] ~ ${
+      throughput(stats.outBytes, sec)
+    }`,
+  );
 }
 if (sub) {
   const sec = sub.duration / 1000;
   const mps = Math.round(argv.c / sec);
-  console.log(`sub    ${mps} msgs/sec - [${sec} secs]`);
+  console.log(
+    `sub    ${humanizeNumber(mps)} msgs/sec - [${sec.toFixed(2)} secs] ~ ${
+      throughput(stats.inBytes, sec)
+    }`,
+  );
 }
 
 if (req) {
   const sec = req.duration / 1000;
   const mps = Math.round((argv.c * 2) / req.duration);
   const label = argv.async ? "async" : "serial";
-  console.log(`req ${label} ${mps} msgs/sec - [${sec} secs]`);
+  console.log(
+    `req ${label} ${humanizeNumber(mps)} msgs/sec - [${sec.toFixed(2)} secs]`,
+  );
 }
 
+console.table(nc.stats());
+
 await nc.close();
+
+function throughput(bytes: number, seconds: number): string {
+  return humanizeBytes(bytes / seconds);
+}
+
+function humanizeBytes(bytes: number, si = false): string {
+  const base = si ? 1000 : 1024;
+  const pre = si
+    ? ["k", "M", "G", "T", "P", "E"]
+    : ["K", "M", "G", "T", "P", "E"];
+  const post = si ? "iB" : "B";
+
+  if (bytes < base) {
+    return `${bytes.toFixed(2)} ${post}/sec`;
+  }
+  const exp = parseInt(Math.log(bytes) / Math.log(base) + "");
+  let index = parseInt((exp - 1) + "");
+  return `${(bytes / Math.pow(base, exp)).toFixed(2)} ${pre[index]}${post}/sec`;
+}
+
+function humanizeNumber(n: number) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}

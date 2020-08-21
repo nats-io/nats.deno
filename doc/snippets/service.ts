@@ -48,7 +48,7 @@ async function requestHandler(sub: Subscription) {
   let serviced = 0;
   for await (const m of sub) {
     serviced++;
-    if (m.respond(new Date().toISOString())) {
+    if (m.respond(sc.encode(new Date().toISOString()))) {
       console.info(
         `[${serviced}] handled ${m.data ? "- " + sc.decode(m.data) : ""}`,
       );
@@ -74,7 +74,7 @@ async function adminHandler(sub: Subscription) {
         m.respond(sc.encode(`${Date.now() - started}`));
         break;
       case "stop":
-        m.respond("stopping....");
+        m.respond(sc.encode("stopping...."));
         // finish requests by draining the subscription
         await sub.drain();
         // close the connection
