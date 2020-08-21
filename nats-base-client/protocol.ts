@@ -112,6 +112,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   listeners: QueuedIterator<Status>[] = [];
   heartbeats: Heartbeat;
   parser: Parser;
+  outMsgs: number = 0;
+  inMsgs: number = 0;
+  outBytes: number = 0;
+  inBytes: number = 0;
 
   private servers: Servers;
   private server!: Server;
@@ -333,6 +337,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processMsg(msg: MsgArg, data: Uint8Array) {
+    this.inMsgs++;
+    this.inBytes += data.length;
     if (!this.subscriptions.sidCounter) {
       return;
     }
@@ -483,6 +489,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     if (len > this.info.max_payload) {
       throw NatsError.errorForCode((ErrorCode.MAX_PAYLOAD_EXCEEDED));
     }
+    this.outBytes += len;
+    this.outMsgs++;
 
     let proto: string;
     if (options.headers) {

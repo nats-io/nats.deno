@@ -32,6 +32,7 @@ import {
   SubscriptionOptions,
   Status,
   NatsConnection,
+  Stats,
 } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
@@ -215,5 +216,14 @@ export class NatsConnectionImpl implements NatsConnection {
     const iter = new QueuedIterator<Status>();
     this.listeners.push(iter);
     return iter;
+  }
+
+  stats(): Stats {
+    return {
+      inBytes: this.protocol.inBytes,
+      outBytes: this.protocol.outBytes,
+      inMsgs: this.protocol.inMsgs,
+      outMsgs: this.protocol.outMsgs,
+    };
   }
 }

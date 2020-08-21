@@ -71,6 +71,7 @@ export interface NatsConnection {
   isDraining(): boolean;
   getServer(): string;
   status(): AsyncIterable<Status>;
+  stats(): Stats;
 }
 
 export interface ConnectionOptions {
@@ -176,4 +177,11 @@ export interface RequestOptions {
 export interface PublishOptions {
   reply?: string;
   headers?: MsgHdrs;
+}
+
+export interface Stats {
+  inBytes: number;
+  outBytes: number;
+  inMsgs: number;
+  outMsgs: number;
 }
