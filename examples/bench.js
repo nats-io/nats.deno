@@ -1,8 +1,8 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.63.0/flags/mod.ts";
-import { connect, Empty, Nuid } from "../src/mod.ts";
-import { Bench, BenchOpts, Metric } from "../nats-base-client/bench.ts";
+import { connect, Nuid } from "../src/mod.ts";
+import { Bench, Metric } from "../nats-base-client/bench.ts";
 const defaults = {
   s: "127.0.0.1:4222",
   c: 100000,
@@ -42,7 +42,7 @@ const server = argv.server;
 const count = parseInt(argv.count);
 const bytes = parseInt(argv.payload);
 const iters = parseInt(argv.iterations);
-const metrics: Metric[] = [];
+const metrics = [];
 
 for (let i = 0; i < iters; i++) {
   const nc = await connect({ servers: server, debug: argv.debug });
@@ -54,7 +54,7 @@ for (let i = 0; i < iters; i++) {
     sub: argv.sub,
     req: argv.req,
     subject: argv.subject,
-  } as BenchOpts;
+  };
 
   const bench = new Bench(nc, opts);
   const m = await bench.run();
@@ -62,7 +62,7 @@ for (let i = 0; i < iters; i++) {
   await nc.close();
 }
 
-const reducer = (a: Metric, m: Metric) => {
+const reducer = (a, m) => {
   if (a) {
     a.name = m.name;
     a.payload = m.payload;
