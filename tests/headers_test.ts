@@ -5,7 +5,6 @@ import {
   ErrorCode,
   headers,
   RequestOptions,
-  JSONCodec,
   StringCodec,
 } from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
