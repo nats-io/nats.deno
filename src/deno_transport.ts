@@ -82,12 +82,11 @@ export class DenoTransport implements Transport {
       } else {
         this.writer = new BufWriter(this.conn);
       }
-      return Promise.resolve();
     } catch (err) {
       err = err.name === "ConnectionRefused"
         ? NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
         : err;
-      return Promise.reject(err);
+      throw err;
     }
   }
 
@@ -102,9 +101,7 @@ export class DenoTransport implements Transport {
       const c = await this.conn.read(this.buf);
       if (c === null) {
         // EOF
-        return Promise.reject(
-          new Error("socket closed while expecting INFO"),
-        );
+        throw new Error("socket closed while expecting INFO");
       } else if (c) {
         const frame = this.buf.slice(0, c);
         if (this.options.debug) {
@@ -124,9 +121,9 @@ export class DenoTransport implements Transport {
     // expecting the info protocol
     const m = INFO.exec(pm);
     if (!m) {
-      return Promise.reject(new Error("unexpected response from server"));
+      throw new Error("unexpected response from server");
     }
-    return Promise.resolve(JSON.parse(m[1]));
+    return JSON.parse(m[1]);
   }
 
   async startTLS(hostname: string): Promise<void> {
@@ -137,7 +134,6 @@ export class DenoTransport implements Transport {
     );
     this.encrypted = true;
     this.writer = new BufWriter(this.conn);
-    return Promise.resolve();
   }
 
   async *[Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array> {
