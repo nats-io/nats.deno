@@ -193,3 +193,37 @@ export function shuffle(a: any[]): any[] {
   }
   return a;
 }
+
+export class Perf {
+  timers: Map<string, number>;
+  measures: Map<string, number>;
+
+  constructor() {
+    this.timers = new Map();
+    this.measures = new Map();
+  }
+
+  mark(key: string) {
+    this.timers.set(key, Date.now());
+  }
+
+  measure(key: string, startKey: string, endKey: string) {
+    const s = this.timers.get(startKey);
+    if (s === undefined) {
+      throw new Error(`${startKey} is not defined`);
+    }
+    const e = this.timers.get(endKey);
+    if (e === undefined) {
+      throw new Error(`${endKey} is not defined`);
+    }
+    this.measures.set(key, e - s);
+  }
+
+  getEntries(): { name: string; duration: number }[] {
+    const values: { name: string; duration: number }[] = [];
+    this.measures.forEach((v, k) => {
+      values.push({ name: k, duration: v });
+    });
+    return values;
+  }
+}

@@ -72,3 +72,4 @@ export {
 } from "./queued_iterator.ts";
 export { Kind, Parser, ParserEvent, State } from "./parser.ts";
 export { Buffer, MAX_SIZE, readAll, writeAll } from "./buffer.ts";
+export { Bench } from "./bench.ts";
