@@ -112,10 +112,11 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   listeners: QueuedIterator<Status>[] = [];
   heartbeats: Heartbeat;
   parser: Parser;
-  outMsgs: number = 0;
-  inMsgs: number = 0;
-  outBytes: number = 0;
-  inBytes: number = 0;
+  outMsgs = 0;
+  inMsgs = 0;
+  outBytes = 0;
+  inBytes = 0;
+  pendingLimit = FLUSH_THRESHOLD;
 
   private servers: Servers;
   private server!: Server;
@@ -127,6 +128,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.muxSubscriptions = new MuxSubscription();
     this.outbound = new DataBuffer();
     this.pongs = [];
+    //@ts-ignore
+    this.pendingLimit = options.pendingLimit || this.pendingLimit;
     this.servers = new Servers(
       !options.noRandomize,
       //@ts-ignore
@@ -237,42 +240,41 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  dial(srv: Server): Promise<void> {
+  async dial(srv: Server): Promise<void> {
     const pong = this.prepare();
     const timer = timeout(this.options.timeout || 20000);
-    this.transport.connect(srv.hostport(), this.options)
-      .then(() => {
-        (async () => {
-          try {
-            for await (const b of this.transport) {
-              this.parser.parse(b);
-            }
-          } catch (err) {
-            console.log("reader closed", err);
+    try {
+      await this.transport.connect(srv.hostport(), this.options);
+      (async () => {
+        try {
+          for await (const b of this.transport) {
+            this.parser.parse(b);
           }
-        })();
-      })
-      .catch((err: Error) => {
-        pong.reject(err);
-      });
-    return Promise.race([timer, pong])
-      .then(() => {
-        timer.cancel();
-        this.connected = true;
-        this.connectError = undefined;
-        this.sendSubscriptions();
-        this.connectedOnce = true;
-        this.server.didConnect = true;
-        this.server.reconnects = 0;
-        this.infoReceived = true;
-        this.flushPending();
-        this.heartbeats.start();
-      })
-      .catch((err) => {
-        timer.cancel();
-        this.transport?.close(err);
-        throw err;
-      });
+        } catch (err) {
+          console.log("reader closed", err);
+        }
+      })().then();
+    } catch (err) {
+      pong.reject(err);
+    }
+
+    try {
+      await Promise.race([timer, pong]);
+      timer.cancel();
+      this.connected = true;
+      this.connectError = undefined;
+      this.sendSubscriptions();
+      this.connectedOnce = true;
+      this.server.didConnect = true;
+      this.server.reconnects = 0;
+      this.infoReceived = true;
+      this.flushPending();
+      this.heartbeats.start();
+    } catch (err) {
+      timer.cancel();
+      await this.transport?.close(err);
+      throw err;
+    }
   }
 
   async dialLoop(): Promise<void> {
@@ -453,7 +455,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       setTimeout(() => {
         this.flushPending();
       });
-    } else if (this.outbound.size() >= FLUSH_THRESHOLD) {
+    } else if (this.outbound.size() >= this.pendingLimit) {
       this.flushPending();
     }
   }
@@ -572,9 +574,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  private _close(err?: Error): Promise<void> {
+  private async _close(err?: Error): Promise<void> {
     if (this._closed) {
-      return Promise.resolve();
+      return;
     }
     this.heartbeats.cancel();
     if (this.connectError) {
@@ -587,10 +589,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       l.stop();
     });
     this._closed = true;
-    return this.transport.close(err)
-      .then(() => {
-        return this.closed.resolve(err);
-      });
+    await this.transport.close(err);
+    await this.closed.resolve(err);
   }
 
   close(): Promise<void> {
