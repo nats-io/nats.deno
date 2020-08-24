@@ -37,6 +37,18 @@ export class Metric {
       throughput(this.bytes, sec)
     } ${minmax}`;
   }
+
+  toCsv(): string {
+    return `"${this.name}",${
+      new Date(this.date).toISOString()
+    },${this.lang},${this.version},${this.msgs},${this.payload},${this.bytes},${this.duration},${
+      this.async ? this.async : false
+    }\n`;
+  }
+
+  static header(): string {
+    return `Test,Date,Lang,Version,Count,MsgPayload,Bytes,Millis,Async\n`;
+  }
 }
 
 export interface BenchOpts {
