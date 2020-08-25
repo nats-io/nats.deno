@@ -1,6 +1,6 @@
 import { Empty, NatsConnection } from "./types.ts";
 import { nuid } from "./nuid.ts";
-import { Perf } from "./util.ts";
+import { deferred, Perf } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
 export class Metric {
@@ -12,7 +12,7 @@ export class Metric {
   lang!: string;
   version!: string;
   bytes = 0;
-  async?: boolean;
+  asyncRequests?: boolean;
   min?: number;
   max?: number;
 
@@ -25,13 +25,13 @@ export class Metric {
   toString(): string {
     const sec = (this.duration) / 1000;
     const mps = Math.round(this.msgs / sec);
-    const label = this.async ? "async" : "";
+    const label = this.asyncRequests ? "asyncRequests" : "";
     let minmax = "";
     if (this.max) {
       minmax = `${this.min}/${this.max}`;
     }
 
-    return `${this.name}${label ? " [async]" : ""} ${
+    return `${this.name}${label ? " [asyncRequests]" : ""} ${
       humanizeNumber(mps)
     } msgs/sec - [${sec.toFixed(2)} secs] ~ ${
       throughput(this.bytes, sec)
@@ -42,7 +42,7 @@ export class Metric {
     return `"${this.name}",${
       new Date(this.date).toISOString()
     },${this.lang},${this.version},${this.msgs},${this.payload},${this.bytes},${this.duration},${
-      this.async ? this.async : false
+      this.asyncRequests ? this.asyncRequests : false
     }\n`;
   }
 
@@ -52,10 +52,11 @@ export class Metric {
 }
 
 export interface BenchOpts {
+  callbacks?: boolean;
   msgs?: number;
   size?: number;
   subject?: string;
-  async?: boolean;
+  asyncRequests?: boolean;
   pub?: boolean;
   sub?: boolean;
   rep?: boolean;
@@ -64,10 +65,11 @@ export interface BenchOpts {
 
 export class Bench {
   nc: NatsConnection;
+  callbacks = false;
   msgs: number;
   size: number;
   subject: string;
-  async?: boolean;
+  asyncRequests?: boolean;
   pub?: boolean;
   sub?: boolean;
   req?: boolean;
@@ -81,7 +83,7 @@ export class Bench {
       msgs: 100000,
       size: 128,
       subject: "",
-      async: false,
+      asyncRequests: false,
       pub: false,
       sub: false,
       req: false,
@@ -89,10 +91,11 @@ export class Bench {
     },
   ) {
     this.nc = nc;
+    this.callbacks = opts.callbacks || false;
     this.msgs = opts.msgs || 0;
     this.size = opts.size || 0;
     this.subject = opts.subject || nuid.next();
-    this.async = opts.async || false;
+    this.asyncRequests = opts.asyncRequests || false;
     this.pub = opts.pub || false;
     this.sub = opts.sub || false;
     this.req = opts.req || false;
@@ -106,74 +109,6 @@ export class Bench {
   }
 
   async run(): Promise<Metric[]> {
-    //@ts-ignore
-    const { lang, version } = this.nc.protocol.transport;
-    const jobs: Promise<void>[] = [];
-
-    if (this.req) {
-      const sub = this.nc.subscribe(this.subject, { max: this.msgs });
-      const job = (async () => {
-        for await (const m of sub) {
-          m.respond(this.payload);
-        }
-      })();
-      jobs.push(job);
-    }
-
-    if (this.sub) {
-      let first = false;
-      const sub = this.nc.subscribe(this.subject, { max: this.msgs });
-      const job = (async () => {
-        for await (const m of sub) {
-          if (!first) {
-            this.perf.mark("subStart");
-            first = true;
-          }
-        }
-        this.perf.mark("subStop");
-        this.perf.measure("sub", "subStart", "subStop");
-      })();
-      jobs.push(job);
-    }
-
-    if (this.pub) {
-      const job = (async () => {
-        this.perf.mark("pubStart");
-        for (let i = 0; i < this.msgs; i++) {
-          this.nc.publish(this.subject, this.payload);
-        }
-        await this.nc.flush();
-        this.perf.mark("pubStop");
-        this.perf.measure("pub", "pubStart", "pubStop");
-      })();
-      jobs.push(job);
-    }
-
-    if (this.req) {
-      const job = (async () => {
-        if (this.async) {
-          this.perf.mark("reqStart");
-          const a = [];
-          for (let i = 0; i < this.msgs; i++) {
-            a.push(
-              this.nc.request(this.subject, this.payload, { timeout: 20000 }),
-            );
-          }
-          await Promise.all(a);
-          this.perf.mark("reqStop");
-          this.perf.measure("req", "reqStart", "reqStop");
-        } else {
-          this.perf.mark("reqStart");
-          for (let i = 0; i < this.msgs; i++) {
-            await this.nc.request(this.subject);
-          }
-          this.perf.mark("reqStop");
-          this.perf.measure("req", "reqStart", "reqStop");
-        }
-      })();
-      jobs.push(job);
-    }
-
     this.nc.closed()
       .then((err) => {
         if (err) {
@@ -185,7 +120,17 @@ export class Bench {
         }
       });
 
-    await Promise.all(jobs);
+    if (this.callbacks) {
+      await this.runCallbacks();
+    } else {
+      await this.runAsync();
+    }
+    return this.processMetrics();
+  }
+
+  processMetrics(): Metric[] {
+    //@ts-ignore
+    const { lang, version } = this.nc.protocol.transport;
 
     if (this.pub && this.sub) {
       this.perf.measure("pubsub", "pubStart", "subStop");
@@ -245,6 +190,157 @@ export class Bench {
     }
 
     return metrics;
+  }
+
+  async runCallbacks(): Promise<void> {
+    const jobs: Promise<void>[] = [];
+
+    if (this.req) {
+      const d = deferred<void>();
+      jobs.push(d);
+      const sub = this.nc.subscribe(
+        this.subject,
+        {
+          max: this.msgs,
+          callback: (_, m) => {
+            m.respond(this.payload);
+            if (sub.getProcessed() === this.msgs) {
+              d.resolve();
+            }
+          },
+        },
+      );
+    }
+
+    if (this.sub) {
+      const d = deferred<void>();
+      jobs.push(d);
+      let i = 0;
+      const sub = this.nc.subscribe(this.subject, {
+        max: this.msgs,
+        callback: (_, msg) => {
+          i++;
+          if (i === 1) {
+            this.perf.mark("subStart");
+          }
+          if (i === this.msgs) {
+            this.perf.mark("subStop");
+            this.perf.measure("sub", "subStart", "subStop");
+            d.resolve();
+          }
+        },
+      });
+    }
+
+    if (this.pub) {
+      const job = (async () => {
+        this.perf.mark("pubStart");
+        for (let i = 0; i < this.msgs; i++) {
+          this.nc.publish(this.subject, this.payload);
+        }
+        await this.nc.flush();
+        this.perf.mark("pubStop");
+        this.perf.measure("pub", "pubStart", "pubStop");
+      })();
+      jobs.push(job);
+    }
+
+    if (this.req) {
+      const job = (async () => {
+        if (this.asyncRequests) {
+          this.perf.mark("reqStart");
+          const a = [];
+          for (let i = 0; i < this.msgs; i++) {
+            a.push(
+              this.nc.request(this.subject, this.payload, { timeout: 20000 }),
+            );
+          }
+          await Promise.all(a);
+          this.perf.mark("reqStop");
+          this.perf.measure("req", "reqStart", "reqStop");
+        } else {
+          this.perf.mark("reqStart");
+          for (let i = 0; i < this.msgs; i++) {
+            await this.nc.request(this.subject);
+          }
+          this.perf.mark("reqStop");
+          this.perf.measure("req", "reqStart", "reqStop");
+        }
+      })();
+      jobs.push(job);
+    }
+
+    await Promise.all(jobs);
+  }
+
+  async runAsync(): Promise<void> {
+    const jobs: Promise<void>[] = [];
+
+    if (this.req) {
+      const sub = this.nc.subscribe(this.subject, { max: this.msgs });
+      const job = (async () => {
+        for await (const m of sub) {
+          m.respond(this.payload);
+        }
+      })();
+      jobs.push(job);
+    }
+
+    if (this.sub) {
+      let first = false;
+      const sub = this.nc.subscribe(this.subject, { max: this.msgs });
+      const job = (async () => {
+        for await (const m of sub) {
+          if (!first) {
+            this.perf.mark("subStart");
+            first = true;
+          }
+        }
+        this.perf.mark("subStop");
+        this.perf.measure("sub", "subStart", "subStop");
+      })();
+      jobs.push(job);
+    }
+
+    if (this.pub) {
+      const job = (async () => {
+        this.perf.mark("pubStart");
+        for (let i = 0; i < this.msgs; i++) {
+          this.nc.publish(this.subject, this.payload);
+        }
+        await this.nc.flush();
+        this.perf.mark("pubStop");
+        this.perf.measure("pub", "pubStart", "pubStop");
+      })();
+      jobs.push(job);
+    }
+
+    if (this.req) {
+      const job = (async () => {
+        if (this.asyncRequests) {
+          this.perf.mark("reqStart");
+          const a = [];
+          for (let i = 0; i < this.msgs; i++) {
+            a.push(
+              this.nc.request(this.subject, this.payload, { timeout: 20000 }),
+            );
+          }
+          await Promise.all(a);
+          this.perf.mark("reqStop");
+          this.perf.measure("req", "reqStart", "reqStop");
+        } else {
+          this.perf.mark("reqStart");
+          for (let i = 0; i < this.msgs; i++) {
+            await this.nc.request(this.subject);
+          }
+          this.perf.mark("reqStop");
+          this.perf.measure("req", "reqStart", "reqStop");
+        }
+      })();
+      jobs.push(job);
+    }
+
+    await Promise.all(jobs);
   }
 }
 
