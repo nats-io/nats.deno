@@ -29,7 +29,8 @@ const argv = parse(
       "subject",
     ],
     boolean: [
-      "async",
+      "asyncRequests",
+      "callbacks",
       "json",
       "csv",
       "csvheader",
@@ -39,7 +40,7 @@ const argv = parse(
 
 if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req)) {
   console.log(
-    "usage: bench.ts [--json] [--csv] [--csvheader] [--iterations <#loop: 1>] [--pub] [--sub] [--req (--async)] [--count messages:1M] [--payload <#bytes>=128] [--server server] [--subject <subj>]\n",
+    "usage: bench.ts [--json] [--csv] [--csvheader] [--callbacks] [--iterations <#loop: 1>] [--pub] [--sub] [--req (--asyncRequests)] [--count messages:1M] [--payload <#bytes>=128] [--server server] [--subject <subj>]\n",
   );
   Deno.exit(0);
 }
@@ -55,7 +56,8 @@ for (let i = 0; i < iters; i++) {
   const opts = {
     msgs: count,
     size: bytes,
-    async: argv.async,
+    asyncRequests: argv.asyncRequests,
+    callbacks: argv.callbacks,
     pub: argv.pub,
     sub: argv.sub,
     req: argv.req,
