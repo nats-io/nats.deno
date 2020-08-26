@@ -77,6 +77,9 @@ function newMsgArg(): MsgArg {
   return ma;
 }
 
+const ASCII_0 = 48;
+const ASCII_9 = 57;
+
 // This is an almost verbatim port of the Go NATS parser
 // https://github.com/nats-io/nats.go/blob/master/parser.go
 export class Parser {
@@ -657,15 +660,17 @@ export class Parser {
   }
 
   protoParseInt(a: Uint8Array): number {
-    try {
-      const v = parseInt(TD.decode(a));
-      if (isNaN(v)) {
-        return -1;
-      }
-      return v;
-    } catch (err) {
+    if (a.length === 0) {
       return -1;
     }
+    let n = 0;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] < ASCII_0 || a[i] > ASCII_9) {
+        return -1;
+      }
+      n = n * 10 + (a[i] - ASCII_0);
+    }
+    return n;
   }
 }
 
