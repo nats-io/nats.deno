@@ -16,8 +16,7 @@ import { Empty, Msg } from "./types.ts";
 import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { Publisher } from "./protocol.ts";
 import { MsgArg } from "./parser.ts";
-
-const td = new TextDecoder();
+import { TD } from "./encoders.ts";
 
 export class MsgImpl implements Msg {
   _headers?: MsgHdrs;
@@ -37,7 +36,7 @@ export class MsgImpl implements Msg {
     if (this._subject) {
       return this._subject;
     }
-    this._subject = td.decode(this._msg.subject);
+    this._subject = TD.decode(this._msg.subject);
     return this._subject;
   }
 
@@ -45,7 +44,7 @@ export class MsgImpl implements Msg {
     if (this._reply) {
       return this._reply;
     }
-    this._reply = td.decode(this._msg.reply);
+    this._reply = TD.decode(this._msg.reply);
     return this._reply;
   }
 

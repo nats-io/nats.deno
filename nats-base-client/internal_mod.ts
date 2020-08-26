@@ -73,3 +73,4 @@ export {
 export { Kind, Parser, ParserEvent, State } from "./parser.ts";
 export { Buffer, MAX_SIZE, readAll, writeAll } from "./buffer.ts";
 export { Bench } from "./bench.ts";
+export { TE, TD } from "./encoders.ts";

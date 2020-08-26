@@ -14,6 +14,7 @@
  */
 
 import { ErrorCode, NatsError } from "./error.ts";
+import { TE, TD } from "./encoders.ts";
 
 export interface Codec<T> {
   encode(d: T): Uint8Array;
@@ -21,28 +22,24 @@ export interface Codec<T> {
 }
 
 export function StringCodec(): Codec<string> {
-  const te = new TextEncoder();
-  const td = new TextDecoder();
   return {
     encode(d: any): Uint8Array {
-      return te.encode(d);
+      return TE.encode(d);
     },
     decode(a: Uint8Array): any {
-      return td.decode(a);
+      return TD.decode(a);
     },
   };
 }
 
 export function JSONCodec(): Codec<any> {
-  const te = new TextEncoder();
-  const td = new TextDecoder();
   return {
     encode(d: any): Uint8Array {
       try {
         if (d === undefined) {
           d = null;
         }
-        return te.encode(JSON.stringify(d));
+        return TE.encode(JSON.stringify(d));
       } catch (err) {
         throw NatsError.errorForCode(ErrorCode.BAD_JSON, err);
       }
@@ -50,7 +47,7 @@ export function JSONCodec(): Codec<any> {
     //@ts-ignore
     decode(a: Uint8Array): any {
       try {
-        return JSON.parse(td.decode(a));
+        return JSON.parse(TD.decode(a));
       } catch (err) {
         throw NatsError.errorForCode(ErrorCode.BAD_JSON, err);
       }

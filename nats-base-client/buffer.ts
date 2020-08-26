@@ -8,6 +8,8 @@
 // in a browser environment
 
 //@internal
+import { TE } from "./encoders.ts";
+
 export class AssertionError extends Error {
   constructor(msg?: string) {
     super(msg);
@@ -37,8 +39,6 @@ export function assert(cond: unknown, msg = "Assertion failed."): asserts cond {
 const MIN_READ = 32 * 1024;
 
 export const MAX_SIZE = 2 ** 32 - 2;
-
-const te = new TextEncoder();
 
 // `off` is the offset into `dst` where it will at which to begin writing values
 // from `src`.
@@ -160,7 +160,7 @@ export class Buffer implements Reader, Writer {
   }
 
   writeString(s: string): number {
-    return this.write(te.encode(s));
+    return this.write(TE.encode(s));
   }
 
   write(p: Uint8Array): number {

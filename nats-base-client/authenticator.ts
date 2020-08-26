@@ -17,6 +17,7 @@ import {
 } from "./nkeys.ts";
 import { ConnectionOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./mod.ts";
+import { TE, TD } from "./encoders.ts";
 
 export type NoAuth = void;
 
@@ -108,7 +109,7 @@ export function nkeyAuthenticator(
     seed = typeof seed === "function" ? seed() : seed;
     const kp = seed ? nkeys.fromSeed(seed) : undefined;
     const nkey = kp ? kp.getPublicKey() : "";
-    const challenge = new TextEncoder().encode(nonce || "");
+    const challenge = TE.encode(nonce || "");
     const sigBytes = kp !== undefined && nonce ? kp.sign(challenge) : undefined;
     const sig = sigBytes ? nkeys.encode(sigBytes) : "";
     return { nkey, sig };
@@ -146,7 +147,7 @@ export function jwtAuthenticator(
 export function credsAuthenticator(creds: Uint8Array): Authenticator {
   const CREDS =
     /\s*(?:(?:[-]{3,}[^\n]*[-]{3,}\n)(.+)(?:\n\s*[-]{3,}[^\n]*[-]{3,}\n))/ig;
-  const s = new TextDecoder().decode(creds);
+  const s = TD.decode(creds);
   // get the JWT
   let m = CREDS.exec(s);
   if (!m) {
@@ -158,6 +159,6 @@ export function credsAuthenticator(creds: Uint8Array): Authenticator {
   if (!m) {
     throw NatsError.errorForCode(ErrorCode.BAD_CREDS);
   }
-  const seed = new TextEncoder().encode(m[1].trim());
+  const seed = TE.encode(m[1].trim());
   return jwtAuthenticator(jwt, seed);
 }
