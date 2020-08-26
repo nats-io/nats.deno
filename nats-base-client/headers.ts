@@ -16,6 +16,7 @@
 // Heavily inspired by Golang's https://golang.org/src/net/http/header.go
 
 import { ErrorCode, NatsError } from "./error.ts";
+import { TD, TE } from "./encoders.ts";
 
 export interface MsgHdrs extends Iterable<[string, string[]]> {
   get(k: string): string;
@@ -76,7 +77,7 @@ export class MsgHdrsImpl implements MsgHdrs {
 
   static decode(a: Uint8Array): MsgHdrsImpl {
     const mh = new MsgHdrsImpl();
-    const s = new TextDecoder().decode(a);
+    const s = TD.decode(a);
     const lines = s.split(MsgHdrsImpl.CRLF);
     const h = lines[0];
     if (h !== MsgHdrsImpl.HEADER) {
@@ -109,7 +110,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   encode(): Uint8Array {
-    return new TextEncoder().encode(this.toString());
+    return TE.encode(this.toString());
   }
 
   // https://www.ietf.org/rfc/rfc822.txt

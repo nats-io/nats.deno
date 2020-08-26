@@ -21,18 +21,19 @@ import {
   Subscription,
   DEFAULT_PING_INTERVAL,
   DEFAULT_MAX_PING_OUT,
+  Empty,
 } from "./types.ts";
 import { Transport, newTransport } from "./transport.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import {
   CR_LF,
-  buildMessage,
   extend,
   extractProtocolMessage,
   timeout,
   deferred,
   Deferred,
   delay,
+  CRLF,
 } from "./util.ts";
 import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
@@ -51,6 +52,7 @@ import {
   ParserEvent,
 } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
+import { TD, TE } from "./encoders.ts";
 
 const FLUSH_THRESHOLD = 1024 * 8;
 
@@ -361,14 +363,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   async processError(m: Uint8Array) {
-    const s = new TextDecoder().decode(m);
+    const s = TD.decode(m);
     const err = ProtocolHandler.toError(s);
     this.subscriptions.handleError(err);
     await this._close(err);
   }
 
   processPing() {
-    this.transport.send(buildMessage(`PONG${CR_LF}`));
+    this.transport.send(TE.encode(`PONG${CR_LF}`));
   }
 
   processPong() {
@@ -380,7 +382,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processInfo(m: Uint8Array) {
-    this.info = JSON.parse(new TextDecoder().decode(m));
+    this.info = JSON.parse(TD.decode(m));
     const updates = this.servers.update(this.info);
     if (!this.infoReceived) {
       // send connect
@@ -394,10 +396,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
         const cs = JSON.stringify(c);
         this.transport.send(
-          buildMessage(`CONNECT ${cs}${CR_LF}`),
+          TE.encode(`CONNECT ${cs}${CR_LF}`),
         );
         this.transport.send(
-          buildMessage(`PING${CR_LF}`),
+          TE.encode(`PING${CR_LF}`),
         );
       } catch (err) {
         this._close(
@@ -442,16 +444,17 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  sendCommand(cmd: string | Uint8Array) {
+  sendCommand(cmd: (string | Uint8Array), ...payloads: Uint8Array[]) {
+    const len = this.outbound.length();
     let buf: Uint8Array;
     if (typeof cmd === "string") {
-      buf = new TextEncoder().encode(cmd);
+      buf = TE.encode(cmd);
     } else {
       buf = cmd as Uint8Array;
     }
-    this.outbound.fill(buf);
+    this.outbound.fill(buf, ...payloads);
 
-    if (this.outbound.length() === 1) {
+    if (len === 0) {
       setTimeout(() => {
         this.flushPending();
       });
@@ -476,16 +479,16 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     options = options || {};
     options.reply = options.reply || "";
 
+    let headers = Empty;
     let hlen = 0;
     if (options.headers) {
       if (!this.options.headers) {
         throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
       }
       const hdrs = options.headers as MsgHdrsImpl;
-      const h = hdrs.encode();
-      data = DataBuffer.concat(h, data);
-      len = data.length;
-      hlen = h.length;
+      headers = hdrs.encode();
+      hlen = headers.length;
+      len = data.length + hlen;
     }
 
     if (len > this.info.max_payload) {
@@ -497,19 +500,19 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     let proto: string;
     if (options.headers) {
       if (options.reply) {
-        proto = `HPUB ${subject} ${options.reply} ${hlen} ${len}\r\n`;
+        proto = `HPUB ${subject} ${options.reply} ${hlen} ${len}${CR_LF}`;
       } else {
         proto = `HPUB ${subject} ${hlen} ${len}\r\n`;
       }
+      this.sendCommand(proto, headers, data, CRLF);
     } else {
       if (options.reply) {
         proto = `PUB ${subject} ${options.reply} ${len}\r\n`;
       } else {
         proto = `PUB ${subject} ${len}\r\n`;
       }
+      this.sendCommand(proto, data, CRLF);
     }
-
-    this.sendCommand(buildMessage(proto, data));
   }
 
   request(r: Request): Request {
@@ -543,9 +546,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return;
     }
     if (max) {
-      this.sendCommand(`UNSUB ${s.sid} ${max}\r\n`);
+      this.sendCommand(`UNSUB ${s.sid} ${max}${CR_LF}`);
     } else {
-      this.sendCommand(`UNSUB ${s.sid}\r\n`);
+      this.sendCommand(`UNSUB ${s.sid}${CR_LF}`);
     }
     s.max = max;
   }
@@ -564,13 +567,13 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.subscriptions.all().forEach((s) => {
       const sub = s as SubscriptionImpl;
       if (sub.queue) {
-        cmds.push(`SUB ${sub.subject} ${sub.queue} ${sub.sid} ${CR_LF}`);
+        cmds.push(`SUB ${sub.subject} ${sub.queue} ${sub.sid}${CR_LF}`);
       } else {
-        cmds.push(`SUB ${sub.subject} ${sub.sid} ${CR_LF}`);
+        cmds.push(`SUB ${sub.subject} ${sub.sid}${CR_LF}`);
       }
     });
     if (cmds.length) {
-      this.transport.send(buildMessage(cmds.join("")));
+      this.transport.send(TE.encode(cmds.join("")));
     }
   }
 

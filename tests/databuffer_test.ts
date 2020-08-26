@@ -43,3 +43,15 @@ Deno.test("databuffer - from empty", () => {
   let a = DataBuffer.fromAscii(undefined);
   assertEquals(0, a.byteLength);
 });
+
+Deno.test("databuffer - multi-fill", () => {
+  const buf = new DataBuffer();
+  const te = new TextEncoder();
+  buf.fill(te.encode("zero"));
+  assertEquals(buf.length(), 1);
+  assertEquals(buf.byteLength, 4);
+
+  buf.fill(te.encode("one"), te.encode("two"));
+  assertEquals(buf.length(), 3);
+  assertEquals(buf.byteLength, 10);
+});

@@ -26,6 +26,7 @@ import {
   checkOptions,
   NatsError,
   ErrorCode,
+  TE,
 } from "../nats-base-client/internal_mod.ts";
 import { TlsOptions } from "../nats-base-client/types.ts";
 
@@ -223,7 +224,7 @@ export class DenoTransport implements Transport {
       try {
         // this is a noop but gives us a place to hang
         // a close and ensure that we sent all before closing
-        await this.enqueue(new TextEncoder().encode(""));
+        await this.enqueue(TE.encode(""));
       } catch (err) {
         if (this.options.debug) {
           console.log("transport close terminated with an error", err);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+import { TD, TE } from "./encoders.ts";
+
 export class DataBuffer {
   buffers: Uint8Array[] = [];
   byteLength: number = 0;
@@ -35,11 +37,11 @@ export class DataBuffer {
     if (!m) {
       m = "";
     }
-    return new TextEncoder().encode(m);
+    return TE.encode(m);
   }
 
   static toAscii(a: Uint8Array): string {
-    return new TextDecoder().decode(a);
+    return TD.decode(a);
   }
 
   pack(): void {
@@ -69,10 +71,16 @@ export class DataBuffer {
     return new Uint8Array(0);
   }
 
-  fill(a: Uint8Array): void {
+  fill(a: Uint8Array, ...bufs: Uint8Array[]): void {
     if (a) {
       this.buffers.push(a);
       this.byteLength += a.length;
+    }
+    for (let i = 0; i < bufs.length; i++) {
+      if (bufs[i] && bufs[i].length) {
+        this.buffers.push(bufs[i]);
+        this.byteLength += bufs[i].length;
+      }
     }
   }
 

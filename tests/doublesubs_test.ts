@@ -94,7 +94,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   let count = 0;
   const subs: string[] = [];
-  const sub = /\[SUB (\S+) \d ]/;
+  const sub = /\[SUB (\S+) \d]/;
   log.split("\n").forEach((s) => {
     const m = sub.exec(s);
     if (m) {

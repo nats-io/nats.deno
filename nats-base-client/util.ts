@@ -15,6 +15,7 @@
 //@ts-ignore
 import { DataBuffer } from "./databuffer.ts";
 import { ErrorCode, NatsError } from "./error.ts";
+import { TD } from "./encoders.ts";
 
 export const CR_LF = "\r\n";
 export const CR_LF_LEN = CR_LF.length;
@@ -42,17 +43,9 @@ export function extractProtocolMessage(a: Uint8Array): string {
   if (len) {
     let ba = new Uint8Array(a);
     let out = ba.slice(0, len);
-    return new TextDecoder().decode(out);
+    return TD.decode(out);
   }
   return "";
-}
-
-export function buildMessage(protocol: string, a?: Uint8Array): Uint8Array {
-  let msg = DataBuffer.fromAscii(protocol);
-  if (a) {
-    msg = DataBuffer.concat(msg, a, CRLF);
-  }
-  return msg;
 }
 
 export function extend(a: any, ...b: any[]): any {
@@ -135,7 +128,7 @@ export function pending(): Pending {
 export function render(frame: Uint8Array): string {
   const cr = "␍";
   const lf = "␊";
-  return new TextDecoder().decode(frame)
+  return TD.decode(frame)
     .replace(/\n/g, lf)
     .replace(/\r/g, cr);
 }

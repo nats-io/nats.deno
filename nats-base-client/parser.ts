@@ -15,6 +15,7 @@
 
 import { Dispatcher } from "./queued_iterator.ts";
 import { Buffer } from "./buffer.ts";
+import { TD } from "./encoders.ts";
 
 export enum Kind {
   OK,
@@ -32,7 +33,6 @@ export interface ParserEvent {
 }
 
 export function describe(e: ParserEvent): string {
-  const td = new TextDecoder();
   let ks: string;
   let data = "";
 
@@ -45,7 +45,7 @@ export function describe(e: ParserEvent): string {
       break;
     case Kind.ERR:
       ks = "ERR";
-      data = td.decode(e.data);
+      data = TD.decode(e.data);
       break;
     case Kind.PING:
       ks = "PING";
@@ -55,7 +55,7 @@ export function describe(e: ParserEvent): string {
       break;
     case Kind.INFO:
       ks = "INFO";
-      data = td.decode(e.data);
+      data = TD.decode(e.data);
   }
   return `${ks}: ${data}`;
 }
@@ -76,8 +76,6 @@ function newMsgArg(): MsgArg {
 
   return ma;
 }
-
-const td = new TextDecoder();
 
 // This is an almost verbatim port of the Go NATS parser
 // https://github.com/nats-io/nats.go/blob/master/parser.go
@@ -597,7 +595,7 @@ export class Parser {
       label = `${label} [${this.state}]`;
     }
 
-    return new Error(`${label}: ${td.decode(data)}`);
+    return new Error(`${label}: ${TD.decode(data)}`);
   }
 
   processHeaderMsgArgs(arg: Uint8Array): void {
@@ -660,7 +658,7 @@ export class Parser {
 
   protoParseInt(a: Uint8Array): number {
     try {
-      const v = parseInt(td.decode(a));
+      const v = parseInt(TD.decode(a));
       if (isNaN(v)) {
         return -1;
       }
