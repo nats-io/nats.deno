@@ -44,6 +44,11 @@ export class DataBuffer {
     return TD.decode(a);
   }
 
+  reset(): void {
+    this.buffers.length = 0;
+    this.byteLength = 0;
+  }
+
   pack(): void {
     if (this.buffers.length > 1) {
       let v = this.buffers.splice(0, this.buffers.length);
