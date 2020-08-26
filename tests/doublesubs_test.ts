@@ -83,9 +83,10 @@ async function runDoubleSubsTest(tls: boolean) {
   await reconnected;
   await nc.flush();
 
-  assertEquals(foo.getReceived(), 1);
-  assertEquals(bar.getReceived(), 1);
-  assertEquals(baz.getReceived(), 1);
+  // pubs are stripped
+  assertEquals(foo.getReceived(), 0);
+  assertEquals(bar.getReceived(), 0);
+  assertEquals(baz.getReceived(), 0);
 
   await nc.close();
   await srv.stop();

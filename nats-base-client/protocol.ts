@@ -148,23 +148,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   resetOutbound(): void {
-    const pending = this.outbound;
-    this.outbound = new DataBuffer();
-    // strip any pings/pongs/subs we have
-    pending.buffers.forEach((buf) => {
-      const m = extractProtocolMessage(buf);
-      if (PING.exec(m)) {
-        return;
-      }
-      if (SUBRE.exec(m)) {
-        return;
-      }
-      if (PONG.exec(m)) {
-        return;
-      }
-      this.outbound.fill(buf);
-    });
-
+    this.outbound.reset();
     const pongs = this.pongs;
     this.pongs = [];
     // reject the pongs
