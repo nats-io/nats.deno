@@ -17,6 +17,7 @@ import { Empty, NatsConnection } from "./types.ts";
 import { nuid } from "./nuid.ts";
 import { deferred, Perf } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
+import { NatsConnectionImpl } from "./nats.ts";
 
 export class Metric {
   name: string;
@@ -144,8 +145,8 @@ export class Bench {
   }
 
   processMetrics(): Metric[] {
-    //@ts-ignore
-    const { lang, version } = this.nc.protocol.transport;
+    const nc = this.nc as NatsConnectionImpl;
+    const { lang, version } = nc.protocol.transport;
 
     if (this.pub && this.sub) {
       this.perf.measure("pubsub", "pubStart", "subStop");
