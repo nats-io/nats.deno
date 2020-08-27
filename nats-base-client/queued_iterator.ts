@@ -40,7 +40,9 @@ export class QueuedIterator<T> implements Dispatcher<T> {
 
   async *iterate(): AsyncIterableIterator<T> {
     while (true) {
-      await this.signal;
+      if (this.yields.length === 0) {
+        await this.signal;
+      }
       if (this.err) {
         throw this.err;
       }
@@ -59,13 +61,8 @@ export class QueuedIterator<T> implements Dispatcher<T> {
       }
       if (this.done) {
         break;
-      } else {
+      } else if (this.yields.length === 0) {
         this.signal = deferred();
-        // if we were paused push's resolve was noop
-        // self resolve
-        if (this.yields.length) {
-          this.signal.resolve();
-        }
       }
     }
   }
