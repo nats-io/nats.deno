@@ -563,7 +563,7 @@ export class Parser {
       }
     }
     if (start >= 0) {
-      args.push(arg.slice(start));
+      args.push(arg.subarray(start));
     }
 
     switch (args.length) {
