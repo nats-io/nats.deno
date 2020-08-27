@@ -55,7 +55,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
       // yielding could have paused and microtask
       // could have added messages. Prevent allocations
       // if possible
-      if(this.done) {
+      if (this.done) {
         break;
       } else if (this.yields.length === 0) {
         yields.length = 0;

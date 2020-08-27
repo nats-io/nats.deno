@@ -28,7 +28,6 @@ import { ErrorCode, NatsError } from "./error.ts";
 import {
   CR_LF,
   extend,
-  extractProtocolMessage,
   timeout,
   deferred,
   Deferred,
@@ -52,18 +51,18 @@ import {
   ParserEvent,
 } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
-import { TD, TE } from "./encoders.ts";
+import { fastEncoder, fastDecoder } from "./encoders.ts";
 
 const FLUSH_THRESHOLD = 1024 * 8;
 
-const PING = /^PING\r\n/i;
-const PONG = /^PONG\r\n/i;
-const SUBRE = /^SUB\s+([^\r\n]+)\r\n/i;
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
 export function createInbox(): string {
   return `_INBOX.${nuid.next()}`;
 }
+
+const PONG_CMD = fastEncoder("PONG\r\n");
+const PING_CMD = fastEncoder("PING\r\n");
 
 export class Connect {
   echo?: boolean;
@@ -347,14 +346,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   async processError(m: Uint8Array) {
-    const s = TD.decode(m);
+    const s = fastDecoder(m);
     const err = ProtocolHandler.toError(s);
     this.subscriptions.handleError(err);
     await this._close(err);
   }
 
   processPing() {
-    this.transport.send(TE.encode(`PONG${CR_LF}`));
+    this.transport.send(PONG_CMD);
   }
 
   processPong() {
@@ -366,7 +365,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processInfo(m: Uint8Array) {
-    this.info = JSON.parse(TD.decode(m));
+    this.info = JSON.parse(fastDecoder(m));
     const updates = this.servers.update(this.info);
     if (!this.infoReceived) {
       // send connect
@@ -380,11 +379,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
         const cs = JSON.stringify(c);
         this.transport.send(
-          TE.encode(`CONNECT ${cs}${CR_LF}`),
+          fastEncoder(`CONNECT ${cs}${CR_LF}`),
         );
-        this.transport.send(
-          TE.encode(`PING${CR_LF}`),
-        );
+        this.transport.send(PING_CMD);
       } catch (err) {
         this._close(
           NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION, err),
@@ -432,7 +429,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const len = this.outbound.length();
     let buf: Uint8Array;
     if (typeof cmd === "string") {
-      buf = TE.encode(cmd);
+      buf = fastEncoder(cmd);
     } else {
       buf = cmd as Uint8Array;
     }
@@ -542,7 +539,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       p = deferred<void>();
     }
     this.pongs.push(p);
-    this.sendCommand(`PING${CR_LF}`);
+    this.sendCommand(PING_CMD);
     return p;
   }
 
@@ -557,7 +554,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     });
     if (cmds.length) {
-      this.transport.send(TE.encode(cmds.join("")));
+      this.transport.send(fastEncoder(cmds.join("")));
     }
   }
 
