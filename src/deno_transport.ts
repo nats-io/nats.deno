@@ -104,7 +104,7 @@ export class DenoTransport implements Transport {
         // EOF
         throw new Error("socket closed while expecting INFO");
       } else if (c) {
-        const frame = this.buf.slice(0, c);
+        const frame = this.buf.subarray(0, c);
         if (this.options.debug) {
           console.info(`> ${render(frame)}`);
         }
@@ -142,15 +142,15 @@ export class DenoTransport implements Transport {
     // yield what we initially read
     yield this.buf;
 
-    this.buf = new Uint8Array(64 * 1024);
     while (!this.done) {
       try {
+        this.buf = new Uint8Array(64 * 1024);
         let c = await this.conn.read(this.buf);
         if (c === null) {
           break;
         }
         if (c) {
-          const frame = this.buf.slice(0, c);
+          const frame = this.buf.subarray(0, c);
           if (this.options.debug) {
             console.info(`> ${render(frame)}`);
           }

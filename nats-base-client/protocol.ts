@@ -53,7 +53,7 @@ import {
 import { MsgImpl } from "./msg.ts";
 import { fastEncoder, fastDecoder } from "./encoders.ts";
 
-const FLUSH_THRESHOLD = 1024 * 8;
+const FLUSH_THRESHOLD = 1024 * 32;
 
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
