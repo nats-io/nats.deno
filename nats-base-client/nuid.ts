@@ -28,13 +28,9 @@ const cryptoObj = initCrypto();
 
 function initCrypto() {
   let cryptoObj = null;
-  if (globalThis) {
+  if (typeof globalThis !== "undefined") {
     if ("crypto" in globalThis && globalThis.crypto.getRandomValues) {
       cryptoObj = globalThis.crypto;
-    } // @ts-ignore
-    else if ("msCrypto" in globalThis && globalThis.msCrypto.getRandomValues) {
-      //@ts-ignore
-      cryptoObj = globalThis.msCrypto;
     }
   }
   if (!cryptoObj) {
@@ -42,7 +38,7 @@ function initCrypto() {
     cryptoObj = {
       getRandomValues: function (array: Uint8Array) {
         for (let i = 0; i < array.length; i++) {
-          array[i] = Math.floor(Math.random() * (255));
+          array[i] = Math.floor(Math.random() * 255);
         }
       },
     };
