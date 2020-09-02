@@ -51,8 +51,14 @@ export class DataBuffer {
 
   pack(): void {
     if (this.buffers.length > 1) {
-      let v = this.buffers.splice(0, this.buffers.length);
-      this.buffers.push(DataBuffer.concat(...v));
+      let v = new Uint8Array(this.byteLength);
+      let index = 0;
+      for (let i = 0; i < this.buffers.length; i++) {
+        v.set(this.buffers[i], index);
+        index += this.buffers[i].length;
+      }
+      this.buffers.length = 0;
+      this.buffers.push(v);
     }
   }
 
@@ -65,9 +71,9 @@ export class DataBuffer {
         if (n === undefined || n > max) {
           n = max;
         }
-        let d = v.slice(0, n);
+        let d = v.subarray(0, n);
         if (max > n) {
-          this.buffers.push(v.slice(n));
+          this.buffers.push(v.subarray(n));
         }
         this.byteLength = max - n;
         return d;
