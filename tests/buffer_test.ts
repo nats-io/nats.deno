@@ -13,7 +13,7 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 import {
-  Buffer,
+  DenoBuffer,
   MAX_SIZE,
   readAll,
   writeAll,
@@ -37,7 +37,7 @@ function init(): void {
   }
 }
 
-function check(buf: Buffer, s: string): void {
+function check(buf: DenoBuffer, s: string): void {
   const bytes = buf.bytes();
   assertEquals(buf.length, bytes.byteLength);
   const decoder = new TextDecoder();
@@ -50,7 +50,7 @@ function check(buf: Buffer, s: string): void {
 // The initial contents of buf corresponds to the string s;
 // the result is the final contents of buf returned as a string.
 function fillBytes(
-  buf: Buffer,
+  buf: DenoBuffer,
   s: string,
   n: number,
   fub: Uint8Array,
@@ -69,7 +69,7 @@ function fillBytes(
 // Empty buf through repeated reads into fub.
 // The initial contents of buf corresponds to the string s.
 function empty(
-  buf: Buffer,
+  buf: DenoBuffer,
   s: string,
   fub: Uint8Array,
 ): void {
@@ -96,7 +96,7 @@ Deno.test("buffer - new buffer", () => {
   init();
   assert(testBytes);
   assert(testString);
-  const buf = new Buffer(testBytes.buffer as ArrayBuffer);
+  const buf = new DenoBuffer(testBytes.buffer as ArrayBuffer);
   check(buf, testString);
 });
 
@@ -104,7 +104,7 @@ Deno.test("buffer - basic operations", () => {
   init();
   assert(testBytes);
   assert(testString);
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   for (let i = 0; i < 5; i++) {
     check(buf, "");
 
@@ -141,14 +141,14 @@ Deno.test("buffer - read/write byte", () => {
   init();
   assert(testBytes);
   assert(testString);
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   buf.writeByte("a".charCodeAt(0));
   const a = String.fromCharCode(buf.readByte()!);
   assertEquals(a, "a");
 });
 
 Deno.test("buffer - write string", () => {
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   const s = "MSG a 1 b 6\r\nfoobar";
   buf.writeString(s);
   const rs = new TextDecoder().decode(buf.bytes());
@@ -156,7 +156,7 @@ Deno.test("buffer - write string", () => {
 });
 
 Deno.test("buffer - write empty string", () => {
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   buf.writeString("");
   assertEquals(buf.length, 0);
   assertEquals(buf.capacity, 0);
@@ -165,7 +165,7 @@ Deno.test("buffer - write empty string", () => {
 Deno.test("buffer - read empty at EOF", () => {
   // check that EOF of 'buf' is not reached (even though it's empty) if
   // results are written to buffer that has 0 length (ie. it can't store any data)
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   const zeroLengthTmp = new Uint8Array(0);
   const result = buf.read(zeroLengthTmp);
   assertEquals(result, 0);
@@ -173,7 +173,7 @@ Deno.test("buffer - read empty at EOF", () => {
 
 Deno.test("buffer - large byte writes", () => {
   init();
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   const limit = 9;
   for (let i = 3; i < limit; i += 3) {
     const s = fillBytes(buf, "", 5, testBytes!);
@@ -187,7 +187,7 @@ Deno.test("buffer - too large byte writes", () => {
   const tmp = new Uint8Array(72);
   const growLen = Number.MAX_VALUE;
   const xBytes = repeat("x", 0);
-  const buf = new Buffer(xBytes.buffer as ArrayBuffer);
+  const buf = new DenoBuffer(xBytes.buffer as ArrayBuffer);
   buf.read(tmp);
 
   assertThrows(
@@ -204,7 +204,7 @@ Deno.test("buffer - grow write max buffer", () => {
   const capacities = [MAX_SIZE, MAX_SIZE - 1];
   for (const capacity of capacities) {
     let written = 0;
-    const buf = new Buffer();
+    const buf = new DenoBuffer();
     const writes = Math.floor(capacity / bufSize);
     for (let i = 0; i < writes; i++) {
       written += buf.write(repeat("x", bufSize));
@@ -219,8 +219,8 @@ Deno.test("buffer - grow write max buffer", () => {
 });
 
 Deno.test("buffer - grow read close max buffer plus 1", () => {
-  const reader = new Buffer(new ArrayBuffer(MAX_SIZE + 1));
-  const buf = new Buffer();
+  const reader = new DenoBuffer(new ArrayBuffer(MAX_SIZE + 1));
+  const buf = new DenoBuffer();
 
   assertThrows(
     () => {
@@ -234,8 +234,8 @@ Deno.test("buffer - grow read close max buffer plus 1", () => {
 Deno.test("buffer - grow read close to max buffer", () => {
   const capacities = [MAX_SIZE, MAX_SIZE - 1];
   for (const capacity of capacities) {
-    const reader = new Buffer(new ArrayBuffer(capacity));
-    const buf = new Buffer();
+    const reader = new DenoBuffer(new ArrayBuffer(capacity));
+    const buf = new DenoBuffer();
     buf.readFrom(reader);
 
     assertEquals(buf.length, capacity);
@@ -245,8 +245,8 @@ Deno.test("buffer - grow read close to max buffer", () => {
 Deno.test("buffer - read close to max buffer with initial grow", () => {
   const capacities = [MAX_SIZE, MAX_SIZE - 1, MAX_SIZE - 512];
   for (const capacity of capacities) {
-    const reader = new Buffer(new ArrayBuffer(capacity));
-    const buf = new Buffer();
+    const reader = new DenoBuffer(new ArrayBuffer(capacity));
+    const buf = new DenoBuffer();
     buf.grow(MAX_SIZE);
     buf.readFrom(reader);
     assertEquals(buf.length, capacity);
@@ -257,7 +257,7 @@ Deno.test("buffer - large byte reads", () => {
   init();
   assert(testBytes);
   assert(testString);
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   for (let i = 3; i < 30; i += 3) {
     const n = Math.floor(testBytes.byteLength / i);
     const s = fillBytes(buf, "", 5, testBytes.subarray(0, n));
@@ -267,7 +267,7 @@ Deno.test("buffer - large byte reads", () => {
 });
 
 Deno.test("buffer - cap with pre allocated slice", () => {
-  const buf = new Buffer(new ArrayBuffer(10));
+  const buf = new DenoBuffer(new ArrayBuffer(10));
   assertEquals(buf.capacity, 10);
 });
 
@@ -275,7 +275,7 @@ Deno.test("buffer - read from sync", () => {
   init();
   assert(testBytes);
   assert(testString);
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   for (let i = 3; i < 30; i += 3) {
     const s = fillBytes(
       buf,
@@ -283,13 +283,13 @@ Deno.test("buffer - read from sync", () => {
       5,
       testBytes.subarray(0, Math.floor(testBytes.byteLength / i)),
     );
-    const b = new Buffer();
+    const b = new DenoBuffer();
     b.readFrom(buf);
     const fub = new Uint8Array(testString.length);
     empty(b, s, fub);
   }
   assertThrows(function () {
-    new Buffer().readFrom(null!);
+    new DenoBuffer().readFrom(null!);
   });
 });
 
@@ -298,7 +298,7 @@ Deno.test("buffer - test grow", () => {
   for (const startLen of [0, 100, 1000, 10000, 100000]) {
     const xBytes = repeat("x", startLen);
     for (const growLen of [0, 100, 1000, 10000, 100000]) {
-      const buf = new Buffer(xBytes.buffer as ArrayBuffer);
+      const buf = new DenoBuffer(xBytes.buffer as ArrayBuffer);
       // If we read, this affects buf.off, which is good to test.
       const nread = (buf.read(tmp)) ?? 0;
       buf.grow(growLen);
@@ -320,7 +320,7 @@ Deno.test("buffer - test grow", () => {
 Deno.test("buffer - read all", () => {
   init();
   assert(testBytes);
-  const reader = new Buffer(testBytes.buffer as ArrayBuffer);
+  const reader = new DenoBuffer(testBytes.buffer as ArrayBuffer);
   const actualBytes = readAll(reader);
   assertEquals(testBytes.byteLength, actualBytes.byteLength);
   for (let i = 0; i < testBytes.length; ++i) {
@@ -331,7 +331,7 @@ Deno.test("buffer - read all", () => {
 Deno.test("buffer - write all", () => {
   init();
   assert(testBytes);
-  const writer = new Buffer();
+  const writer = new DenoBuffer();
   writeAll(writer, testBytes);
   const actualBytes = writer.bytes();
   assertEquals(testBytes.byteLength, actualBytes.byteLength);
@@ -346,10 +346,10 @@ Deno.test("buffer - bytes array buffer length", () => {
   for (const arg of args) {
     const bufSize = 64 * 1024;
     const bytes = new TextEncoder().encode("a".repeat(bufSize));
-    const reader = new Buffer();
+    const reader = new DenoBuffer();
     writeAll(reader, bytes);
 
-    const writer = new Buffer();
+    const writer = new DenoBuffer();
     writer.readFrom(reader);
     const actualBytes = writer.bytes(arg);
 
@@ -362,10 +362,10 @@ Deno.test("buffer - bytes array buffer length", () => {
 Deno.test("buffer - bytes copy false", () => {
   const bufSize = 64 * 1024;
   const bytes = new TextEncoder().encode("a".repeat(bufSize));
-  const reader = new Buffer();
+  const reader = new DenoBuffer();
   writeAll(reader, bytes);
 
-  const writer = new Buffer();
+  const writer = new DenoBuffer();
   writer.readFrom(reader);
   const actualBytes = writer.bytes({ copy: false });
 
@@ -377,10 +377,10 @@ Deno.test("buffer - bytes copy false", () => {
 Deno.test("buffer - bytes copy false grow exact bytes", () => {
   const bufSize = 64 * 1024;
   const bytes = new TextEncoder().encode("a".repeat(bufSize));
-  const reader = new Buffer();
+  const reader = new DenoBuffer();
   writeAll(reader, bytes);
 
-  const writer = new Buffer();
+  const writer = new DenoBuffer();
   writer.grow(bufSize);
   writer.readFrom(reader);
   const actualBytes = writer.bytes({ copy: false });

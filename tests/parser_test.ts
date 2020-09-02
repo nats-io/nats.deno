@@ -21,7 +21,7 @@ import {
   Dispatcher,
   headers,
   MsgHdrsImpl,
-  Buffer,
+  DenoBuffer,
   Empty,
   Msg,
   MsgImpl,
@@ -466,7 +466,7 @@ function parserClobberTest(hdrs: boolean = false): void {
     }
   };
 
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   const N = 100;
   for (let i = 0; i < N; i++) {
     buf.reset();

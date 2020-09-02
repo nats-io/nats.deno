@@ -72,7 +72,7 @@ export function append(origin: Uint8Array, b: number): Uint8Array {
   return concat(origin, Uint8Array.of(b));
 }
 
-export class Buffer implements Reader, Writer {
+export class DenoBuffer implements Reader, Writer {
   _buf: Uint8Array; // contents are the bytes _buf[off : len(_buf)]
   _off = 0; // read at _buf[off], write at _buf[_buf.byteLength]
 
@@ -234,7 +234,7 @@ export class Buffer implements Reader, Writer {
 }
 
 export function readAll(r: Reader): Uint8Array {
-  const buf = new Buffer();
+  const buf = new DenoBuffer();
   buf.readFrom(r);
   return buf.bytes();
 }
