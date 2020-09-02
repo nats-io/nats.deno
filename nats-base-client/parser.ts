@@ -14,7 +14,7 @@
  */
 
 import { Dispatcher } from "./queued_iterator.ts";
-import { Buffer } from "./buffer.ts";
+import { DenoBuffer } from "./denobuffer.ts";
 import { TD } from "./encoders.ts";
 
 export enum Kind {
@@ -89,8 +89,8 @@ export class Parser {
   drop = 0;
   hdr = 0;
   ma!: MsgArg;
-  argBuf?: Buffer;
-  msgBuf?: Buffer;
+  argBuf?: DenoBuffer;
+  msgBuf?: DenoBuffer;
 
   constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
@@ -131,7 +131,7 @@ export class Parser {
               this.state = State.OP_I;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_H:
@@ -141,7 +141,7 @@ export class Parser {
               this.state = State.OP_M;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_M:
@@ -151,7 +151,7 @@ export class Parser {
               this.state = State.OP_MS;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MS:
@@ -161,7 +161,7 @@ export class Parser {
               this.state = State.OP_MSG;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MSG:
@@ -171,7 +171,7 @@ export class Parser {
               this.state = State.OP_MSG_SPC;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MSG_SPC:
@@ -192,7 +192,7 @@ export class Parser {
             case cc.NL:
               const arg: Uint8Array = this.argBuf
                 ? this.argBuf.bytes()
-                : buf.subarray(this.as, i - this.drop);
+                : buf.slice(this.as, i - this.drop);
               this.processMsgArgs(arg);
               this.drop = 0;
               this.as = i + 1;
@@ -227,7 +227,7 @@ export class Parser {
               }
 
               if (toCopy > 0) {
-                this.msgBuf.write(buf.subarray(i, i + toCopy));
+                this.msgBuf.write(buf.slice(i, i + toCopy));
                 i = (i + toCopy) - 1;
               } else {
                 this.msgBuf.writeByte(b);
@@ -235,7 +235,7 @@ export class Parser {
             }
           } else if (i - this.as >= this.ma.size) {
             this.dispatcher.push(
-              { kind: Kind.MSG, msg: this.ma, data: buf.subarray(this.as, i) },
+              { kind: Kind.MSG, msg: this.ma, data: buf.slice(this.as, i) },
             );
             this.argBuf = undefined;
             this.msgBuf = undefined;
@@ -260,7 +260,7 @@ export class Parser {
               this.state = State.OP_PLUS_O;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PLUS_O:
@@ -270,7 +270,7 @@ export class Parser {
               this.state = State.OP_PLUS_OK;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PLUS_OK:
@@ -289,7 +289,7 @@ export class Parser {
               this.state = State.OP_MINUS_E;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MINUS_E:
@@ -299,7 +299,7 @@ export class Parser {
               this.state = State.OP_MINUS_ER;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MINUS_ER:
@@ -309,7 +309,7 @@ export class Parser {
               this.state = State.OP_MINUS_ERR;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MINUS_ERR:
@@ -319,7 +319,7 @@ export class Parser {
               this.state = State.OP_MINUS_ERR_SPC;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_MINUS_ERR_SPC:
@@ -343,7 +343,7 @@ export class Parser {
                 arg = this.argBuf.bytes();
                 this.argBuf = undefined;
               } else {
-                arg = buf.subarray(this.as, i - this.drop);
+                arg = buf.slice(this.as, i - this.drop);
               }
               this.dispatcher.push({ kind: Kind.ERR, data: arg });
               this.drop = 0;
@@ -367,7 +367,7 @@ export class Parser {
               this.state = State.OP_PO;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PO:
@@ -377,7 +377,7 @@ export class Parser {
               this.state = State.OP_PON;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PON:
@@ -387,7 +387,7 @@ export class Parser {
               this.state = State.OP_PONG;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PONG:
@@ -406,7 +406,7 @@ export class Parser {
               this.state = State.OP_PIN;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PIN:
@@ -416,7 +416,7 @@ export class Parser {
               this.state = State.OP_PING;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_PING:
@@ -435,7 +435,7 @@ export class Parser {
               this.state = State.OP_IN;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_IN:
@@ -445,7 +445,7 @@ export class Parser {
               this.state = State.OP_INF;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_INF:
@@ -455,7 +455,7 @@ export class Parser {
               this.state = State.OP_INFO;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_INFO:
@@ -465,7 +465,7 @@ export class Parser {
               this.state = State.OP_INFO_SPC;
               break;
             default:
-              throw this.fail(buf.subarray(i));
+              throw this.fail(buf.slice(i));
           }
           break;
         case State.OP_INFO_SPC:
@@ -489,7 +489,7 @@ export class Parser {
                 arg = this.argBuf.bytes();
                 this.argBuf = undefined;
               } else {
-                arg = buf.subarray(this.as, i - this.drop);
+                arg = buf.slice(this.as, i - this.drop);
               }
               this.dispatcher.push({ kind: Kind.INFO, data: arg });
               this.drop = 0;
@@ -503,7 +503,7 @@ export class Parser {
           }
           break;
         default:
-          throw this.fail(buf.subarray(i));
+          throw this.fail(buf.slice(i));
       }
     }
 
@@ -511,14 +511,14 @@ export class Parser {
       (this.state === State.MSG_ARG || this.state === State.MINUS_ERR_ARG ||
         this.state === State.INFO_ARG) && !this.argBuf
     ) {
-      this.argBuf = new Buffer(buf.subarray(this.as, i - this.drop));
+      this.argBuf = new DenoBuffer(buf.slice(this.as, i - this.drop));
     }
 
     if (this.state === State.MSG_PAYLOAD && !this.msgBuf) {
       if (!this.argBuf) {
         this.cloneMsgArg();
       }
-      this.msgBuf = new Buffer(buf.subarray(this.as));
+      this.msgBuf = new DenoBuffer(buf.slice(this.as));
     }
   }
 
@@ -530,10 +530,10 @@ export class Parser {
     if (this.ma.reply) {
       buf.set(this.ma.reply, s);
     }
-    this.argBuf = new Buffer(buf);
-    this.ma.subject = buf.subarray(0, s);
+    this.argBuf = new DenoBuffer(buf);
+    this.ma.subject = buf.slice(0, s);
     if (this.ma.reply) {
-      this.ma.reply = buf.subarray(r);
+      this.ma.reply = buf.slice(r);
     }
   }
 
@@ -552,7 +552,7 @@ export class Parser {
         case cc.CR:
         case cc.NL:
           if (start >= 0) {
-            args.push(arg.subarray(start, i));
+            args.push(arg.slice(start, i));
             start = -1;
           }
           break;
@@ -563,7 +563,7 @@ export class Parser {
       }
     }
     if (start >= 0) {
-      args.push(arg.subarray(start));
+      args.push(arg.slice(start));
     }
 
     switch (args.length) {
@@ -612,7 +612,7 @@ export class Parser {
         case cc.CR:
         case cc.NL:
           if (start >= 0) {
-            args.push(arg.subarray(start, i));
+            args.push(arg.slice(start, i));
             start = -1;
           }
           break;
@@ -623,7 +623,7 @@ export class Parser {
       }
     }
     if (start >= 0) {
-      args.push(arg.subarray(start));
+      args.push(arg.slice(start));
     }
 
     switch (args.length) {
