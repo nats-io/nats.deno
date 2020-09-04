@@ -155,9 +155,7 @@ export interface ServerInfo {
   client_id?: number;
   client_ip?: string;
   nonce?: string;
-  cluster?: string;
   connect_urls?: string[];
-  ws_connect_urls?: string[];
   ldm?: boolean;
 }
 
