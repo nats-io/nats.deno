@@ -138,25 +138,25 @@ export interface Base {
 
 export interface ServerInfo {
   auth_required?: boolean;
+  client_id: number;
   client_ip?: string;
+  connect_urls?: string[];
   git_commit?: string;
   go: string;
+  headers?: boolean;
   host: string;
   jetstream?: boolean;
   ldm?: boolean;
+  max_payload: number;
+  nonce?: string;
   port: number;
+  proto: number;
+  server_id: string;
   server_name: string;
   tls_available?: boolean;
   tls_required?: boolean;
   tls_verify?: boolean;
-  connect_urls?: string[];
-  max_payload: number;
-  client_id: number;
-  headers?: boolean;
-  proto: number;
-  server_id: string;
   version: string;
-  nonce?: string;
 }
 
 export interface ServersChanged {
