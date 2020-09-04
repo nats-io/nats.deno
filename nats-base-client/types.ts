@@ -164,6 +164,7 @@ export interface Subscription extends AsyncIterable<Msg> {
   getSubject(): string;
   getReceived(): number;
   getProcessed(): number;
+  getPending(): number;
   getID(): number;
   getMax(): number | undefined;
 }

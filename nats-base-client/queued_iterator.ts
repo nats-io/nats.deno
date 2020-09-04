@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 import { deferred } from "./util.ts";
+import { ErrorCode, NatsError } from "./error.ts";
 
 export interface Dispatcher<T> {
   push(v: T): void;
@@ -21,6 +22,7 @@ export interface Dispatcher<T> {
 export class QueuedIterator<T> implements Dispatcher<T> {
   processed = 0;
   received = 0; // this is updated by the protocol
+  protected noIterator = false;
   protected done = false;
   private signal = deferred<void>();
   private yields: T[] = [];
@@ -39,6 +41,9 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   }
 
   async *iterate(): AsyncIterableIterator<T> {
+    if (this.noIterator) {
+      throw new NatsError("unsupported iterator", ErrorCode.API_ERROR);
+    }
     while (true) {
       if (this.yields.length === 0) {
         await this.signal;
@@ -72,7 +77,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   }
 
   getProcessed(): number {
-    return this.processed;
+    return this.noIterator ? this.received : this.processed;
   }
 
   getPending(): number {
