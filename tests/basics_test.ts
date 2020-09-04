@@ -631,3 +631,10 @@ Deno.test("basics - msg buffers dont overwrite", async () => {
     check(i, msgs[i]);
   }
 });
+
+Deno.test("basics - get client ip", async () => {
+  const nc = await connect({ servers: u });
+  assert(nc.info?.client_id);
+  await nc.close();
+  assert(nc.info === undefined);
+});

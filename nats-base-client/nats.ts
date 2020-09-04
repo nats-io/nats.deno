@@ -33,6 +33,7 @@ import {
   Status,
   NatsConnection,
   Stats,
+  ServerInfo,
 } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
@@ -216,6 +217,10 @@ export class NatsConnectionImpl implements NatsConnection {
     const iter = new QueuedIterator<Status>();
     this.listeners.push(iter);
     return iter;
+  }
+
+  get info(): (ServerInfo | undefined) {
+    return this.protocol.isClosed() ? undefined : this.protocol.info;
   }
 
   stats(): Stats {

@@ -171,6 +171,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   private prepare(): Deferred<void> {
+    this.info = undefined;
     this.resetOutbound();
 
     const pong = deferred<void>();

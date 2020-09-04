@@ -56,6 +56,7 @@ export interface ConnectFn {
 }
 
 export interface NatsConnection {
+  info?: ServerInfo;
   closed(): Promise<void | Error>;
   close(): Promise<void>;
   publish(subject: string, data?: Uint8Array, options?: PublishOptions): void;
@@ -136,18 +137,26 @@ export interface Base {
 }
 
 export interface ServerInfo {
-  tls_required?: boolean;
-  tls_verify?: boolean;
-  connect_urls?: string[];
-  max_payload: number;
+  auth_required?: boolean;
   client_id: number;
+  client_ip?: string;
+  connect_urls?: string[];
+  git_commit?: string;
+  go: string;
   headers?: boolean;
+  host: string;
+  jetstream?: boolean;
+  ldm?: boolean;
+  max_payload: number;
+  nonce?: string;
+  port: number;
   proto: number;
   server_id: string;
+  server_name: string;
+  tls_available?: boolean;
+  tls_required?: boolean;
+  tls_verify?: boolean;
   version: string;
-  echo?: boolean;
-  nonce?: string;
-  nkey?: string;
 }
 
 export interface ServersChanged {
