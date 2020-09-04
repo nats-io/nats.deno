@@ -38,6 +38,8 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     extend(this, opts);
     this.protocol = protocol;
     this.subject = subject;
+    this.noIterator = typeof opts.callback === "function";
+
     if (opts.timeout) {
       this.timer = timeout<void>(opts.timeout);
       this.timer

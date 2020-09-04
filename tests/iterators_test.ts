@@ -15,8 +15,10 @@
 import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
 import {
   assertEquals,
+  fail,
 } from "https://deno.land/std@0.63.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
+import { assert } from "../nats-base-client/denobuffer.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -127,4 +129,56 @@ Deno.test("iterators - connection close closes", async () => {
   await nc.close();
   await lock;
   await done;
+});
+
+Deno.test("iterators - cb subs fail iterator", async () => {
+  const nc = await connect(
+    { servers: u },
+  );
+  const subj = createInbox();
+  const lock = Lock(2);
+  const sub = nc.subscribe(subj, {
+    callback: (err, msg) => {
+      assert(err === null);
+      assert(msg);
+      lock.unlock();
+    },
+  });
+
+  (async () => {
+    for await (const m of sub) {
+      lock.unlock();
+    }
+  })().catch((err) => {
+    assertErrorCode(err, ErrorCode.API_ERROR);
+    lock.unlock();
+  });
+  nc.publish(subj);
+  await nc.flush();
+  await nc.close();
+  await lock;
+});
+
+Deno.test("iterators - cb message counts", async () => {
+  const nc = await connect(
+    { servers: u },
+  );
+  const subj = createInbox();
+  const lock = Lock(3);
+  const sub = nc.subscribe(subj, {
+    callback: (err, msg) => {
+      lock.unlock();
+    },
+  });
+
+  nc.publish(subj);
+  nc.publish(subj);
+  nc.publish(subj);
+
+  await lock;
+
+  assertEquals(sub.getReceived(), 3);
+  assertEquals(sub.getProcessed(), 3);
+  assertEquals(sub.getPending(), 0);
+  await nc.close();
 });

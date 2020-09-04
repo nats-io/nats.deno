@@ -15,6 +15,7 @@
 
 export enum ErrorCode {
   // emitted by the client
+  API_ERROR = "BAD API",
   BAD_AUTHENTICATION = "BAD_AUTHENTICATION",
   BAD_CREDS = "BAD_CREDS",
   BAD_HEADER = "BAD_HEADER",
