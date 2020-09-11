@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.63.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.68.0/flags/mod.ts";
 import { ConnectionOptions, connect } from "../src/mod.ts";
 
 const argv = parse(

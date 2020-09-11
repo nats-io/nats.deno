@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import {
   connect,
   Msg,
@@ -154,11 +154,11 @@ Deno.test("basics - subscriptions iterate", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
   const sub = nc.subscribe(subj);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       lock.unlock();
     }
-  })();
+  })().then();
   nc.publish(subj);
   await nc.flush();
   await lock;
@@ -171,12 +171,12 @@ Deno.test("basics - subscriptions pass exact subject to cb", async () => {
   const nc = await connect({ servers: u });
   const sub = nc.subscribe(`${s}.*.*.*`);
   const sp = deferred<string>();
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       sp.resolve(m.subject);
       break;
     }
-  })();
+  })().then();
   nc.publish(subj);
   assertEquals(await sp, subj);
   await nc.close();
@@ -223,12 +223,12 @@ Deno.test("basics - correct data in message", async () => {
   const subj = createInbox();
   const mp = deferred<Msg>();
   const sub = nc.subscribe(subj);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       mp.resolve(m);
       break;
     }
-  })();
+  })().then();
 
   nc.publish(subj, sc.encode(subj));
   const m = await mp;
@@ -245,12 +245,12 @@ Deno.test("basics - correct reply in message", async () => {
 
   const rp = deferred<string>();
   const sub = nc.subscribe(s);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       rp.resolve(m.reply);
       break;
     }
-  })();
+  })().then();
   nc.publish(s, Empty, { reply: r });
   assertEquals(await rp, r);
   await nc.close();
@@ -261,12 +261,12 @@ Deno.test("basics - respond returns false if no reply subject set", async () => 
   let s = createInbox();
   const dr = deferred<boolean>();
   const sub = nc.subscribe(s);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       dr.resolve(m.respond());
       break;
     }
-  })();
+  })().then();
   nc.publish(s);
   const failed = await dr;
   assert(!failed);
@@ -340,11 +340,11 @@ Deno.test("basics - request", async () => {
   const nc = await connect({ servers: u });
   const s = createInbox();
   const sub = nc.subscribe(s);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       m.respond(sc.encode("foo"));
     }
-  })();
+  })().then();
   const msg = await nc.request(s);
   await nc.close();
   assertEquals(sc.decode(msg.data), "foo");
@@ -482,7 +482,7 @@ Deno.test("basics - subscription timeout auto cancels", async () => {
 
 Deno.test("basics - no mux requests create normal subs", async () => {
   const nc = await connect({ servers: u }) as NatsConnectionImpl;
-  const _ = nc.request(createInbox(), Empty, { timeout: 1000, noMux: true });
+  nc.request(createInbox(), Empty, { timeout: 1000, noMux: true }).then();
   assertEquals(nc.protocol.subscriptions.size(), 1);
   assertEquals(nc.protocol.muxSubscriptions.size(), 0);
   const sub = nc.protocol.subscriptions.get(1);
@@ -535,7 +535,7 @@ Deno.test("basics - no max_payload messages", async () => {
   }
 
   try {
-    const _ = await nc.request(subj, big);
+    await nc.request(subj, big).then();
     fail();
   } catch (err) {
     assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
@@ -565,12 +565,12 @@ Deno.test("basics - empty message", async () => {
   const subj = createInbox();
   const mp = deferred<Msg>();
   const sub = nc.subscribe(subj);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       mp.resolve(m);
       break;
     }
-  })();
+  })().then();
 
   nc.publish(subj);
   const m = await mp;
@@ -585,11 +585,11 @@ Deno.test("basics - msg buffers dont overwrite", async () => {
   const nc = await connect({ port: ns.port }) as NatsConnectionImpl;
   const sub = nc.subscribe(">");
   const msgs: Msg[] = [];
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       msgs.push(m);
     }
-  })();
+  })().then();
 
   const a = "a".charCodeAt(0);
   const fill = (n: number, b: Uint8Array) => {

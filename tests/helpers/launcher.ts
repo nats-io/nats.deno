@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as path from "https://deno.land/std@0.63.0/path/mod.ts";
+import * as path from "https://deno.land/std@0.68.0/path/mod.ts";
 import { check } from "./mod.ts";
 import {
   deferred,
@@ -21,7 +21,7 @@ import {
   nuid,
   Deferred,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.63.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.68.0/testing/asserts.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,

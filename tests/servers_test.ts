@@ -16,7 +16,7 @@
 import { Servers } from "../nats-base-client/servers.ts";
 import {
   assertEquals,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import { ServerInfo } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("servers - single", () => {

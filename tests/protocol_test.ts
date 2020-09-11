@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 import {
-  ConnectionOptions,
   ProtocolHandler,
   Msg,
   SubscriptionImpl,
@@ -21,13 +20,12 @@ import {
   ErrorCode,
   Subscriptions,
   MuxSubscription,
-  StringCodec,
 } from "../nats-base-client/internal_mod.ts";
-import { assertErrorCode, Lock } from "./helpers/mod.ts";
+import { assertErrorCode } from "./helpers/mod.ts";
 import {
   assertEquals,
   equal,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 
 Deno.test("protocol - mux subscription unknown return null", async () => {
   let mux = new MuxSubscription();

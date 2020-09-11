@@ -15,8 +15,7 @@
 import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
 import {
   assertEquals,
-  fail,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 
@@ -166,7 +165,7 @@ Deno.test("iterators - cb message counts", async () => {
   const subj = createInbox();
   const lock = Lock(3);
   const sub = nc.subscribe(subj, {
-    callback: (err, msg) => {
+    callback: () => {
       lock.unlock();
     },
   });

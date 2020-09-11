@@ -19,7 +19,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import {
   connect,
   createInbox,

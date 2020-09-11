@@ -15,7 +15,7 @@
 
 import {
   assertEquals,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import {
   connect,
   Msg,
@@ -33,11 +33,11 @@ function macro(input: any) {
     const nc = await connect({ servers: u });
     const dm = deferred<Msg>();
     const sub = nc.subscribe(subj, { max: 1 });
-    const _ = (async () => {
+    (async () => {
       for await (const m of sub) {
         dm.resolve(m);
       }
-    })();
+    })().then();
 
     nc.publish(subj, input);
     const msg = await dm;
