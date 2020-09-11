@@ -62,7 +62,7 @@ Deno.test("noresponders - list", async () => {
     for await (const m of sub) {
       const h = headers();
       h.append("a", "b");
-      m.respond(Empty, h);
+      m.respond(Empty, { headers: h });
     }
   })().then();
   await nc.flush();

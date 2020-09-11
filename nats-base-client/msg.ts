@@ -70,9 +70,12 @@ export class MsgImpl implements Msg {
   }
 
   // eslint-ignore-next-line @typescript-eslint/no-explicit-any
-  respond(data: Uint8Array = Empty, headers?: MsgHdrsImpl): boolean {
+  respond(
+    data: Uint8Array = Empty,
+    opts?: { headers?: MsgHdrs; reply?: string },
+  ): boolean {
     if (this.reply) {
-      this.publisher.publish(this.reply, data, { headers: headers });
+      this.publisher.publish(this.reply, data, opts);
       return true;
     }
     return false;
