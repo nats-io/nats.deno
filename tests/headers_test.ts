@@ -14,7 +14,7 @@ import {
   assertArrayContains,
   assert,
   fail,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();
@@ -102,11 +102,11 @@ Deno.test("headers - request headers", async () => {
   });
   const s = createInbox();
   const sub = nc.subscribe(s);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       m.respond(sc.encode("foo"), { headers: m.headers });
     }
-  })();
+  })().then();
   const opts = {} as RequestOptions;
   opts.headers = headers();
   opts.headers.set("x", s);

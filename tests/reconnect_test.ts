@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -125,7 +125,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
   const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
 
   const dt = deferred<number>();
-  const _ = (async () => {
+  (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
         case DebugEvents.RECONNECTING:
@@ -134,7 +134,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
           break;
       }
     }
-  })();
+  })().then();
   await srv.stop();
   const elapsed = await dt;
   assert(elapsed >= 500 && elapsed <= 700, `elapsed was ${elapsed}`);

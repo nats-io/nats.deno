@@ -14,7 +14,7 @@
  */
 import {
   assertEquals,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 
 import {
   ErrorCode,
@@ -109,7 +109,7 @@ Deno.test("autounsub - request receives expected count with multiple helpers", a
   const subs: Subscription[] = [];
   for (let i = 0; i < 5; i++) {
     const sub = nc.subscribe(subj);
-    const _ = fn(sub);
+    fn(sub).then();
     subs.push(sub);
   }
   await nc.request(subj);
@@ -135,7 +135,7 @@ Deno.test("autounsub - manual request receives expected count with multiple help
   });
   for (let i = 0; i < 5; i++) {
     const sub = nc.subscribe(subj);
-    const _ = fn(sub);
+    fn(sub).then();
   }
   const replySubj = createInbox();
   const sub = nc.subscribe(replySubj);
@@ -162,11 +162,11 @@ Deno.test("autounsub - check request leaks", async () => {
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
   let sub = nc.subscribe(subj);
-  const _ = (async () => {
+  (async () => {
     for await (const m of sub) {
       m.respond();
     }
-  })();
+  })().then();
 
   // should have one subscription
   assertEquals(nc.protocol.subscriptions.size(), 1);

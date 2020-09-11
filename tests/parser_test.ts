@@ -30,7 +30,7 @@ import {
   assertEquals,
   assertThrows,
   assert,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import { Publisher } from "../nats-base-client/protocol.ts";
 
 let te = new TextEncoder();
@@ -69,6 +69,7 @@ class TestDispatcher implements Dispatcher<ParserEvent> {
         break;
       case Kind.PONG:
         this.pongs++;
+        break;
       default:
         throw new Error(`unknown parser evert ${JSON.stringify(a)}`);
     }

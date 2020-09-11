@@ -11,9 +11,9 @@ import {
 import {
   assertEquals,
   assertArrayContains,
-} from "https://deno.land/std@0.63.0/testing/asserts.ts";
+} from "https://deno.land/std@0.68.0/testing/asserts.ts";
 import { extend } from "../nats-base-client/util.ts";
-import { join, resolve } from "https://deno.land/std@0.63.0/path/mod.ts";
+import { join, resolve } from "https://deno.land/std@0.68.0/path/mod.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();
@@ -53,7 +53,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const disconnected = deferred<void>();
   const reconnected = deferred<void>();
-  let _ = (async () => {
+  (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
         case Events.DISCONNECT:
@@ -64,7 +64,7 @@ async function runDoubleSubsTest(tls: boolean) {
           break;
       }
     }
-  })();
+  })().then();
 
   await nc.flush();
   await srv.stop();
