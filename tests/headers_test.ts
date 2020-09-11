@@ -104,7 +104,7 @@ Deno.test("headers - request headers", async () => {
   const sub = nc.subscribe(s);
   const _ = (async () => {
     for await (const m of sub) {
-      m.respond(sc.encode("foo"), m.headers);
+      m.respond(sc.encode("foo"), { headers: m.headers });
     }
   })();
   const opts = {} as RequestOptions;

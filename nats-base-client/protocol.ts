@@ -22,6 +22,7 @@ import {
   DEFAULT_PING_INTERVAL,
   DEFAULT_MAX_PING_OUT,
   Empty,
+  PublishOptions,
 } from "./types.ts";
 import { Transport, newTransport } from "./transport.ts";
 import { ErrorCode, NatsError } from "./error.ts";
@@ -448,7 +449,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   publish(
     subject: string,
     data: Uint8Array,
-    options?: { reply?: string; headers?: MsgHdrs },
+    options?: PublishOptions,
   ) {
     if (this.isClosed()) {
       throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);

@@ -59,7 +59,7 @@ for await (const m of sub) {
     hdrs.set("sequence", sub.getProcessed().toString());
     hdrs.set("time", Date.now().toString());
   }
-  if (m.respond(argv.e ? m.data : payload, hdrs)) {
+  if (m.respond(argv.e ? m.data : payload, { headers: hdrs })) {
     console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.data}`);
   } else {
     console.log(`[${sub.getProcessed()}]: ignored - no reply subject`);

@@ -117,7 +117,7 @@ export interface Msg {
   data: Uint8Array;
   headers?: MsgHdrs;
 
-  respond(data?: Uint8Array, headers?: MsgHdrs): boolean;
+  respond(data?: Uint8Array, opts?: PublishOptions): boolean;
 }
 
 export interface SubscriptionOptions {
