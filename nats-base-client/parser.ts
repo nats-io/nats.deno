@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { Dispatcher } from "./queued_iterator.ts";
+import type { Dispatcher } from "./queued_iterator.ts";
 import { DenoBuffer } from "./denobuffer.ts";
 import { TD } from "./encoders.ts";
 

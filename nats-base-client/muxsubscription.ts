@@ -12,10 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Request } from "./request.ts";
-import { Msg } from "./types.ts";
+import type { Request } from "./request.ts";
+import type { Msg } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { MsgHdrsImpl } from "./headers.ts";
+import type { MsgHdrsImpl } from "./headers.ts";
 import { createInbox } from "./protocol.ts";
 
 export class MuxSubscription {

@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.68.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.68.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.69.0/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.69.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   ConnectionOptions,
@@ -28,7 +28,7 @@ import {
   ErrorCode,
   TE,
 } from "../nats-base-client/internal_mod.ts";
-import { TlsOptions } from "../nats-base-client/types.ts";
+import type { TlsOptions } from "../nats-base-client/types.ts";
 
 const VERSION = "1.0.0-5";
 const LANG = "nats.deno";
