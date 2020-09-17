@@ -638,3 +638,25 @@ Deno.test("basics - get client ip", async () => {
   await nc.close();
   assert(nc.info === undefined);
 });
+
+Deno.test("basics - subs pending count", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+
+  const sub = nc.subscribe(subj, { max: 10 });
+  const done = (async () => {
+    let count = 0;
+    for await (const m of sub) {
+      count++;
+      assertEquals(count, sub.getProcessed());
+      assertEquals(sub.getProcessed() + sub.getPending(), 11);
+    }
+  })();
+
+  for (let i = 0; i < 10; i++) {
+    nc.publish(subj);
+  }
+  await nc.flush();
+  await done;
+  await nc.close();
+});
