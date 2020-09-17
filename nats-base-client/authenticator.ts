@@ -15,7 +15,7 @@
 import {
   nkeys,
 } from "./nkeys.ts";
-import { ConnectionOptions } from "./types.ts";
+import type { ConnectionOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./mod.ts";
 import { TE, TD } from "./encoders.ts";
 

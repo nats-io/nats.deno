@@ -17,7 +17,7 @@ import { Empty, NatsConnection } from "./types.ts";
 import { nuid } from "./nuid.ts";
 import { deferred, Perf } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { NatsConnectionImpl } from "./nats.ts";
+import type { NatsConnectionImpl } from "./nats.ts";
 
 export class Metric {
   name: string;

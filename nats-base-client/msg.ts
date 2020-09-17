@@ -14,8 +14,8 @@
  */
 import { Empty, Msg } from "./types.ts";
 import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import { Publisher } from "./protocol.ts";
-import { MsgArg } from "./parser.ts";
+import type { Publisher } from "./protocol.ts";
+import type { MsgArg } from "./parser.ts";
 import { TD } from "./encoders.ts";
 
 export class MsgImpl implements Msg {

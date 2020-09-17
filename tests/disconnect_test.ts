@@ -15,7 +15,7 @@
 
 import { connect } from "../src/mod.ts";
 import { Lock, NatsServer } from "./helpers/mod.ts";
-import {
+import type {
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 

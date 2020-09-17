@@ -14,8 +14,8 @@
  */
 //@ts-ignore
 import { NatsError } from "./error.ts";
-import { MsgHdrs } from "./headers.ts";
-import { Authenticator } from "./authenticator.ts";
+import type { MsgHdrs } from "./headers.ts";
+import type { Authenticator } from "./authenticator.ts";
 
 export const Empty = new Uint8Array(0);
 

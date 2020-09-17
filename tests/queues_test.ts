@@ -20,7 +20,7 @@ import {
 } from "../src/mod.ts";
 import {
   assertEquals,
-} from "https://deno.land/std@0.68.0/testing/asserts.ts";
+} from "https://deno.land/std@0.69.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
 

@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 import { Deferred, deferred, extend, timeout, Timeout } from "./util.ts";
-import { Msg, RequestOptions } from "./types.ts";
+import type { Msg, RequestOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { MuxSubscription } from "./muxsubscription.ts";
+import type { MuxSubscription } from "./muxsubscription.ts";
 import { nuid } from "./nuid.ts";
 
 export class Request {

@@ -39,11 +39,11 @@ import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { Server, Servers } from "./servers.ts";
 import { Dispatcher, QueuedIterator } from "./queued_iterator.ts";
-import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
+import type { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 import { Subscriptions } from "./subscriptions.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
-import { Request } from "./request.ts";
+import type { Request } from "./request.ts";
 import { Heartbeat, PH } from "./heartbeats.ts";
 import {
   Kind,

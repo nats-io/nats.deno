@@ -14,7 +14,7 @@
  */
 import {
   assertEquals,
-} from "https://deno.land/std@0.68.0/testing/asserts.ts";
+} from "https://deno.land/std@0.69.0/testing/asserts.ts";
 
 import {
   ErrorCode,
@@ -24,7 +24,7 @@ import {
   Empty,
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import type { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 const u = "demo.nats.io:4222";
 

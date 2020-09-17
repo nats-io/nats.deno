@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 import { QueuedIterator } from "./queued_iterator.ts";
-import { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
+import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
 import { deferred, extend, timeout, Timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { ProtocolHandler } from "./protocol.ts";
+import type { ProtocolHandler } from "./protocol.ts";
 
 export class SubscriptionImpl extends QueuedIterator<Msg>
   implements Base, Subscription {

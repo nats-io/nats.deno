@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { SubscriptionImpl } from "./subscription.ts";
-import { NatsError } from "./error.ts";
-import { Msg } from "./types.ts";
+import type { SubscriptionImpl } from "./subscription.ts";
+import type { NatsError } from "./error.ts";
+import type { Msg } from "./types.ts";
 
 export class Subscriptions {
   mux!: SubscriptionImpl;
