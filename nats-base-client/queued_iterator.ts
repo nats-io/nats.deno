@@ -20,6 +20,7 @@ export interface Dispatcher<T> {
 }
 
 export class QueuedIterator<T> implements Dispatcher<T> {
+  inflight = 0;
   processed = 0;
   received = 0; // this is updated by the protocol
   protected noIterator = false;
@@ -52,10 +53,12 @@ export class QueuedIterator<T> implements Dispatcher<T> {
         throw this.err;
       }
       const yields = this.yields;
+      this.inflight = yields.length;
       this.yields = [];
       for (let i = 0; i < yields.length; i++) {
         this.processed++;
         yield yields[i];
+        this.inflight--;
       }
       // yielding could have paused and microtask
       // could have added messages. Prevent allocations
@@ -81,7 +84,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   }
 
   getPending(): number {
-    return this.yields.length;
+    return this.yields.length + this.inflight;
   }
 
   getReceived(): number {
