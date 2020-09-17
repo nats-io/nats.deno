@@ -81,7 +81,8 @@ export class Connect {
     if (opts.noResponders) {
       this.no_responders = true;
     }
-    const creds = (opts?.authenticator ? opts.authenticator(nonce) : {}) || {};
+    const creds =
+      (opts && opts.authenticator ? opts.authenticator(nonce) : {}) || {};
     extend(this, opts, transport, creds);
   }
 }
@@ -259,7 +260,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       this.heartbeats.start();
     } catch (err) {
       timer.cancel();
-      await this.transport?.close(err);
+      await this.transport.close(err);
       throw err;
     }
   }

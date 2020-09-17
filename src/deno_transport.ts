@@ -128,7 +128,9 @@ export class DenoTransport implements Transport {
   }
 
   async startTLS(hostname: string): Promise<void> {
-    const tls = this.options?.tls || {} as TlsOptions;
+    const tls = this.options && this.options.tls
+      ? this.options.tls
+      : {} as TlsOptions;
     this.conn = await Deno.startTls(
       this.conn,
       { hostname, certFile: tls.caFile },
@@ -233,7 +235,7 @@ export class DenoTransport implements Transport {
     }
     this.done = true;
     try {
-      this.conn?.close();
+      this.conn.close();
     } catch (err) {
     }
 

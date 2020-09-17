@@ -59,7 +59,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     ) {
       for (const [k, v] of this.headers) {
         const a = mh.values(k);
-        if (v.length !== a?.length) {
+        if (v.length !== a.length) {
           return false;
         }
         const vv = [...v].sort();
