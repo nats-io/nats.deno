@@ -1,4 +1,5 @@
 export {
+  Bench,
   ErrorCode,
   NatsError,
   Empty,
@@ -9,6 +10,7 @@ export {
   JSONCodec,
   jwtAuthenticator,
   nkeyAuthenticator,
+  Nuid,
   StringCodec,
 } from "./internal_mod.ts";
 
@@ -19,7 +21,6 @@ export type {
   Msg,
   MsgHdrs,
   NatsConnection,
-  Nuid,
   PublishOptions,
   RequestOptions,
   ServersChanged,
