@@ -81,10 +81,13 @@ export {
 export * from "./nkeys.ts";
 export type {
   Dispatcher,
+} from "./queued_iterator.ts";
+export {
   QueuedIterator,
 } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Parser, State, Kind } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
-export type { Bench, BenchOpts, Metric } from "./bench.ts";
+export { Bench, Metric } from "./bench.ts";
+export type { BenchOpts } from "./bench.ts";
 export { TE, TD } from "./encoders.ts";
