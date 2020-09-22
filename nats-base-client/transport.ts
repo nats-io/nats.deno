@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 //@ts-ignore
-import { ConnectionOptions } from "./types.ts";
+import { ConnectionOptions, Server } from "./types.ts";
 
 let transportFactory: TransportFactory;
 export function setTransportFactory(fn: TransportFactory): void {
@@ -38,7 +38,7 @@ export interface Transport extends AsyncIterable<Uint8Array> {
   readonly closeError?: Error;
 
   connect(
-    hp: { hostname: string; port: number },
+    server: Server,
     opts: ConnectionOptions,
   ): Promise<void>;
 

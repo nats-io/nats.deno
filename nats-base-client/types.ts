@@ -159,6 +159,13 @@ export interface ServerInfo {
   version: string;
 }
 
+export interface Server {
+  hostname: string;
+  port: number;
+  listen: string;
+  src: string;
+}
+
 export interface ServersChanged {
   readonly added: string[];
   readonly deleted: string[];
