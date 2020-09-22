@@ -37,7 +37,7 @@ import {
 } from "./util.ts";
 import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
-import { Server, Servers } from "./servers.ts";
+import { ServerImpl, Servers } from "./servers.ts";
 import { Dispatcher, QueuedIterator } from "./queued_iterator.ts";
 import type { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { SubscriptionImpl } from "./subscription.ts";
@@ -122,7 +122,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   pendingLimit = FLUSH_THRESHOLD;
 
   private servers: Servers;
-  private server!: Server;
+  private server!: ServerImpl;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
     this.options = options;
@@ -228,11 +228,11 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  async dial(srv: Server): Promise<void> {
+  async dial(srv: ServerImpl): Promise<void> {
     const pong = this.prepare();
     const timer = timeout(this.options.timeout || 20000);
     try {
-      await this.transport.connect(srv.hostport(), this.options);
+      await this.transport.connect(srv, this.options);
       (async () => {
         try {
           for await (const b of this.transport) {
@@ -369,7 +369,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   processInfo(m: Uint8Array) {
     this.info = JSON.parse(fastDecoder(m));
-    const updates = this.servers.update(this.info);
+    const updates = this.options && this.options.ignoreClusterUpdates
+      ? undefined
+      : this.servers.update(this.info);
     if (!this.infoReceived) {
       // send connect
       const { version, lang } = this.transport;
@@ -627,7 +629,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  private selectServer(): Server | undefined {
+  private selectServer(): ServerImpl | undefined {
     let server = this.servers.selectServer();
     if (server === undefined) {
       return undefined;
@@ -637,7 +639,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     return this.server;
   }
 
-  getServer(): Server | undefined {
+  getServer(): ServerImpl | undefined {
     return this.server;
   }
 }

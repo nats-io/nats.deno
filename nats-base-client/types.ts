@@ -101,6 +101,7 @@ export interface ConnectionOptions {
   user?: string;
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
+  ignoreClusterUpdates?: boolean;
 }
 
 // these may not be supported on all environments
@@ -159,6 +160,13 @@ export interface ServerInfo {
   version: string;
 }
 
+export interface Server {
+  hostname: string;
+  port: number;
+  listen: string;
+  src: string;
+}
+
 export interface ServersChanged {
   readonly added: string[];
   readonly deleted: string[];
@@ -194,4 +202,8 @@ export interface Stats {
   outBytes: number;
   inMsgs: number;
   outMsgs: number;
+}
+
+export interface URLParseFn {
+  (u: string): string;
 }

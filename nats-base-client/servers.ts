@@ -18,13 +18,16 @@ import {
   DEFAULT_HOSTPORT,
   ServerInfo,
   ServersChanged,
+  Server,
+  URLParseFn,
 } from "./types.ts";
 import { shuffle } from "./util.ts";
 
 /**
  * @hidden
  */
-export class Server {
+export class ServerImpl implements Server {
+  src: string;
   listen: string;
   hostname: string;
   port: number;
@@ -34,6 +37,7 @@ export class Server {
   gossiped: boolean;
 
   constructor(u: string, gossiped = false) {
+    this.src = u;
     // remove any protocol that may have been provided
     if (u.match(/^(.*:\/\/)(.*)/m)) {
       u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
@@ -58,10 +62,10 @@ export class Server {
   toString(): string {
     return this.listen;
   }
+}
 
-  hostport(): { hostname: string; port: number } {
-    return this;
-  }
+export interface ServersOptions {
+  urlParseFn?: URLParseFn;
 }
 
 /**
@@ -69,50 +73,42 @@ export class Server {
  */
 export class Servers {
   private firstSelect: boolean = true;
-  private readonly servers: Server[];
-  private currentServer: Server;
+  private readonly servers: ServerImpl[];
+  private currentServer: ServerImpl;
+  private urlParseFn?: URLParseFn;
 
   constructor(
     randomize: boolean,
     listens: string[] = [],
-    firstServer?: string,
+    opts: ServersOptions = {},
   ) {
-    this.servers = [] as Server[];
+    this.urlParseFn = opts.urlParseFn;
+    this.servers = [] as ServerImpl[];
     if (listens) {
       listens.forEach((hp) => {
-        this.servers.push(new Server(hp));
+        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
+        this.servers.push(new ServerImpl(hp));
       });
       if (randomize) {
         this.servers = shuffle(this.servers);
       }
     }
-
-    if (firstServer) {
-      let index = listens.indexOf(firstServer);
-      if (index === -1) {
-        this.servers.unshift(new Server(firstServer));
-      } else {
-        let fs = this.servers[index];
-        this.servers.splice(index, 1);
-        this.servers.unshift(fs);
-      }
-    } else {
-      if (this.servers.length === 0) {
-        this.addServer(DEFAULT_HOSTPORT, false);
-      }
+    if (this.servers.length === 0) {
+      this.addServer(DEFAULT_HOSTPORT, false);
     }
     this.currentServer = this.servers[0];
   }
 
-  getCurrentServer(): Server {
+  getCurrentServer(): ServerImpl {
     return this.currentServer;
   }
 
   addServer(u: string, implicit = false): void {
-    this.servers.push(new Server(u, implicit));
+    u = this.urlParseFn ? this.urlParseFn(u) : u;
+    this.servers.push(new ServerImpl(u, implicit));
   }
 
-  selectServer(): Server | undefined {
+  selectServer(): ServerImpl | undefined {
     // allow using select without breaking the order of the servers
     if (this.firstSelect) {
       this.firstSelect = false;
@@ -130,7 +126,7 @@ export class Servers {
     this.removeServer(this.currentServer);
   }
 
-  removeServer(server: Server | undefined): void {
+  removeServer(server: ServerImpl | undefined): void {
     if (server) {
       let index = this.servers.indexOf(server);
       this.servers.splice(index, 1);
@@ -141,11 +137,11 @@ export class Servers {
     return this.servers.length;
   }
 
-  next(): Server | undefined {
+  next(): ServerImpl | undefined {
     return this.servers.length ? this.servers[0] : undefined;
   }
 
-  getServers(): Server[] {
+  getServers(): ServerImpl[] {
     return this.servers;
   }
 
@@ -153,10 +149,11 @@ export class Servers {
     const added: string[] = [];
     let deleted: string[] = [];
 
-    const discovered = new Map<string, Server>();
+    const discovered = new Map<string, ServerImpl>();
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {
-        discovered.set(hp, new Server(hp, true));
+        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
+        discovered.set(hp, new ServerImpl(hp, true));
       });
     }
     // remove gossiped servers that are no longer reported
