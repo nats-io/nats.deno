@@ -13,7 +13,12 @@
  * limitations under the License.
  */
 //@ts-ignore
-import { ConnectionOptions, Server } from "./types.ts";
+import { ConnectionOptions, Server, URLParseFn } from "./types.ts";
+
+let urlParseFn: URLParseFn;
+export function setUrlParseFn(fn: URLParseFn): void {
+  urlParseFn = fn;
+}
 
 let transportFactory: TransportFactory;
 export function setTransportFactory(fn: TransportFactory): void {

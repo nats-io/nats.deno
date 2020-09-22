@@ -19,6 +19,7 @@ import {
   ServerInfo,
   ServersChanged,
   Server,
+  URLParseFn,
 } from "./types.ts";
 import { shuffle } from "./util.ts";
 
@@ -63,6 +64,11 @@ export class ServerImpl implements Server {
   }
 }
 
+export interface ServersOptions {
+  firstServer?: string;
+  urlParseFn?: URLParseFn;
+}
+
 /**
  * @hidden
  */
@@ -70,15 +76,18 @@ export class Servers {
   private firstSelect: boolean = true;
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
+  private urlParseFn?: URLParseFn;
 
   constructor(
     randomize: boolean,
     listens: string[] = [],
-    firstServer?: string,
+    opts: ServersOptions = {},
   ) {
+    this.urlParseFn = opts.urlParseFn;
     this.servers = [] as ServerImpl[];
     if (listens) {
       listens.forEach((hp) => {
+        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
         this.servers.push(new ServerImpl(hp));
       });
       if (randomize) {
@@ -86,10 +95,13 @@ export class Servers {
       }
     }
 
-    if (firstServer) {
-      let index = listens.indexOf(firstServer);
+    if (opts.firstServer) {
+      opts.firstServer = this.urlParseFn
+        ? this.urlParseFn(opts.firstServer)
+        : opts.firstServer;
+      let index = listens.indexOf(opts.firstServer);
       if (index === -1) {
-        this.servers.unshift(new ServerImpl(firstServer));
+        this.servers.unshift(new ServerImpl(opts.firstServer));
       } else {
         let fs = this.servers[index];
         this.servers.splice(index, 1);
@@ -108,6 +120,7 @@ export class Servers {
   }
 
   addServer(u: string, implicit = false): void {
+    u = this.urlParseFn ? this.urlParseFn(u) : u;
     this.servers.push(new ServerImpl(u, implicit));
   }
 
@@ -155,6 +168,7 @@ export class Servers {
     const discovered = new Map<string, ServerImpl>();
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {
+        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
         discovered.set(hp, new ServerImpl(hp, true));
       });
     }

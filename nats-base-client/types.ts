@@ -203,3 +203,7 @@ export interface Stats {
   inMsgs: number;
   outMsgs: number;
 }
+
+export interface URLParseFn {
+  (u: string): string;
+}
