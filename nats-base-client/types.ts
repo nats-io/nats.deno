@@ -101,6 +101,7 @@ export interface ConnectionOptions {
   user?: string;
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
+  ignoreClusterUpdates?: boolean;
 }
 
 // these may not be supported on all environments

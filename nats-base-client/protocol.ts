@@ -369,7 +369,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   processInfo(m: Uint8Array) {
     this.info = JSON.parse(fastDecoder(m));
-    const updates = this.servers.update(this.info);
+    const updates = this.options && this.options.ignoreClusterUpdates
+      ? undefined
+      : this.servers.update(this.info);
     if (!this.infoReceived) {
       // send connect
       const { version, lang } = this.transport;

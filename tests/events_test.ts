@@ -3,7 +3,7 @@ import { connect, Events, ServersChanged } from "../src/mod.ts";
 import {
   assertEquals,
 } from "https://deno.land/std@0.69.0/testing/asserts.ts";
-import { delay } from "../nats-base-client/internal_mod.ts";
+import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -120,6 +120,26 @@ Deno.test("events - ldm", async () => {
 
   await cluster[0].signal(ServerSignals.LDM);
   await lock;
+  await nc.close();
+  await NatsServer.stopAll(cluster);
+});
+
+Deno.test("events - ignore server updates", async () => {
+  const cluster = await NatsServer.cluster(1);
+  const nc = await connect(
+    {
+      servers: `127.0.0.1:${cluster[0].port}`,
+      ignoreClusterUpdates: true,
+    },
+  );
+  // @ts-ignore
+  assertEquals(nc.protocol.servers.length(), 1);
+  const s = await NatsServer.addClusterMember(cluster[0]);
+  cluster.push(s);
+  await NatsServer.localClusterFormed(cluster);
+  await nc.flush();
+  // @ts-ignore
+  assertEquals(nc.protocol.servers.length(), 1);
   await nc.close();
   await NatsServer.stopAll(cluster);
 });
