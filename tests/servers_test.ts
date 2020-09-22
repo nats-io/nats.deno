@@ -20,7 +20,7 @@ import {
 import type { ServerInfo } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("servers - single", () => {
-  const servers = new Servers(false, [], { firstServer: "127.0.0.1:4222" });
+  const servers = new Servers(false, ["127.0.0.1:4222"]);
   assertEquals(servers.length(), 1);
   assertEquals(servers.getServers().length, 1);
   assertEquals(servers.getCurrentServer().listen, "127.0.0.1:4222");
@@ -37,11 +37,10 @@ Deno.test("servers - multiples", () => {
   const servers = new Servers(
     false,
     ["h:1", "h:2"],
-    { firstServer: "127.0.0.1:4222" },
   );
-  assertEquals(servers.length(), 3);
-  assertEquals(servers.getServers().length, 3);
-  assertEquals(servers.getCurrentServer().listen, "127.0.0.1:4222");
+  assertEquals(servers.length(), 2);
+  assertEquals(servers.getServers().length, 2);
+  assertEquals(servers.getCurrentServer().listen, "h:1");
   let ni = 0;
   servers.getServers().forEach((s) => {
     if (s.gossiped) {
@@ -61,7 +60,7 @@ function servInfo(): ServerInfo {
 }
 
 Deno.test("servers - add/delete", () => {
-  const servers = new Servers(false, [], { firstServer: "127.0.0.1:4222" });
+  const servers = new Servers(false, ["127.0.0.1:4222"]);
   assertEquals(servers.length(), 1);
   let ce = servers.update(Object.assign(servInfo(), { connect_urls: ["h:1"] }));
   assertEquals(ce.added.length, 1);
@@ -89,8 +88,8 @@ Deno.test("servers - url parse fn", () => {
   };
   const s = new Servers(
     false,
-    [],
-    { firstServer: "127.0.0.1:4222", urlParseFn: fn },
+    ["127.0.0.1:4222"],
+    { urlParseFn: fn },
   );
   s.update(Object.assign(servInfo(), { connect_urls: ["h:1", "j:2/path"] }));
 

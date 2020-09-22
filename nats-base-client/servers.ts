@@ -65,7 +65,6 @@ export class ServerImpl implements Server {
 }
 
 export interface ServersOptions {
-  firstServer?: string;
   urlParseFn?: URLParseFn;
 }
 
@@ -94,23 +93,8 @@ export class Servers {
         this.servers = shuffle(this.servers);
       }
     }
-
-    if (opts.firstServer) {
-      opts.firstServer = this.urlParseFn
-        ? this.urlParseFn(opts.firstServer)
-        : opts.firstServer;
-      let index = listens.indexOf(opts.firstServer);
-      if (index === -1) {
-        this.servers.unshift(new ServerImpl(opts.firstServer));
-      } else {
-        let fs = this.servers[index];
-        this.servers.splice(index, 1);
-        this.servers.unshift(fs);
-      }
-    } else {
-      if (this.servers.length === 0) {
-        this.addServer(DEFAULT_HOSTPORT, false);
-      }
+    if (this.servers.length === 0) {
+      this.addServer(DEFAULT_HOSTPORT, false);
     }
     this.currentServer = this.servers[0];
   }
