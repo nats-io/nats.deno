@@ -30,6 +30,7 @@ export {
 } from "./subscriptions.ts";
 export {
   setTransportFactory,
+  setUrlParseFn,
 } from "./transport.ts";
 export type {
   Transport,
