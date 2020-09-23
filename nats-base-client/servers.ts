@@ -40,7 +40,7 @@ export class ServerImpl implements Server {
   gossiped: boolean;
 
   constructor(u: string, gossiped = false) {
-    this.src = urlParseFn ? urlParseFn(u) : u;
+    this.src = u;
     // remove any protocol that may have been provided
     if (u.match(/^(.*:\/\/)(.*)/m)) {
       u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
