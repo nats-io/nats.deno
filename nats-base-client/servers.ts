@@ -40,7 +40,7 @@ export class ServerImpl implements Server {
   gossiped: boolean;
 
   constructor(u: string, gossiped = false) {
-    this.src = urlParseFn ? urlParseFn(u) : u;
+    this.src = u;
     // remove any protocol that may have been provided
     if (u.match(/^(.*:\/\/)(.*)/m)) {
       u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
@@ -78,18 +78,16 @@ export class Servers {
   private firstSelect: boolean = true;
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
-  private urlParseFn?: URLParseFn;
 
   constructor(
     randomize: boolean,
     listens: string[] = [],
     opts: ServersOptions = {},
   ) {
-    this.urlParseFn = opts.urlParseFn;
     this.servers = [] as ServerImpl[];
     if (listens) {
       listens.forEach((hp) => {
-        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
+        hp = urlParseFn ? urlParseFn(hp) : hp;
         this.servers.push(new ServerImpl(hp));
       });
       if (randomize) {
@@ -107,7 +105,7 @@ export class Servers {
   }
 
   addServer(u: string, implicit = false): void {
-    u = this.urlParseFn ? this.urlParseFn(u) : u;
+    u = urlParseFn ? urlParseFn(u) : u;
     this.servers.push(new ServerImpl(u, implicit));
   }
 
@@ -155,7 +153,7 @@ export class Servers {
     const discovered = new Map<string, ServerImpl>();
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {
-        hp = this.urlParseFn ? this.urlParseFn(hp) : hp;
+        hp = urlParseFn ? urlParseFn(hp) : hp;
         discovered.set(hp, new ServerImpl(hp, true));
       });
     }
