@@ -18,6 +18,7 @@ import {
   assertEquals,
 } from "https://deno.land/std@0.69.0/testing/asserts.ts";
 import type { ServerInfo } from "../nats-base-client/internal_mod.ts";
+import { setUrlParseFn } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("servers - single", () => {
   const servers = new Servers(false, ["127.0.0.1:4222"]);
@@ -86,10 +87,10 @@ Deno.test("servers - url parse fn", () => {
   const fn = (s: string): string => {
     return `x://${s}`;
   };
+  setUrlParseFn(fn);
   const s = new Servers(
     false,
     ["127.0.0.1:4222"],
-    { urlParseFn: fn },
   );
   s.update(Object.assign(servInfo(), { connect_urls: ["h:1", "j:2/path"] }));
 
@@ -97,4 +98,5 @@ Deno.test("servers - url parse fn", () => {
   assertEquals(servers[0].src, "x://127.0.0.1:4222");
   assertEquals(servers[1].src, "x://h:1");
   assertEquals(servers[2].src, "x://j:2/path");
+  setUrlParseFn(undefined);
 });
