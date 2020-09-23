@@ -7,6 +7,7 @@ export type {
   NatsConnection,
   PublishOptions,
   RequestOptions,
+  Server,
   ServerInfo,
   ServersChanged,
   Status,
