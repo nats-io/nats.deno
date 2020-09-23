@@ -15,7 +15,7 @@
 //@ts-ignore
 import { ConnectionOptions, Server, URLParseFn } from "./types.ts";
 
-let urlParseFn: URLParseFn;
+export let urlParseFn: URLParseFn;
 export function setUrlParseFn(fn: URLParseFn): void {
   urlParseFn = fn;
 }
