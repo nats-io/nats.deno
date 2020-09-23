@@ -21,6 +21,9 @@ import {
   Server,
   URLParseFn,
 } from "./types.ts";
+import {
+  urlParseFn,
+} from "./transport.ts";
 import { shuffle } from "./util.ts";
 
 /**
@@ -37,7 +40,7 @@ export class ServerImpl implements Server {
   gossiped: boolean;
 
   constructor(u: string, gossiped = false) {
-    this.src = u;
+    this.src = urlParseFn ? urlParseFn(u) : u;
     // remove any protocol that may have been provided
     if (u.match(/^(.*:\/\/)(.*)/m)) {
       u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
