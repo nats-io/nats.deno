@@ -15,7 +15,7 @@
 import { StringCodec, JSONCodec } from "../nats-base-client/codec.ts";
 import {
   assertEquals,
-} from "https://deno.land/std@0.69.0/testing/asserts.ts";
+} from "https://deno.land/std@0.71.0/testing/asserts.ts";
 
 Deno.test("codec - string", () => {
   const sc = StringCodec();
