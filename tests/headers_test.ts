@@ -14,7 +14,7 @@ import {
   assertArrayContains,
   assert,
   fail,
-} from "https://deno.land/std@0.69.0/testing/asserts.ts";
+} from "https://deno.land/std@0.71.0/testing/asserts.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();

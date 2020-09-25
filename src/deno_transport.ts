@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.69.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.69.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.71.0/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.71.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   ConnectionOptions,
