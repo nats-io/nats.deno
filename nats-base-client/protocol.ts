@@ -69,21 +69,38 @@ export class Connect {
   echo?: boolean;
   no_responders?: boolean;
   protocol: number = 1;
+  verbose?: boolean;
+  pedantic?: boolean;
+  jwt?: string;
+  nkey?: string;
+  sig?: string;
+  user?: string;
+  pass?: string;
+  auth_token?: string;
+  tls_required?: boolean;
+  name?: string;
+  lang: string;
+  version: string;
+  headers?: boolean;
 
   constructor(
     transport: { version: string; lang: string },
     opts: ConnectionOptions,
     nonce?: string,
   ) {
-    if (opts.noEcho) {
-      this.echo = false;
-    }
-    if (opts.noResponders) {
-      this.no_responders = true;
-    }
+    this.version = transport.version;
+    this.lang = transport.lang;
+    this.echo = opts.noEcho ? false : undefined;
+    this.no_responders = opts.noResponders ? true : undefined;
+    this.verbose = opts.verbose;
+    this.pedantic = opts.pedantic;
+    this.tls_required = opts.tls ? true : undefined;
+    this.name = opts.name;
+    this.headers = opts.headers;
+
     const creds =
       (opts && opts.authenticator ? opts.authenticator(nonce) : {}) || {};
-    extend(this, opts, transport, creds);
+    extend(this, creds);
   }
 }
 
