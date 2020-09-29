@@ -57,12 +57,10 @@ Deno.test("properties - default connect properties", () => {
   assertEquals(cc.name, undefined, "name");
 });
 
-Deno.test("properties - configured options", async () => {
+Deno.test("properties - configured token options", async () => {
   let opts = defaultOptions();
   opts.servers = "127.0.0.1:4222";
   opts.name = "test";
-  opts.pass = "secret";
-  opts.user = "me";
   opts.token = "abc";
   opts.pedantic = true;
   opts.verbose = true;
@@ -77,7 +75,25 @@ Deno.test("properties - configured options", async () => {
   assertEquals(cc.verbose, opts.verbose);
   assertEquals(cc.pedantic, opts.pedantic);
   assertEquals(cc.name, opts.name);
+  assertEquals(cc.user, undefined);
+  assertEquals(cc.pass, undefined);
+  assertEquals(cc.auth_token, opts.token);
+});
+
+Deno.test("properties - configured user/pass options", async () => {
+  let opts = defaultOptions();
+  opts.servers = "127.0.0.1:4222";
+  opts.user = "test";
+  opts.pass = "secret";
+  // simulate the autheticator
+  opts.authenticator = buildAuthenticator(opts);
+  const auth = await opts.authenticator();
+  opts = extend(opts, auth);
+
+  const c = new Connect({ version, lang }, opts);
+  const cc = JSON.parse(JSON.stringify(c));
+
   assertEquals(cc.user, opts.user);
   assertEquals(cc.pass, opts.pass);
-  assertEquals(cc.auth_token, opts.token);
+  assertEquals(cc.auth_token, undefined);
 });
