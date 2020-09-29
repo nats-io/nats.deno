@@ -97,3 +97,27 @@ Deno.test("properties - configured user/pass options", async () => {
   assertEquals(cc.pass, opts.pass);
   assertEquals(cc.auth_token, undefined);
 });
+
+Deno.test("properties - tls doesn't leak options", () => {
+  const tlsOptions = {
+    keyFile: "keyFile",
+    certFile: "certFile",
+    caFile: "caFile",
+    key: "key",
+    cert: "cert",
+    ca: "ca",
+  };
+
+  let opts = { tls: tlsOptions, cert: "another" };
+  const auth = buildAuthenticator(opts);
+  opts = extend(opts, auth);
+
+  const c = new Connect({ version: "1.2.3", lang: "test" }, opts);
+  const cc = JSON.parse(JSON.stringify(c));
+  assertEquals(cc.tls_required, true);
+  assertEquals(cc.cert, undefined);
+  assertEquals(cc.keyFile, undefined);
+  assertEquals(cc.certFile, undefined);
+  assertEquals(cc.caFile, undefined);
+  assertEquals(cc.tls, undefined);
+});
