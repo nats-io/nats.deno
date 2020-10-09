@@ -33,7 +33,7 @@ export function headers(): MsgHdrs {
 
 export class MsgHdrsImpl implements MsgHdrs {
   static CRLF = "\r\n";
-  static SEP = ":";
+  static SEP = ": ";
   static HEADER = "NATS/1.0";
   error?: number;
   headers: Map<string, string[]> = new Map();
@@ -88,7 +88,7 @@ export class MsgHdrsImpl implements MsgHdrs {
         if (s) {
           const idx = s.indexOf(MsgHdrsImpl.SEP);
           const k = s.slice(0, idx);
-          const v = s.slice(idx + 1);
+          const v = s.slice(idx + 2);
           mh.append(k, v);
         }
       });
@@ -103,7 +103,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     let s = MsgHdrsImpl.HEADER;
     for (const [k, v] of this.headers) {
       for (let i = 0; i < v.length; i++) {
-        s = `${s}\r\n${k}:${v[i]}`;
+        s = `${s}\r\n${k}: ${v[i]}`;
       }
     }
     return `${s}\r\n\r\n`;
