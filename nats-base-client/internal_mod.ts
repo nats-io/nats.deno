@@ -93,3 +93,4 @@ export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
 export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TE, TD } from "./encoders.ts";
+export { parseIP, isIP } from "./ipparser.ts";

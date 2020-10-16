@@ -165,6 +165,7 @@ export interface Server {
   port: number;
   listen: string;
   src: string;
+  tlsName: string;
 }
 
 export interface ServersChanged {

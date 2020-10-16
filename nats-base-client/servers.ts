@@ -25,6 +25,7 @@ import {
   urlParseFn,
 } from "./transport.ts";
 import { shuffle } from "./util.ts";
+import { isIP } from "./ipparser.ts";
 
 /**
  * @hidden
@@ -38,6 +39,7 @@ export class ServerImpl implements Server {
   reconnects: number;
   lastConnect: number;
   gossiped: boolean;
+  tlsName = "";
 
   constructor(u: string, gossiped = false) {
     this.src = u;
@@ -78,6 +80,7 @@ export class Servers {
   private firstSelect: boolean = true;
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
+  private tlsName = "";
 
   constructor(
     randomize: boolean,
@@ -100,13 +103,29 @@ export class Servers {
     this.currentServer = this.servers[0];
   }
 
+  updateTLSName(): void {
+    const cs = this.getCurrentServer();
+    if (!isIP(cs.hostname)) {
+      this.tlsName = cs.hostname;
+      this.servers.forEach((s) => {
+        if (s.gossiped) {
+          s.tlsName = this.tlsName;
+        }
+      });
+    }
+  }
+
   getCurrentServer(): ServerImpl {
     return this.currentServer;
   }
 
   addServer(u: string, implicit = false): void {
     u = urlParseFn ? urlParseFn(u) : u;
-    this.servers.push(new ServerImpl(u, implicit));
+    const s = new ServerImpl(u, implicit);
+    if (isIP(s.hostname)) {
+      s.tlsName = this.tlsName;
+    }
+    this.servers.push(s);
   }
 
   selectServer(): ServerImpl | undefined {
@@ -154,7 +173,10 @@ export class Servers {
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {
         hp = urlParseFn ? urlParseFn(hp) : hp;
-        discovered.set(hp, new ServerImpl(hp, true));
+        const s = new ServerImpl(hp, true);
+        if (isIP(s.hostname)) {
+        }
+        discovered.set(hp, s);
       });
     }
     // remove gossiped servers that are no longer reported

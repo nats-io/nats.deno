@@ -68,7 +68,7 @@ export class DenoTransport implements Transport {
   }
 
   async connect(
-    hp: { hostname: string; port: number },
+    hp: { hostname: string; port: number; tlsName: string },
     options: ConnectionOptions,
   ): Promise<any> {
     this.options = options;
@@ -79,7 +79,8 @@ export class DenoTransport implements Transport {
       // @ts-ignore
       const { tls_required } = info;
       if (tls_required) {
-        await this.startTLS(hp.hostname);
+        const tlsn = hp.tlsName ? hp.tlsName : hp.hostname;
+        await this.startTLS(tlsn);
       } else {
         this.writer = new BufWriter(this.conn);
       }

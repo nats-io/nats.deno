@@ -390,6 +390,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       : this.servers.update(this.info);
     if (!this.infoReceived) {
       this.infoReceived = true;
+      if (this.transport.isEncrypted()) {
+        this.servers.updateTLSName();
+      }
       // send connect
       const { version, lang } = this.transport;
       try {
