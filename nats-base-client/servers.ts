@@ -25,7 +25,7 @@ import {
   urlParseFn,
 } from "./transport.ts";
 import { shuffle } from "./util.ts";
-import { isIP } from './ipparser.ts'
+import { isIP } from "./ipparser.ts";
 
 /**
  * @hidden
@@ -108,7 +108,7 @@ export class Servers {
     if (!isIP(cs.hostname)) {
       this.tlsName = cs.hostname;
       this.servers.forEach((s) => {
-        if(s.gossiped) {
+        if (s.gossiped) {
           s.tlsName = this.tlsName;
         }
       });
@@ -122,7 +122,7 @@ export class Servers {
   addServer(u: string, implicit = false): void {
     u = urlParseFn ? urlParseFn(u) : u;
     const s = new ServerImpl(u, implicit);
-    if(isIP(s.hostname)) {
+    if (isIP(s.hostname)) {
       s.tlsName = this.tlsName;
     }
     this.servers.push(s);
@@ -174,7 +174,7 @@ export class Servers {
       info.connect_urls.forEach((hp) => {
         hp = urlParseFn ? urlParseFn(hp) : hp;
         const s = new ServerImpl(hp, true);
-        if(isIP(s.hostname)) {
+        if (isIP(s.hostname)) {
         }
         discovered.set(hp, s);
       });

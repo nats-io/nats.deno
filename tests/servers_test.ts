@@ -108,16 +108,16 @@ Deno.test("servers - save tls name", () => {
   );
   servers.addServer("127.1.0.0", true);
   servers.addServer("127.1.2.0", true);
-  servers.updateTLSName()
+  servers.updateTLSName();
   assertEquals(servers.length(), 4);
   assertEquals(servers.getServers().length, 4);
   assertEquals(servers.getCurrentServer().listen, "h:1");
 
   const gossiped = servers.getServers().filter((s) => {
-    return s.gossiped
+    return s.gossiped;
   });
   assertEquals(gossiped.length, 2);
   gossiped.forEach((sn) => {
     assertEquals(sn.tlsName, "h");
-  })
+  });
 });
