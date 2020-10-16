@@ -272,7 +272,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       this.connectedOnce = true;
       this.server.didConnect = true;
       this.server.reconnects = 0;
-      this.infoReceived = true;
       this.flushPending();
       this.heartbeats.start();
     } catch (err) {
@@ -390,6 +389,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       ? undefined
       : this.servers.update(this.info);
     if (!this.infoReceived) {
+      this.infoReceived = true;
       // send connect
       const { version, lang } = this.transport;
       try {
