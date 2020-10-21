@@ -12,7 +12,7 @@ A Deno client for the [NATS messaging system](https://nats.io).
 ** :warning: NATS.deno is a preview** you can get the current development version by:
 
 ```bash
-import * as nats from 'https://raw.githubusercontent.com/nats-io/nats.deno/master/src/mod.ts'
+import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts"
 ```
 The Deno client is under active development. All tests are passing, but the APIs will change
 slightly - See the [TODO](TODO.md).
