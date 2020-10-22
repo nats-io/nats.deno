@@ -449,6 +449,64 @@ const sub = nc.subscribe("hello", { timeout: 1000 });
 });
 ```
 
+### Authenticators
+
+For user/password and token authentication, you can simply provide them
+as `ConnectionOptions` - see `user`, `pass`, `token`. Internally these
+mechanisms are implemented as an `Authenticator`. An `Authenticator` is
+simply a function that optionally handles a nonce signing, and returns
+a number of options that get passed to the server during the connection process.
+ 
+Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator` 
+that handles the authentication. NKeys and JWT authentication are more complex, 
+but their function is the same.
+
+Because nkey and JWT authentication may require reading data from a file or 
+an HTTP cookie, these forms of authentication will require a bit more from
+the developer to activate them. However, the work is related to accessing
+these resources on the platform they are working with.
+
+After the data, is read, you can use one of these functions in your code to 
+generate the authenticator and assign it to the `authenticator` property of
+the `ConnectionOptions`:
+
+- `nkeyAuthenticator(seed?: Uint8Array | (() => Uint8Array)): Authenticator`
+- `jwtAuthenticator(jwt: string | (() => string), seed?: Uint8Array | (()=> Uint8Array)): Authenticator`
+- `credsAuthenticator(creds: Uint8Array): Authenticator`
+
+
+The first two options also provide the ability to specify functions that return
+the desired value. This enables dynamic enviroment such as a browser where
+values accessed by fetching an URL or doing some other manipulation on a 
+cookie:
+
+
+Here's an example:
+
+```javascript
+  // read the creds file as necessary, in the case it
+  // is part of the code for illustration purposes
+  const creds = `-----BEGIN NATS USER JWT-----
+    eyJ0eXAiOiJqdSDJB....
+  ------END NATS USER JWT------
+
+************************* IMPORTANT *************************
+  NKEY Seed printed below can be used sign and prove identity.
+  NKEYs are sensitive and should be treated as secrets.
+
+  -----BEGIN USER NKEY SEED-----
+    SUAIBDPBAUTW....
+  ------END USER NKEY SEED------
+`;
+
+  const nc = await connect(
+    {
+      port: 4222,
+      authenticator: credsAuthenticator(new TextEncoder().encode(creds)),
+    },
+  );
+```
+
 ### Lifecycle/Informational Events
 Clients can get notification on various event types:
 - `Events.DISCONNECT`
