@@ -475,7 +475,7 @@ the `ConnectionOptions`:
 - `credsAuthenticator(creds: Uint8Array): Authenticator`
 
 
-The first two options also provide the ability to call a function to return
+The first two options also provide the ability to specify functions that return
 the desired value. This enables dynamic enviroment such as a browser where
 values accessed by fetching an URL or doing some other manipulation on a 
 cookie:
@@ -506,9 +506,6 @@ Here's an example:
     },
   );
 ```
-
-
-#### 
 
 ### Lifecycle/Informational Events
 Clients can get notification on various event types:
