@@ -14,16 +14,14 @@
  *
  */
 import {
-  DEFAULT_PORT,
   DEFAULT_HOSTPORT,
+  DEFAULT_PORT,
+  Server,
   ServerInfo,
   ServersChanged,
-  Server,
   URLParseFn,
 } from "./types.ts";
-import {
-  urlParseFn,
-} from "./transport.ts";
+import { urlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
 

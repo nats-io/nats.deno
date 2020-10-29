@@ -14,12 +14,12 @@
  */
 
 import { connect, createInbox, Empty, ErrorCode, headers } from "../src/mod.ts";
-import { NatsServer, Lock, assertErrorCode } from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
-  assertEquals,
   assert,
+  assertEquals,
   fail,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 Deno.test("noresponders - option", async () => {
   const srv = await NatsServer.start();

@@ -14,26 +14,21 @@
  */
 
 import { deferred, isUint8Array } from "./util.ts";
-import {
-  createInbox,
-  ProtocolHandler,
-} from "./protocol.ts";
-import {
-  SubscriptionImpl,
-} from "./subscription.ts";
+import { createInbox, ProtocolHandler } from "./protocol.ts";
+import { SubscriptionImpl } from "./subscription.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import {
   ConnectionOptions,
-  Subscription,
-  RequestOptions,
   Empty,
-  PublishOptions,
   Msg,
-  SubscriptionOptions,
-  Status,
   NatsConnection,
-  Stats,
+  PublishOptions,
+  RequestOptions,
   ServerInfo,
+  Stats,
+  Status,
+  Subscription,
+  SubscriptionOptions,
 } from "./types.ts";
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";

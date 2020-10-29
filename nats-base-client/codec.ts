@@ -14,7 +14,7 @@
  */
 
 import { ErrorCode, NatsError } from "./error.ts";
-import { TE, TD } from "./encoders.ts";
+import { TD, TE } from "./encoders.ts";
 
 export interface Codec<T> {
   encode(d: T): Uint8Array;

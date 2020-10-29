@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { deferred, Deferred } from "./util.ts";
+import { Deferred, deferred } from "./util.ts";
 import { DebugEvents, Status } from "./types.ts";
 
 export interface PH {

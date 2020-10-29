@@ -12,10 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { StringCodec, JSONCodec } from "../nats-base-client/codec.ts";
-import {
-  assertEquals,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
+import { assertEquals } from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 Deno.test("codec - string", () => {
   const sc = StringCodec();

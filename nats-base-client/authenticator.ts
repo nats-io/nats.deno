@@ -12,12 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  nkeys,
-} from "./nkeys.ts";
+import { nkeys } from "./nkeys.ts";
 import type { ConnectionOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./mod.ts";
-import { TE, TD } from "./encoders.ts";
+import { TD, TE } from "./encoders.ts";
 
 export type NoAuth = void;
 

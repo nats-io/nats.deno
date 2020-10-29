@@ -14,26 +14,26 @@
  */
 import {
   ConnectionOptions,
-  Events,
-  Status,
   DebugEvents,
-  DEFAULT_RECONNECT_TIME_WAIT,
-  Subscription,
-  DEFAULT_PING_INTERVAL,
   DEFAULT_MAX_PING_OUT,
+  DEFAULT_PING_INTERVAL,
+  DEFAULT_RECONNECT_TIME_WAIT,
   Empty,
+  Events,
   PublishOptions,
+  Status,
+  Subscription,
 } from "./types.ts";
-import { Transport, newTransport } from "./transport.ts";
+import { newTransport, Transport } from "./transport.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import {
   CR_LF,
+  CRLF,
+  Deferred,
+  deferred,
+  delay,
   extend,
   timeout,
-  deferred,
-  Deferred,
-  delay,
-  CRLF,
 } from "./util.ts";
 import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
@@ -45,14 +45,9 @@ import { Subscriptions } from "./subscriptions.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
 import type { Request } from "./request.ts";
 import { Heartbeat, PH } from "./heartbeats.ts";
-import {
-  Kind,
-  MsgArg,
-  Parser,
-  ParserEvent,
-} from "./parser.ts";
+import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
-import { fastEncoder, fastDecoder } from "./encoders.ts";
+import { fastDecoder, fastEncoder } from "./encoders.ts";
 
 const FLUSH_THRESHOLD = 1024 * 32;
 

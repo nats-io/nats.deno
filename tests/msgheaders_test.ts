@@ -14,11 +14,11 @@
  */
 import {
   assert,
+  assertArrayContains,
   assertEquals,
   assertThrows,
-  assertArrayContains,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
-import { NatsError, MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { MsgHdrsImpl, NatsError } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("msgheaders - basics", () => {
   const h = new MsgHdrsImpl();

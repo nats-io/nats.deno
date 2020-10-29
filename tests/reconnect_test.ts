@@ -17,21 +17,12 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { connect, createInbox, ErrorCode, Events } from "../src/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
-  connect,
-  createInbox,
-  Events,
-  ErrorCode,
-} from "../src/mod.ts";
-import {
-  assertErrorCode,
-  Lock,
-  NatsServer,
-} from "./helpers/mod.ts";
-import {
-  deferred,
   DebugEvents,
+  deferred,
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 

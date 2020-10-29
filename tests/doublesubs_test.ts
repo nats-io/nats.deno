@@ -9,11 +9,11 @@ import {
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
-  assertEquals,
   assertArrayContains,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+  assertEquals,
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
 import { extend } from "../nats-base-client/util.ts";
-import { join, resolve } from "https://deno.land/std@0.71.0/path/mod.ts";
+import { join, resolve } from "https://deno.land/std@0.74.0/path/mod.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();

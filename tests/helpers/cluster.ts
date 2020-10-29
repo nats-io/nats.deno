@@ -13,10 +13,8 @@
  * limitations under the License.
  */
 
-import {
-  NatsServer,
-} from "./mod.ts";
-import { parse } from "https://deno.land/std@0.71.0/flags/mod.ts";
+import { NatsServer } from "./mod.ts";
+import { parse } from "https://deno.land/std@0.74.0/flags/mod.ts";
 
 const defaults = {
   c: 2,
