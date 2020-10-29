@@ -14,11 +14,11 @@
  */
 import { DenoTransport } from "./deno_transport.ts";
 import {
-  NatsConnection,
   ConnectionOptions,
+  NatsConnection,
+  NatsConnectionImpl,
   setTransportFactory,
   Transport,
-  NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {

@@ -17,14 +17,14 @@ import { extend } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import {
   ConnectionOptions,
+  DEFAULT_HOST,
+  DEFAULT_HOSTPORT,
   DEFAULT_JITTER,
   DEFAULT_JITTER_TLS,
   DEFAULT_MAX_PING_OUT,
   DEFAULT_MAX_RECONNECT_ATTEMPTS,
   DEFAULT_PING_INTERVAL,
-  DEFAULT_HOST,
   DEFAULT_RECONNECT_TIME_WAIT,
-  DEFAULT_HOSTPORT,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
 

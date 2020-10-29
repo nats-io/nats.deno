@@ -13,20 +13,20 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.71.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.71.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.74.0/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.74.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
+  checkOptions,
   ConnectionOptions,
   DataBuffer,
+  ErrorCode,
   extractProtocolMessage,
   INFO,
-  render,
-  Transport,
-  checkOptions,
   NatsError,
-  ErrorCode,
+  render,
   TE,
+  Transport,
 } from "../nats-base-client/internal_mod.ts";
 import type { TlsOptions } from "../nats-base-client/types.ts";
 

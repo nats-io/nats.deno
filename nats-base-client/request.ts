@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred, extend, timeout, Timeout } from "./util.ts";
+import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import type { Msg, RequestOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { MuxSubscription } from "./muxsubscription.ts";

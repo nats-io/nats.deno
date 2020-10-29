@@ -14,23 +14,23 @@
  */
 
 import {
+  DenoBuffer,
+  Dispatcher,
+  Empty,
+  headers,
   Kind,
+  Msg,
+  MsgHdrsImpl,
+  MsgImpl,
   Parser,
   ParserEvent,
   State,
-  Dispatcher,
-  headers,
-  MsgHdrsImpl,
-  DenoBuffer,
-  Empty,
-  Msg,
-  MsgImpl,
 } from "../nats-base-client/internal_mod.ts";
 import {
+  assert,
   assertEquals,
   assertThrows,
-  assert,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
 import type { Publisher } from "../nats-base-client/protocol.ts";
 
 let te = new TextEncoder();

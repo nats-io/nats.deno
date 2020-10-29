@@ -13,16 +13,14 @@
  * limitations under the License.
  */
 import {
+  assert,
   assertEquals,
   assertMatch,
-  assert,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 import { connect } from "../src/mod.ts";
 import { DenoTransport } from "../src/deno_transport.ts";
-import {
-  Connect,
-} from "../nats-base-client/internal_mod.ts";
+import { Connect } from "../nats-base-client/internal_mod.ts";
 import { buildAuthenticator } from "../nats-base-client/authenticator.ts";
 import { extend } from "../nats-base-client/util.ts";
 import { defaultOptions } from "../nats-base-client/options.ts";

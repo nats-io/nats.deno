@@ -14,14 +14,9 @@
  */
 
 import { NatsServer } from "./helpers/launcher.ts";
-import {
-  createInbox,
-  DataBuffer,
-} from "../nats-base-client/internal_mod.ts";
+import { createInbox, DataBuffer } from "../nats-base-client/internal_mod.ts";
 import { connect } from "../src/mod.ts";
-import {
-  assertEquals,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 function makeBuffer(N: number): Uint8Array {
   const buf = new Uint8Array(N);

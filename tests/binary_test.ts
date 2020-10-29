@@ -13,17 +13,9 @@
  * limitations under the License.
  */
 
-import {
-  assertEquals,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
-import {
-  connect,
-  Msg,
-  createInbox,
-} from "../src/mod.ts";
-import {
-  deferred,
-} from "../nats-base-client/internal_mod.ts";
+import { assertEquals } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { connect, createInbox, Msg } from "../src/mod.ts";
+import { deferred } from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
 

@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 import {
-  fail,
   assert,
   assertEquals,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+  fail,
+} from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 import {
   DebugEvents,

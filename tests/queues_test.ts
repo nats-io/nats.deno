@@ -13,14 +13,8 @@
  * limitations under the License.
  */
 
-import {
-  connect,
-  createInbox,
-  Subscription,
-} from "../src/mod.ts";
-import {
-  assertEquals,
-} from "https://deno.land/std@0.71.0/testing/asserts.ts";
+import { connect, createInbox, Subscription } from "../src/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
 

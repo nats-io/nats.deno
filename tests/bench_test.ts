@@ -13,10 +13,7 @@
  * limitations under the License.
  */
 
-import {
-  connect,
-  createInbox,
-} from "../src/mod.ts";
+import { connect, createInbox } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";

@@ -14,7 +14,7 @@
  */
 import { QueuedIterator } from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
-import { deferred, extend, timeout, Timeout } from "./util.ts";
+import { deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
