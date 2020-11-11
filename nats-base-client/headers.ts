@@ -21,7 +21,7 @@ import { TD, TE } from "./encoders.ts";
 export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
-  code?: number
+  code?: number;
   get(k: string): string;
   set(k: string, v: string): void;
   append(k: string, v: string): void;
@@ -216,7 +216,7 @@ export class MsgHdrsImpl implements MsgHdrs {
 
   get hasError() {
     if (this.code) {
-      return this.code > 0 && this.code < 200 && this.code >= 300;
+      return this.code > 0 && (this.code < 200 || this.code >= 300);
     }
     return false;
   }

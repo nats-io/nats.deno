@@ -129,7 +129,7 @@ function status(code: number, description: string): Uint8Array {
 
 function checkStatus(code = 200, description = "") {
   const h = MsgHdrsImpl.decode(status(code, description));
-  const isErrorCode = code > 0 && code < 200 && code >= 300;
+  const isErrorCode = code > 0 && (code < 200 || code >= 300);
   assertEquals(h.hasError, isErrorCode);
 
   if (code > 0) {
