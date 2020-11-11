@@ -62,9 +62,9 @@ export class MuxSubscription {
         if (r) {
           if (err === null && m.headers) {
             const headers = m.headers as MsgHdrsImpl;
-            if (headers.error) {
+            if (headers.hasError) {
               err = new NatsError(
-                headers.error.toString(),
+                headers.status,
                 ErrorCode.REQUEST_ERROR,
               );
             }

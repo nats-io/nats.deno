@@ -19,6 +19,8 @@ import { ErrorCode, NatsError } from "./error.ts";
 import { TD, TE } from "./encoders.ts";
 
 export interface MsgHdrs extends Iterable<[string, string[]]> {
+  hasError: boolean;
+  status: string;
   get(k: string): string;
   set(k: string, v: string): void;
   append(k: string, v: string): void;
@@ -35,7 +37,8 @@ export class MsgHdrsImpl implements MsgHdrs {
   static CRLF = "\r\n";
   static SEP = ": ";
   static HEADER = "NATS/1.0";
-  error?: number;
+  code?: number;
+  description = "";
   headers: Map<string, string[]> = new Map();
 
   constructor() {}
@@ -55,7 +58,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   equals(mh: MsgHdrsImpl) {
     if (
       mh && this.headers.size === mh.headers.size &&
-      this.error === mh.error
+      this.code === mh.code
     ) {
       for (const [k, v] of this.headers) {
         const a = mh.values(k);
@@ -81,8 +84,13 @@ export class MsgHdrsImpl implements MsgHdrs {
     const lines = s.split(MsgHdrsImpl.CRLF);
     const h = lines[0];
     if (h !== MsgHdrsImpl.HEADER) {
-      const str = h.replace(MsgHdrsImpl.HEADER, "");
-      mh.error = parseInt(str, 10);
+      let str = h.replace(MsgHdrsImpl.HEADER, "");
+      mh.code = parseInt(str, 10);
+      const scode = mh.status.toString();
+      mh.set("Status", scode);
+      str = str.replace(mh.status.toString(), "");
+      mh.description = str.trim();
+      mh.set("Description", mh.description);
     } else {
       lines.slice(1).map((s) => {
         if (s) {
@@ -203,5 +211,16 @@ export class MsgHdrsImpl implements MsgHdrs {
   delete(k: string): void {
     const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
     this.headers.delete(key);
+  }
+
+  get hasError() {
+    if (this.code) {
+      return this.code > 0 && this.code < 200 && this.code >= 300;
+    }
+    return false;
+  }
+
+  get status(): string {
+    return `${this.code} ${this.description}`.trim();
   }
 }

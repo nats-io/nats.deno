@@ -4,6 +4,7 @@ import {
   Empty,
   ErrorCode,
   headers,
+  MsgHdrs,
   RequestOptions,
   StringCodec,
 } from "../src/mod.ts";
@@ -15,6 +16,7 @@ import {
   assertEquals,
   fail,
 } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("headers - option", async () => {
   const srv = await NatsServer.start();
@@ -115,4 +117,34 @@ Deno.test("headers - request headers", async () => {
   await srv.stop();
   assertEquals(sc.decode(msg.data), "foo");
   assertEquals(msg.headers?.get("x"), s);
+});
+
+function status(code: number, description: string): Uint8Array {
+  const status = code
+    ? `${MsgHdrsImpl.HEADER} ${code.toString()} ${description}`.trim()
+    : MsgHdrsImpl.HEADER;
+  const line = `${status}\r\n\r\n\r\n`;
+  return StringCodec().encode(line);
+}
+
+function checkStatus(code = 200, description = "") {
+  const h = MsgHdrsImpl.decode(status(code, description));
+  const isErrorCode = code > 0 && code < 200 && code >= 300;
+  assertEquals(h.hasError, isErrorCode);
+
+  if (code > 0) {
+    assertEquals(h.code, code);
+    assertEquals(h.description, description);
+    assertEquals(h.status, `${code} ${description}`.trim());
+    assertEquals(h.get("status"), code.toString());
+  }
+  assertEquals(h.get("description"), description);
+}
+
+Deno.test("headers - status", () => {
+  checkStatus(0, "");
+  checkStatus(200, "");
+  checkStatus(200, "OK");
+  checkStatus(503, "No Responders");
+  checkStatus(404, "No Messages");
 });
