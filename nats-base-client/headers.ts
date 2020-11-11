@@ -21,6 +21,7 @@ import { TD, TE } from "./encoders.ts";
 export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
+  code?: number
   get(k: string): string;
   set(k: string, v: string): void;
   append(k: string, v: string): void;
