@@ -87,11 +87,13 @@ export class MsgHdrsImpl implements MsgHdrs {
     if (h !== MsgHdrsImpl.HEADER) {
       let str = h.replace(MsgHdrsImpl.HEADER, "");
       mh.code = parseInt(str, 10);
-      const scode = mh.status.toString();
+      const scode = mh.code.toString();
       mh.set("Status", scode);
-      str = str.replace(mh.status.toString(), "");
+      str = str.replace(scode, "");
       mh.description = str.trim();
-      mh.set("Description", mh.description);
+      if (mh.description) {
+        mh.set("Description", mh.description);
+      }
     } else {
       lines.slice(1).map((s) => {
         if (s) {
