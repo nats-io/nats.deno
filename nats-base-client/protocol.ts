@@ -611,10 +611,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     subs.forEach((sub: Subscription) => {
       promises.push(sub.drain());
     });
-    promises.push(this.flush(deferred()));
     return Promise.all(promises)
       .then(async () => {
         this.noMorePublishing = true;
+        await this.flush()
         return this.close();
       })
       .catch(() => {
