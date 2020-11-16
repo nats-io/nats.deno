@@ -30,7 +30,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import type { TlsOptions } from "../nats-base-client/types.ts";
 
-const VERSION = "1.0.0-11";
+const VERSION = "1.0.0-12";
 const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason
