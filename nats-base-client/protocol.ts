@@ -614,6 +614,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     return Promise.all(promises)
       .then(async () => {
         this.noMorePublishing = true;
+        await this.flush();
         return this.close();
       })
       .catch(() => {
