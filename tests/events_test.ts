@@ -41,7 +41,7 @@ Deno.test("events - disconnect and close", async () => {
 });
 
 Deno.test("events - disconnect, reconnect", async () => {
-  const cluster = await NatsServer.cluster(2, undefined, true);
+  const cluster = await NatsServer.cluster();
   const nc = await connect(
     {
       servers: `${cluster[0].hostname}:${cluster[0].port}`,

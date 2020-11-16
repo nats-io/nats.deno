@@ -328,7 +328,7 @@ export class NatsServer implements PortInfo {
             } catch (_) {
             }
           },
-          1500,
+          1000,
           { name: "read ports file" },
         );
 
