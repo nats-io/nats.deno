@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo '::set-env name=NATS_VERSION::v2.1.7'
+        run: echo "NATS_VERSION=v2.1.7" >> $GITHUB_ENV
       - name: Get nats-server
         run: |
           wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
