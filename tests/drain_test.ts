@@ -46,19 +46,12 @@ Deno.test("drain - connection drain", async () => {
 
   const nc1 = await connect({ servers: u });
   let first = true;
-  const closed = deferred<void>();
   await nc1.subscribe(subj, {
     callback: () => {
       lock.unlock();
       if (first) {
         first = false;
-        nc1.drain()
-          .then(() => {
-            closed.resolve();
-          })
-          .catch((err) => {
-            fail(err);
-          });
+        nc1.drain();
       }
     },
     queue: "q1",
@@ -80,10 +73,8 @@ Deno.test("drain - connection drain", async () => {
   for (let i = 0; i < max; i++) {
     nc2.publish(subj);
   }
-  await nc2.flush();
-  await closed;
+  await nc2.drain();
   await lock;
-  await nc2.close();
   assert(count > 0, "expected second connection to get some messages");
 });
 
@@ -169,12 +160,8 @@ Deno.test("drain - publisher drain", async () => {
 
   for (let i = 0; i < 10000; i++) {
     nc2.publish(subj);
-    // FIXME: this shouldn't be necessary
-    if (i % 1000 === 0) {
-      await nc2.flush();
-    }
   }
-  await nc2.flush();
+  await nc2.drain();
 
   await lock;
 
@@ -313,5 +300,27 @@ Deno.test("drain - multiple sub drain returns same promise", async () => {
   nc.publish(subj);
   await nc.flush();
   await p1;
+  await nc.close();
+});
+
+Deno.test("drain - simple publisher connection drain", async () => {
+  const nc = await connect({ servers: u });
+
+  const subj = createInbox();
+  const lock = Lock(500);
+
+  nc.subscribe(subj, {
+    callback: (err, msg) => {
+      lock.unlock();
+    },
+  });
+  await nc.flush();
+
+  const nc1 = await connect({ servers: u });
+  for (let i = 0; i < 500; i++) {
+    nc1.publish(subj);
+  }
+  await nc1.drain();
+  await lock;
   await nc.close();
 });
