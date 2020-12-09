@@ -23,6 +23,7 @@ import {
   Empty,
   ErrorCode,
   Msg,
+  NatsError,
   StringCodec,
 } from "../src/mod.ts";
 import {
@@ -386,6 +387,51 @@ Deno.test("basics - request cancel rejects", async () => {
     v.cancel();
   });
   await lock;
+  await nc.close();
+});
+
+Deno.test("basics - old style requests", async () => {
+  const sc = StringCodec();
+  const nc = await connect({ servers: u });
+  nc.subscribe("q", {
+    callback: (err, msg) => {
+      msg.respond(sc.encode("hello"));
+    },
+  });
+
+  const m = await nc.request(
+    "q",
+    Empty,
+    { reply: "bar", noMux: true, timeout: 1000 },
+  );
+  assertEquals("hello", sc.decode(m.data));
+  assertEquals("bar", m.subject);
+
+  await nc.close();
+});
+
+Deno.test("basics - request with custom subject", async () => {
+  const sc = StringCodec();
+  const nc = await connect({ servers: u });
+  nc.subscribe("q", {
+    callback: (err, msg) => {
+      msg.respond(sc.encode("hello"));
+    },
+  });
+
+  try {
+    await nc.request(
+      "q",
+      Empty,
+      { reply: "bar", timeout: 1000 },
+    );
+
+    fail("should have failed");
+  } catch (err) {
+    const nerr = err as NatsError;
+    assertEquals(ErrorCode.INVALID_OPTION, nerr.code);
+  }
+
   await nc.close();
 });
 

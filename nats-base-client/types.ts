@@ -191,6 +191,7 @@ export interface RequestOptions {
   timeout: number;
   headers?: MsgHdrs;
   noMux?: boolean;
+  reply?: string;
 }
 
 export interface PublishOptions {

@@ -132,9 +132,17 @@ export class NatsConnectionImpl implements NatsConnection {
     if (opts.timeout < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.INVALID_OPTION));
     }
+    if (!opts.noMux && opts.reply) {
+      return Promise.reject(
+        new NatsError(
+          "reply can only be used with noMux",
+          ErrorCode.INVALID_OPTION,
+        ),
+      );
+    }
 
     if (opts.noMux) {
-      const inbox = createInbox();
+      const inbox = opts.reply ? opts.reply : createInbox();
       const sub = this.subscribe(inbox, { max: 1, timeout: opts.timeout });
       this.publish(subject, data, { reply: inbox });
       const d = deferred<Msg>();
