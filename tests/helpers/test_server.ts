@@ -137,7 +137,7 @@ export class TestServer {
     );
 
     const self = this;
-    this.accept = new Promise(async (resolve, reject) => {
+    this.accept = new Promise<void>(async (resolve) => {
       for await (const socket of listener) {
         try {
           const c = new Connection(socket, debug, ca);

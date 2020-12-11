@@ -27,7 +27,7 @@ export interface Lock<T> extends Promise<T> {
  */
 export function Lock<T>(count: number = 1, ms: number = 5000): Lock<T> {
   let methods;
-  const promise = new Promise((resolve, reject) => {
+  const promise = new Promise<void>((resolve, reject) => {
     let timer: number;
 
     let cancel = (): void => {

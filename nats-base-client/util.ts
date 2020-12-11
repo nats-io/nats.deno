@@ -91,7 +91,7 @@ export interface Pending {
 
 export function pending(): Pending {
   const v = {} as Pending;
-  const promise = new Promise((resolve) => {
+  const promise = new Promise<void>((resolve) => {
     v.promise = () => {
       return promise;
     };
@@ -158,7 +158,7 @@ export function timeout<T>(ms: number): Timeout<T> {
 }
 
 export function delay<T>(ms: number = 0, value?: T): Promise<T> {
-  return new Promise((resolve) => {
+  return new Promise<any>((resolve) => {
     setTimeout(() => {
       resolve(value);
     }, ms);

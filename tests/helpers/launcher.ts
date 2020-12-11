@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as path from "https://deno.land/std@0.74.0/path/mod.ts";
+import * as path from "https://deno.land/std@0.80.0/path/mod.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -21,7 +21,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,
@@ -384,23 +384,23 @@ export function toConf(o: object, indent?: string): string {
       //@ts-ignore
       let v = o[k];
       if (Array.isArray(v)) {
-        buf.push(pad + k + " [");
+        buf.push(`${pad}${k} [`);
         buf.push(toConf(v, pad));
-        buf.push(pad + " ]");
+        buf.push(`${pad} ]`);
       } else if (typeof v === "object") {
         // don't print a key if it is an array and it is an index
         let kn = Array.isArray(o) ? "" : k;
-        buf.push(pad + kn + " {");
+        buf.push(`${pad}${kn} {`);
         buf.push(toConf(v, pad));
-        buf.push(pad + " }");
+        buf.push(`${pad} }`);
       } else {
         if (!Array.isArray(o)) {
           if (
             typeof v === "string" && v.charAt(0) >= "0" && v.charAt(0) <= "9"
           ) {
-            buf.push(pad + k + ': \"' + v + '\"');
+            buf.push(`${pad}${k}: "${v}"`);
           } else {
-            buf.push(pad + k + ": " + v);
+            buf.push(`${pad}${k}: ${v}`);
           }
         } else {
           buf.push(pad + v);

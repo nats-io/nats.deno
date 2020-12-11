@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { assert, fail } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { assert, fail } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 
 export function assertErrorCode(err: Error, ...codes: string[]) {
   const { code } = err as { code?: string };

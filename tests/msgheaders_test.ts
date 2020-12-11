@@ -14,10 +14,10 @@
  */
 import {
   assert,
-  assertArrayContains,
+  assertArrayIncludes,
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+} from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import { MsgHdrsImpl, NatsError } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("msgheaders - basics", () => {
@@ -40,14 +40,14 @@ Deno.test("msgheaders - basics", () => {
   assert(h.has("foo"));
   const foos = h.values(header);
   assertEquals(2, foos.length);
-  assertArrayContains(foos, ["bar", "bam"]);
+  assertArrayIncludes(foos, ["bar", "bam"]);
   assert(foos.indexOf("baz") === -1);
 
   header = MsgHdrsImpl.canonicalMIMEHeaderKey("foo-bar");
   assertEquals("Foo-Bar", header);
   const foobars = h.values(header);
   assertEquals(1, foobars.length);
-  assertArrayContains(foobars, ["baz"]);
+  assertArrayIncludes(foobars, ["baz"]);
 
   const a = h.encode();
   const hh = MsgHdrsImpl.decode(a);
