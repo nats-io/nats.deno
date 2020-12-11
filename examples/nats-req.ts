@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.74.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.80.0/flags/mod.ts";
 import { connect, ConnectionOptions, StringCodec } from "../src/mod.ts";
 import { delay } from "../nats-base-client/internal_mod.ts";
 

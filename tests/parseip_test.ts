@@ -19,7 +19,7 @@
 // license that can be found in the LICENSE file.
 import { parseIP } from "../nats-base-client/internal_mod.ts";
 
-import { assertEquals } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import { ipV4 } from "../nats-base-client/ipparser.ts";
 
 Deno.test("ipparser", () => {

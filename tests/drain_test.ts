@@ -19,7 +19,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+} from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -29,7 +29,6 @@ import {
 } from "../src/mod.ts";
 
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
-import { deferred } from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -258,7 +257,7 @@ Deno.test("drain - publisher drain", async () => {
   const lock = Lock(10);
 
   nc.subscribe(subj, {
-    callback: (err, msg) => {
+    callback: () => {
       lock.unlock();
     },
   });

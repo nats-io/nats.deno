@@ -4,7 +4,6 @@ import {
   Empty,
   ErrorCode,
   headers,
-  MsgHdrs,
   RequestOptions,
   StringCodec,
 } from "../src/mod.ts";
@@ -12,10 +11,10 @@ import { NatsServer } from "./helpers/launcher.ts";
 import { assertErrorCode, Lock } from "./helpers/mod.ts";
 import {
   assert,
-  assertArrayContains,
+  assertArrayIncludes,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+} from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("headers - option", async () => {
@@ -43,7 +42,7 @@ Deno.test("headers - option", async () => {
         assert(k);
         assert(v);
         const vv = h.values(k);
-        assertArrayContains(v, vv);
+        assertArrayIncludes(v, vv);
       }
       lock.unlock();
     }

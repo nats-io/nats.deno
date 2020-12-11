@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { fail } from "https://deno.land/std@0.74.0/testing/asserts.ts";
+import { fail } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import {
   connect,
   credsAuthenticator,

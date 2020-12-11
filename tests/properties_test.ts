@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   assertMatch,
-} from "https://deno.land/std@0.74.0/testing/asserts.ts";
+} from "https://deno.land/std@0.80.0/testing/asserts.ts";
 
 import { connect } from "../src/mod.ts";
 import { DenoTransport } from "../src/deno_transport.ts";
