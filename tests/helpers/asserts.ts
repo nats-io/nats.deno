@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,7 @@ export function assertErrorCode(err: Error, ...codes: string[]) {
   assert(ok);
 }
 
-export function assertThrowsErrorCode(fn: () => any, ...codes: string[]) {
+export function assertThrowsErrorCode(fn: () => unknown, ...codes: string[]) {
   try {
     fn();
     fail("failed to throw error");

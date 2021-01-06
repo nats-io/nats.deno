@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,7 +19,7 @@ import type { Msg } from "./types.ts";
 export class Subscriptions {
   mux!: SubscriptionImpl;
   subs: Map<number, SubscriptionImpl> = new Map<number, SubscriptionImpl>();
-  sidCounter: number = 0;
+  sidCounter = 0;
 
   size(): number {
     return this.subs.size;
@@ -46,8 +46,8 @@ export class Subscriptions {
   }
 
   all(): (SubscriptionImpl)[] {
-    let buf = [];
-    for (let s of this.subs.values()) {
+    const buf = [];
+    for (const s of this.subs.values()) {
       buf.push(s);
     }
     return buf;

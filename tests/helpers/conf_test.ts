@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,56 +17,56 @@ import { toConf } from "./launcher.ts";
 import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 
 Deno.test("conf - serializing simple", () => {
-  let x = {
+  const x = {
     test: "one",
   };
-  let y = toConf(x);
+  const y = toConf(x);
 
-  let buf = y.split("\n");
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, "test: one");
 });
 
 Deno.test("conf - serializing nested", () => {
-  let x = {
+  const x = {
     a: "one",
     b: {
       a: "two",
     },
   };
-  let y = toConf(x);
+  const y = toConf(x);
 
-  let buf = y.split("\n");
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, "a: one b { a: two }");
 });
 
 Deno.test("conf - serializing array", () => {
-  let x = {
+  const x = {
     a: "one",
     b: ["a", "b", "c"],
   };
-  let y = toConf(x);
+  const y = toConf(x);
 
-  let buf = y.split("\n");
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, "a: one b [ a b c ]");
 });
 
 Deno.test("conf - serializing array objs", () => {
-  let x = {
+  const x = {
     a: "one",
     b: [{
       a: "a",
@@ -76,18 +76,18 @@ Deno.test("conf - serializing array objs", () => {
       c: "c",
     }],
   };
-  let y = toConf(x);
-  let buf = y.split("\n");
+  const y = toConf(x);
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, "a: one b [ { a: a } { b: b } { c: c } ]");
 });
 
 Deno.test("conf - serializing array arrays", () => {
-  let x = {
+  const x = {
     a: "one",
     b: [{
       a: "a",
@@ -98,28 +98,28 @@ Deno.test("conf - serializing array arrays", () => {
       c: "c",
     }],
   };
-  let y = toConf(x);
-  let buf = y.split("\n");
+  const y = toConf(x);
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, "a: one b [ { a: a b [ b c ] } { b: b } { c: c } ]");
 });
 
 Deno.test("conf - strings that start with numbers are quoted", () => {
-  let x = {
+  const x = {
     a: "2hello",
     b: 2,
     c: "hello",
   };
-  let y = toConf(x);
-  let buf = y.split("\n");
+  const y = toConf(x);
+  const buf = y.split("\n");
   buf.forEach(function (e, i) {
     buf[i] = e.trim();
   });
 
-  let z = buf.join(" ");
+  const z = buf.join(" ");
   assertEquals(z, 'a: "2hello" b: 2 c: hello');
 });

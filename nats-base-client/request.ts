@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +20,7 @@ import { nuid } from "./nuid.ts";
 
 export class Request {
   token: string;
-  received: number = 0;
+  received = 0;
   deferred: Deferred<Msg> = deferred();
   timer: Timeout<Msg>;
   private mux: MuxSubscription;

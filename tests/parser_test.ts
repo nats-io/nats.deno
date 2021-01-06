@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,7 +33,7 @@ import {
 } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import type { Publisher } from "../nats-base-client/protocol.ts";
 
-let te = new TextEncoder();
+const te = new TextEncoder();
 const td = new TextDecoder();
 
 class NoopDispatcher implements Dispatcher<ParserEvent> {
@@ -188,7 +188,7 @@ Deno.test("parser - ok", () => {
 });
 
 Deno.test("parser - info", () => {
-  let states = [
+  const states = [
     State.OP_START,
     State.OP_I,
     State.OP_IN,
@@ -256,8 +256,8 @@ Deno.test("parser - split msg", () => {
     p.parse(te.encode("MSG a b c\r\n"));
   });
 
-  let d = new TestDispatcher();
-  let p = new Parser(d);
+  const d = new TestDispatcher();
+  const p = new Parser(d);
   p.parse(te.encode("MSG a"));
   assert(p.argBuf);
   p.parse(te.encode(" 1 3\r\nf"));
@@ -324,14 +324,14 @@ Deno.test("parser - split msg", () => {
 
 Deno.test("parser - info arg", () => {
   const arg = {
-    server_id: "test",
+    "server_id": "test",
     host: "localhost",
     port: 4222,
     version: "1.2.3",
-    auth_required: true,
-    tls_required: true,
-    max_payload: 2 * 1024 * 1024,
-    connect_urls: [
+    "auth_required": true,
+    "tls_required": true,
+    "max_payload": 2 * 1024 * 1024,
+    "connect_urls": [
       "localhost:5222",
       "localhost:6222",
     ],
@@ -420,7 +420,7 @@ Deno.test("parser - hmsg buffers don't clobber", () => {
   parserClobberTest(true);
 });
 
-function parserClobberTest(hdrs: boolean = false): void {
+function parserClobberTest(hdrs = false): void {
   const d = new TestDispatcher();
   const p = new Parser(d);
 

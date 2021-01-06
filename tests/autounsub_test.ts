@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -113,7 +113,7 @@ Deno.test("autounsub - request receives expected count with multiple helpers", a
   await nc.request(subj);
   await nc.drain();
 
-  let counts = subs.map((s) => {
+  const counts = subs.map((s) => {
     return s.getReceived();
   });
   const count = counts.reduce((a, v) => a + v);
@@ -144,22 +144,22 @@ Deno.test("autounsub - manual request receives expected count with multiple help
 });
 
 Deno.test("autounsub - check subscription leaks", async () => {
-  let nc = await connect({ servers: u }) as NatsConnectionImpl;
-  let subj = createInbox();
-  let sub = nc.subscribe(subj);
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+  const sub = nc.subscribe(subj);
   sub.unsubscribe();
   assertEquals(nc.protocol.subscriptions.size(), 0);
   await nc.close();
 });
 
 Deno.test("autounsub - check request leaks", async () => {
-  let nc = await connect({ servers: u }) as NatsConnectionImpl;
-  let subj = createInbox();
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
 
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
-  let sub = nc.subscribe(subj);
+  const sub = nc.subscribe(subj);
   (async () => {
     for await (const m of sub) {
       m.respond();
@@ -169,7 +169,7 @@ Deno.test("autounsub - check request leaks", async () => {
   // should have one subscription
   assertEquals(nc.protocol.subscriptions.size(), 1);
 
-  let msgs = [];
+  const msgs = [];
   msgs.push(nc.request(subj));
   msgs.push(nc.request(subj));
 
@@ -188,13 +188,13 @@ Deno.test("autounsub - check request leaks", async () => {
 });
 
 Deno.test("autounsub - check cancelled request leaks", async () => {
-  let nc = await connect({ servers: u }) as NatsConnectionImpl;
-  let subj = createInbox();
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
 
   // should have no subscriptions
   assertEquals(nc.protocol.subscriptions.size(), 0);
 
-  let rp = nc.request(subj, Empty, { timeout: 100 });
+  const rp = nc.request(subj, Empty, { timeout: 100 });
 
   assertEquals(nc.protocol.subscriptions.size(), 1);
   assertEquals(nc.protocol.muxSubscriptions.size(), 1);

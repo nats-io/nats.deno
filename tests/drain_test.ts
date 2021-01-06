@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,7 +33,7 @@ import { assertErrorCode, Lock } from "./helpers/mod.ts";
 const u = "demo.nats.io:4222";
 
 Deno.test("drain - connection drains when no subs", async () => {
-  let nc = await connect({ servers: u });
+  const nc = await connect({ servers: u });
   await nc.drain();
   await nc.close();
 });
@@ -46,7 +46,7 @@ Deno.test("drain - connection drain", async () => {
   const nc1 = await connect({ servers: u });
   let first = true;
   await nc1.subscribe(subj, {
-    callback: async () => {
+    callback: () => {
       lock.unlock();
       if (first) {
         first = false;
@@ -79,11 +79,11 @@ Deno.test("drain - connection drain", async () => {
 });
 
 Deno.test("drain - subscription drain", async () => {
-  let lock = Lock();
-  let nc = await connect({ servers: u });
-  let subj = createInbox();
+  const lock = Lock();
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
   let c1 = 0;
-  let s1 = nc.subscribe(subj, {
+  const s1 = nc.subscribe(subj, {
     callback: () => {
       c1++;
       if (!s1.isDraining()) {
@@ -139,7 +139,7 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
   const subj = createInbox();
   const sc = StringCodec();
   // start a service for replies
-  let nc1 = await connect({ servers: u });
+  const nc1 = await connect({ servers: u });
   await nc1.subscribe(subj, {
     callback: (_, msg: Msg) => {
       if (msg.reply) {
@@ -149,9 +149,9 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
   });
   await nc1.flush();
 
-  let nc2 = await connect({ servers: u });
+  const nc2 = await connect({ servers: u });
   let first = true;
-  let done = Lock();
+  const done = Lock();
   await nc2.subscribe(subj, {
     callback: async () => {
       if (first) {
@@ -202,7 +202,7 @@ Deno.test("drain - reject drain on draining", async () => {
 Deno.test("drain - reject subscribe on draining", async () => {
   const nc = await connect({ servers: u });
   const done = nc.drain();
-  const err = await assertThrowsAsync(async (): Promise<any> => {
+  const err = await assertThrows(() => {
     return nc.subscribe("foo");
   });
   assertErrorCode(err, ErrorCode.CONNECTION_DRAINING);
@@ -210,10 +210,10 @@ Deno.test("drain - reject subscribe on draining", async () => {
 });
 
 Deno.test("drain - reject subscription drain on closed sub", async () => {
-  let nc = await connect({ servers: u });
-  let sub = nc.subscribe("foo");
+  const nc = await connect({ servers: u });
+  const sub = nc.subscribe("foo");
   sub.unsubscribe();
-  const err = await assertThrowsAsync((): Promise<any> => {
+  const err = await assertThrows(() => {
     return sub.drain();
   });
   await nc.close();
@@ -221,15 +221,15 @@ Deno.test("drain - reject subscription drain on closed sub", async () => {
 });
 
 Deno.test("drain - connection is closed after drain", async () => {
-  let nc = await connect({ servers: u });
+  const nc = await connect({ servers: u });
   nc.subscribe("foo");
   await nc.drain();
   assert(nc.isClosed());
 });
 
 Deno.test("drain - reject subscription drain on closed", async () => {
-  let nc = await connect({ servers: u });
-  let sub = nc.subscribe("foo");
+  const nc = await connect({ servers: u });
+  const sub = nc.subscribe("foo");
   await nc.close();
   const err = await assertThrowsAsync(() => {
     return sub.drain();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use assertEquals file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,9 +28,9 @@ import { assertThrowsErrorCode } from "./helpers/asserts.ts";
 
 const u = "demo.nats.io:4222";
 
-Deno.test("json - bad json error in callback", async () => {
-  let o = {};
-  //@ts-ignore
+Deno.test("json - bad json error in callback", () => {
+  const o = {};
+  //@ts-ignore: bad json
   o.a = o;
 
   const jc = JSONCodec();
@@ -39,12 +39,12 @@ Deno.test("json - bad json error in callback", async () => {
   }, ErrorCode.BAD_JSON);
 });
 
-function macro(input: any) {
+function macro(input: unknown) {
   return async () => {
     const jc = JSONCodec();
     const nc = await connect({ servers: u });
-    let lock = Lock();
-    let subj = createInbox();
+    const lock = Lock();
+    const subj = createInbox();
     nc.subscribe(subj, {
       callback: (err: NatsError | null, msg: Msg) => {
         assertEquals(null, err);

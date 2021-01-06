@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,7 +27,7 @@ function makeBuffer(N: number): Uint8Array {
 }
 
 Deno.test("clobber - buffers don't clobber", async () => {
-  let iters = 250 * 1024;
+  const iters = 250 * 1024;
   const data = makeBuffer(iters * 1024);
   const ns = await NatsServer.start();
   const nc = await connect({ port: ns.port });

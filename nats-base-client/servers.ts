@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -48,7 +48,7 @@ export class ServerImpl implements Server {
     // in web environments, URL may not be a living standard
     // that means that protocols other than HTTP/S are not
     // parsable correctly.
-    let url = new URL(`http://${u}`);
+    const url = new URL(`http://${u}`);
     if (!url.port) {
       url.port = `${DEFAULT_PORT}`;
     }
@@ -75,7 +75,7 @@ export interface ServersOptions {
  * @hidden
  */
 export class Servers {
-  private firstSelect: boolean = true;
+  private firstSelect = true;
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
   private tlsName = "";
@@ -132,7 +132,7 @@ export class Servers {
       this.firstSelect = false;
       return this.currentServer;
     }
-    let t = this.servers.shift();
+    const t = this.servers.shift();
     if (t) {
       this.servers.push(t);
       this.currentServer = t;
@@ -146,7 +146,7 @@ export class Servers {
 
   removeServer(server: ServerImpl | undefined): void {
     if (server) {
-      let index = this.servers.indexOf(server);
+      const index = this.servers.indexOf(server);
       this.servers.splice(index, 1);
     }
   }
@@ -172,15 +172,13 @@ export class Servers {
       info.connect_urls.forEach((hp) => {
         hp = urlParseFn ? urlParseFn(hp) : hp;
         const s = new ServerImpl(hp, true);
-        if (isIP(s.hostname)) {
-        }
         discovered.set(hp, s);
       });
     }
     // remove gossiped servers that are no longer reported
-    let toDelete: number[] = [];
+    const toDelete: number[] = [];
     this.servers.forEach((s, index) => {
-      let u = s.listen;
+      const u = s.listen;
       if (
         s.gossiped && this.currentServer.listen !== u &&
         discovered.get(u) === undefined
@@ -195,7 +193,7 @@ export class Servers {
     // perform the deletion
     toDelete.reverse();
     toDelete.forEach((index) => {
-      let removed = this.servers.splice(index, 1);
+      const removed = this.servers.splice(index, 1);
       deleted = deleted.concat(removed[0].listen);
     });
 

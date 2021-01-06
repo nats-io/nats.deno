@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,10 +28,10 @@ import {
 } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 
 Deno.test("protocol - mux subscription unknown return null", async () => {
-  let mux = new MuxSubscription();
+  const mux = new MuxSubscription();
   mux.init();
 
-  let r = new Request(mux);
+  const r = new Request(mux);
   r.token = "alberto";
   mux.add(r);
   assertEquals(mux.size(), 1);
@@ -49,7 +49,7 @@ Deno.test("protocol - mux subscription unknown return null", async () => {
 });
 
 Deno.test("protocol - bad dispatch is noop", () => {
-  let mux = new MuxSubscription();
+  const mux = new MuxSubscription();
   mux.init();
   mux.dispatcher()(null, { subject: "foo" } as Msg);
 });

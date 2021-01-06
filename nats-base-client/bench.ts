@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -375,7 +375,7 @@ function humanizeBytes(bytes: number, si = false): string {
     return `${bytes.toFixed(2)} ${post}/sec`;
   }
   const exp = parseInt(Math.log(bytes) / Math.log(base) + "");
-  let index = parseInt((exp - 1) + "");
+  const index = parseInt((exp - 1) + "");
   return `${(bytes / Math.pow(base, exp)).toFixed(2)} ${pre[index]}${post}/sec`;
 }
 

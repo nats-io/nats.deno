@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import { Lock } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
 
-let max = 1000;
+const max = 1000;
 Deno.test(`bench - pubsub`, async () => {
   const lock = Lock(max, 30000);
   const nc = await connect({ servers: u });

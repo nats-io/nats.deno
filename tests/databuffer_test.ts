@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import { DataBuffer } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("databuffer - empty", () => {
-  let buf = new DataBuffer();
+  const buf = new DataBuffer();
   assertEquals(0, buf.length());
   assertEquals(0, buf.size());
   assertEquals(0, buf.drain(1000).byteLength);
@@ -24,23 +24,23 @@ Deno.test("databuffer - empty", () => {
 });
 
 Deno.test("databuffer - simple", () => {
-  let buf = new DataBuffer();
+  const buf = new DataBuffer();
   buf.fill(DataBuffer.fromAscii("Hello"));
   buf.fill(DataBuffer.fromAscii(" "));
   buf.fill(DataBuffer.fromAscii("World"));
   assertEquals(3, buf.length());
   assertEquals(11, buf.size());
-  let p = buf.peek();
+  const p = buf.peek();
   assertEquals(11, p.byteLength);
   assertEquals("Hello World", DataBuffer.toAscii(p));
-  let d = buf.drain();
+  const d = buf.drain();
   assertEquals(11, d.byteLength);
   assertEquals("Hello World", DataBuffer.toAscii(d));
 });
 
 Deno.test("databuffer - from empty", () => {
-  //@ts-ignore
-  let a = DataBuffer.fromAscii(undefined);
+  //@ts-ignore: bad argument to fn
+  const a = DataBuffer.fromAscii(undefined);
   assertEquals(0, a.byteLength);
 });
 

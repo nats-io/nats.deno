@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,6 +24,7 @@ const nc = await connect({ servers: "demo.nats.io:4222" });
 const sub = nc.subscribe("hello", { timeout: 1000 });
 (async () => {
   for await (const m of sub) {
+    // handle the messages
   }
 })().catch((err) => {
   if (err.code === ErrorCode.TIMEOUT) {

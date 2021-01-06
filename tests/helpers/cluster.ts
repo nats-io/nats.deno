@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 import { NatsServer } from "./mod.ts";
 import { parse } from "https://deno.land/std@0.80.0/flags/mod.ts";
+import { deferred } from "../../nats-base-client/internal_mod.ts";
 
 const defaults = {
   c: 2,
@@ -57,11 +58,10 @@ try {
   console.error(err);
 }
 
-async function waitForStop() {
+async function waitForStop(): Promise<void> {
   console.log("control+c to terminate");
-  const interval = setInterval(() => {}, Number.MAX_SAFE_INTEGER);
-  Deno.signal(Deno.Signal.SIGINT)
-    .then(() => {
-      clearInterval(interval);
-    });
+  const sig = Deno.signal(Deno.Signal.SIGTERM);
+  for await (const _ of sig) {
+    sig.dispose();
+  }
 }

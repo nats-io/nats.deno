@@ -1,7 +1,22 @@
+/*
+ * Copyright 2021-2021 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import { Lock, NatsServer, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
 import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
+import { assert } from "../nats-base-client/denobuffer.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -82,11 +97,12 @@ Deno.test("events - update", async () => {
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
-        case Events.UPDATE:
+        case Events.UPDATE: {
           const u = s.data as ServersChanged;
           assertEquals(u.added.length, 1);
           lock.unlock();
           break;
+        }
       }
     }
   })().then();
@@ -129,14 +145,12 @@ Deno.test("events - ignore server updates", async () => {
       servers: `127.0.0.1:${cluster[0].port}`,
       ignoreClusterUpdates: true,
     },
-  );
-  // @ts-ignore
+  ) as NatsConnectionImpl;
   assertEquals(nc.protocol.servers.length(), 1);
   const s = await NatsServer.addClusterMember(cluster[0]);
   cluster.push(s);
   await NatsServer.localClusterFormed(cluster);
   await nc.flush();
-  // @ts-ignore
   assertEquals(nc.protocol.servers.length(), 1);
   await nc.close();
   await NatsServer.stopAll(cluster);
