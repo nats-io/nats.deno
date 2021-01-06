@@ -37,10 +37,11 @@ export class ServerImpl implements Server {
   reconnects: number;
   lastConnect: number;
   gossiped: boolean;
-  tlsName = "";
+  tlsName: string;
 
   constructor(u: string, gossiped = false) {
     this.src = u;
+    this.tlsName = "";
     // remove any protocol that may have been provided
     if (u.match(/^(.*:\/\/)(.*)/m)) {
       u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
@@ -75,17 +76,19 @@ export interface ServersOptions {
  * @hidden
  */
 export class Servers {
-  private firstSelect = true;
+  private firstSelect: boolean;
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
-  private tlsName = "";
+  private tlsName: string;
 
   constructor(
     randomize: boolean,
     listens: string[] = [],
     opts: ServersOptions = {},
   ) {
+    this.firstSelect = true;
     this.servers = [] as ServerImpl[];
+    this.tlsName = "";
     if (listens) {
       listens.forEach((hp) => {
         hp = urlParseFn ? urlParseFn(hp) : hp;

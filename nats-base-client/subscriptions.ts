@@ -18,8 +18,13 @@ import type { Msg } from "./types.ts";
 
 export class Subscriptions {
   mux!: SubscriptionImpl;
-  subs: Map<number, SubscriptionImpl> = new Map<number, SubscriptionImpl>();
-  sidCounter = 0;
+  subs: Map<number, SubscriptionImpl>;
+  sidCounter: number;
+
+  constructor() {
+    this.sidCounter = 0;
+    this.subs = new Map<number, SubscriptionImpl>();
+  }
 
   size(): number {
     return this.subs.size;

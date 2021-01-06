@@ -22,7 +22,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
   implements Base, Subscription {
   sid!: number;
   queue?: string;
-  draining = false;
+  draining: boolean;
   max?: number;
   subject: string;
   drained?: Promise<void>;
@@ -38,6 +38,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     extend(this, opts);
     this.protocol = protocol;
     this.subject = subject;
+    this.draining = false;
     this.noIterator = typeof opts.callback === "function";
 
     if (opts.timeout) {

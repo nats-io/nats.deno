@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,15 +34,16 @@ export function headers(): MsgHdrs {
   return new MsgHdrsImpl();
 }
 
+const HEADER = "NATS/1.0";
+
 export class MsgHdrsImpl implements MsgHdrs {
-  static CRLF = "\r\n";
-  static SEP = ": ";
-  static HEADER = "NATS/1.0";
   code?: number;
   description = "";
-  headers: Map<string, string[]> = new Map();
+  headers: Map<string, string[]>;
 
-  constructor() {}
+  constructor() {
+    this.headers = new Map();
+  }
 
   [Symbol.iterator]() {
     return this.headers.entries();
@@ -82,10 +83,10 @@ export class MsgHdrsImpl implements MsgHdrs {
   static decode(a: Uint8Array): MsgHdrsImpl {
     const mh = new MsgHdrsImpl();
     const s = TD.decode(a);
-    const lines = s.split(MsgHdrsImpl.CRLF);
+    const lines = s.split("\r\n");
     const h = lines[0];
-    if (h !== MsgHdrsImpl.HEADER) {
-      let str = h.replace(MsgHdrsImpl.HEADER, "");
+    if (h !== HEADER) {
+      let str = h.replace(HEADER, "");
       mh.code = parseInt(str, 10);
       const scode = mh.code.toString();
       mh.set("Status", scode);
@@ -97,7 +98,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     } else {
       lines.slice(1).map((s) => {
         if (s) {
-          const idx = s.indexOf(MsgHdrsImpl.SEP);
+          const idx = s.indexOf(": ");
           const k = s.slice(0, idx);
           const v = s.slice(idx + 2);
           mh.append(k, v);
@@ -111,7 +112,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     if (this.headers.size === 0) {
       return "";
     }
-    let s = MsgHdrsImpl.HEADER;
+    let s = HEADER;
     for (const [k, v] of this.headers) {
       for (let i = 0; i < v.length; i++) {
         s = `${s}\r\n${k}: ${v[i]}`;

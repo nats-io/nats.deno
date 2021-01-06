@@ -1,4 +1,4 @@
-// Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 
 // This code has been ported almost directly from Go's src/bytes/buffer.go
 // Copyright 2009 The Go Authors. All rights reserved. BSD license.
@@ -74,9 +74,10 @@ export function append(origin: Uint8Array, b: number): Uint8Array {
 
 export class DenoBuffer implements Reader, Writer {
   _buf: Uint8Array; // contents are the bytes _buf[off : len(_buf)]
-  _off = 0; // read at _buf[off], write at _buf[_buf.byteLength]
+  _off: number; // read at _buf[off], write at _buf[_buf.byteLength]
 
   constructor(ab?: ArrayBuffer) {
+    this._off = 0;
     if (ab == null) {
       this._buf = new Uint8Array(0);
       return;

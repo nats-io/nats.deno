@@ -26,12 +26,13 @@ export class Heartbeat {
   interval: number;
   maxOut: number;
   timer?: number;
-  pendings: Promise<void>[] = [];
+  pendings: Promise<void>[];
 
   constructor(ph: PH, interval: number, maxOut: number) {
     this.ph = ph;
     this.interval = interval;
     this.maxOut = maxOut;
+    this.pendings = [];
   }
 
   // api to start the heartbeats, since this can be

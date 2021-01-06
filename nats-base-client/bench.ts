@@ -23,11 +23,11 @@ export class Metric {
   name: string;
   duration: number;
   date: number;
-  payload = 0;
-  msgs = 0;
+  payload: number;
+  msgs: number;
   lang!: string;
   version!: string;
-  bytes = 0;
+  bytes: number;
   asyncRequests?: boolean;
   min?: number;
   max?: number;
@@ -36,6 +36,9 @@ export class Metric {
     this.name = name;
     this.duration = duration;
     this.date = Date.now();
+    this.payload = 0;
+    this.msgs = 0;
+    this.bytes = 0;
   }
 
   toString(): string {
@@ -81,7 +84,7 @@ export interface BenchOpts {
 
 export class Bench {
   nc: NatsConnection;
-  callbacks = false;
+  callbacks: boolean;
   msgs: number;
   size: number;
   subject: string;
