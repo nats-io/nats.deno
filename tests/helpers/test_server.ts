@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,11 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Deferred, deferred } from "../../nats-base-client/internal_mod.ts";
+
 export class Connection {
   conn: Deno.Conn | null;
   buf = new Uint8Array(1024 * 8);
   debug: boolean;
-  pending: Promise<any>[] = [];
+  pending: Promise<unknown>[] = [];
   ca?: ConnectionAction;
 
   static td = new TextDecoder();
@@ -29,27 +31,26 @@ export class Connection {
     this.ca = ca;
   }
 
-  async read(): Promise<any> {
+  async startReading() {
     if (this.conn) {
-      this.conn.read(this.buf)
-        .then((c) => {
+      while (true) {
+        try {
+          const c = await this.conn.read(this.buf);
           if (c === null) {
-            return this.close();
+            break;
           }
           if (c) {
-            const s = this.buf.slice(0, c);
+            const frame = this.buf.subarray(0, c);
             if (this.debug) {
-              console.info("> cs (raw)", new TextDecoder().decode(s));
+              console.info("> cs (raw)", new TextDecoder().decode(frame));
             }
-            this.processInbound(this.buf.slice(0, c));
+            this.processInbound(frame);
           }
-          setTimeout(() => {
-            this.read();
-          }, 0);
-        })
-        .catch((err) => {
-          return this.close();
-        });
+        } catch (err) {
+          break;
+        }
+      }
+      return this.close();
     }
   }
 
@@ -69,15 +70,20 @@ export class Connection {
           this.ca(this);
         }
       } else if (/^SUB\s+/i.test(line)) {
+        // ignored
       } else if (/^PUB\s+/i.test(line)) {
+        // ignored
       } else if (/^UNSUB\s+/i.test(line)) {
+        // ignored
       } else if (/^MSG\s+/i.test(line)) {
+        // ignored
       } else if (/^INFO\s+/i.test(line)) {
+        // ignored
       }
     });
   }
 
-  async write(buf: Uint8Array): Promise<any> {
+  write(buf: Uint8Array) {
     try {
       if (this.conn) {
         if (this.debug) {
@@ -94,16 +100,21 @@ export class Connection {
     }
   }
 
-  close(): Promise<any> {
+  close(): Promise<void> {
     if (!this.conn) {
       return Promise.resolve();
     }
+    const d = deferred<void>();
     const conn = this.conn;
     this.conn = null;
-    return Promise.all(this.pending)
+
+    Promise.all(this.pending)
       .finally(() => {
         conn.close();
+        d.resolve();
       });
+
+    return d;
   }
 }
 
@@ -117,12 +128,11 @@ export class TestServer {
   info: Uint8Array;
   debug: boolean;
   clients: Connection[] = [];
-  accept: Promise<any>;
+  accept: Deferred<void>;
 
   constructor(debug: boolean = false, ca?: ConnectionAction) {
     const listener = Deno.listen({ port: 0, transport: "tcp" });
-    //@ts-ignore
-    const { port } = listener.addr;
+    const { port } = listener.addr as Deno.NetAddr;
     this.port = port;
     this.debug = debug;
     this.listener = listener;
@@ -136,32 +146,30 @@ export class TestServer {
       }) + "\r\n",
     );
 
-    const self = this;
-    this.accept = new Promise<void>(async (resolve) => {
+    this.accept = deferred<void>();
+    (async function (ts: TestServer) {
       for await (const socket of listener) {
         try {
           const c = new Connection(socket, debug, ca);
-          self.clients.push(c);
-          c.write(self.info);
-          setTimeout(() => {
-            c.read();
-          });
+          ts.clients.push(c);
+          c.write(ts.info);
+          c.startReading();
         } catch (err) {
-          resolve();
+          ts.accept.resolve();
           return;
         }
       }
-    });
+    })(this);
   }
 
   getPort(): number {
     return this.port;
   }
 
-  async stop() {
+  stop() {
     if (this.listener) {
       this.listener.close();
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       promises.push(this.accept);
       this.clients.forEach((c) => {
         promises.push(c.close());

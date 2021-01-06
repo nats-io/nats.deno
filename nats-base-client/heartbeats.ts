@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,12 +26,13 @@ export class Heartbeat {
   interval: number;
   maxOut: number;
   timer?: number;
-  pendings: Promise<void>[] = [];
+  pendings: Promise<void>[];
 
   constructor(ph: PH, interval: number, maxOut: number) {
     this.ph = ph;
     this.interval = interval;
     this.maxOut = maxOut;
+    this.pendings = [];
   }
 
   // api to start the heartbeats, since this can be
@@ -56,8 +57,7 @@ export class Heartbeat {
   }
 
   _schedule() {
-    // node is not a number - we treat this opaquely
-    // @ts-ignore
+    // @ts-ignore: node is not a number - we treat this opaquely
     this.timer = setTimeout(() => {
       this.ph.dispatchStatus(
         { type: DebugEvents.PING_TIMER, data: `${this.pendings.length + 1}` },

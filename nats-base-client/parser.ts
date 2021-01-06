@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import type { Dispatcher } from "./queued_iterator.ts";
 import { DenoBuffer } from "./denobuffer.ts";
 import { TD } from "./encoders.ts";
@@ -84,10 +83,10 @@ const ASCII_9 = 57;
 // https://github.com/nats-io/nats.go/blob/master/parser.go
 export class Parser {
   dispatcher: Dispatcher<ParserEvent>;
-  state = State.OP_START;
-  as = 0;
-  drop = 0;
-  hdr = 0;
+  state: State;
+  as: number;
+  drop: number;
+  hdr: number;
   ma!: MsgArg;
   argBuf?: DenoBuffer;
   msgBuf?: DenoBuffer;
@@ -95,12 +94,15 @@ export class Parser {
   constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
     this.state = State.OP_START;
+    this.as = 0;
+    this.drop = 0;
+    this.hdr = 0;
   }
 
   parse(buf: Uint8Array): void {
-    // @ts-ignore
+    // @ts-ignore: on node.js module is a global
     if (typeof module !== "undefined" && module.exports) {
-      // Uint8Array.slice() copies in node it doesn't and it is faster:wq
+      // Uint8Array.slice() copies in node it doesn't and it is faster
       buf.subarray = buf.slice;
     }
 
@@ -195,7 +197,7 @@ export class Parser {
             case cc.CR:
               this.drop = 1;
               break;
-            case cc.NL:
+            case cc.NL: {
               const arg: Uint8Array = this.argBuf
                 ? this.argBuf.bytes()
                 : buf.subarray(this.as, i - this.drop);
@@ -208,6 +210,7 @@ export class Parser {
               // what is left we fall out and process a split buffer.
               i = this.as + this.ma.size - 1;
               break;
+            }
             default:
               if (this.argBuf) {
                 this.argBuf.writeByte(b);
@@ -343,7 +346,7 @@ export class Parser {
             case cc.CR:
               this.drop = 1;
               break;
-            case cc.NL:
+            case cc.NL: {
               let arg: Uint8Array;
               if (this.argBuf) {
                 arg = this.argBuf.bytes();
@@ -356,6 +359,7 @@ export class Parser {
               this.as = i + 1;
               this.state = State.OP_START;
               break;
+            }
             default:
               if (this.argBuf) {
                 this.argBuf.write(Uint8Array.of(b));
@@ -489,7 +493,7 @@ export class Parser {
             case cc.CR:
               this.drop = 1;
               break;
-            case cc.NL:
+            case cc.NL: {
               let arg: Uint8Array;
               if (this.argBuf) {
                 arg = this.argBuf.bytes();
@@ -502,6 +506,7 @@ export class Parser {
               this.as = i + 1;
               this.state = State.OP_START;
               break;
+            }
             default:
               if (this.argBuf) {
                 this.argBuf.writeByte(b);

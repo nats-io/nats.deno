@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { deferred } from "./util.ts";
+import { Deferred, deferred } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
 export interface Dispatcher<T> {
@@ -20,14 +20,24 @@ export interface Dispatcher<T> {
 }
 
 export class QueuedIterator<T> implements Dispatcher<T> {
-  inflight = 0;
-  processed = 0;
-  received = 0; // this is updated by the protocol
-  protected noIterator = false;
-  protected done = false;
-  private signal = deferred<void>();
-  private yields: T[] = [];
+  inflight: number;
+  processed: number;
+  received: number; // this is updated by the protocol
+  protected noIterator: boolean;
+  protected done: boolean;
+  private signal: Deferred<void>;
+  private yields: T[];
   private err?: Error;
+
+  constructor() {
+    this.inflight = 0;
+    this.processed = 0;
+    this.received = 0;
+    this.noIterator = false;
+    this.done = false;
+    this.signal = deferred<void>();
+    this.yields = [];
+  }
 
   [Symbol.asyncIterator]() {
     return this.iterate();

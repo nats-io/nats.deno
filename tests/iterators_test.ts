@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 
@@ -77,7 +77,9 @@ Deno.test("iterators - permission error breaks and closes", async () => {
 
   const lock = Lock();
   await (async () => {
-    for await (const m of sub) {}
+    for await (const m of sub) {
+      // ignored
+    }
   })().catch(() => {
     lock.unlock();
   });

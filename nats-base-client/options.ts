@@ -1,5 +1,5 @@
 /*
-* Copyright 2020 The NATS Authors
+* Copyright 2021 The NATS Authors
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
@@ -25,6 +25,7 @@ import {
   DEFAULT_MAX_RECONNECT_ATTEMPTS,
   DEFAULT_PING_INTERVAL,
   DEFAULT_RECONNECT_TIME_WAIT,
+  ServerInfo,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
 
@@ -98,9 +99,8 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
   return options;
 }
 
-export function checkOptions(info: object, options: ConnectionOptions) {
-  //@ts-ignore
-  const { proto, headers, tls_required } = info;
+export function checkOptions(info: ServerInfo, options: ConnectionOptions) {
+  const { proto, headers, tls_required: tlsRequired } = info;
   if ((proto === undefined || proto < 1) && options.noEcho) {
     throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
   }
@@ -120,7 +120,7 @@ export function checkOptions(info: object, options: ConnectionOptions) {
       ErrorCode.SERVER_OPTION_NA,
     );
   }
-  if (options.tls && !tls_required) {
+  if (options.tls && !tlsRequired) {
     throw new NatsError("tls", ErrorCode.SERVER_OPTION_NA);
   }
 }

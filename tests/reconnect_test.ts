@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.80.0/testing/asserts.ts";
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { connect, createInbox, ErrorCode, Events } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
@@ -29,7 +29,9 @@ import {
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
   const servers = ["127.0.0.1:7", "demo.nats.io:4222"];
-  const nc = await connect({ servers: servers, noRandomize: true });
+  const nc = await connect(
+    { servers: servers, noRandomize: true },
+  ) as NatsConnectionImpl;
   const subj = createInbox();
   await nc.subscribe(subj, {
     callback: () => {
@@ -39,7 +41,6 @@ Deno.test("reconnect - should receive when some servers are invalid", async () =
   nc.publish(subj);
   await lock;
   await nc.close();
-  // @ts-ignore
   const a = nc.protocol.servers.getServers();
   assertEquals(a.length, 1);
   assert(a[0].didConnect);
@@ -48,7 +49,7 @@ Deno.test("reconnect - should receive when some servers are invalid", async () =
 Deno.test("reconnect - events", async () => {
   const srv = await NatsServer.start();
 
-  let nc = await connect({
+  const nc = await connect({
     port: srv.port,
     waitOnFirstConnect: true,
     reconnectTimeWait: 100,
@@ -82,7 +83,7 @@ Deno.test("reconnect - events", async () => {
 
 Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
   const srv = await NatsServer.start();
-  let nc = await connect({
+  const nc = await connect({
     port: srv.port,
     reconnect: false,
   });
@@ -107,22 +108,22 @@ Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
 
 Deno.test("reconnect - reconnecting after proper delay", async () => {
   const srv = await NatsServer.start();
-  let nc = await connect({
+  const nc = await connect({
     port: srv.port,
     reconnectTimeWait: 500,
     maxReconnectAttempts: 1,
-  });
-  // @ts-ignore
+  }) as NatsConnectionImpl;
   const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
 
   const dt = deferred<number>();
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case DebugEvents.RECONNECTING:
+        case DebugEvents.RECONNECTING: {
           const elapsed = Date.now() - serverLastConnect;
           dt.resolve(elapsed);
           break;
+        }
       }
     }
   })().then();
@@ -135,7 +136,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
 Deno.test("reconnect - indefinite reconnects", async () => {
   let srv = await NatsServer.start();
 
-  let nc = await connect({
+  const nc = await connect({
     port: srv.port,
     reconnectTimeWait: 100,
     maxReconnectAttempts: -1,
@@ -179,7 +180,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
 });
 
 Deno.test("reconnect - jitter", async () => {
-  let srv = await NatsServer.start();
+  const srv = await NatsServer.start();
 
   let called = false;
   const h = () => {
@@ -187,14 +188,13 @@ Deno.test("reconnect - jitter", async () => {
     return 15;
   };
 
-  let hasDefaultFn: boolean;
-  let dc = await connect({
+  const dc = await connect({
     port: srv.port,
     reconnect: false,
   }) as NatsConnectionImpl;
-  hasDefaultFn = typeof dc.options.reconnectDelayHandler === "function";
+  const hasDefaultFn = typeof dc.options.reconnectDelayHandler === "function";
 
-  let nc = await connect({
+  const nc = await connect({
     port: srv.port,
     maxReconnectAttempts: 1,
     reconnectDelayHandler: h,

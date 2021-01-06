@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,10 +14,10 @@
  */
 
 export function check(
-  fn: Function,
-  timeout: number = 5000,
+  fn: () => unknown,
+  timeout = 5000,
   opts?: { interval?: number; name?: string },
-): Promise<any> {
+): Promise<unknown> {
   opts = opts || {};
   opts = Object.assign(opts, { interval: 50 });
   let toHandle: number;

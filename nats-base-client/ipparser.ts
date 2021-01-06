@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,12 +21,12 @@
 
 const IPv4LEN = 4;
 const IPv6LEN = 16;
-const ASCII_0 = 48;
-const ASCII_9 = 57;
-const ASCII_A = 65;
-const ASCII_F = 70;
-const ASCII_a = 97;
-const ASCII_f = 102;
+const ASCII0 = 48;
+const ASCII9 = 57;
+const ASCIIA = 65;
+const ASCIIF = 70;
+const ASCIIa = 97;
+const ASCIIf = 102;
 const big = 0xFFFFFF;
 
 export function ipV4(a: number, b: number, c: number, d: number): Uint8Array {
@@ -156,7 +156,7 @@ function parseIPv6(s: string): (Uint8Array | undefined) {
       return undefined;
     }
 
-    let n = IPv6LEN - i;
+    const n = IPv6LEN - i;
     for (let j = i - 1; j >= ellipsis; j--) {
       ip[j + n] = ip[j];
     }
@@ -171,14 +171,13 @@ function parseIPv6(s: string): (Uint8Array | undefined) {
 
 function dtoi(s: string): { n: number; c: number; ok: boolean } {
   let i = 0;
-  let consumed = 0;
   let n = 0;
   for (
     i = 0;
-    i < s.length && ASCII_0 <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII_9;
+    i < s.length && ASCII0 <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII9;
     i++
   ) {
-    n = n * 10 + (s.charCodeAt(i) - ASCII_0);
+    n = n * 10 + (s.charCodeAt(i) - ASCII0);
     if (n >= big) {
       return { n: big, c: i, ok: false };
     }
@@ -193,15 +192,15 @@ function xtoi(s: string): { n: number; c: number; ok: boolean } {
   let n = 0;
   let i = 0;
   for (i = 0; i < s.length; i++) {
-    if (ASCII_0 <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII_9) {
+    if (ASCII0 <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII9) {
       n *= 16;
-      n += (s.charCodeAt(i) - ASCII_0);
-    } else if (ASCII_a <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII_f) {
+      n += (s.charCodeAt(i) - ASCII0);
+    } else if (ASCIIa <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCIIf) {
       n *= 16;
-      n += (s.charCodeAt(i) - ASCII_a) + 10;
-    } else if (ASCII_A <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII_F) {
+      n += (s.charCodeAt(i) - ASCIIa) + 10;
+    } else if (ASCIIA <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCIIF) {
       n *= 16;
-      n += (s.charCodeAt(i) - ASCII_A) + 10;
+      n += (s.charCodeAt(i) - ASCIIA) + 10;
     } else {
       break;
     }

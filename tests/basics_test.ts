@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.80.0/testing/asserts.ts";
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -196,7 +196,7 @@ Deno.test("basics - wildcard subscriptions", async () => {
   const partial = 2;
   const full = 5;
 
-  let nc = await connect({ servers: u });
+  const nc = await connect({ servers: u });
   const s = createInbox();
 
   const sub = nc.subscribe(`${s}.*`);
@@ -258,8 +258,8 @@ Deno.test("basics - correct reply in message", async () => {
 });
 
 Deno.test("basics - respond returns false if no reply subject set", async () => {
-  let nc = await connect({ servers: u });
-  let s = createInbox();
+  const nc = await connect({ servers: u });
+  const s = createInbox();
   const dr = deferred<boolean>();
   const sub = nc.subscribe(s);
   (async () => {
@@ -275,7 +275,7 @@ Deno.test("basics - respond returns false if no reply subject set", async () => 
 });
 
 Deno.test("basics - closed cannot subscribe", async () => {
-  let nc = await connect({ servers: u });
+  const nc = await connect({ servers: u });
   await nc.close();
   let failed = false;
   try {
@@ -288,7 +288,7 @@ Deno.test("basics - closed cannot subscribe", async () => {
 });
 
 Deno.test("basics - close cannot request", async () => {
-  let nc = await connect({ servers: u });
+  const nc = await connect({ servers: u });
   await nc.close();
   let failed = false;
   try {
@@ -302,7 +302,7 @@ Deno.test("basics - close cannot request", async () => {
 
 Deno.test("basics - flush returns promise", async () => {
   const nc = await connect({ servers: u });
-  let p = nc.flush();
+  const p = nc.flush();
   if (!p) {
     fail("should have returned a promise");
   }
@@ -311,8 +311,8 @@ Deno.test("basics - flush returns promise", async () => {
 });
 
 Deno.test("basics - unsubscribe after close", async () => {
-  let nc = await connect({ servers: u });
-  let sub = nc.subscribe(createInbox());
+  const nc = await connect({ servers: u });
+  const sub = nc.subscribe(createInbox());
   await nc.close();
   sub.unsubscribe();
 });
@@ -479,7 +479,9 @@ Deno.test("basics - subscription with timeout", async () => {
   const nc = await connect({ servers: u });
   const sub = nc.subscribe(createInbox(), { max: 1, timeout: 250 });
   (async () => {
-    for await (const m of sub) {}
+    for await (const m of sub) {
+      // ignored
+    }
   })().catch((err) => {
     assertErrorCode(err, ErrorCode.TIMEOUT);
     lock.unlock();
@@ -493,7 +495,9 @@ Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => 
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 2, timeout: 500 });
   (async () => {
-    for await (const m of sub) {}
+    for await (const m of sub) {
+      // ignored
+    }
   })().catch((err) => {
     fail(err);
   });
@@ -569,7 +573,7 @@ Deno.test("basics - no mux requests", async () => {
 
 Deno.test("basics - no max_payload messages", async () => {
   const nc = await connect({ servers: u }) as NatsConnectionImpl;
-  assert(nc.protocol.info.max_payload);
+  assert(nc.protocol.info);
   const big = new Uint8Array(nc.protocol.info.max_payload + 1);
 
   const subj = createInbox();
@@ -645,6 +649,7 @@ Deno.test("basics - msg buffers dont overwrite", async () => {
     }
   };
   const td = new TextDecoder();
+  assert(nc.protocol.info);
   const buf = new Uint8Array(nc.protocol.info.max_payload);
   for (let i = 0; i < N; i++) {
     fill(i, buf);
@@ -658,6 +663,7 @@ Deno.test("basics - msg buffers dont overwrite", async () => {
 
   const check = (n: number, m: Msg) => {
     const v = n % 26 + a;
+    assert(nc.protocol.info);
     assertEquals(m.data.length, nc.protocol.info.max_payload);
     for (let i = 0; i < m.data.length; i++) {
       if (m.data[i] !== v) {

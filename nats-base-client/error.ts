@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -47,8 +47,8 @@ export enum ErrorCode {
   PERMISSIONS_VIOLATION = "PERMISSIONS_VIOLATION",
 }
 
+
 export class Messages {
-  static messages = new Messages();
   messages: Map<string, string>;
 
   constructor() {
@@ -67,13 +67,17 @@ export class Messages {
   }
 
   static getMessage(s: string): string {
-    return Messages.messages.getMessage(s);
+    return messages.getMessage(s);
   }
 
   getMessage(s: string): string {
     return this.messages.get(s) || s;
   }
 }
+
+// safari doesn't support static class members
+const messages: Messages = new Messages();
+
 
 export class NatsError extends Error {
   name: string;
@@ -98,7 +102,7 @@ export class NatsError extends Error {
   }
 
   static errorForCode(code: string, chainedError?: Error): NatsError {
-    let m = Messages.getMessage(code);
+    const m = Messages.getMessage(code);
     return new NatsError(m, code, chainedError);
   }
 }

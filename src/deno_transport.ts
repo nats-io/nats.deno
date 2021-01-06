@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.80.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.80.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.83.0/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.83.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   checkOptions,
@@ -25,6 +25,8 @@ import {
   INFO,
   NatsError,
   render,
+  Server,
+  ServerInfo,
   TE,
   Transport,
 } from "../nats-base-client/internal_mod.ts";
@@ -70,25 +72,23 @@ export class DenoTransport implements Transport {
   async connect(
     hp: { hostname: string; port: number; tlsName: string },
     options: ConnectionOptions,
-  ): Promise<any> {
+  ) {
     this.options = options;
     try {
       this.conn = await Deno.connect(hp);
       const info = await this.peekInfo();
       checkOptions(info, this.options);
-      // @ts-ignore
-      const { tls_required } = info;
-      if (tls_required) {
+      const { tls_required: tlsRequired } = info;
+      if (tlsRequired) {
         const tlsn = hp.tlsName ? hp.tlsName : hp.hostname;
         await this.startTLS(tlsn);
       } else {
         this.writer = new BufWriter(this.conn);
       }
     } catch (err) {
-      err = err.name === "ConnectionRefused"
+      throw err.name === "ConnectionRefused"
         ? NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
         : err;
-      throw err;
     }
   }
 
@@ -96,7 +96,7 @@ export class DenoTransport implements Transport {
     return this.done;
   }
 
-  async peekInfo(): Promise<object> {
+  async peekInfo(): Promise<ServerInfo> {
     const inbound = new DataBuffer();
     let pm: string;
     while (true) {
@@ -125,7 +125,7 @@ export class DenoTransport implements Transport {
     if (!m) {
       throw new Error("unexpected response from server");
     }
-    return JSON.parse(m[1]);
+    return JSON.parse(m[1]) as ServerInfo;
   }
 
   async startTLS(hostname: string): Promise<void> {
@@ -148,7 +148,7 @@ export class DenoTransport implements Transport {
     while (!this.done) {
       try {
         this.buf = new Uint8Array(64 * 1024);
-        let c = await this.conn.read(this.buf);
+        const c = await this.conn.read(this.buf);
         if (c === null) {
           break;
         }
@@ -211,7 +211,7 @@ export class DenoTransport implements Transport {
     return this.encrypted;
   }
 
-  async close(err?: Error): Promise<void> {
+  close(err?: Error): Promise<void> {
     return this._closed(err, false);
   }
 
@@ -220,7 +220,7 @@ export class DenoTransport implements Transport {
       .then().catch();
   }
 
-  private async _closed(err?: Error, internal: boolean = true): Promise<void> {
+  private async _closed(err?: Error, internal = true): Promise<void> {
     if (this.done) return;
     this.closeError = err;
     if (!err) {
@@ -238,6 +238,7 @@ export class DenoTransport implements Transport {
     try {
       this.conn.close();
     } catch (err) {
+      // ignored
     }
 
     if (internal) {

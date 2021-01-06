@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-2020 The NATS Authors
+* Copyright 2016-2021 The NATS Authors
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
@@ -89,10 +89,10 @@ export class Nuid {
      * @api private
      */
   private setPre() {
-    let cbuf = new Uint8Array(preLen);
+    const cbuf = new Uint8Array(preLen);
     cryptoObj.getRandomValues(cbuf);
     for (let i = 0; i < preLen; i++) {
-      let di = cbuf[i] % base;
+      const di = cbuf[i] % base;
       this.buf[i] = digits.charCodeAt(di);
     }
   }
@@ -122,7 +122,7 @@ export class Nuid {
       this.initSeqAndInc();
     }
     this.fillSeq();
-    //@ts-ignore
+    // @ts-ignore - Uint8Arrays can be an argument
     return String.fromCharCode.apply(String, this.buf);
   }
 

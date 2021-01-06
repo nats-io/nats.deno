@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,11 +23,11 @@ export class Metric {
   name: string;
   duration: number;
   date: number;
-  payload = 0;
-  msgs = 0;
+  payload: number;
+  msgs: number;
   lang!: string;
   version!: string;
-  bytes = 0;
+  bytes: number;
   asyncRequests?: boolean;
   min?: number;
   max?: number;
@@ -36,6 +36,9 @@ export class Metric {
     this.name = name;
     this.duration = duration;
     this.date = Date.now();
+    this.payload = 0;
+    this.msgs = 0;
+    this.bytes = 0;
   }
 
   toString(): string {
@@ -81,7 +84,7 @@ export interface BenchOpts {
 
 export class Bench {
   nc: NatsConnection;
-  callbacks = false;
+  callbacks: boolean;
   msgs: number;
   size: number;
   subject: string;
@@ -375,7 +378,7 @@ function humanizeBytes(bytes: number, si = false): string {
     return `${bytes.toFixed(2)} ${post}/sec`;
   }
   const exp = parseInt(Math.log(bytes) / Math.log(base) + "");
-  let index = parseInt((exp - 1) + "");
+  const index = parseInt((exp - 1) + "");
   return `${(bytes / Math.pow(base, exp)).toFixed(2)} ${pre[index]}${post}/sec`;
 }
 

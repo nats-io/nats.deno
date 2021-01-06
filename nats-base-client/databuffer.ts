@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,15 +16,20 @@
 import { TD, TE } from "./encoders.ts";
 
 export class DataBuffer {
-  buffers: Uint8Array[] = [];
-  byteLength: number = 0;
+  buffers: Uint8Array[];
+  byteLength: number;
+
+  constructor() {
+    this.buffers = [];
+    this.byteLength = 0;
+  }
 
   static concat(...bufs: Uint8Array[]): Uint8Array {
     let max = 0;
     for (let i = 0; i < bufs.length; i++) {
       max += bufs[i].length;
     }
-    let out = new Uint8Array(max);
+    const out = new Uint8Array(max);
     let index = 0;
     for (let i = 0; i < bufs.length; i++) {
       out.set(bufs[i], index);
@@ -51,7 +56,7 @@ export class DataBuffer {
 
   pack(): void {
     if (this.buffers.length > 1) {
-      let v = new Uint8Array(this.byteLength);
+      const v = new Uint8Array(this.byteLength);
       let index = 0;
       for (let i = 0; i < this.buffers.length; i++) {
         v.set(this.buffers[i], index);
@@ -65,13 +70,13 @@ export class DataBuffer {
   drain(n?: number): Uint8Array {
     if (this.buffers.length) {
       this.pack();
-      let v = this.buffers.pop();
+      const v = this.buffers.pop();
       if (v) {
-        let max = this.byteLength;
+        const max = this.byteLength;
         if (n === undefined || n > max) {
           n = max;
         }
-        let d = v.subarray(0, n);
+        const d = v.subarray(0, n);
         if (max > n) {
           this.buffers.push(v.subarray(n));
         }

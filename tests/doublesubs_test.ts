@@ -1,3 +1,17 @@
+/*
+ * Copyright 2020-2021 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import { NatsServer } from "./helpers/launcher.ts";
 import { connect } from "../src/connect.ts";
 import {
@@ -11,9 +25,9 @@ import {
 import {
   assertArrayIncludes,
   assertEquals,
-} from "https://deno.land/std@0.80.0/testing/asserts.ts";
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { extend } from "../nats-base-client/util.ts";
-import { join, resolve } from "https://deno.land/std@0.80.0/path/mod.ts";
+import { join, resolve } from "https://deno.land/std@0.83.0/path/mod.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();
@@ -49,7 +63,7 @@ async function runDoubleSubsTest(tls: boolean) {
   if (tls) {
     connOpts = extend(connOpts, cert);
   }
-  let nc = await connect(connOpts) as NatsConnectionImpl;
+  const nc = await connect(connOpts) as NatsConnectionImpl;
 
   const disconnected = deferred<void>();
   const reconnected = deferred<void>();
