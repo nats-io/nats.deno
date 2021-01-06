@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 
