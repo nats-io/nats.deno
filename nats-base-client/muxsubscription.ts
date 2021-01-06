@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -47,7 +47,7 @@ export class MuxSubscription {
   }
 
   getToken(m: Msg): string | null {
-    let s = m.subject || "";
+    const s = m.subject || "";
     if (s.indexOf(this.baseInbox) === 0) {
       return s.substring(this.baseInbox.length);
     }
@@ -56,9 +56,9 @@ export class MuxSubscription {
 
   dispatcher() {
     return (err: NatsError | null, m: Msg) => {
-      let token = this.getToken(m);
+      const token = this.getToken(m);
       if (token) {
-        let r = this.get(token);
+        const r = this.get(token);
         if (r) {
           if (err === null && m.headers) {
             const headers = m.headers as MsgHdrsImpl;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,7 +37,7 @@ import { Request } from "./request.ts";
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
-  draining: boolean = false;
+  draining = false;
   listeners: QueuedIterator<Status>[] = [];
 
   private constructor(opts: ConnectionOptions) {
@@ -46,7 +46,7 @@ export class NatsConnectionImpl implements NatsConnection {
 
   public static connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     return new Promise<NatsConnection>((resolve, reject) => {
-      let nc = new NatsConnectionImpl(opts);
+      const nc = new NatsConnectionImpl(opts);
       ProtocolHandler.connect(nc.options, nc)
         .then((ph: ProtocolHandler) => {
           nc.protocol = ph;

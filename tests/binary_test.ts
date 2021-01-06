@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,13 +13,13 @@
  * limitations under the License.
  */
 
-import { assertEquals } from "https://deno.land/std@0.80.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { connect, createInbox, Msg } from "../src/mod.ts";
 import { deferred } from "../nats-base-client/internal_mod.ts";
 
 const u = "demo.nats.io:4222";
 
-function macro(input: any) {
+function macro(input: Uint8Array) {
   return async () => {
     const subj = createInbox();
     const nc = await connect({ servers: u });

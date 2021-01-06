@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,7 +19,7 @@ import {
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
 
-export function consume(sub: Subscription, ms: number = 1000): Promise<Msg[]> {
+export function consume(sub: Subscription, ms = 1000): Promise<Msg[]> {
   const to = timeout<Msg[]>(ms);
   const d = deferred<Msg[]>();
   const msgs: Msg[] = [];

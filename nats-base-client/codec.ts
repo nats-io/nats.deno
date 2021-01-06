@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,18 +23,18 @@ export interface Codec<T> {
 
 export function StringCodec(): Codec<string> {
   return {
-    encode(d: any): Uint8Array {
+    encode(d: string): Uint8Array {
       return TE.encode(d);
     },
-    decode(a: Uint8Array): any {
+    decode(a: Uint8Array): string {
       return TD.decode(a);
     },
   };
 }
 
-export function JSONCodec(): Codec<any> {
+export function JSONCodec(): Codec<unknown> {
   return {
-    encode(d: any): Uint8Array {
+    encode(d: unknown): Uint8Array {
       try {
         if (d === undefined) {
           d = null;
@@ -44,8 +44,8 @@ export function JSONCodec(): Codec<any> {
         throw NatsError.errorForCode(ErrorCode.BAD_JSON, err);
       }
     },
-    //@ts-ignore
-    decode(a: Uint8Array): any {
+
+    decode(a: Uint8Array): unknown {
       try {
         return JSON.parse(TD.decode(a));
       } catch (err) {

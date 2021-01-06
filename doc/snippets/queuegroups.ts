@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,8 +21,8 @@ import {
 
 async function createService(
   name: string,
-  count: number = 1,
-  queue: string = "",
+  count = 1,
+  queue = "",
 ): Promise<NatsConnection[]> {
   const conns: NatsConnection[] = [];
   for (let i = 1; i <= count; i++) {
@@ -42,7 +42,7 @@ async function createService(
     // any client with the same queue will be the queue group.
     const sub = nc.subscribe("echo", { queue: queue });
     const _ = handleRequest(n, sub);
-    console.log(`${nc.options.name} is listening for 'echo' requests...`);
+    console.log(`${n} is listening for 'echo' requests...`);
     conns.push(nc);
   }
   return conns;

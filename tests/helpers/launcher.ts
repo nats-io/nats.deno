@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,16 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as path from "https://deno.land/std@0.80.0/path/mod.ts";
+// deno-lint-ignore-file no-explicit-any
+import * as path from "https://deno.land/std@0.83.0/path/mod.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
   deferred,
-  delay,
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.80.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,
@@ -45,6 +45,10 @@ export interface Ports {
   cluster?: string[];
   monitoring?: string[];
   websocket?: string[];
+}
+
+export interface VarZ {
+  connect_urls: string[];
 }
 
 function parseHostport(s?: string) {
@@ -109,7 +113,7 @@ export class NatsServer implements PortInfo {
   websocket?: number;
   process: Deno.Process;
   logBuffer: string[] = [];
-  stopped: boolean = false;
+  stopped = false;
   done!: Deferred<void>;
   debug: boolean;
   config: any;
@@ -195,7 +199,7 @@ export class NatsServer implements PortInfo {
     }
   }
 
-  async varz(): Promise<any> {
+  async varz(): Promise<VarZ> {
     if (!this.monitoring) {
       return Promise.reject(new Error("server is not monitoring"));
     }
@@ -204,9 +208,9 @@ export class NatsServer implements PortInfo {
   }
 
   static async cluster(
-    count: number = 2,
+    count = 2,
     conf?: any,
-    debug: boolean = false,
+    debug = false,
   ): Promise<NatsServer[]> {
     conf = conf || {};
     conf = Object.assign({}, conf);
@@ -225,7 +229,7 @@ export class NatsServer implements PortInfo {
     return cluster;
   }
 
-  static async localClusterFormed(servers: NatsServer[]): Promise<void[]> {
+  static localClusterFormed(servers: NatsServer[]): Promise<void[]> {
     const ports = servers.map((s) => s.port);
 
     const fn = async function (s: NatsServer) {
@@ -255,7 +259,7 @@ export class NatsServer implements PortInfo {
             break;
           }
         }
-        await delay(100);
+        await timeout(100);
       }
       return dp;
     };
@@ -263,10 +267,10 @@ export class NatsServer implements PortInfo {
     return Promise.all(proms);
   }
 
-  static async addClusterMember(
+  static addClusterMember(
     ns: NatsServer,
     conf?: any,
-    debug: boolean = false,
+    debug = false,
   ): Promise<NatsServer> {
     if (ns.cluster === undefined) {
       return Promise.reject(new Error("no cluster port on server"));
@@ -281,115 +285,111 @@ export class NatsServer implements PortInfo {
     return NatsServer.start(conf, debug);
   }
 
-  static async start(conf?: any, debug: boolean = false): Promise<NatsServer> {
+  static async start(conf?: any, debug = false): Promise<NatsServer> {
     const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
     const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
 
-    let srv: Deno.Process;
-    return new Promise(async (resolve, reject) => {
-      try {
-        conf = conf || {};
-        conf.ports_file_dir = tmp;
-        conf.host = conf.host || "127.0.0.1";
-        conf.port = conf.port || -1;
-        conf.http = conf.http || "127.0.0.1:-1";
+    conf = conf || {};
+    conf.ports_file_dir = tmp;
+    conf.host = conf.host || "127.0.0.1";
+    conf.port = conf.port || -1;
+    conf.http = conf.http || "127.0.0.1:-1";
 
-        const confFile = await Deno.makeTempFileSync();
-        await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
-        if (debug) {
-          console.info(`${exe} -c ${confFile}`);
-        }
-        srv = await Deno.run(
-          {
-            cmd: [exe, "-c", confFile],
-            stderr: "piped",
-            stdout: "null",
-            stdin: "null",
-          },
-        );
+    const confFile = await Deno.makeTempFileSync();
+    await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
+    if (debug) {
+      console.info(`${exe} -c ${confFile}`);
+    }
+    const srv = await Deno.run(
+      {
+        cmd: [exe, "-c", confFile],
+        stderr: "piped",
+        stdout: "null",
+        stdin: "null",
+      },
+    );
 
-        if (debug) {
-          console.info(`[${srv.pid}] - launched`);
-        }
+    if (debug) {
+      console.info(`[${srv.pid}] - launched`);
+    }
 
-        const portsFile = path.resolve(
-          path.join(tmp, `nats-server_${srv.pid}.ports`),
-        );
+    const portsFile = path.resolve(
+      path.join(tmp, `nats-server_${srv.pid}.ports`),
+    );
 
-        const pi = await check(
-          () => {
-            try {
-              const data = Deno.readFileSync(portsFile);
-              const txt = new TextDecoder().decode(data);
-              const d = JSON.parse(txt);
-              if (d) {
-                return d;
-              }
-            } catch (_) {
-            }
-          },
-          1000,
-          { name: "read ports file" },
-        );
-
-        if (debug) {
-          console.info(`[${srv.pid}] - ports file found`);
-        }
-
-        const ports = parsePorts(pi as Ports);
-        if (conf.cluster?.name) {
-          ports.clusterName = conf.cluster.name;
-        }
-        await check(
-          async () => {
-            try {
-              if (debug) {
-                console.info(`[${srv.pid}] - attempting to connect`);
-              }
-              const conn = await Deno.connect(ports as Deno.ConnectOptions);
-              conn.close();
-              return ports.port;
-            } catch (_) {
-              // ignore
-            }
-          },
-          5000,
-          { name: "wait for server" },
-        );
-        resolve(
-          new NatsServer(
-            { info: ports, process: srv, debug: debug, config: conf },
-          ),
-        );
-      } catch (err) {
-        if (srv) {
-          try {
-            const d = await srv.stderrOutput();
-            console.error(new TextDecoder().decode(d));
-          } catch (err) {
-            console.error("unable to read server output:", err);
+    const pi = await check(
+      () => {
+        try {
+          const data = Deno.readFileSync(portsFile);
+          const txt = new TextDecoder().decode(data);
+          const d = JSON.parse(txt);
+          if (d) {
+            return d;
           }
+        } catch (_) {
+          // ignore
         }
-        reject(err);
+      },
+      1000,
+      { name: "read ports file" },
+    );
+
+    if (debug) {
+      console.info(`[${srv.pid}] - ports file found`);
+    }
+
+    const ports = parsePorts(pi as Ports);
+    if (conf.cluster?.name) {
+      ports.clusterName = conf.cluster.name;
+    }
+    try {
+      await check(
+        async () => {
+          try {
+            if (debug) {
+              console.info(`[${srv.pid}] - attempting to connect`);
+            }
+            const conn = await Deno.connect(ports as Deno.ConnectOptions);
+            conn.close();
+            return ports.port;
+          } catch (_) {
+            // ignore
+          }
+        },
+        5000,
+        { name: "wait for server" },
+      );
+
+      return new NatsServer(
+        { info: ports, process: srv, debug: debug, config: conf },
+      );
+    } catch (err) {
+      try {
+        const d = await srv.stderrOutput();
+        console.error(new TextDecoder().decode(d));
+      } catch (err) {
+        console.error("unable to read server output:", err);
       }
-    });
+      throw err;
+    }
   }
 }
 
-export function toConf(o: object, indent?: string): string {
-  let pad = indent !== undefined ? indent + "  " : "";
-  let buf = [];
-  for (let k in o) {
-    if (o.hasOwnProperty(k)) {
-      //@ts-ignore
-      let v = o[k];
+// @ts-ignore: any is exactly what we need here
+export function toConf(o: any, indent?: string): string {
+  const pad = indent !== undefined ? indent + "  " : "";
+  const buf = [];
+  for (const k in o) {
+    if (Object.prototype.hasOwnProperty.call(o, k)) {
+      //@ts-ignore: tsc,
+      const v = o[k];
       if (Array.isArray(v)) {
         buf.push(`${pad}${k} [`);
         buf.push(toConf(v, pad));
         buf.push(`${pad} ]`);
       } else if (typeof v === "object") {
         // don't print a key if it is an array and it is an index
-        let kn = Array.isArray(o) ? "" : k;
+        const kn = Array.isArray(o) ? "" : k;
         buf.push(`${pad}${kn} {`);
         buf.push(toConf(v, pad));
         buf.push(`${pad} }`);

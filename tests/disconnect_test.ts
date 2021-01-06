@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The NATS Authors
+ * Copyright 2018-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,8 +19,8 @@ import type { NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("disconnect - close handler is called on close", async () => {
   const ns = await NatsServer.start();
-  let lock = Lock(1);
-  let nc = await connect(
+  const lock = Lock(1);
+  const nc = await connect(
     { port: ns.port, reconnect: false },
   );
   nc.closed().then(() => {
@@ -33,8 +33,8 @@ Deno.test("disconnect - close handler is called on close", async () => {
 
 Deno.test("disconnect - close process inbound ignores", async () => {
   const ns = await NatsServer.start();
-  let lock = Lock(1);
-  let nc = await connect(
+  const lock = Lock(1);
+  const nc = await connect(
     { port: ns.port, reconnect: false },
   ) as NatsConnectionImpl;
   nc.closed().then(() => {

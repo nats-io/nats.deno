@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 export interface Lock<T> extends Promise<T> {
   resolve: (value?: T | PromiseLike<T>) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  reject: (reason?: any) => void;
+  reject: (reason: Error) => void;
   cancel: () => void;
   lock: () => void;
   unlock: () => void;
@@ -25,22 +25,22 @@ export interface Lock<T> extends Promise<T> {
  * If a timeout is provided, the lock rejects if it has not unlocked
  * by the specified number of milliseconds (default 1000).
  */
-export function Lock<T>(count: number = 1, ms: number = 5000): Lock<T> {
+export function Lock<T>(count = 1, ms = 5000): Lock<T> {
   let methods;
   const promise = new Promise<void>((resolve, reject) => {
     let timer: number;
 
-    let cancel = (): void => {
+    const cancel = (): void => {
       if (timer) {
         clearTimeout(timer);
       }
     };
 
-    let lock = (): void => {
+    const lock = (): void => {
       count++;
     };
 
-    let unlock = (): void => {
+    const unlock = (): void => {
       count--;
       if (count === 0) {
         cancel();

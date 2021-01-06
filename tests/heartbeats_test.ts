@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.80.0/testing/asserts.ts";
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 
 import {
   DebugEvents,
@@ -41,7 +41,7 @@ function pm(
       if (skip && skip.indexOf(counter) !== -1) {
         return d;
       }
-      delay<void>(lag)
+      delay(lag)
         .then(() => d.resolve());
       return d;
     },
