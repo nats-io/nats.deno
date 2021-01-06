@@ -134,8 +134,8 @@ Deno.test("headers - request headers", async () => {
 
 function status(code: number, description: string): Uint8Array {
   const status = code
-    ? `${MsgHdrsImpl.HEADER} ${code.toString()} ${description}`.trim()
-    : MsgHdrsImpl.HEADER;
+    ? `NATS/1.0 ${code.toString()} ${description}`.trim()
+    : "NATS/1.0";
   const line = `${status}\r\n\r\n\r\n`;
   return StringCodec().encode(line);
 }
