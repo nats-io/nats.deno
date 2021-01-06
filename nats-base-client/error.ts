@@ -47,7 +47,6 @@ export enum ErrorCode {
   PERMISSIONS_VIOLATION = "PERMISSIONS_VIOLATION",
 }
 
-
 export class Messages {
   messages: Map<string, string>;
 
@@ -77,7 +76,6 @@ export class Messages {
 
 // safari doesn't support static class members
 const messages: Messages = new Messages();
-
 
 export class NatsError extends Error {
   name: string;
