@@ -20,7 +20,11 @@ import { createInbox } from "./protocol.ts";
 
 export class MuxSubscription {
   baseInbox!: string;
-  reqs: Map<string, Request> = new Map<string, Request>();
+  reqs: Map<string, Request>;
+
+  constructor() {
+    this.reqs = new Map<string, Request>();
+  }
 
   size(): number {
     return this.reqs.size;

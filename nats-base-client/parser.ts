@@ -83,10 +83,10 @@ const ASCII_9 = 57;
 // https://github.com/nats-io/nats.go/blob/master/parser.go
 export class Parser {
   dispatcher: Dispatcher<ParserEvent>;
-  state = State.OP_START;
-  as = 0;
-  drop = 0;
-  hdr = 0;
+  state: State;
+  as: number;
+  drop: number;
+  hdr: number;
   ma!: MsgArg;
   argBuf?: DenoBuffer;
   msgBuf?: DenoBuffer;
@@ -94,6 +94,9 @@ export class Parser {
   constructor(dispatcher: Dispatcher<ParserEvent>) {
     this.dispatcher = dispatcher;
     this.state = State.OP_START;
+    this.as = 0;
+    this.drop = 0;
+    this.hdr = 0;
   }
 
   parse(buf: Uint8Array): void {

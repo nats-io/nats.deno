@@ -16,8 +16,13 @@
 import { TD, TE } from "./encoders.ts";
 
 export class DataBuffer {
-  buffers: Uint8Array[] = [];
-  byteLength = 0;
+  buffers: Uint8Array[];
+  byteLength: number;
+
+  constructor() {
+    this.buffers = [];
+    this.byteLength = 0;
+  }
 
   static concat(...bufs: Uint8Array[]): Uint8Array {
     let max = 0;

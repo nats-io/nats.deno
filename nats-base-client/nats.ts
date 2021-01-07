@@ -37,11 +37,13 @@ import { Request } from "./request.ts";
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
-  draining = false;
-  listeners: QueuedIterator<Status>[] = [];
+  draining: boolean;
+  listeners: QueuedIterator<Status>[];
 
   private constructor(opts: ConnectionOptions) {
+    this.draining = false;
     this.options = parseOptions(opts);
+    this.listeners = [];
   }
 
   public static connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {

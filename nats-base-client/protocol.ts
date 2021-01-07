@@ -64,7 +64,7 @@ const PING_CMD = fastEncoder("PING\r\n");
 export class Connect {
   echo?: boolean;
   no_responders?: boolean;
-  protocol = 1;
+  protocol: number;
   verbose?: boolean;
   pedantic?: boolean;
   jwt?: string;
@@ -84,6 +84,7 @@ export class Connect {
     opts: ConnectionOptions,
     nonce?: string,
   ) {
+    this.protocol = 1;
     this.version = transport.version;
     this.lang = transport.lang;
     this.echo = opts.noEcho ? false : undefined;
@@ -109,35 +110,45 @@ export interface Publisher {
 }
 
 export class ProtocolHandler implements Dispatcher<ParserEvent> {
-  connected = false;
-  connectedOnce = false;
-  infoReceived = false;
+  connected: boolean;
+  connectedOnce: boolean;
+  infoReceived: boolean;
   info?: ServerInfo;
   muxSubscriptions: MuxSubscription;
   options: ConnectionOptions;
   outbound: DataBuffer;
   pongs: Array<Deferred<void>>;
-  pout = 0;
   subscriptions: Subscriptions;
   transport!: Transport;
-  noMorePublishing = false;
+  noMorePublishing: boolean;
   connectError?: (err?: Error) => void;
   publisher: Publisher;
-  _closed = false;
+  _closed: boolean;
   closed: Deferred<Error | void>;
-  listeners: QueuedIterator<Status>[] = [];
+  listeners: QueuedIterator<Status>[];
   heartbeats: Heartbeat;
   parser: Parser;
-  outMsgs = 0;
-  inMsgs = 0;
-  outBytes = 0;
-  inBytes = 0;
-  pendingLimit = FLUSH_THRESHOLD;
+  outMsgs: number;
+  inMsgs: number;
+  outBytes: number;
+  inBytes: number;
+  pendingLimit: number;
 
   servers: Servers;
   server!: ServerImpl;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
+    this._closed = false;
+    this.connected = false;
+    this.connectedOnce = false;
+    this.infoReceived = false;
+    this.noMorePublishing = false;
+    this.listeners = [];
+    this.pendingLimit = FLUSH_THRESHOLD;
+    this.outMsgs = 0;
+    this.inMsgs = 0;
+    this.outBytes = 0;
+    this.inBytes = 0;
     this.options = options;
     this.publisher = publisher;
     this.subscriptions = new Subscriptions();
@@ -372,7 +383,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processPong() {
-    this.pout = 0;
     const cb = this.pongs.shift();
     if (cb) {
       cb.resolve();

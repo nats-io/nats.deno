@@ -48,7 +48,6 @@ export enum ErrorCode {
 }
 
 export class Messages {
-  static messages = new Messages();
   messages: Map<string, string>;
 
   constructor() {
@@ -67,13 +66,16 @@ export class Messages {
   }
 
   static getMessage(s: string): string {
-    return Messages.messages.getMessage(s);
+    return messages.getMessage(s);
   }
 
   getMessage(s: string): string {
     return this.messages.get(s) || s;
   }
 }
+
+// safari doesn't support static class members
+const messages: Messages = new Messages();
 
 export class NatsError extends Error {
   name: string;
