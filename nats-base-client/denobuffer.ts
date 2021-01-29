@@ -126,12 +126,12 @@ export class DenoBuffer implements Reader, Writer {
       return l;
     }
     return -1;
-  };
+  }
 
   _reslice(len: number): void {
     assert(len <= this._buf.buffer.byteLength);
     this._buf = new Uint8Array(this._buf.buffer, 0, len);
-  };
+  }
 
   readByte(): number | null {
     const a = new Uint8Array(1);
@@ -199,7 +199,7 @@ export class DenoBuffer implements Reader, Writer {
     this._off = 0;
     this._reslice(Math.min(m + n, MAX_SIZE));
     return m;
-  };
+  }
 
   grow(n: number): void {
     if (n < 0) {
