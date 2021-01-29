@@ -38,11 +38,12 @@ const HEADER = "NATS/1.0";
 
 export class MsgHdrsImpl implements MsgHdrs {
   code?: number;
-  description = "";
   headers: Map<string, string[]>;
+  description: string;
 
   constructor() {
     this.headers = new Map();
+    this.description = "";
   }
 
   [Symbol.iterator]() {

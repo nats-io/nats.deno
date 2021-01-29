@@ -119,7 +119,7 @@ export class DenoBuffer implements Reader, Writer {
     this._off = 0;
   }
 
-  _tryGrowByReslice = (n: number): number => {
+  _tryGrowByReslice(n: number): number {
     const l = this._buf.byteLength;
     if (n <= this.capacity - l) {
       this._reslice(l + n);
@@ -128,7 +128,7 @@ export class DenoBuffer implements Reader, Writer {
     return -1;
   };
 
-  _reslice = (len: number): void => {
+  _reslice(len: number): void {
     assert(len <= this._buf.buffer.byteLength);
     this._buf = new Uint8Array(this._buf.buffer, 0, len);
   };
@@ -169,7 +169,7 @@ export class DenoBuffer implements Reader, Writer {
     return copy(p, this._buf, m);
   }
 
-  _grow = (n: number): number => {
+  _grow(n: number): number {
     const m = this.length;
     // If buffer is empty, reset to recover space.
     if (m === 0 && this._off !== 0) {
