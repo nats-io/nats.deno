@@ -9,14 +9,13 @@ A Deno client for the [NATS messaging system](https://nats.io).
 
 # Installation
 
-** :warning: NATS.deno is a preview** you can get the current development version by:
+** :warning: NATS.deno is a release candidate** you can get the current development version by:
 
 ```bash
 import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts"
 ```
-The Deno client is under active development. All tests are passing, but the APIs will change
-slightly - See the [TODO](TODO.md).
 
+To see a list of items that are under development see [TODO](TODO.md).
 
 
 ## Basics
@@ -25,20 +24,28 @@ slightly - See the [TODO](TODO.md).
 ### Connecting to a nats-server
 
 To connect to a server you use the `connect()` function. It returns
-a connection that you can use to interact with the server.
+a connection that you can use to interact with the server. You can customize
+the connection by specifying `ConnectionOptions`.
 
-By default, a connection will attempt to auto-reconnect when dropped
-due to some networking type error. Messages that have not been
-sent to the server when a disconnect happens are lost. A client can queue
-new messages to be sent when the connection resumes. If the connection
-cannot be re-established the client will give up and `close` the connection.
+By default, a connection will attempt a connection on`127.0.0.1:4222`. 
+If the connection is dropped, the client will attempt to reconnect. 
+You can customize the server you want to connect by specifying `port` 
+(for local connections), or full host port on the `servers` option.
+Note that the `servers` option can be a single hostport (a string) or
+an array of hostsports.
+
+When a connection is lost, any messages that have not been
+sent to the server are lost. A client can queue  new messages to be sent when 
+the connection resumes. If the connection  cannot be re-established the 
+client will give up and `close` the connection.
 
 To learn when a connection closes, wait for the promise returned by the `closed()`
-function. If the close was due to an error, it will resolve to an error.
+function. If the close was due to an error, the promise will resolve to an error.
 
-To disconnect from the nats-server, you call `close()` on the connection.
-Connections can also be closed if there's an error. For example, the
-server returns some run-time error.
+To disconnect from the nats-server, call `close()` on the connection.
+A connections can also be terminated if there's an error. For example, the
+server returns a run-time error. In those cases, the client will re-initiate
+a connection.
 
 This first example looks a bit complex, because it shows all the things
 discussed above. The example attempts to connect a nats-server by specifying
@@ -47,14 +54,19 @@ internet is working.
 
 ```typescript
 // import the connect function
-import { connect, NatsConnection } from "src/mod.ts";
+import { connect, NatsConnection } from "../../src/mod.ts";
 
 // the connection is configured by a set of ConnectionOptions
-// if none is set, the client will connect to 127.0.0.1:4222.
-// common options that you could pass look like:
+// if none is set, the client will connect to 127.0.0.1:4222:
 const localhostAtStandardPort = {};
+
+// you can also specify a port:
 const localPort = { port: 4222 };
+
+// or a host using the standard 4222 port:
 const hostAtStdPort = { servers: "demo.nats.io" };
+
+// or the full host port
 const hostPort = { servers: "demo.nats.io:4222" };
 
 // let's try to connect to all the above, some may fail
@@ -105,10 +117,13 @@ and publish to `send` messages. A subscription works as an async
 iterator where you process messages in a loop until the subscription
 closes.
 
-NATS is payload agnostic, this means that payloads are `Uint8Arrays`.
-You can easily send JSON or strings by using a `StringCodec` or a
-`JSONCodec`, or create a Codec of your own that handles the type
-of your data as necessary.
+Subscriptions listen for messages on a subject. Messages are published
+to a subject.
+
+NATS messages are payload agnostic, this means that payloads are
+`Uint8Arrays`.  You can easily send JSON or strings by using a 
+`StringCodec` or a `JSONCodec`, or create a Codec of your own that 
+handles the encoding or decoding of the data you are working with.
 
 ```typescript
 // import the connect function
@@ -141,34 +156,6 @@ nc.publish("hello", sc.encode("again"));
 await nc.drain();
 ```
 
-### Streams
-Streams are messages that are published at regular intervals.
-To get the messages, you simply subscribe to them. To stop
-getting the messages you unsubscribe.
-
-```typescript
-import { connect, JSONCodec } from "../../src/mod.ts";
-
-// to create a connection to a nats-server:
-const nc = await connect({ servers: "demo.nats.io" });
-
-// create a codec
-const jc = JSONCodec();
-
-console.info("enter the following command to get messages from the stream");
-console.info(
-  "deno run --allow-all --unstable examples/nats-sub.ts stream.demo",
-);
-
-const start = Date.now();
-let sequence = 0;
-setInterval(() => {
-  sequence++;
-  const uptime = Date.now() - start;
-  console.info(`publishing #${sequence}`);
-  nc.publish("stream.demo", jc.encode({ sequence, uptime }));
-}, 1000);
-```
 
 ### Wildcard Subscriptions
 Sometimes you want to process an event (message), based on the
@@ -191,7 +178,7 @@ const sc = StringCodec();
 const s1 = nc.subscribe("help.*.system");
 const s2 = nc.subscribe("help.me.*");
 // the '>' matches any tokens in that position or following
-// '>' can only be specified at the end
+// '>' can only be specified at the end of the subject
 const s3 = nc.subscribe("help.>");
 
 async function printMsgs(s: Subscription) {
@@ -221,7 +208,7 @@ await nc.closed();
 ### Services
 A service is a client that responds to requests from other clients.
 Now that you know how to create subscriptions, and know about wildcards,
-it is time to develop a service that mocks something useful.
+it is time to develop a service that does something useful.
 
 This example is a bit complicated, because we are going to use NATS
 not only to provide a service, but also to control the service.
@@ -403,6 +390,91 @@ await Promise.all(a);
 
 ## Advanced Usage
 
+### Headers
+
+New nats-servers offer the ability to add additional metadata to a message.
+The metadata is added in the form of headers. NATS headers are very close to
+HTTP headers. Note that headers are not guaranteed. If a client subscribes
+to the message but doesn't want headers, the headers will be stripped from
+the message. On more capable clients headers can allow for additional
+data to be sent to the header-aware clients.
+
+```typescript
+import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
+import { nuid } from "../../nats-base-client/nuid.ts";
+
+const nc = await connect(
+  {
+    servers: `demo.nats.io`,
+    headers: true,
+  },
+);
+
+const subj = createInbox();
+const sub = nc.subscribe(subj);
+(async () => {
+  for await (const m of sub) {
+    if (m.headers) {
+      for (const [key, value] of m.headers) {
+        console.log(`${key}=${value}`);
+      }
+      console.log("ID", m.headers.get("ID"));
+      console.log("Id", m.headers.get("Id"));
+      console.log("id", m.headers.get("id"));
+    }
+  }
+})().then();
+
+// headers always have their names turned into a cannincal mime header key
+// header names can be any printable ASCII character with the  exception of `:`.
+// header values can be any ASCII character except `\r` or `\n`.
+// see https://www.ietf.org/rfc/rfc822.txt
+const h = headers();
+h.append("id", nuid.next());
+h.append("unix_time", Date.now().toString());
+nc.publish(subj, Empty, { headers: h });
+
+await nc.flush();
+await nc.close();
+
+```
+
+
+### No Responders
+
+Requests can fail for many reasons. A common reason is when a request is made
+to a subject that no service is listening on. Typically these surface as a
+timeout error. With newer nats servers that support `headers` and `noResponders`,
+the nats-server can report immediately if there are no subscriptions
+for the request:
+
+```typescript
+const nc = await connect({
+    servers: `demo.nats.io`, noResponders: true, headers: true },
+);
+
+try {
+  const m = await nc.request('hello.world');
+  console.log(m.data);
+} catch(err) {
+  const nerr = err as NatsError
+  switch (nerr.code) {
+    case ErrorCode.NO_RESPONDERS:
+      console.log("no one is listening to 'hello.world'")
+      break;
+    case ErrorCode.TIMEOUT:
+      console.log("someone is listening but didn't respond")
+      break;
+    default:
+      console.log("request failed", err)
+  }
+}
+
+await nc.close();
+
+```
+
+
 ### Authentication
 ```typescript
 // if the connection requires authentication, provide `user` and `pass` or 
@@ -424,13 +496,20 @@ nc.publish('bar');
 await nc.flush();
 ```
 
-### Auto Unsubscribe
+### SubscriptionOptions
+You can specify several options when creating a subscription:
+- `max`: maximum number of messages to receive - auto unsubscribe
+- `timeout`: how long to wait for the first message
+- `queue`: the [queue group](#Queue-Groups) name the subscriber belongs to
+- `callback`: a function with the signature `(err: NatsError|null, msg: Msg) => void;` that should be used for handling the message. Subscriptions with callbacks are NOT iterators.
+
+#### Auto Unsubscribe
 ```javascript
 // subscriptions can auto unsubscribe after a certain number of messages
-nc.subscribe('foo', {max:10});
+nc.subscribe('foo', { max: 10 });
 ```
 
-### Timeout Subscriptions
+#### Timeout Subscriptions
 ```javascript
 // create subscription with a timeout, if no message arrives
 // within the timeout, the function running the iterator with
@@ -448,6 +527,41 @@ const sub = nc.subscribe("hello", { timeout: 1000 });
   }
 });
 ```
+
+### RequestOptions
+
+When making a request, there are several options you can pass:
+
+- `timeout`: how long to wait for the response
+- `headers`: optional headers to include with the message
+- `noMux`: create a new subscription to handle the request. Normally a shared subscription is used to receive request messages.
+- `reply`: optional subject where the reply should be received
+
+#### noMux and reply
+
+Under the hood the request api simply has a wildcard subscription.
+When a request is generated, the api creates a subject appending a nuid
+which is used as the reply subject for the request. When the response
+is received, the multiplex subscription matches the token, and delivers
+the reply to the correct requestor.
+
+In some cases the mux subscription strategy doesn't work correctly.
+For example the client may be constrained on what subjects it can
+receive replies.
+
+When `noMux` is set to `true`, the client will create a normal subscription for
+receiving the response to a generated inbox subject. The `reply` option can
+be used to override the generated inbox subject with an application
+provided one. Note that setting `reply` requires `noMux` to be `true`:
+
+```typescript
+  const m = await nc.request(
+    "q",
+    Empty,
+    { reply: "bar", noMux: true, timeout: 1000 },
+  );
+```
+
 
 ### Authenticators
 
@@ -539,3 +653,46 @@ const nc = await connect(opts);
 
 To be aware of when a client closes, wait for the `closed()` promise to resolve.
 When it resolves, the client has finished and won't reconnect.
+
+
+## Connection Options
+
+The following is the list of connection options and default values.
+
+| Option                 | Default                   | Description
+|--------                |---------                  |------------
+| `authenticator`        | none                      | Specifies the authenticator function that sets the client credentials.
+| `debug`                | `false`                   | If `true`, the client prints protocol interactions to the console. Useful for debugging. 
+| `headers`              | `false`                   | Client requires header support on the server.
+| `maxPingOut`           | `2`                       | Max number of pings the client will allow unanswered before raising a stale connection error
+| `maxReconnectAttempts` | `10`                      | Sets the maximum number of reconnect attempts. The value of `-1` specifies no limit
+| `name`                 |                           | Optional client name - recommended to be set to an unique client name.
+| `noEcho`               | `false`                   | Subscriptions receive messages published by the client. Requires server support (1.2.0). If set to true, and the server does not support the feature, an error with code `NO_ECHO_NOT_SUPPORTED` is emitted, and the connection is aborted. Note that it is possible for this error to be emitted on reconnect when the server reconnects to a server that does not support the feature.
+| `noRandomize`          | `false`                   | If set, the order of user-specified servers is randomized.
+| `noResponders`         | `false`                   | Requires `headers`. Fail immediately if there are no subscribers for a request.
+| `pass`                 |                           | Sets the password for a connection
+| `pedantic`             | `false`                   | Turns on strict subject format checks
+| `pingInterval`         | `120000`                  | Number of milliseconds between client-sent pings
+| `port`                 | `4222`                    | Port to connect to (only used if `servers` is not specified).
+| `reconnectTimeWait`    | `2000`                    | If disconnected, the client will wait the specified number of milliseconds between reconnect attempts.
+| `reconnectJitter`      | `100`                     | Number of millis to randomize after `reconnectTimeWait`.
+| `reconnectJitterTLS`   | `1000`                    | Number of millis to randomize after `reconnectTimeWait` when TLS options are specified.
+| `reconnectDelayHandler`| Generated function        | A function that returns the number of millis to wait before the next connection to a server it connected to `()=>number`.
+| `reconnect`            | `true`                    | If false client will not attempt reconnecting
+| `servers`              | `"localhost:4222"`        | String or Array of hostport for servers.
+| `timeout`              | 20000                     | Number of milliseconds the client will wait for a connection to be established. If it fails it will emit a `connection_timeout` event with a NatsError that provides the hostport of the server where the connection was attempted.
+| `tls`                  | TlsOptions                | TlsOption configuration object (not applicable to nats.ws)
+| `token`                |                           | Sets a authorization token for a connection
+| `user`                 |                           | Sets the username for a connection
+| `verbose`              | `false`                   | Turns on `+OK` protocol acknowledgements
+| `waitOnFirstConnect`   | `false`                   | If `true` the client will fall back to a reconnect mode if it fails its first connection attempt.
+| `ignoreClusterUpdates` | `false`                   | If `true` the client will ignore any cluster updates provided by the server.
+
+
+### TlsOptions
+
+| Option       | Default | Description
+|  `caFile`    |         | CA certificate filepath
+|  `certFile`  |         | Client certificate file path - not applicable to Deno clients.
+|  `keyFile`   |         | Client key file path - not applicable to Deno clients.
+
