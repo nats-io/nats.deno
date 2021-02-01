@@ -37,7 +37,7 @@ Deno.test("noresponders - option", async () => {
       fail("should have not resolved");
     })
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.REQUEST_ERROR);
+      assertErrorCode(err, ErrorCode.NO_RESPONDERS);
       lock.unlock();
     });
 
