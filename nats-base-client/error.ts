@@ -31,6 +31,7 @@ export enum ErrorCode {
   INVALID_OPTION = "INVALID_OPTION",
   INVALID_PAYLOAD_TYPE = "INVALID_PAYLOAD",
   MAX_PAYLOAD_EXCEEDED = "MAX_PAYLOAD_EXCEEDED",
+  NO_RESPONDERS = "NO_RESPONDERS",
   NOT_FUNC = "NOT_FUNC",
   REQUEST_ERROR = "REQUEST_ERROR",
   SERVER_OPTION_NA = "SERVER_OPT_NA",
@@ -52,13 +53,11 @@ export class Messages {
 
   constructor() {
     this.messages = new Map<string, string>();
-
     this.messages.set(
       ErrorCode.INVALID_PAYLOAD_TYPE,
       "Invalid payload type - payloads can be 'binary', 'string', or 'json'",
     );
     this.messages.set(ErrorCode.BAD_JSON, "Bad JSON");
-
     this.messages.set(
       ErrorCode.WSS_REQUIRED,
       "TLS is required, therefore a secure websocket connection is also required",
