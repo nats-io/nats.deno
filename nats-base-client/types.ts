@@ -18,23 +18,23 @@ import type { Authenticator } from "./authenticator.ts";
 
 export const Empty = new Uint8Array(0);
 
-export const Events = Object.freeze({
-  DISCONNECT: "disconnect",
-  RECONNECT: "reconnect",
-  UPDATE: "update",
-  LDM: "ldm",
-});
+export enum Events {
+  DISCONNECT = "disconnect",
+  RECONNECT = "reconnect",
+  UPDATE = "update",
+  LDM = "ldm",
+}
 
 export interface Status {
-  type: string;
+  type: Events | DebugEvents;
   data: string | ServersChanged;
 }
 
-export const DebugEvents = Object.freeze({
-  RECONNECTING: "reconnecting",
-  PING_TIMER: "pingTimer",
-  STALE_CONNECTION: "staleConnection",
-});
+export enum DebugEvents {
+  RECONNECTING = "reconnecting",
+  PING_TIMER = "pingTimer",
+  STALE_CONNECTION = "staleConnection",
+}
 
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_HOST = "127.0.0.1";
