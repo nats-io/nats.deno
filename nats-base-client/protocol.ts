@@ -317,10 +317,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         } catch (err) {
           lastError = err;
           if (!this.connectedOnce) {
-            if (!this.options.waitOnFirstConnect) {
-              this.servers.removeCurrentServer();
+            if (this.options.waitOnFirstConnect) {
+              continue;
             }
-            continue;
+            this.servers.removeCurrentServer();
           }
           srv.reconnects++;
           const mra = this.options.maxReconnectAttempts || 0;
