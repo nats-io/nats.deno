@@ -29,10 +29,10 @@ the connection by specifying `ConnectionOptions`.
 
 By default, a connection will attempt a connection on`127.0.0.1:4222`. 
 If the connection is dropped, the client will attempt to reconnect. 
-You can customize the server you want to connect by specifying `port` 
+You can customize the server you want to connect to by specifying `port` 
 (for local connections), or full host port on the `servers` option.
 Note that the `servers` option can be a single hostport (a string) or
-an array of hostsports.
+an array of hostports.
 
 When a connection is lost, any messages that have not been
 sent to the server are lost. A client can queue  new messages to be sent when 
@@ -43,12 +43,12 @@ To learn when a connection closes, wait for the promise returned by the `closed(
 function. If the close was due to an error, the promise will resolve to an error.
 
 To disconnect from the nats-server, call `close()` on the connection.
-A connections can also be terminated if there's an error. For example, the
+A connection can also be terminated if there's an error. For example, the
 server returns a run-time error. In those cases, the client will re-initiate
 a connection.
 
-This first example looks a bit complex, because it shows all the things
-discussed above. The example attempts to connect a nats-server by specifying
+This first example looks a bit complex, because it shows all of the things
+discussed above. The example attempts to connect to a nats-server by specifying
 different connect options. At least two of them should work if your
 internet is working.
 
@@ -120,10 +120,10 @@ Messages are published to a subject. Subscriptions listen for
 messages on a subject. When a published message matches a subscription,
 the server forwards the message to it.
 
-In JavaScript clients (websocket, deno, or node) subscriptions work as
+In JavaScript clients (websocket, deno, or node) subscriptions work as an
 async iterator - clients simply loop to process messages.
 
-NATS messages are payload agnostic, this means that payloads are
+NATS messages are payload agnostic, meaning payloads are
 `Uint8Arrays`.  You can easily send JSON or strings by using a 
 `StringCodec` or a `JSONCodec`, or create a Codec of your own that 
 handles the encoding or decoding of the data you are working with.
@@ -131,7 +131,7 @@ handles the encoding or decoding of the data you are working with.
 To stop a subscription, you call `unsubscribe()` or `drain()` on it.
 You can drain all subscriptions and close the connection by calling
 `drain()` on the connection. Drain unsubscribes from the subscription,
-but gives a chance to the client to process all messages that it has
+but gives the client a chance to process all messages it has
 received but not yet processed.
 
 ```typescript
@@ -172,7 +172,7 @@ Subjects can be used to organize messages into hierarchies.
 For example the subject may add additional information that
 can be useful in providing a context to the message.
 
-Instead of subscribing to each specific subject that you may
+Instead of subscribing to each specific subject for which you may want to
 receive a message, you can create subscriptions that have wildcards.
 Wildcards match one or more tokens in a subject, but tokens
 represented by a wildcard are not specified.
@@ -327,7 +327,7 @@ await nc.close();
 
 ### Queue Groups
 Queue groups allow scaling of services horizontally. Subscriptions for members of a 
-queue group are treated as a single service, that means when you send a message
+queue group are treated as a single service, meaning when you send a message
 only a single client in a queue group will receive it. There can be multiple queue 
 groups, and each is treated as an independent group. Non-queue subscriptions are
 also independent.
@@ -406,10 +406,10 @@ await Promise.all(a);
 
 ### Headers
 
-New nats-servers offer the ability to add additional metadata to a message.
+New NATS servers offer the ability to add additional metadata to a message.
 The metadata is added in the form of headers. NATS headers are very close to
 HTTP headers. Note that headers are not guaranteed. If the client doesn't
-want or support headers it will not receive them.
+want to support headers it will not receive them.
 
 ```typescript
 import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
@@ -455,7 +455,7 @@ await nc.close();
 
 Requests can fail for many reasons. A common reason is when a request is made
 to a subject that no service is listening on. Typically these surface as a
-timeout error. With a nats-server that support `headers` and `noResponders`,
+timeout error. With a nats-server that supports `headers` and `noResponders`,
 the nats-server can report immediately if there is no interest on the request
 subject:
 
@@ -504,7 +504,7 @@ mechanisms are implemented as an `Authenticator`. An `Authenticator` is
 simply a function that handles the type of authentication specified.
 
 Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator`
-sets the username/password. NKeys and JWT authentication are more complex,
+and sets the username/password. NKeys and JWT authentication are more complex,
 as they cryptographically respond to a server challenge.
 
 Because nkey and JWT authentication may require reading data from a file or
@@ -512,7 +512,7 @@ an HTTP cookie, these forms of authentication will require a bit more from
 the developer to activate them. However, the work is related to accessing
 these resources on the platform they are working with.
 
-After the data, is read, you can use one of these functions in your code to
+After the data is read, you can use one of these functions in your code to
 generate the authenticator and assign it to the `authenticator` property of
 the `ConnectionOptions`:
 
@@ -613,11 +613,11 @@ When making a request, there are several options you can pass:
 
 #### `noMux` and `reply`
 
-Under the hood the request api simply use a wildcard subscription
+Under the hood the request API simply uses a wildcard subscription
 to handle all requests you send.
 
 In some cases the default subscription strategy doesn't work correctly.
-For example the client may be constrained on what subjects it can
+For example the client may be constrained by the subjects from which it can
 receive replies.
 
 When `noMux` is set to `true`, the client will create a normal subscription for
@@ -636,7 +636,7 @@ provided one. Note that setting `reply` requires `noMux` to be `true`:
 ### Draining Connections and Subscriptions
 
 Draining provides for a graceful way to unsubscribe or 
-close a connection without loosing messages that have 
+close a connection without losing messages that have 
 already been dispatched to the client.
 
 You can drain a subscription or all subscriptions in a connection.
@@ -685,7 +685,7 @@ const nc = await connect(opts);
 
 ```
 
-To be aware of when a client closes, wait for the `closed()` promise to resolve.
+Be aware that when a client closes, you will need to wait for the `closed()` promise to resolve.
 When it resolves, the client has finished and won't reconnect.
 
 
@@ -698,27 +698,27 @@ The following is the list of connection options and default values.
 | `authenticator`        | none                      | Specifies the authenticator function that sets the client credentials.
 | `debug`                | `false`                   | If `true`, the client prints protocol interactions to the console. Useful for debugging. 
 | `headers`              | `false`                   | Client requires header support on the server.
-| `maxPingOut`           | `2`                       | Max number of pings the client will allow unanswered before raising a stale connection error
-| `maxReconnectAttempts` | `10`                      | Sets the maximum number of reconnect attempts. The value of `-1` specifies no limit
-| `name`                 |                           | Optional client name - recommended to be set to an unique client name.
+| `maxPingOut`           | `2`                       | Max number of pings the client will allow unanswered before raising a stale connection error.
+| `maxReconnectAttempts` | `10`                      | Sets the maximum number of reconnect attempts. The value of `-1` specifies no limit.
+| `name`                 |                           | Optional client name - recommended to be set to a unique client name.
 | `noEcho`               | `false`                   | Subscriptions receive messages published by the client. Requires server support (1.2.0). If set to true, and the server does not support the feature, an error with code `NO_ECHO_NOT_SUPPORTED` is emitted, and the connection is aborted. Note that it is possible for this error to be emitted on reconnect when the server reconnects to a server that does not support the feature.
 | `noRandomize`          | `false`                   | If set, the order of user-specified servers is randomized.
 | `noResponders`         | `false`                   | Requires `headers`. Fail immediately if there are no subscribers for a request.
-| `pass`                 |                           | Sets the password for a connection
-| `pedantic`             | `false`                   | Turns on strict subject format checks
-| `pingInterval`         | `120000`                  | Number of milliseconds between client-sent pings
+| `pass`                 |                           | Sets the password for a connection.
+| `pedantic`             | `false`                   | Turns on strict subject format checks.
+| `pingInterval`         | `120000`                  | Number of milliseconds between client-sent pings.
 | `port`                 | `4222`                    | Port to connect to (only used if `servers` is not specified).
 | `reconnectTimeWait`    | `2000`                    | If disconnected, the client will wait the specified number of milliseconds between reconnect attempts.
 | `reconnectJitter`      | `100`                     | Number of millis to randomize after `reconnectTimeWait`.
 | `reconnectJitterTLS`   | `1000`                    | Number of millis to randomize after `reconnectTimeWait` when TLS options are specified.
 | `reconnectDelayHandler`| Generated function        | A function that returns the number of millis to wait before the next connection to a server it connected to `()=>number`.
-| `reconnect`            | `true`                    | If false client will not attempt reconnecting
+| `reconnect`            | `true`                    | If false, client will not attempt reconnecting.
 | `servers`              | `"localhost:4222"`        | String or Array of hostport for servers.
 | `timeout`              | 20000                     | Number of milliseconds the client will wait for a connection to be established. If it fails it will emit a `connection_timeout` event with a NatsError that provides the hostport of the server where the connection was attempted.
 | `tls`                  | TlsOptions                | A configuration object for requiring a TLS connection (not applicable to nats.ws).
-| `token`                |                           | Sets a authorization token for a connection
-| `user`                 |                           | Sets the username for a connection
-| `verbose`              | `false`                   | Turns on `+OK` protocol acknowledgements
+| `token`                |                           | Sets a authorization token for a connection.
+| `user`                 |                           | Sets the username for a connection.
+| `verbose`              | `false`                   | Turns on `+OK` protocol acknowledgements.
 | `waitOnFirstConnect`   | `false`                   | If `true` the client will fall back to a reconnect mode if it fails its first connection attempt.
 | `ignoreClusterUpdates` | `false`                   | If `true` the client will ignore any cluster updates provided by the server.
 
@@ -730,8 +730,7 @@ The following is the list of connection options and default values.
 |  `certFile`  |         | Client certificate file path - not applicable to Deno clients.
 |  `keyFile`   |         | Client key file path - not applicable to Deno clients.
 
-In some Node and Deno clients, having the option set to an empty option, requires that
-the client have a secured connection.
+In some Node and Deno clients, having the option set to an empty option, requires the client have a secured connection.
 
 
 ### Jitter
