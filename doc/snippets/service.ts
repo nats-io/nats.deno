@@ -22,16 +22,56 @@ const nc = await connect({ servers: "demo.nats.io" });
 // create a codec
 const sc = StringCodec();
 
-// A service is a subscriber that listens for messages, and responds
-const started = Date.now();
+// this subscription listens for `time` requests and returns the current time
 const sub = nc.subscribe("time");
-requestHandler(sub);
+(async (sub: Subscription) => {
+  console.log(`listening for ${sub.getSubject()} requests...`);
+  for await (const m of sub) {
+    if (m.respond(sc.encode(new Date().toISOString()))) {
+      console.info(`[time] handled #${sub.getProcessed()}`);
+    } else {
+      console.log(`[time] #${sub.getProcessed()} ignored - no reply subject`);
+    }
+  }
+  console.log(`subscription ${sub.getSubject()} drained.`);
+})(sub);
 
-// If you wanted to manage a service - well NATS is awesome
-// for just that - setup another subscription where admin
-// messages can be sent
+// this subscription listens for admin.uptime and admin.stop
+// requests to admin.uptime returns how long the service has been running
+// requests to admin.stop gracefully stop the client by draining
+// the connection
+const started = Date.now();
 const msub = nc.subscribe("admin.*");
-adminHandler(msub);
+(async (sub: Subscription) => {
+  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
+  // it would be very good to verify the origin of the request
+  // before implementing something that allows your service to be managed.
+  // NATS can limit which client can send or receive on what subjects.
+  for await (const m of sub) {
+    const chunks = m.subject.split(".");
+    console.info(`[admin] #${sub.getProcessed()} handling ${chunks[1]}`);
+    switch (chunks[1]) {
+      case "uptime":
+        // send the number of millis since up
+        m.respond(sc.encode(`${Date.now() - started}`));
+        break;
+      case "stop": {
+        m.respond(sc.encode(`[admin] #${sub.getProcessed()} stopping....`));
+        // gracefully shutdown
+        nc.drain()
+          .catch((err) => {
+            console.log("error draining", err);
+          });
+        break;
+      }
+      default:
+        console.log(
+          `[admin] #${sub.getProcessed()} ignoring request for ${m.subject}`,
+        );
+    }
+  }
+  console.log(`subscription ${sub.getSubject()} drained.`);
+})(msub);
 
 // wait for the client to close here.
 await nc.closed().then((err?: void | Error) => {
@@ -41,48 +81,3 @@ await nc.closed().then((err?: void | Error) => {
   }
   console.log(m);
 });
-
-// this implements the public service, and just prints
-async function requestHandler(sub: Subscription) {
-  console.log(`listening for ${sub.getSubject()} requests...`);
-  let serviced = 0;
-  for await (const m of sub) {
-    serviced++;
-    if (m.respond(sc.encode(new Date().toISOString()))) {
-      console.info(
-        `[${serviced}] handled ${m.data ? "- " + sc.decode(m.data) : ""}`,
-      );
-    } else {
-      console.log(`[${serviced}] ignored - no reply subject`);
-    }
-  }
-}
-
-// this implements the admin service
-async function adminHandler(sub: Subscription) {
-  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
-
-  // it would be very good to verify the origin of the request
-  // before implementing something that allows your service to be managed.
-  // NATS can limit which client can send or receive on what subjects.
-  for await (const m of sub) {
-    const chunks = m.subject.split(".");
-    console.info(`[admin] handling ${chunks[1]}`);
-    switch (chunks[1]) {
-      case "uptime":
-        // send the number of millis since up
-        m.respond(sc.encode(`${Date.now() - started}`));
-        break;
-      case "stop": {
-        m.respond(sc.encode("stopping...."));
-        // finish requests by draining the subscription
-        await sub.drain();
-        // close the connection
-        const _ = nc.close();
-        break;
-      }
-      default:
-        console.log(`ignoring request`);
-    }
-  }
-}

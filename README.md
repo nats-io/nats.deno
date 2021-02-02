@@ -77,7 +77,7 @@ const dials: Promise<NatsConnection>[] = [];
 
 const conns: NatsConnection[] = [];
 // wait until all the dialed connections resolve or fail
-// allSettled returns a tupple with `closed` and `value`:
+// allSettled returns a tuple with `closed` and `value`:
 await Promise.allSettled(dials)
   .then((a) => {
     // filter all the ones that succeeded
@@ -112,18 +112,27 @@ await Promise.all(closed);
 ```
 
 ### Publish and Subscribe
-The basic client operations are to `subscribe` to receive messages,
-and publish to `send` messages. A subscription works as an async
-iterator where you process messages in a loop until the subscription
-closes.
 
-Subscriptions listen for messages on a subject. Messages are published
-to a subject.
+The basic client operations are publish to `send` messages and
+`subscribe` to receive messages. 
+
+Messages are published to a subject. Subscriptions listen for 
+messages on a subject. When a published message matches a subscription,
+the server forwards the message to it.
+
+In JavaScript clients (websocket, deno, or node) subscriptions work as
+async iterator - clients simply loop to process messages.
 
 NATS messages are payload agnostic, this means that payloads are
 `Uint8Arrays`.  You can easily send JSON or strings by using a 
 `StringCodec` or a `JSONCodec`, or create a Codec of your own that 
 handles the encoding or decoding of the data you are working with.
+
+To stop a subscription, you call `unsubscribe()` or `drain()` on it.
+You can drain all subscriptions and close the connection by calling
+`drain()` on the connection. Drain unsubscribes from the subscription,
+but gives a chance to the client to process all messages that it has
+received but not yet processed.
 
 ```typescript
 // import the connect function
@@ -158,15 +167,18 @@ await nc.drain();
 
 
 ### Wildcard Subscriptions
-Sometimes you want to process an event (message), based on the
-subject that was used to send it. In NATS this is accomplished
-by specifying wildcards in the subscription. Subjects that match
-the wildcards, are sent to the client.
 
-In the example below, I am using 3 different subscription
-to highlight that each subscription is independent. And if
-the subject you use matches one or more of them, they all
-will get a chance at processing the message.
+Subjects can be used to organize messages into hierarchies.
+For example the subject may add additional information that
+can be useful in providing a context to the message.
+
+Instead of subscribing to each specific subject that you may
+receive a message, you can create subscriptions that have wildcards.
+Wildcards match one or more tokens in a subject, but tokens
+represented by a wildcard are not specified.
+
+Each subscription is independent. If two different subscriptions
+match a subject, both will get to process the message:
 
 ```javascript
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
@@ -204,14 +216,17 @@ await nc.closed();
 
 ```
 
+### Services: Request/Reply
+
+When you publish a message, you have the ability to specify a `reply`
+subject. The `reply` subject specifies a subject for a subscription
+where the client making the request is waiting for a response.
 
 ### Services
 A service is a client that responds to requests from other clients.
-Now that you know how to create subscriptions, and know about wildcards,
-it is time to develop a service that does something useful.
 
 This example is a bit complicated, because we are going to use NATS
-not only to provide a service, but also to control the service.
+not only to implement a service.
 
 ```typescript
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
@@ -222,16 +237,56 @@ const nc = await connect({ servers: "demo.nats.io" });
 // create a codec
 const sc = StringCodec();
 
-// A service is a subscriber that listens for messages, and responds
-const started = Date.now();
+// this subscription listens for `time` requests and returns the current time
 const sub = nc.subscribe("time");
-requestHandler(sub);
+(async (sub: Subscription) => {
+  console.log(`listening for ${sub.getSubject()} requests...`);
+  for await (const m of sub) {
+    if (m.respond(sc.encode(new Date().toISOString()))) {
+      console.info(`[time] handled #${sub.getProcessed()}`);
+    } else {
+      console.log(`[time] #${sub.getProcessed()} ignored - no reply subject`);
+    }
+  }
+  console.log(`subscription ${sub.getSubject()} drained.`);
+})(sub);
 
-// If you wanted to manage a service - well NATS is awesome
-// for just that - setup another subscription where admin
-// messages can be sent
+// this subscription listens for admin.uptime and admin.stop
+// requests to admin.uptime returns how long the service has been running
+// requests to admin.stop gracefully stop the client by draining
+// the connection
+const started = Date.now();
 const msub = nc.subscribe("admin.*");
-adminHandler(msub);
+(async (sub: Subscription) => {
+  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
+  // it would be very good to verify the origin of the request
+  // before implementing something that allows your service to be managed.
+  // NATS can limit which client can send or receive on what subjects.
+  for await (const m of sub) {
+    const chunks = m.subject.split(".");
+    console.info(`[admin] #${sub.getProcessed()} handling ${chunks[1]}`);
+    switch (chunks[1]) {
+      case "uptime":
+        // send the number of millis since up
+        m.respond(sc.encode(`${Date.now() - started}`));
+        break;
+      case "stop": {
+        m.respond(sc.encode(`[admin] #${sub.getProcessed()} stopping....`));
+        // gracefully shutdown
+        nc.drain()
+          .catch((err) => {
+            console.log("error draining", err);
+          });
+        break;
+      }
+      default:
+        console.log(
+          `[admin] #${sub.getProcessed()} ignoring request for ${m.subject}`,
+        );
+    }
+  }
+  console.log(`subscription ${sub.getSubject()} drained.`);
+})(msub);
 
 // wait for the client to close here.
 await nc.closed().then((err?: void | Error) => {
@@ -242,54 +297,12 @@ await nc.closed().then((err?: void | Error) => {
   console.log(m);
 });
 
-// this implements the public service, and just prints
-async function requestHandler(sub: Subscription) {
-  console.log(`listening for ${sub.getSubject()} requests...`);
-  let serviced = 0;
-  for await (const m of sub) {
-    serviced++;
-    if (m.respond(new Date().toISOString())) {
-      console.info(
-        `[${serviced}] handled ${m.data ? "- " + sc.decode(m.data) : ""}`,
-      );
-    } else {
-      console.log(`[${serviced}] ignored - no reply subject`);
-    }
-  }
-}
-
-// this implements the admin service
-async function adminHandler(sub: Subscription) {
-  console.log(`listening for ${sub.getSubject()} requests [uptime | stop]`);
-
-  // it would be very good to verify the origin of the request
-  // before implementing something that allows your service to be managed.
-  // NATS can limit which client can send or receive on what subjects.
-  for await (const m of sub) {
-    const chunks = m.subject.split(".");
-    console.info(`[admin] handling ${chunks[1]}`);
-    switch (chunks[1]) {
-      case "uptime":
-        // send the number of millis since up
-        m.respond(sc.encode(`${Date.now() - started}`));
-        break;
-      case "stop":
-        m.respond("stopping....");
-        // finish requests by draining the subscription
-        await sub.drain();
-        // close the connection
-        const _ = nc.close();
-        break;
-      default:
-        console.log(`ignoring request`);
-    }
-  }
-}
 ```
 
 ### Making Requests
+
 ```typescript
-import { connect, StringCodec } from "../../src/mod.ts";
+import { connect, StringCodec, Empty } from "../../src/mod.ts";
 
 // create a connection
 const nc = await connect({ servers: "demo.nats.io:4222" });
@@ -297,10 +310,10 @@ const nc = await connect({ servers: "demo.nats.io:4222" });
 // create an encoder
 const sc = StringCodec();
 
-// a client makes a request and receives a promise for a message
+// the client makes a request and receives a promise for a message
 // by default the request times out after 1s (1000 millis) and has
 // no payload.
-await nc.request("time", sc.encode("hello!"), { timeout: 1000 })
+await nc.request("time", Empty, { timeout: 1000 })
   .then((m) => {
     console.log(`got response: ${sc.decode(m.data)}`);
   })
@@ -318,6 +331,7 @@ queue group are treated as a single service, that means when you send a message
 only a single client in a queue group will receive it. There can be multiple queue 
 groups, and each is treated as an independent group. Non-queue subscriptions are
 also independent.
+
 ```typescript
 import {
   connect,
@@ -394,10 +408,8 @@ await Promise.all(a);
 
 New nats-servers offer the ability to add additional metadata to a message.
 The metadata is added in the form of headers. NATS headers are very close to
-HTTP headers. Note that headers are not guaranteed. If a client subscribes
-to the message but doesn't want headers, the headers will be stripped from
-the message. On more capable clients headers can allow for additional
-data to be sent to the header-aware clients.
+HTTP headers. Note that headers are not guaranteed. If the client doesn't
+want or support headers it will not receive them.
 
 ```typescript
 import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
@@ -418,14 +430,13 @@ const sub = nc.subscribe(subj);
       for (const [key, value] of m.headers) {
         console.log(`${key}=${value}`);
       }
-      console.log("ID", m.headers.get("ID"));
-      console.log("Id", m.headers.get("Id"));
+      // reading/setting a header is not case sensitive
       console.log("id", m.headers.get("id"));
     }
   }
 })().then();
 
-// headers always have their names turned into a cannincal mime header key
+// headers always have their names turned into a canonical mime header key
 // header names can be any printable ASCII character with the  exception of `:`.
 // header values can be any ASCII character except `\r` or `\n`.
 // see https://www.ietf.org/rfc/rfc822.txt
@@ -444,9 +455,9 @@ await nc.close();
 
 Requests can fail for many reasons. A common reason is when a request is made
 to a subject that no service is listening on. Typically these surface as a
-timeout error. With newer nats servers that support `headers` and `noResponders`,
-the nats-server can report immediately if there are no subscriptions
-for the request:
+timeout error. With a nats-server that support `headers` and `noResponders`,
+the nats-server can report immediately if there is no interest on the request
+subject:
 
 ```typescript
 const nc = await connect({
@@ -485,18 +496,81 @@ const nc1 = await connect({servers: "127.0.0.1:4222", user: "jenny", pass: "867-
 const nc2 = await connect({port: 4222, token: "t0pS3cret!"});
 ```
 
+#### Authenticators
+
+For user/password and token authentication, you can simply provide them
+as `ConnectionOptions` - see `user`, `pass`, `token`. Internally these
+mechanisms are implemented as an `Authenticator`. An `Authenticator` is
+simply a function that handles the type of authentication specified.
+
+Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator`
+sets the username/password. NKeys and JWT authentication are more complex,
+as they cryptographically respond to a server challenge.
+
+Because nkey and JWT authentication may require reading data from a file or
+an HTTP cookie, these forms of authentication will require a bit more from
+the developer to activate them. However, the work is related to accessing
+these resources on the platform they are working with.
+
+After the data, is read, you can use one of these functions in your code to
+generate the authenticator and assign it to the `authenticator` property of
+the `ConnectionOptions`:
+
+- `nkeyAuthenticator(seed?: Uint8Array | (() => Uint8Array)): Authenticator`
+- `jwtAuthenticator(jwt: string | (() => string), seed?: Uint8Array | (()=> Uint8Array)): Authenticator`
+- `credsAuthenticator(creds: Uint8Array): Authenticator`
+
+
+The first two options also provide the ability to specify functions that return
+the desired value. This enables dynamic environment such as a browser where
+values accessed by fetching a value from a cookie.
+
+
+Here's an example:
+
+```javascript
+  // read the creds file as necessary, in the case it
+  // is part of the code for illustration purposes
+  const creds = `-----BEGIN NATS USER JWT-----
+    eyJ0eXAiOiJqdSDJB....
+  ------END NATS USER JWT------
+
+************************* IMPORTANT *************************
+  NKEY Seed printed below can be used sign and prove identity.
+  NKEYs are sensitive and should be treated as secrets.
+
+  -----BEGIN USER NKEY SEED-----
+    SUAIBDPBAUTW....
+  ------END USER NKEY SEED------
+`;
+
+  const nc = await connect(
+    {
+      port: 4222,
+      authenticator: credsAuthenticator(new TextEncoder().encode(creds)),
+    },
+  );
+```
+
 ### Flush
 ```javascript
-// flush sends a PING request to the servers and returns a promise
+// flush sends a PING protocol request to the servers and returns a promise
 // when the servers responds with a PONG. The flush guarantees that
-// things you published have been delivered to the servers. Typically
+// things you published have been delivered to the server. Typically
 // it is not necessary to use flush, but on tests it can be invaluable.
 nc.publish('foo');
 nc.publish('bar');
 await nc.flush();
 ```
 
-### SubscriptionOptions
+### `PublishOptions`
+
+When you publish a message you can specify some options:
+
+- `reply` - this is a subject to receive a reply (you must setup a subscription) before you publish.
+- `headers` - a set of headers to decorate the message.
+
+### `SubscriptionOptions`
 You can specify several options when creating a subscription:
 - `max`: maximum number of messages to receive - auto unsubscribe
 - `timeout`: how long to wait for the first message
@@ -528,7 +602,7 @@ const sub = nc.subscribe("hello", { timeout: 1000 });
 });
 ```
 
-### RequestOptions
+### `RequestOptions`
 
 When making a request, there are several options you can pass:
 
@@ -537,15 +611,12 @@ When making a request, there are several options you can pass:
 - `noMux`: create a new subscription to handle the request. Normally a shared subscription is used to receive request messages.
 - `reply`: optional subject where the reply should be received
 
-#### noMux and reply
+#### `noMux` and `reply`
 
-Under the hood the request api simply has a wildcard subscription.
-When a request is generated, the api creates a subject appending a nuid
-which is used as the reply subject for the request. When the response
-is received, the multiplex subscription matches the token, and delivers
-the reply to the correct requestor.
+Under the hood the request api simply use a wildcard subscription
+to handle all requests you send.
 
-In some cases the mux subscription strategy doesn't work correctly.
+In some cases the default subscription strategy doesn't work correctly.
 For example the client may be constrained on what subjects it can
 receive replies.
 
@@ -562,64 +633,27 @@ provided one. Note that setting `reply` requires `noMux` to be `true`:
   );
 ```
 
+### Draining Connections and Subscriptions
 
-### Authenticators
+Draining provides for a graceful way to unsubscribe or 
+close a connection without loosing messages that have 
+already been dispatched to the client.
 
-For user/password and token authentication, you can simply provide them
-as `ConnectionOptions` - see `user`, `pass`, `token`. Internally these
-mechanisms are implemented as an `Authenticator`. An `Authenticator` is
-simply a function that optionally handles a nonce signing, and returns
-a number of options that get passed to the server during the connection process.
- 
-Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator` 
-that handles the authentication. NKeys and JWT authentication are more complex, 
-but their function is the same.
+You can drain a subscription or all subscriptions in a connection.
 
-Because nkey and JWT authentication may require reading data from a file or 
-an HTTP cookie, these forms of authentication will require a bit more from
-the developer to activate them. However, the work is related to accessing
-these resources on the platform they are working with.
+When you drain a subscription, the client sends an `unsubscribe`
+protocol message to the server followed by a `flush`. The
+subscription handler is only removed when the server responds
+with a pong. Thus by that time all pending messages for the
+subscription have been processed by the client.
 
-After the data, is read, you can use one of these functions in your code to 
-generate the authenticator and assign it to the `authenticator` property of
-the `ConnectionOptions`:
+Draining a connection, drains all subscriptions. However
+when you drain the connection it is impossible to make
+new subscriptions or send new requests. After the last
+subscription is drained it also becomes impossible to publish
+a message. These restrictions do not exist when just draining
+a subscription.
 
-- `nkeyAuthenticator(seed?: Uint8Array | (() => Uint8Array)): Authenticator`
-- `jwtAuthenticator(jwt: string | (() => string), seed?: Uint8Array | (()=> Uint8Array)): Authenticator`
-- `credsAuthenticator(creds: Uint8Array): Authenticator`
-
-
-The first two options also provide the ability to specify functions that return
-the desired value. This enables dynamic enviroment such as a browser where
-values accessed by fetching an URL or doing some other manipulation on a 
-cookie:
-
-
-Here's an example:
-
-```javascript
-  // read the creds file as necessary, in the case it
-  // is part of the code for illustration purposes
-  const creds = `-----BEGIN NATS USER JWT-----
-    eyJ0eXAiOiJqdSDJB....
-  ------END NATS USER JWT------
-
-************************* IMPORTANT *************************
-  NKEY Seed printed below can be used sign and prove identity.
-  NKEYs are sensitive and should be treated as secrets.
-
-  -----BEGIN USER NKEY SEED-----
-    SUAIBDPBAUTW....
-  ------END USER NKEY SEED------
-`;
-
-  const nc = await connect(
-    {
-      port: 4222,
-      authenticator: credsAuthenticator(new TextEncoder().encode(creds)),
-    },
-  );
-```
 
 ### Lifecycle/Informational Events
 Clients can get notification on various event types:
@@ -681,7 +715,7 @@ The following is the list of connection options and default values.
 | `reconnect`            | `true`                    | If false client will not attempt reconnecting
 | `servers`              | `"localhost:4222"`        | String or Array of hostport for servers.
 | `timeout`              | 20000                     | Number of milliseconds the client will wait for a connection to be established. If it fails it will emit a `connection_timeout` event with a NatsError that provides the hostport of the server where the connection was attempted.
-| `tls`                  | TlsOptions                | TlsOption configuration object (not applicable to nats.ws)
+| `tls`                  | TlsOptions                | A configuration object for requiring a TLS connection (not applicable to nats.ws).
 | `token`                |                           | Sets a authorization token for a connection
 | `user`                 |                           | Sets the username for a connection
 | `verbose`              | `false`                   | Turns on `+OK` protocol acknowledgements
@@ -696,3 +730,21 @@ The following is the list of connection options and default values.
 |  `certFile`  |         | Client certificate file path - not applicable to Deno clients.
 |  `keyFile`   |         | Client key file path - not applicable to Deno clients.
 
+In some Node and Deno clients, having the option set to an empty option, requires that
+the client have a secured connection.
+
+
+### Jitter
+
+The settings `reconnectTimeWait`, `reconnectJitter`, `reconnectJitterTLS`, `reconnectDelayHandler` are all related.
+They control how long before the NATS client attempts to reconnect to a server it has previously connected.
+
+The intention of the settings is to spread out the number of clients attempting to reconnect to a server over a period of time,
+and thus preventing a ["Thundering Herd"](https://docs.nats.io/developing-with-nats/reconnect/random).
+
+The relationship between these is:
+
+- If `reconnectDelayHandler` is specified, the client will wait the value returned by this function. No other value will be taken into account.
+- If the client specified TLS options, the client will generate a number between 0 and `reconnectJitterTLS` and add it to
+  `reconnectTimeWait`.
+- If the client didn't specify TLS options, the client will generate a number between 0 and `reconnectJitter` and add it to `reconnectTimeWait`.
