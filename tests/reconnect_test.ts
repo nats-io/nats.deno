@@ -283,7 +283,7 @@ Deno.test("reconnect - wait on first connect", async () => {
 });
 
 Deno.test("reconnect - wait on first connect off", async () => {
-  let srv = await NatsServer.start({});
+  const srv = await NatsServer.start({});
   const port = srv.port;
   await delay(500);
   await srv.stop();

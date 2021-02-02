@@ -45,7 +45,6 @@ await Promise.allSettled(dials)
       return v.status === "fulfilled";
     });
     // and now extract all the connections
-    //@ts-ignore
     const values = fulfilled.map((v) => v.value);
     conns.push(...values);
   });
