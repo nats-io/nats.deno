@@ -18,11 +18,18 @@ import {
   assertEquals,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
-import { connect, createInbox, ErrorCode, Events } from "../src/mod.ts";
+import {
+  connect,
+  createInbox,
+  ErrorCode,
+  Events,
+  NatsError,
+} from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
   DebugEvents,
   deferred,
+  delay,
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 
@@ -242,4 +249,54 @@ Deno.test("reconnect - internal disconnect forces reconnect", async () => {
 
   await nc.close();
   await srv.stop();
+});
+
+Deno.test("reconnect - wait on first connect", async () => {
+  let srv = await NatsServer.start({});
+  const port = srv.port;
+  await delay(500);
+  await srv.stop();
+  await delay(1000);
+  const pnc = connect({
+    port: port,
+    waitOnFirstConnect: true,
+    reconnectTimeWait: 100,
+    maxReconnectAttempts: 10,
+  });
+  await delay(3000);
+  srv = await srv.restart();
+
+  const nc = await pnc;
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    callback: (err, msg) => {
+      msg.respond();
+    },
+  });
+  await nc.request(subj);
+
+  // stop the server
+  await srv.stop();
+  // no reconnect, will quit the client
+  const what = await nc.closed() as NatsError;
+  assertEquals(what.code, ErrorCode.CONNECTION_REFUSED);
+});
+
+Deno.test("reconnect - wait on first connect off", async () => {
+  let srv = await NatsServer.start({});
+  const port = srv.port;
+  await delay(500);
+  await srv.stop();
+  await delay(1000);
+  const pnc = connect({
+    port: port,
+  });
+
+  try {
+    // should fail
+    await pnc;
+  } catch (err) {
+    const nerr = err as NatsError;
+    assertEquals(nerr.code, ErrorCode.CONNECTION_REFUSED);
+  }
 });
