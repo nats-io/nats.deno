@@ -44,6 +44,7 @@ export enum ErrorCode {
 
   // emitted by the server
   AUTHORIZATION_VIOLATION = "AUTHORIZATION_VIOLATION",
+  AUTHENTICATION_EXPIRED = "AUTHENTICATION_EXPIRED",
   NATS_PROTOCOL_ERR = "NATS_PROTOCOL_ERR",
   PERMISSIONS_VIOLATION = "PERMISSIONS_VIOLATION",
 }
@@ -101,5 +102,18 @@ export class NatsError extends Error {
   static errorForCode(code: string, chainedError?: Error): NatsError {
     const m = Messages.getMessage(code);
     return new NatsError(m, code, chainedError);
+  }
+
+  isAuthError(): boolean {
+    return this.code === ErrorCode.AUTHENTICATION_EXPIRED ||
+      this.code === ErrorCode.AUTHORIZATION_VIOLATION;
+  }
+
+  isPermissionError(): boolean {
+    return this.code === ErrorCode.PERMISSIONS_VIOLATION;
+  }
+
+  isProtocolError(): boolean {
+    return this.code === ErrorCode.NATS_PROTOCOL_ERR;
   }
 }

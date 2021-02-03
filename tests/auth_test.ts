@@ -13,16 +13,21 @@
  * limitations under the License.
  */
 
-import { fail } from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import {
+  assertEquals,
+  fail,
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
   connect,
   credsAuthenticator,
   ErrorCode,
+  Events,
   jwtAuthenticator,
   nkeyAuthenticator,
+  Status,
 } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
-import { nkeys } from "../nats-base-client/internal_mod.ts";
+import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
 
 const conf = {
   authorization: {
@@ -78,14 +83,21 @@ Deno.test("auth - un/pw", async () => {
 
 Deno.test("auth - sub permissions", async () => {
   const ns = await NatsServer.start(conf);
-  const lock = Lock(2);
+  const lock = Lock();
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
-  nc.closed().then((err) => {
-    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
-    lock.unlock();
-  });
+
+  const status = nc.status();
+
+  let notifications = 0;
+  (async () => {
+    for await (const s of status) {
+      notifications++;
+    }
+  })().then();
+
+  const done = nc.closed();
 
   const sub = nc.subscribe("foo");
   (async () => {
@@ -95,11 +107,13 @@ Deno.test("auth - sub permissions", async () => {
   })().catch((err) => {
     lock.unlock();
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
+    notifications++;
   });
 
   nc.publish("foo");
 
-  await lock;
+  await Promise.all([lock, done]);
+  assertEquals(notifications, 1);
   await ns.stop();
 });
 
@@ -109,6 +123,15 @@ Deno.test("auth - pub perm", async () => {
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
   );
+
+  const status = nc.status();
+  const errStatus = deferred<Status>();
+  (async () => {
+    for await (const s of status) {
+      errStatus.resolve(s);
+    }
+  })().then();
+
   nc.closed().then((err) => {
     assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
     lock.unlock();
@@ -125,6 +148,9 @@ Deno.test("auth - pub perm", async () => {
 
   await lock;
   await iter;
+  const es = await errStatus;
+  assertEquals(es.type, Events.ERROR);
+  assertEquals(es.data, ErrorCode.PERMISSIONS_VIOLATION);
   await ns.stop();
 });
 
@@ -279,4 +305,19 @@ Deno.test("auth - custom error", async () => {
     assertErrorCode(err, ErrorCode.BAD_AUTHENTICATION);
   });
   await ns.stop();
+});
+
+Deno.test("basics - bad auth", async () => {
+  try {
+    await connect(
+      {
+        servers: "connect.ngs.global",
+        waitOnFirstConnect: true,
+        user: "me",
+        pass: "you",
+      },
+    );
+  } catch (err) {
+    assertErrorCode(err, ErrorCode.AUTHORIZATION_VIOLATION);
+  }
 });

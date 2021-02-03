@@ -23,6 +23,7 @@ export enum Events {
   RECONNECT = "reconnect",
   UPDATE = "update",
   LDM = "ldm",
+  ERROR = "error",
 }
 
 export interface Status {
