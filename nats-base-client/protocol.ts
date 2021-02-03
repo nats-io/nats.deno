@@ -133,6 +133,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   outBytes: number;
   inBytes: number;
   pendingLimit: number;
+  lastError?: NatsError;
+  abortReconnect: boolean;
 
   servers: Servers;
   server!: ServerImpl;
@@ -143,6 +145,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.connectedOnce = false;
     this.infoReceived = false;
     this.noMorePublishing = false;
+    this.abortReconnect = false;
     this.listeners = [];
     this.pendingLimit = FLUSH_THRESHOLD;
     this.outMsgs = 0;
@@ -202,8 +205,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
     const pong = deferred<void>();
     this.pongs.unshift(pong);
-
-    this.connectError = undefined;
 
     this.connectError = (err?: Error) => {
       pong.reject(err);
@@ -302,7 +303,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         : DEFAULT_RECONNECT_TIME_WAIT;
       let maxWait = wait;
       const srv = this.selectServer();
-      if (!srv) {
+      if (!srv || this.abortReconnect) {
         throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED);
       }
       const now = Date.now();
@@ -350,6 +351,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return new NatsError(s, ErrorCode.PERMISSIONS_VIOLATION);
     } else if (t.indexOf("authorization violation") !== -1) {
       return new NatsError(s, ErrorCode.AUTHORIZATION_VIOLATION);
+    } else if (t.indexOf("user authentication expired") !== -1) {
+      return new NatsError(s, ErrorCode.AUTHENTICATION_EXPIRED);
     } else {
       return new NatsError(s, ErrorCode.NATS_PROTOCOL_ERR);
     }
@@ -380,8 +383,32 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async processError(m: Uint8Array) {
     const s = fastDecoder(m);
     const err = ProtocolHandler.toError(s);
-    this.subscriptions.handleError(err);
-    await this._close(err);
+    const handled = this.subscriptions.handleError(err);
+    if (!handled) {
+      this.dispatchStatus({ type: Events.ERROR, data: err.code });
+    }
+    await this.handleError(err);
+  }
+
+  async handleError(err: NatsError) {
+    if (err.isAuthError()) {
+      this.handleAuthError(err);
+    }
+    if (err.isPermissionError() || err.isProtocolError()) {
+      await this._close(err);
+    }
+    this.lastError = err;
+  }
+
+  handleAuthError(err: NatsError) {
+    if (this.lastError && err.code === this.lastError.code) {
+      this.abortReconnect = true;
+    }
+    if (this.connectError) {
+      this.connectError(err);
+    } else {
+      this.disconnect();
+    }
   }
 
   processPing() {

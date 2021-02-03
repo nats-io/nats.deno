@@ -65,7 +65,8 @@ export class Subscriptions {
     }
   }
 
-  handleError(err?: NatsError) {
+  handleError(err?: NatsError): boolean {
+    let handled = false;
     if (err) {
       const re = /^'Permissions Violation for Subscription to "(\S+)"'/i;
       const ma = re.exec(err.message);
@@ -75,10 +76,12 @@ export class Subscriptions {
           if (subj == sub.subject) {
             sub.callback(err, {} as Msg);
             sub.close();
+            handled = sub !== this.mux;
           }
         });
       }
     }
+    return handled;
   }
 
   close() {
