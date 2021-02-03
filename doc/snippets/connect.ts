@@ -14,57 +14,31 @@
  */
 
 // import the connect function
-import { connect, NatsConnection } from "../../src/mod.ts";
+import { connect } from "../../src/mod.ts";
 
-// the connection is configured by a set of ConnectionOptions
-// if none is set, the client will connect to 127.0.0.1:4222:
-const localhostAtStandardPort = {};
+const servers = [
+  {},
+  { servers: ["demo.nats.io:4442", "demo.nats.io:4222"] },
+  { servers: "demo.nats.io:4443" },
+  { port: 4222 },
+  { servers: "localhost" },
+];
+await servers.forEach(async (v) => {
+  try {
+    const nc = await connect(v);
+    console.log(`connected to ${nc.getServer()}`);
+    // this promise indicates the client closed
+    const done = nc.closed();
+    // do something with the connection
 
-// you can also specify a port:
-const localPort = { port: 4222 };
-
-// or a host using the standard 4222 port:
-const hostAtStdPort = { servers: "demo.nats.io" };
-
-// or the full host port
-const hostPort = { servers: "demo.nats.io:4222" };
-
-// let's try to connect to all the above, some may fail
-const dials: Promise<NatsConnection>[] = [];
-[localhostAtStandardPort, localPort, hostAtStdPort, hostPort].forEach((v) => {
-  dials.push(connect(v));
+    // close the connection
+    await nc.close();
+    // check if the close was OK
+    const err = await done;
+    if (err) {
+      console.log(`error closing:`, err);
+    }
+  } catch (err) {
+    console.log(`error connecting to ${JSON.stringify(v)}`);
+  }
 });
-
-const conns: NatsConnection[] = [];
-// wait until all the dialed connections resolve or fail
-// allSettled returns a tupple with `closed` and `value`:
-await Promise.allSettled(dials)
-  .then((a) => {
-    // filter all the ones that succeeded
-    const fulfilled = a.filter((v) => {
-      return v.status === "fulfilled";
-    });
-    // and now extract all the connections
-    const values = fulfilled.map((v) => v.value);
-    conns.push(...values);
-  });
-
-// Print where we connected, and register a close handler
-conns.forEach((nc) => {
-  console.log(`connected to ${nc.getServer()}`);
-  // you can get notified when the client exits by getting `closed()`.
-  // closed resolves void or with an error if the connection
-  // closed because of an error
-  nc.closed()
-    .then((err: void | Error) => {
-      let m = `connection to ${nc.getServer()} closed`;
-      if (err) {
-        m = `${m} with an error: ${err.message}`;
-      }
-      console.log(m);
-    });
-});
-
-// now close all the connections, and wait for the close to finish
-const closed = conns.map((nc) => nc.close());
-await Promise.all(closed);

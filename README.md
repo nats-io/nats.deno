@@ -25,7 +25,7 @@ To see a list of items that are under development see [TODO](TODO.md).
 
 To connect to a server you use the `connect()` function. It returns
 a connection that you can use to interact with the server. You can customize
-the connection by specifying `ConnectionOptions`.
+the behavior of the client by specifying many [`ConnectionOptions`](#Connection_Options).
 
 By default, a connection will attempt a connection on`127.0.0.1:4222`. 
 If the connection is dropped, the client will attempt to reconnect. 
@@ -34,105 +34,79 @@ You can customize the server you want to connect to by specifying `port`
 Note that the `servers` option can be a single hostport (a string) or
 an array of hostports.
 
-When a connection is lost, any messages that have not been
-sent to the server are lost. A client can queue  new messages to be sent when 
-the connection resumes. If the connection  cannot be re-established the 
-client will give up and `close` the connection.
-
-To learn when a connection closes, wait for the promise returned by the `closed()`
-function. If the close was due to an error, the promise will resolve to an error.
-
-To disconnect from the nats-server, call `close()` on the connection.
-A connection can also be terminated if there's an error. For example, the
-server returns a run-time error. In those cases, the client will re-initiate
-a connection.
-
-This first example looks a bit complex, because it shows all of the things
-discussed above. The example attempts to connect to a nats-server by specifying
-different connect options. At least two of them should work if your
+The example below will attempt to connect to different servers by specifying
+different `ConnectionOptions`. At least two of them should work if your
 internet is working.
 
 ```typescript
 // import the connect function
-import { connect, NatsConnection } from "../../src/mod.ts";
+import { connect } from "../../src/mod.ts";
 
-// the connection is configured by a set of ConnectionOptions
-// if none is set, the client will connect to 127.0.0.1:4222:
-const localhostAtStandardPort = {};
+const servers = [
+  {},
+  { servers: ["demo.nats.io:4442", "demo.nats.io:4222"] },
+  { servers: "demo.nats.io:4443" },
+  { port: 4222 },
+  { servers: "localhost" },
+];
+await servers.forEach(async (v) => {
+  try {
+    const nc = await connect(v);
+    console.log(`connected to ${nc.getServer()}`);
+    // this promise indicates the client closed
+    const done = nc.closed();
+    // do something with the connection
 
-// you can also specify a port:
-const localPort = { port: 4222 };
-
-// or a host using the standard 4222 port:
-const hostAtStdPort = { servers: "demo.nats.io" };
-
-// or the full host port
-const hostPort = { servers: "demo.nats.io:4222" };
-
-// let's try to connect to all the above, some may fail
-const dials: Promise<NatsConnection>[] = [];
-[localhostAtStandardPort, localPort, hostAtStdPort, hostPort].forEach((v) => {
-  dials.push(connect(v));
+    // close the connection
+    await nc.close();
+    // check if the close was OK
+    const err = await done;
+    if (err) {
+      console.log(`error closing:`, err);
+    }
+  } catch (err) {
+    console.log(`error connecting to ${JSON.stringify(v)}`);
+  }
 });
-
-const conns: NatsConnection[] = [];
-// wait until all the dialed connections resolve or fail
-// allSettled returns a tuple with `closed` and `value`:
-await Promise.allSettled(dials)
-  .then((a) => {
-    // filter all the ones that succeeded
-    const fulfilled = a.filter((v) => {
-      return v.status === "fulfilled";
-    });
-    // and now extract all the connections
-    //@ts-ignore
-    const values = fulfilled.map((v) => v.value);
-    conns.push(...values);
-  });
-
-// Print where we connected, and register a close handler
-conns.forEach((nc) => {
-  console.log(`connected to ${nc.getServer()}`);
-  // you can get notified when the client exits by getting `closed()`.
-  // closed resolves void or with an error if the connection
-  // closed because of an error
-  nc.closed()
-    .then((err) => {
-      let m = `connection to ${nc.getServer()} closed`;
-      if (err) {
-        m = `${m} with an error: ${err.message}`;
-      }
-      console.log(m);
-    });
-});
-
-// now close all the connections, and wait for the close to finish
-const closed = conns.map((nc) => nc.close());
-await Promise.all(closed);
 ```
+
+To disconnect from the nats-server, call `close()` on the connection.
+A connection can also be terminated when an unexpected error happens. 
+For example, the server returns a run-time error. In those cases, 
+the client will re-initiate a connection.
+
+By default, the client will always attempt to reconnect if the connection
+is closed for a reason other than calling `close()`. To get notified when
+the connection is closed for some reason, await the resolution of the Promise 
+returned by `closed()`. If closed resolves to a value, the value is a `NatsError`
+indicating why the connection closed.
+
 
 ### Publish and Subscribe
 
-The basic client operations are publish to `send` messages and
+The basic client operations are `publish` to send messages and
 `subscribe` to receive messages. 
 
-Messages are published to a subject. Subscriptions listen for 
-messages on a subject. When a published message matches a subscription,
-the server forwards the message to it.
+Messages are published to a subject. A subject is like an URL with the
+exception that it doesn't specify an actual endpoint. All recipients that
+have expressed interest in a subject will receive messages addressed to that subject
+(provided they have access and permissions to get it). To express interest 
+in a subject, you create a `subscription`.
 
-In JavaScript clients (websocket, deno, or node) subscriptions work as an
-async iterator - clients simply loop to process messages.
+In JavaScript clients (websocket, Deno, or Node) subscriptions work as an
+async iterator - clients simply loop to process messages as they become available.
 
-NATS messages are payload agnostic, meaning payloads are
-`Uint8Arrays`.  You can easily send JSON or strings by using a 
-`StringCodec` or a `JSONCodec`, or create a Codec of your own that 
-handles the encoding or decoding of the data you are working with.
+NATS messages are payload agnostic. Payloads are `Uint8Arrays`. You can easily 
+convert to and from JSON or strings by using  `JSONCodec` or `StringCodec`, 
+or a custom `Codec`.
 
-To stop a subscription, you call `unsubscribe()` or `drain()` on it.
-You can drain all subscriptions and close the connection by calling
-`drain()` on the connection. Drain unsubscribes from the subscription,
-but gives the client a chance to process all messages it has
-received but not yet processed.
+To cancel a subscription and terminate your interest, you call `unsubscribe()` 
+or `drain()` on a subscription. Unsubscribe will typically terminate regardless
+of whether there are messages in flight for the client. Drain ensures
+that all messages that are inflight are processed before canceling the
+subscription. Connections can also be drained as well. Draining a connection
+closes it, after all subscriptions have been drained and all outbound messages
+have been sent to the server.
 
 ```typescript
 // import the connect function
@@ -169,15 +143,17 @@ await nc.drain();
 ### Wildcard Subscriptions
 
 Subjects can be used to organize messages into hierarchies.
-For example the subject may add additional information that
-can be useful in providing a context to the message.
+For example, a subject may contain additional information that
+can be useful in providing a context to the message, such as
+the ID of the client that sent the message, or the region where
+a message originated.
 
-Instead of subscribing to each specific subject for which you may want to
-receive a message, you can create subscriptions that have wildcards.
-Wildcards match one or more tokens in a subject, but tokens
-represented by a wildcard are not specified.
+Instead of subscribing to each specific subject, you can create 
+subscriptions that have subjects with wildcards. Wildcards match
+one or more tokens in a subject. A token is a string following a
+period.
 
-Each subscription is independent. If two different subscriptions
+All subscriptions are independent. If two different subscriptions
 match a subject, both will get to process the message:
 
 ```javascript
@@ -218,15 +194,21 @@ await nc.closed();
 
 ### Services: Request/Reply
 
-When you publish a message, you have the ability to specify a `reply`
-subject. The `reply` subject specifies a subject for a subscription
-where the client making the request is waiting for a response.
+Request/Reply is NATS equivalent to an HTTP request. To make requests
+you publish messages as you did before, but also specify a `reply`
+subject. The `reply` subject is where a service will publish your response.
 
-### Services
-A service is a client that responds to requests from other clients.
+NATS provides syntactic sugar, for publishing requests. The `request()` API
+will generate a reply subject and manage the creation of a subscription 
+under the covers. It will also start a timer to ensure that if a response
+is not received within your alloted time, the request fails. The example
+also illustrates a graceful shutdown.
 
-This example is a bit complicated, because we are going to use NATS
-not only to implement a service.
+#### Services
+
+Here's an example of a service. It is a bit more complicated than expected
+simply to illustrate not only how to create responses, but how
+the subject itself is used to dispatch different behaviors.
 
 ```typescript
 import { connect, StringCodec, Subscription } from "../../src/mod.ts";
@@ -299,7 +281,10 @@ await nc.closed().then((err?: void | Error) => {
 
 ```
 
-### Making Requests
+#### Making Requests
+
+Here's a simple example of a client making a simple request
+from the service above:
 
 ```typescript
 import { connect, StringCodec, Empty } from "../../src/mod.ts";
@@ -327,10 +312,12 @@ await nc.close();
 
 ### Queue Groups
 Queue groups allow scaling of services horizontally. Subscriptions for members of a 
-queue group are treated as a single service, meaning when you send a message
-only a single client in a queue group will receive it. There can be multiple queue 
-groups, and each is treated as an independent group. Non-queue subscriptions are
-also independent.
+queue group are treated as a single service. When you send a message to a queue group
+subscription, only a single client in a queue group will receive it. 
+
+There can be any number of queue groups. Each group is treated as its own independent
+unit. Note that non-queue subscriptions are also independent of subscriptions in a queue
+group.
 
 ```typescript
 import {
@@ -340,6 +327,8 @@ import {
   Subscription,
 } from "../../src/mod.ts";
 
+// this is the definition of a service with `count` members in them.
+// if the queue is specified, the they will be part of a queue
 async function createService(
   name: string,
   count: number = 1,
@@ -360,7 +349,7 @@ async function createService(
         }
       });
     // create a subscription - note the option for a queue, if set
-    // any client with the same queue will be the queue group.
+    // any client with the same queue will be a member of the group.
     const sub = nc.subscribe("echo", { queue: queue });
     const _ = handleRequest(n, sub);
     console.log(`${nc.options.name} is listening for 'echo' requests...`);
@@ -402,14 +391,15 @@ conns.forEach((c) => {
 await Promise.all(a);
 ```
 
+Run it and publish a request to the subject `echo` to see what happens.
+
 ## Advanced Usage
 
 ### Headers
 
-New NATS servers offer the ability to add additional metadata to a message.
-The metadata is added in the form of headers. NATS headers are very close to
-HTTP headers. Note that headers are not guaranteed. If the client doesn't
-want to support headers it will not receive them.
+NATS headers are similar to HTTP headers. Headers are enabled by specifying
+the `headers` `ConnectionOption`. Note that clients opt to receive
+message headers. If a client doesn't opt-in, it will not receive them.
 
 ```typescript
 import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
@@ -450,14 +440,13 @@ await nc.close();
 
 ```
 
-
 ### No Responders
 
-Requests can fail for many reasons. A common reason is when a request is made
-to a subject that no service is listening on. Typically these surface as a
-timeout error. With a nats-server that supports `headers` and `noResponders`,
-the nats-server can report immediately if there is no interest on the request
-subject:
+Requests can fail for many reasons. A common reason for a failure is the 
+lack of interest in the subject. Typically these surface as a
+timeout error. If your client uses `headers` and specifies the `noResponders`
+`ConnectionOption`, the nats-server can immediately reject requests for
+which there is no interest:
 
 ```typescript
 const nc = await connect({
@@ -485,8 +474,24 @@ await nc.close();
 
 ```
 
-
 ### Authentication
+
+NATS supports many different forms of credentials:
+
+- username/password
+- token
+- NKEYS
+- client certificates
+- JWTs
+
+For user/password and token authentication, you can simply provide them
+as `ConnectionOptions` - see `user`, `pass`, `token`. Internally these
+mechanisms are implemented as an `Authenticator`. An `Authenticator` is
+simply a function that handles the type of authentication specified.
+
+Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator`
+and sets the username/password. 
+
 ```typescript
 // if the connection requires authentication, provide `user` and `pass` or 
 // `token` options in the NatsConnectionOptions
@@ -498,31 +503,24 @@ const nc2 = await connect({port: 4222, token: "t0pS3cret!"});
 
 #### Authenticators
 
-For user/password and token authentication, you can simply provide them
-as `ConnectionOptions` - see `user`, `pass`, `token`. Internally these
-mechanisms are implemented as an `Authenticator`. An `Authenticator` is
-simply a function that handles the type of authentication specified.
+NKEYs and JWT authentication are more complex, as they cryptographically 
+respond to a server challenge.
 
-Setting the `user`/`pass` or `token` options, simply initializes an `Authenticator`
-and sets the username/password. NKeys and JWT authentication are more complex,
-as they cryptographically respond to a server challenge.
-
-Because nkey and JWT authentication may require reading data from a file or
+Because NKEY and JWT authentication may require reading data from a file or
 an HTTP cookie, these forms of authentication will require a bit more from
 the developer to activate them. However, the work is related to accessing
-these resources on the platform they are working with.
+these resources varies depending on the platform.
 
-After the data is read, you can use one of these functions in your code to
-generate the authenticator and assign it to the `authenticator` property of
+After the credential artifacts are read, you can use one of these functions to
+create the authenticator. You then simply assign it to the `authenticator` property of
 the `ConnectionOptions`:
 
 - `nkeyAuthenticator(seed?: Uint8Array | (() => Uint8Array)): Authenticator`
 - `jwtAuthenticator(jwt: string | (() => string), seed?: Uint8Array | (()=> Uint8Array)): Authenticator`
 - `credsAuthenticator(creds: Uint8Array): Authenticator`
 
-
-The first two options also provide the ability to specify functions that return
-the desired value. This enables dynamic environment such as a browser where
+The first two options provide the ability to specify functions that return
+the desired value. This enables dynamic environments such as a browser where
 values accessed by fetching a value from a cookie.
 
 
@@ -553,11 +551,14 @@ Here's an example:
 ```
 
 ### Flush
+
+Flush sends a PING to the server. When the server responds with PONG
+you are guaranteed that all pending data was sent and received by the server.
+Note `ping()` effectively adds a server round-trip. All NATS clients
+handle their buffering optimally, so `ping(): Promise<void>` shouldn't 
+be used except in cases where you are writing some sort of test.
+
 ```javascript
-// flush sends a PING protocol request to the servers and returns a promise
-// when the servers responds with a PONG. The flush guarantees that
-// things you published have been delivered to the server. Typically
-// it is not necessary to use flush, but on tests it can be invaluable.
 nc.publish('foo');
 nc.publish('bar');
 await nc.flush();
@@ -571,6 +572,7 @@ When you publish a message you can specify some options:
 - `headers` - a set of headers to decorate the message.
 
 ### `SubscriptionOptions`
+
 You can specify several options when creating a subscription:
 - `max`: maximum number of messages to receive - auto unsubscribe
 - `timeout`: how long to wait for the first message
@@ -608,8 +610,8 @@ When making a request, there are several options you can pass:
 
 - `timeout`: how long to wait for the response
 - `headers`: optional headers to include with the message
-- `noMux`: create a new subscription to handle the request. Normally a shared subscription is used to receive request messages.
-- `reply`: optional subject where the reply should be received
+- `noMux`: create a new subscription to handle the request. Normally a shared subscription is used to receive response messages.
+- `reply`: optional subject where the reply should be sent.
 
 #### `noMux` and `reply`
 
@@ -617,12 +619,12 @@ Under the hood the request API simply uses a wildcard subscription
 to handle all requests you send.
 
 In some cases the default subscription strategy doesn't work correctly.
-For example the client may be constrained by the subjects from which it can
+For example a client may be constrained by the subjects where it can
 receive replies.
 
 When `noMux` is set to `true`, the client will create a normal subscription for
-receiving the response to a generated inbox subject. The `reply` option can
-be used to override the generated inbox subject with an application
+receiving the response to a generated inbox subject before the request is published. 
+The `reply` option can be used to override the generated inbox subject with an application
 provided one. Note that setting `reply` requires `noMux` to be `true`:
 
 ```typescript
@@ -643,12 +645,11 @@ You can drain a subscription or all subscriptions in a connection.
 
 When you drain a subscription, the client sends an `unsubscribe`
 protocol message to the server followed by a `flush`. The
-subscription handler is only removed when the server responds
-with a pong. Thus by that time all pending messages for the
-subscription have been processed by the client.
+subscription handler is only removed after the server responds. 
+Thus all pending messages for the subscription have been processed.
 
 Draining a connection, drains all subscriptions. However
-when you drain the connection it is impossible to make
+when you drain the connection it becomes impossible to make
 new subscriptions or send new requests. After the last
 subscription is drained it also becomes impossible to publish
 a message. These restrictions do not exist when just draining
@@ -656,6 +657,7 @@ a subscription.
 
 
 ### Lifecycle/Informational Events
+
 Clients can get notification on various event types:
 - `Events.DISCONNECT`
 - `Events.RECONNECT`
@@ -686,7 +688,7 @@ const nc = await connect(opts);
 ```
 
 Be aware that when a client closes, you will need to wait for the `closed()` promise to resolve.
-When it resolves, the client has finished and won't reconnect.
+When it resolves, the client is done and will not reconnect.
 
 
 ## Connection Options
