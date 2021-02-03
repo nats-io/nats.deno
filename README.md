@@ -76,7 +76,7 @@ For example, the server returns a run-time error. In those cases,
 the client will re-initiate a connection.
 
 By default, the client will always attempt to reconnect if the connection
-is closed by a reason other than calling `close()`. To get notified when
+is closed for a reason other than calling `close()`. To get notified when
 the connection is closed for some reason, await the resolution of the Promise 
 returned by `closed()`. If closed resolves to a value, the value is a `NatsError`
 indicating why the connection closed.
@@ -89,7 +89,7 @@ The basic client operations are `publish` to send messages and
 
 Messages are published to a subject. A subject is like an URL with the
 exception that it doesn't specify an actual endpoint. All recipients that
-have expressed interest in a subject will messages addressed to that subject
+have expressed interest in a subject will receive messages addressed to that subject
 (provided they have access and permissions to get it). To express interest 
 in a subject, you create a `subscription`.
 
@@ -102,7 +102,7 @@ or a custom `Codec`.
 
 To cancel a subscription and terminate your interest, you call `unsubscribe()` 
 or `drain()` on a subscription. Unsubscribe will typically terminate regardless
-of whether there are messages in flight for the client. Drain insures
+of whether there are messages in flight for the client. Drain ensures
 that all messages that are inflight are processed before canceling the
 subscription. Connections can also be drained as well. Draining a connection
 closes it, after all subscriptions have been drained and all outbound messages
@@ -200,14 +200,14 @@ subject. The `reply` subject is where a service will publish your response.
 
 NATS provides syntactic sugar, for publishing requests. The `request()` API
 will generate a reply subject and manage the creation of a subscription 
-under the covers. It will also start a timer to insure that if a response
+under the covers. It will also start a timer to ensure that if a response
 is not received within your alloted time, the request fails. The example
 also illustrates a graceful shutdown.
 
 #### Services
 
 Here's an example of a service. It is a bit more complicated than expected
-for the only reason to illustrate not only how to create responses, but how
+simply to illustrate not only how to create responses, but how
 the subject itself is used to dispatch different behaviors.
 
 ```typescript
@@ -446,7 +446,7 @@ Requests can fail for many reasons. A common reason for a failure is the
 lack of interest in the subject. Typically these surface as a
 timeout error. If your client uses `headers` and specifies the `noResponders`
 `ConnectionOption`, the nats-server can immediately reject requests for
-which there's no interest:
+which there is no interest:
 
 ```typescript
 const nc = await connect({
@@ -480,7 +480,7 @@ NATS supports many different forms of credentials:
 
 - username/password
 - token
-- nkeys
+- NKEYS
 - client certificates
 - JWTs
 
@@ -503,10 +503,10 @@ const nc2 = await connect({port: 4222, token: "t0pS3cret!"});
 
 #### Authenticators
 
-NKeys and JWT authentication are more complex, as they cryptographically 
+NKEYs and JWT authentication are more complex, as they cryptographically 
 respond to a server challenge.
 
-Because nkey and JWT authentication may require reading data from a file or
+Because NKEY and JWT authentication may require reading data from a file or
 an HTTP cookie, these forms of authentication will require a bit more from
 the developer to activate them. However, the work is related to accessing
 these resources varies depending on the platform.
@@ -520,7 +520,7 @@ the `ConnectionOptions`:
 - `credsAuthenticator(creds: Uint8Array): Authenticator`
 
 The first two options provide the ability to specify functions that return
-the desired value. This enables dynamic environment such as a browser where
+the desired value. This enables dynamic environments such as a browser where
 values accessed by fetching a value from a cookie.
 
 
@@ -552,7 +552,7 @@ Here's an example:
 
 ### Flush
 
-Flush is sends PING to the server. When the server responds with PONG
+Flush sends a PING to the server. When the server responds with PONG
 you are guaranteed that all pending data was sent and received by the server.
 Note `ping()` effectively adds a server round-trip. All NATS clients
 handle their buffering optimally, so `ping(): Promise<void>` shouldn't 
@@ -572,6 +572,7 @@ When you publish a message you can specify some options:
 - `headers` - a set of headers to decorate the message.
 
 ### `SubscriptionOptions`
+
 You can specify several options when creating a subscription:
 - `max`: maximum number of messages to receive - auto unsubscribe
 - `timeout`: how long to wait for the first message
