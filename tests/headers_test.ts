@@ -16,18 +16,16 @@ import {
   connect,
   createInbox,
   Empty,
-  ErrorCode,
   headers,
   RequestOptions,
   StringCodec,
 } from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
-import { assertErrorCode, Lock } from "./helpers/mod.ts";
+import { Lock } from "./helpers/mod.ts";
 import {
   assert,
   assertArrayIncludes,
   assertEquals,
-  fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
@@ -36,7 +34,6 @@ Deno.test("headers - option", async () => {
   const nc = await connect(
     {
       servers: `127.0.0.1:${srv.port}`,
-      headers: true,
     },
   );
 
@@ -69,51 +66,11 @@ Deno.test("headers - option", async () => {
   await srv.stop();
 });
 
-Deno.test("headers - pub throws if not enabled", async () => {
-  const srv = await NatsServer.start();
-  const nc = await connect(
-    {
-      servers: `127.0.0.1:${srv.port}`,
-    },
-  );
-
-  const h = headers();
-  h.set("a", "a");
-
-  try {
-    nc.publish("foo", Empty, { headers: h });
-    fail("shouldn't have been able to publish");
-  } catch (err) {
-    assertErrorCode(err, ErrorCode.SERVER_OPTION_NA);
-  }
-
-  await nc.close();
-  await srv.stop();
-});
-
-Deno.test("headers - client fails to connect if headers not available", async () => {
-  const srv = await NatsServer.start({ no_header_support: true });
-  const lock = Lock();
-  await connect(
-    {
-      servers: `127.0.0.1:${srv.port}`,
-      headers: true,
-    },
-  ).catch((err) => {
-    assertErrorCode(err, ErrorCode.SERVER_OPTION_NA);
-    lock.unlock();
-  });
-
-  await lock;
-  await srv.stop();
-});
-
 Deno.test("headers - request headers", async () => {
   const sc = StringCodec();
   const srv = await NatsServer.start();
   const nc = await connect({
     servers: `nats://127.0.0.1:${srv.port}`,
-    headers: true,
   });
   const s = createInbox();
   const sub = nc.subscribe(s);

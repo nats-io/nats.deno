@@ -202,7 +202,7 @@ Deno.test("autounsub - check cancelled request leaks", async () => {
   // the rejection should be timeout
   const lock = Lock();
   rp.catch((rej) => {
-    assertEquals(rej?.code, ErrorCode.TIMEOUT);
+    assertEquals(rej?.code, ErrorCode.NO_RESPONDERS);
     lock.unlock();
   });
 

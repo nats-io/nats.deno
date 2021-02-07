@@ -78,13 +78,11 @@ export interface NatsConnection {
 export interface ConnectionOptions {
   authenticator?: Authenticator;
   debug?: boolean;
-  headers?: boolean;
   maxPingOut?: number;
   maxReconnectAttempts?: number;
   name?: string;
   noEcho?: boolean;
   noRandomize?: boolean;
-  noResponders?: boolean;
   pass?: string;
   pedantic?: boolean;
   pingInterval?: number;

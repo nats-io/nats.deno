@@ -27,10 +27,6 @@ const sc = StringCodec();
 const ps = argv._[1] || "";
 const payload = sc.encode(String(ps));
 
-if (argv.headers) {
-  opts.headers = true;
-}
-
 if (argv.debug) {
   opts.debug = true;
 }
