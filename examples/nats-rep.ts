@@ -1,7 +1,12 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.83.0/flags/mod.ts";
-import { connect, ConnectionOptions, StringCodec } from "../src/mod.ts";
+import {
+  connect,
+  ConnectionOptions,
+  credsAuthenticator,
+  StringCodec,
+} from "../src/mod.ts";
 import { headers } from "../nats-base-client/mod.ts";
 
 const argv = parse(
@@ -11,13 +16,14 @@ const argv = parse(
       "s": ["server"],
       "q": ["queue"],
       "e": ["echo"],
+      "f": ["creds"],
     },
     default: {
       s: "127.0.0.1:4222",
       q: "",
     },
     boolean: ["echo", "headers", "debug"],
-    string: ["server", "queue"],
+    string: ["server", "queue", "creds"],
   },
 );
 
@@ -33,9 +39,16 @@ if (argv.debug) {
 
 if (argv.h || argv.help || !subject || (argv._[1] && argv.q)) {
   console.log(
-    "Usage: nats-rep [-s server] [-q queue] [--headers] [-e echo_payload] subject [payload]",
+    "Usage: nats-rep [-s server] [--creds=/path/file.creds] [-q queue] [--headers] [-e echo_payload] subject [payload]",
   );
   Deno.exit(1);
+}
+
+if (argv.creds) {
+  const f = await Deno.open(argv.creds, { read: true });
+  const data = await Deno.readAll(f);
+  Deno.close(f.rid);
+  opts.authenticator = credsAuthenticator(data);
 }
 
 const nc = await connect(opts);
