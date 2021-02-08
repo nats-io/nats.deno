@@ -17,6 +17,26 @@ import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import type { Publisher } from "./protocol.ts";
 import type { MsgArg } from "./parser.ts";
 import { TD } from "./encoders.ts";
+import { ErrorCode, NatsError } from "./error.ts";
+
+const noResponders = "503";
+
+export function isRequestError(msg: Msg): (NatsError | null) {
+  if (msg && msg.headers) {
+    const headers = msg.headers as MsgHdrsImpl;
+    if (headers.hasError) {
+      if (headers.status === noResponders) {
+        return NatsError.errorForCode(ErrorCode.NO_RESPONDERS);
+      } else {
+        return new NatsError(
+          headers.status,
+          ErrorCode.REQUEST_ERROR,
+        );
+      }
+    }
+  }
+  return null;
+}
 
 export class MsgImpl implements Msg {
   _headers?: MsgHdrs;

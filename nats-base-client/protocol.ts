@@ -88,12 +88,10 @@ export class Connect {
     this.version = transport.version;
     this.lang = transport.lang;
     this.echo = opts.noEcho ? false : undefined;
-    this.no_responders = opts.noResponders ? true : undefined;
     this.verbose = opts.verbose;
     this.pedantic = opts.pedantic;
     this.tls_required = opts.tls ? true : undefined;
     this.name = opts.name;
-    this.headers = opts.headers;
 
     const creds =
       (opts && opts.authenticator ? opts.authenticator(nonce) : {}) || {};
@@ -442,6 +440,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
           info.nonce,
         );
 
+        if (info.headers) {
+          c.headers = true;
+          c.no_responders = true;
+        }
         const cs = JSON.stringify(c);
         this.transport.send(
           fastEncoder(`CONNECT ${cs}${CR_LF}`),
@@ -529,7 +531,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     let headers = Empty;
     let hlen = 0;
     if (options.headers) {
-      if (!this.options.headers) {
+      if (this.info && !this.info.headers) {
         throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
       }
       const hdrs = options.headers as MsgHdrsImpl;

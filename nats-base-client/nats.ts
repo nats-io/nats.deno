@@ -33,6 +33,7 @@ import {
 import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
+import { isRequestError } from "./msg.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
@@ -145,17 +146,27 @@ export class NatsConnectionImpl implements NatsConnection {
 
     if (opts.noMux) {
       const inbox = opts.reply ? opts.reply : createInbox();
-      const sub = this.subscribe(inbox, { max: 1, timeout: opts.timeout });
-      this.publish(subject, data, { reply: inbox });
       const d = deferred<Msg>();
-      (async () => {
-        for await (const msg of sub) {
-          d.resolve(msg);
-          break;
-        }
-      })().catch((err) => {
-        d.reject(err);
-      });
+      this.subscribe(
+        inbox,
+        {
+          max: 1,
+          timeout: opts.timeout,
+          callback: (err, msg) => {
+            if (err) {
+              d.reject(err);
+            } else {
+              err = isRequestError(msg);
+              if (err) {
+                d.reject(err);
+              } else {
+                d.resolve(msg);
+              }
+            }
+          },
+        },
+      );
+      this.publish(subject, data, { reply: inbox });
       return d;
     } else {
       const r = new Request(this.protocol.muxSubscriptions, opts);

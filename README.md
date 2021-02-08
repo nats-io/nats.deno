@@ -397,9 +397,11 @@ Run it and publish a request to the subject `echo` to see what happens.
 
 ### Headers
 
-NATS headers are similar to HTTP headers. Headers are enabled by specifying
-the `headers` `ConnectionOption`. Note that clients opt to receive
-message headers. If a client doesn't opt-in, it will not receive them.
+NATS headers are similar to HTTP headers. Headers are enabled automatically\
+if the server supports them. Note that if you publish a message using headers
+but the server doesn't support them, an Error is thrown. Also note that
+even if you are publishing a message with a header, it is possible for the
+recipient to not support them.
 
 ```typescript
 import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
@@ -408,7 +410,6 @@ import { nuid } from "../../nats-base-client/nuid.ts";
 const nc = await connect(
   {
     servers: `demo.nats.io`,
-    headers: true,
   },
 );
 
@@ -444,13 +445,13 @@ await nc.close();
 
 Requests can fail for many reasons. A common reason for a failure is the 
 lack of interest in the subject. Typically these surface as a
-timeout error. If your client uses `headers` and specifies the `noResponders`
-`ConnectionOption`, the nats-server can immediately reject requests for
-which there is no interest:
+timeout error. If the server is enabled to use headers, it will also
+enable a `no responders` feature. If you send a request for which there's
+no interest, the request will be immediately rejected:
 
 ```typescript
 const nc = await connect({
-    servers: `demo.nats.io`, noResponders: true, headers: true },
+    servers: `demo.nats.io` },
 );
 
 try {
@@ -699,13 +700,11 @@ The following is the list of connection options and default values.
 |--------                |---------                  |------------
 | `authenticator`        | none                      | Specifies the authenticator function that sets the client credentials.
 | `debug`                | `false`                   | If `true`, the client prints protocol interactions to the console. Useful for debugging. 
-| `headers`              | `false`                   | Client requires header support on the server.
 | `maxPingOut`           | `2`                       | Max number of pings the client will allow unanswered before raising a stale connection error.
 | `maxReconnectAttempts` | `10`                      | Sets the maximum number of reconnect attempts. The value of `-1` specifies no limit.
 | `name`                 |                           | Optional client name - recommended to be set to a unique client name.
 | `noEcho`               | `false`                   | Subscriptions receive messages published by the client. Requires server support (1.2.0). If set to true, and the server does not support the feature, an error with code `NO_ECHO_NOT_SUPPORTED` is emitted, and the connection is aborted. Note that it is possible for this error to be emitted on reconnect when the server reconnects to a server that does not support the feature.
 | `noRandomize`          | `false`                   | If set, the order of user-specified servers is randomized.
-| `noResponders`         | `false`                   | Requires `headers`. Fail immediately if there are no subscribers for a request.
 | `pass`                 |                           | Sets the password for a connection.
 | `pedantic`             | `false`                   | Turns on strict subject format checks.
 | `pingInterval`         | `120000`                  | Number of milliseconds between client-sent pings.

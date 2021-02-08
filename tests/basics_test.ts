@@ -361,7 +361,7 @@ Deno.test("basics - request timeout", async () => {
       fail();
     })
     .catch((err) => {
-      assertEquals(err.code, ErrorCode.TIMEOUT);
+      assertEquals(err.code, ErrorCode.NO_RESPONDERS);
       lock.unlock();
     });
 
@@ -546,9 +546,13 @@ Deno.test("basics - no mux requests create normal subs", async () => {
 Deno.test("basics - no mux requests timeout", async () => {
   const nc = await connect({ servers: u }) as NatsConnectionImpl;
   const lock = Lock();
-  nc.request(createInbox(), Empty, { timeout: 250, noMux: true })
+  await nc.request(
+    createInbox(),
+    Empty,
+    { timeout: 1000, noMux: true },
+  )
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.TIMEOUT);
+      assertErrorCode(err, ErrorCode.NO_RESPONDERS);
       lock.unlock();
     });
   await lock;

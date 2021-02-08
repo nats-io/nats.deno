@@ -26,10 +26,6 @@ if (argv.debug) {
   opts.debug = true;
 }
 
-if (argv.headers) {
-  opts.headers = true;
-}
-
 if (argv.h || argv.help || !subject) {
   console.log("Usage: nats-sub [-s server] [-q queue] [--headers] subject");
   Deno.exit(1);
