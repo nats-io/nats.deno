@@ -680,7 +680,7 @@ initiate a new connection to a different server in the cluster.
 
 The `ERROR` event notifies you of async errors that couldn't be routed
 in a more precise way to your client. For example, permission errors for 
-subscription or request will properly be reported by the subscription 
+a subscription or request, will properly be reported by the subscription 
 or request. However, permission errors on publish will be reported via 
 the status mechanism.
 
@@ -725,8 +725,7 @@ in the subscription options. The signature for a callback is
 `(err: (NatsError|null), msg: Msg) => void`. When specified, the subscription
 iterator will never yield a message, as the callback will intercept all messages.
 
-Note that `callback` likely shouldn't even be documented,  as likely it
-is a workaround to an underlying application problem where you should be
+Note that `callback` likely shouldn't be documented, as it may be a workaround to an underlying application problem where you should be
 considering a different strategy to horizontally scale your application,
 or reduce pressure on the clients, such as using queue workers,
 or more explicitly targeting messages. With that said, there are many situations
