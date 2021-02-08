@@ -664,6 +664,7 @@ Clients can get notification on various event types:
 - `Events.RECONNECT`
 - `Events.UPDATE`
 - `Events.LDM`
+- `Events.ERROR`
 
 The first two fire when a client disconnects and reconnects respectively.
 The payload will be the server where the event took place.
@@ -676,6 +677,12 @@ The `LDM` event notifies that the current server has signaled that it
 is running in _Lame Duck Mode_ and will evict clients. Depending on the server
 configuration policy, the client may want to initiate an ordered shutdown, and
 initiate a new connection to a different server in the cluster.
+
+The `ERROR` event notifies you of async errors that couldn't be routed
+in a more precise way to your client. For example, permission errors for 
+subscription or request will properly be reported by the subscription 
+or request. However, permission errors on publish will be reported via 
+the status mechanism.
 
 ```javascript
 const nc = await connect(opts);
@@ -691,6 +698,39 @@ const nc = await connect(opts);
 Be aware that when a client closes, you will need to wait for the `closed()` promise to resolve.
 When it resolves, the client is done and will not reconnect.
 
+### Async vs. Callbacks
+
+Previous versions of the JavaScript NATS clients specified callbacks
+for message processing. This required complex handling logic when a
+service required coordination of operations. Callbacks are an
+inversion of control anti-pattern.
+
+The async APIs trivialize complex coordination and makes your code
+easier to maintain. With that said, there are some implications:
+
+- Async subscriptions buffer inbound messages.
+- Subscription processing delays until the runtime executes the promise related
+  microtasks at the end of an event loop.
+
+In a traditional callback-based library, I/O happens after all data yielded by
+a read in the current event loop completes processing. This means that
+callbacks are invoked as part of processing. With async, the processing is queued
+in a microtask queue. At the end of the event loop, the runtime processes
+the microtasks, which in turn resumes your functions. As expected, this
+increases latency, but also provides additional liveliness.
+
+To reduce async latency, the NATS client allows processing a subscription
+in the same event loop that dispatched the message. Simply specify a `callback`
+in the subscription options. The signature for a callback is
+`(err: (NatsError|null), msg: Msg) => void`. When specified, the subscription
+iterator will never yield a message, as the callback will intercept all messages.
+
+Note that `callback` likely shouldn't even be documented,  as likely it
+is a workaround to an underlying application problem where you should be
+considering a different strategy to horizontally scale your application,
+or reduce pressure on the clients, such as using queue workers,
+or more explicitly targeting messages. With that said, there are many situations
+where using callbacks can be more performant or appropriate.
 
 ## Connection Options
 
