@@ -1,7 +1,12 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.83.0/flags/mod.ts";
-import { connect, ConnectionOptions, StringCodec } from "../src/mod.ts";
+import {
+  connect,
+  ConnectionOptions,
+  credsAuthenticator,
+  StringCodec,
+} from "../src/mod.ts";
 import { headers, MsgHdrs } from "../nats-base-client/mod.ts";
 import { delay } from "../nats-base-client/internal_mod.ts";
 
@@ -12,6 +17,7 @@ const argv = parse(
       "s": ["server"],
       "c": ["count"],
       "i": ["interval"],
+      "f": ["creds"],
     },
     default: {
       s: "127.0.0.1:4222",
@@ -19,7 +25,7 @@ const argv = parse(
       i: 0,
     },
     boolean: true,
-    string: ["server", "count", "interval", "headers"],
+    string: ["server", "count", "interval", "headers", "creds"],
   },
 );
 
@@ -35,10 +41,17 @@ if (argv.debug) {
 
 if (argv.h || argv.help || !subject) {
   console.log(
-    "Usage: nats-pub [-s server] [-c <count>=1] [-i <interval>=0] [--headers='k=v;k2=v2'] subject [msg]",
+    "Usage: nats-pub [-s server] [--creds=/path/file.creds] [-c <count>=1] [-i <interval>=0] [--headers='k=v;k2=v2'] subject [msg]",
   );
   console.log("to publish forever, specify -c=-1 or --count=-1");
   Deno.exit(1);
+}
+
+if (argv.creds) {
+  const f = await Deno.open(argv.creds, { read: true });
+  const data = await Deno.readAll(f);
+  Deno.close(f.rid);
+  copts.authenticator = credsAuthenticator(data);
 }
 
 const nc = await connect(copts);

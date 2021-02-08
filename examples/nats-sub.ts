@@ -1,7 +1,12 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
 import { parse } from "https://deno.land/std@0.83.0/flags/mod.ts";
-import { connect, ConnectionOptions, StringCodec } from "../src/mod.ts";
+import {
+  connect,
+  ConnectionOptions,
+  credsAuthenticator,
+  StringCodec,
+} from "../src/mod.ts";
 
 const argv = parse(
   Deno.args,
@@ -9,13 +14,14 @@ const argv = parse(
     alias: {
       "s": ["server"],
       "q": ["queue"],
+      "f": ["creds"],
     },
     default: {
       s: "127.0.0.1:4222",
       q: "",
     },
     boolean: ["headers", "debug"],
-    string: ["server", "queue"],
+    string: ["server", "queue", "creds"],
   },
 );
 
@@ -26,8 +32,17 @@ if (argv.debug) {
   opts.debug = true;
 }
 
+if (argv.creds) {
+  const f = await Deno.open(argv.creds, { read: true });
+  const data = await Deno.readAll(f);
+  Deno.close(f.rid);
+  opts.authenticator = credsAuthenticator(data);
+}
+
 if (argv.h || argv.help || !subject) {
-  console.log("Usage: nats-sub [-s server] [-q queue] [--headers] subject");
+  console.log(
+    "Usage: nats-sub [-s server]  [--creds=/path/file.creds] [-q queue] [--headers] subject",
+  );
   Deno.exit(1);
 }
 
