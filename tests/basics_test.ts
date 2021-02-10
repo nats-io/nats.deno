@@ -15,6 +15,7 @@
 import {
   assert,
   assertEquals,
+  assertMatch,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
@@ -431,6 +432,24 @@ Deno.test("basics - request with custom subject", async () => {
     const nerr = err as NatsError;
     assertEquals(ErrorCode.INVALID_OPTION, nerr.code);
   }
+
+  await nc.close();
+});
+
+Deno.test("basics - request with inbox prefix", async () => {
+  const sc = StringCodec();
+  const nc = await connect({ servers: u, inboxPrefix: "apple" });
+  nc.subscribe("q", {
+    callback: (err, msg) => {
+      msg.respond(sc.encode("hello"));
+    },
+  });
+
+  const reply = await nc.request(
+    "q",
+    Empty,
+  );
+  assertMatch(reply.subject, /^apple[.]/);
 
   await nc.close();
 });
