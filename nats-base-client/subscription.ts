@@ -28,6 +28,8 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
   drained?: Promise<void>;
   protocol: ProtocolHandler;
   timer?: Timeout<void>;
+  info?: unknown;
+  cleanupFn?: (sub: Subscription, info?: unknown) => void;
 
   constructor(
     protocol: ProtocolHandler,
