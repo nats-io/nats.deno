@@ -18,6 +18,8 @@ import { deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
+type YieldedMsgCallback = (m: Msg) => void;
+
 export class SubscriptionImpl extends QueuedIterator<Msg>
   implements Base, Subscription {
   sid!: number;
@@ -30,6 +32,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
   timer?: Timeout<void>;
   info?: unknown;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
+  yieldedCb?: YieldedMsgCallback;
 
   constructor(
     protocol: ProtocolHandler,
@@ -54,6 +57,20 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
           // timer fired
           this.stop(err);
         });
+    }
+  }
+
+  setYieldedCb(cb: YieldedMsgCallback) {
+    // user specified callback
+    if (this.noIterator) {
+      const uc = this.callback;
+      const wc = (err: NatsError | null, msg: Msg) => {
+        uc(err, msg);
+        cb(msg);
+      };
+      this.callback = wc;
+    } else {
+      this.yieldedCb = cb;
     }
   }
 
