@@ -5,5 +5,3 @@
 - [-] Transport send batching (current batching seems to perform best)
 
 ## BUGS
-
-

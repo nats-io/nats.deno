@@ -64,7 +64,7 @@ export class Subscriptions {
       if (s.cleanupFn) {
         try {
           s.cleanupFn(s, s.info);
-        } catch(err) {
+        } catch (err) {
           // ignoring
         }
       }
