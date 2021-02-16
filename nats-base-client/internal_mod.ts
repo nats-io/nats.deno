@@ -25,6 +25,7 @@ export type { Deferred, Timeout } from "./util.ts";
 export {
   deferred,
   delay,
+  extend,
   extractProtocolMessage,
   render,
   timeout,
