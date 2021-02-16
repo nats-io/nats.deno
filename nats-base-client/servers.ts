@@ -14,14 +14,14 @@
  *
  */
 import {
-  DEFAULT_HOSTPORT,
+  DEFAULT_HOST,
   DEFAULT_PORT,
   Server,
   ServerInfo,
   ServersChanged,
   URLParseFn,
 } from "./types.ts";
-import { urlParseFn } from "./transport.ts";
+import { defaultPort, getUrlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
 
@@ -89,6 +89,8 @@ export class Servers {
     this.firstSelect = true;
     this.servers = [] as ServerImpl[];
     this.tlsName = "";
+
+    const urlParseFn = getUrlParseFn();
     if (listens) {
       listens.forEach((hp) => {
         hp = urlParseFn ? urlParseFn(hp) : hp;
@@ -99,7 +101,7 @@ export class Servers {
       }
     }
     if (this.servers.length === 0) {
-      this.addServer(DEFAULT_HOSTPORT, false);
+      this.addServer(`${DEFAULT_HOST}:${defaultPort()}`, false);
     }
     this.currentServer = this.servers[0];
   }
@@ -121,6 +123,7 @@ export class Servers {
   }
 
   addServer(u: string, implicit = false): void {
+    const urlParseFn = getUrlParseFn();
     u = urlParseFn ? urlParseFn(u) : u;
     const s = new ServerImpl(u, implicit);
     if (isIP(s.hostname)) {
@@ -170,6 +173,7 @@ export class Servers {
     const added: string[] = [];
     let deleted: string[] = [];
 
+    const urlParseFn = getUrlParseFn();
     const discovered = new Map<string, ServerImpl>();
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {

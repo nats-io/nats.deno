@@ -18,7 +18,6 @@ import { ErrorCode, NatsError } from "./error.ts";
 import {
   ConnectionOptions,
   DEFAULT_HOST,
-  DEFAULT_HOSTPORT,
   DEFAULT_JITTER,
   DEFAULT_JITTER_TLS,
   DEFAULT_MAX_PING_OUT,
@@ -28,6 +27,7 @@ import {
   ServerInfo,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
+import { defaultPort } from "./transport.ts";
 
 export function defaultOptions(): ConnectionOptions {
   return {
@@ -47,7 +47,8 @@ export function defaultOptions(): ConnectionOptions {
 }
 
 export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
-  opts = opts || { servers: [DEFAULT_HOSTPORT] };
+  const dhp = `${DEFAULT_HOST}:${defaultPort()}`;
+  opts = opts || { servers: [dhp] };
   if (opts.port) {
     opts.servers = [`${DEFAULT_HOST}:${opts.port}`];
   }
@@ -55,7 +56,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
     opts.servers = [opts.servers];
   }
   if (opts.servers && opts.servers.length === 0) {
-    opts.servers = [DEFAULT_HOSTPORT];
+    opts.servers = [dhp];
   }
   const options = extend(defaultOptions(), opts);
 

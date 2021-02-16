@@ -48,7 +48,7 @@ export interface Ports {
 }
 
 export interface VarZ {
-  connect_urls: string[];
+  "connect_urls": string[];
 }
 
 function parseHostport(s?: string) {
