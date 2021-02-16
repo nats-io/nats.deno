@@ -39,7 +39,6 @@ export enum DebugEvents {
 
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_HOST = "127.0.0.1";
-export const DEFAULT_HOSTPORT = `${DEFAULT_HOST}:${DEFAULT_PORT}`;
 
 // DISCONNECT Parameters, 2 sec wait, 10 tries
 export const DEFAULT_RECONNECT_TIME_WAIT = 2 * 1000;
@@ -136,25 +135,25 @@ export interface Base {
 }
 
 export interface ServerInfo {
-  auth_required?: boolean;
-  client_id: number;
-  client_ip?: string;
-  connect_urls?: string[];
-  git_commit?: string;
+  "auth_required"?: boolean;
+  "client_id": number;
+  "client_ip"?: string;
+  "connect_urls"?: string[];
+  "git_commit"?: string;
   go: string;
   headers?: boolean;
   host: string;
   jetstream?: boolean;
   ldm?: boolean;
-  max_payload: number;
+  "max_payload": number;
   nonce?: string;
   port: number;
   proto: number;
-  server_id: string;
-  server_name: string;
-  tls_available?: boolean;
-  tls_required?: boolean;
-  tls_verify?: boolean;
+  "server_id": string;
+  "server_name": string;
+  "tls_available"?: boolean;
+  "tls_required"?: boolean;
+  "tls_verify"?: boolean;
   version: string;
 }
 

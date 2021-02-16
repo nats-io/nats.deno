@@ -20,11 +20,14 @@ import {
   setTransportFactory,
   Transport,
 } from "../nats-base-client/internal_mod.ts";
+import { TransportFactory } from "../nats-base-client/transport.ts";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
-  setTransportFactory((): Transport => {
-    return new DenoTransport();
-  });
+  setTransportFactory({
+    factory: (): Transport => {
+      return new DenoTransport();
+    },
+  } as TransportFactory);
 
   return NatsConnectionImpl.connect(opts);
 }
