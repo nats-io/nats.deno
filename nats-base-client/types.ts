@@ -104,8 +104,11 @@ export interface ConnectionOptions {
 // these may not be supported on all environments
 export interface TlsOptions {
   certFile?: string;
+  cert?: string;
   caFile?: string;
+  ca?: string;
   keyFile?: string;
+  key?: string;
 }
 
 export interface Msg {

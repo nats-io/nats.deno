@@ -19,7 +19,6 @@ import { nuid } from "../../nats-base-client/nuid.ts";
 const nc = await connect(
   {
     servers: `demo.nats.io`,
-    headers: true,
   },
 );
 
