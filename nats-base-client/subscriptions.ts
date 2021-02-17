@@ -61,6 +61,13 @@ export class Subscriptions {
   cancel(s: SubscriptionImpl): void {
     if (s) {
       s.close();
+      if (s.cleanupFn) {
+        try {
+          s.cleanupFn(s, s.info);
+        } catch (err) {
+          // ignoring
+        }
+      }
       this.subs.delete(s.sid);
     }
   }

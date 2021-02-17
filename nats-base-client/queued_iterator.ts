@@ -27,6 +27,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
+  yieldedCb?: (data: T) => void;
   private err?: Error;
 
   constructor() {
@@ -68,6 +69,9 @@ export class QueuedIterator<T> implements Dispatcher<T> {
       for (let i = 0; i < yields.length; i++) {
         this.processed++;
         yield yields[i];
+        if (this.yieldedCb) {
+          this.yieldedCb(yields[i]);
+        }
         this.inflight--;
       }
       // yielding could have paused and microtask

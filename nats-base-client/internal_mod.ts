@@ -18,13 +18,14 @@ export { DebugEvents, Empty, Events } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
 export { SubscriptionImpl } from "./subscription.ts";
 export { Subscriptions } from "./subscriptions.ts";
-export { setTransportFactory, setUrlParseFn } from "./transport.ts";
-export type { Transport } from "./transport.ts";
+export { setTransportFactory } from "./transport.ts";
+export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, createInbox, INFO, ProtocolHandler } from "./protocol.ts";
 export type { Deferred, Timeout } from "./util.ts";
 export {
   deferred,
   delay,
+  extend,
   extractProtocolMessage,
   render,
   timeout,

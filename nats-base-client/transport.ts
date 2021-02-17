@@ -12,27 +12,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ConnectionOptions, Server, URLParseFn } from "./types.ts";
+import {
+  ConnectionOptions,
+  DEFAULT_PORT,
+  Server,
+  URLParseFn,
+} from "./types.ts";
 
-export let urlParseFn: URLParseFn | undefined;
-export function setUrlParseFn(fn?: URLParseFn): void {
-  urlParseFn = fn;
+let transportConfig: TransportFactory;
+export function setTransportFactory(config: TransportFactory): void {
+  transportConfig = config;
 }
 
-let transportFactory: TransportFactory;
-export function setTransportFactory(fn: TransportFactory): void {
-  transportFactory = fn;
+export function defaultPort(): number {
+  return transportConfig !== undefined &&
+      transportConfig.defaultPort !== undefined
+    ? transportConfig.defaultPort
+    : DEFAULT_PORT;
+}
+
+export function getUrlParseFn(): URLParseFn | undefined {
+  return transportConfig !== undefined && transportConfig.urlParseFn
+    ? transportConfig.urlParseFn
+    : undefined;
 }
 
 export function newTransport(): Transport {
-  if (typeof transportFactory !== "function") {
-    throw new Error("transport is not set");
+  if (!transportConfig || typeof transportConfig.factory !== "function") {
+    throw new Error("transport fn is not set");
   }
-  return transportFactory();
+  return transportConfig.factory();
 }
 
 export interface TransportFactory {
-  (): Transport;
+  factory?: () => Transport;
+  defaultPort?: number;
+  urlParseFn?: URLParseFn;
 }
 
 export interface Transport extends AsyncIterable<Uint8Array> {

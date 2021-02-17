@@ -20,7 +20,7 @@ import { TD, TE } from "./encoders.ts";
 export type NoAuth = void;
 
 export interface TokenAuth {
-  auth_token: string;
+  "auth_token": string;
 }
 
 export interface UserPass {
