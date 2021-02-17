@@ -15,6 +15,7 @@
 import {
   ConnectionOptions,
   DebugEvents,
+  DEFAULT_INBOX_PREFIX,
   DEFAULT_MAX_PING_OUT,
   DEFAULT_PING_INTERVAL,
   DEFAULT_RECONNECT_TIME_WAIT,
@@ -55,12 +56,10 @@ const FLUSH_THRESHOLD = 1024 * 32;
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
 export function createInbox(inboxPrefix?: string): string {
-  if (typeof inboxPrefix === "string") {
-    inboxPrefix = inboxPrefix + ".";
-  } else {
-    inboxPrefix = "";
+  if (typeof inboxPrefix !== "string") {
+    inboxPrefix = DEFAULT_INBOX_PREFIX;
   }
-  return `${inboxPrefix}_INBOX.${nuid.next()}`;
+  return `${inboxPrefix}${nuid.next()}`;
 }
 
 const PONG_CMD = fastEncoder("PONG\r\n");

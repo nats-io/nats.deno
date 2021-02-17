@@ -16,6 +16,7 @@ import {
   assert,
   assertEquals,
   assertMatch,
+  assertNotMatch,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
@@ -348,6 +349,8 @@ Deno.test("basics - request", async () => {
     }
   })().then();
   const msg = await nc.request(s);
+  // ensure default prefix is used.
+  assertMatch(msg.subject, /^_INBOX[.]/)
   await nc.close();
   assertEquals(sc.decode(msg.data), "foo");
 });
@@ -438,7 +441,7 @@ Deno.test("basics - request with custom subject", async () => {
 
 Deno.test("basics - request with inbox prefix", async () => {
   const sc = StringCodec();
-  const nc = await connect({ servers: u, inboxPrefix: "apple" });
+  const nc = await connect({ servers: u, inboxPrefix: "apple." });
   nc.subscribe("q", {
     callback: (err, msg) => {
       msg.respond(sc.encode("hello"));
@@ -450,7 +453,7 @@ Deno.test("basics - request with inbox prefix", async () => {
     Empty,
   );
   assertMatch(reply.subject, /^apple[.]/);
-
+  assertNotMatch(reply.subject, /^apple[.]_INBOX/);
   await nc.close();
 });
 
