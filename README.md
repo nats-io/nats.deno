@@ -759,11 +759,14 @@ The following is the list of connection options and default values.
 
 ### TlsOptions
 
-| Option     | Default | Description                                                    |
-| ---------- | ------- | -------------------------------------------------------------- |
-| `caFile`   |         | CA certificate filepath                                        |
-| `certFile` |         | Client certificate file path - not applicable to Deno clients. |
-| `keyFile`  |         | Client key file path - not applicable to Deno clients.         |
+| Option     | Default | Description                  |
+| ---------- | ------- | ---------------------------- |
+| `caFile`   |         | CA certificate filepath      |
+| `ca`       | N/A     | CA certificate               |
+| `certFile` | N/A     | Client certificate file path |
+| `cert`     | N/A     | Client certificate           |
+| `keyFile`  | N/A     | Client key file path         |
+| `key`      | N/A     | Client key                   |
 
 In some Node and Deno clients, having the option set to an empty option,
 requires the client have a secured connection.
