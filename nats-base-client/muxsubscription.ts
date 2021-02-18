@@ -30,8 +30,8 @@ export class MuxSubscription {
     return this.reqs.size;
   }
 
-  init(): string {
-    this.baseInbox = `${createInbox()}.`;
+  init(prefix?: string): string {
+    this.baseInbox = `${createInbox(prefix)}.`;
     return this.baseInbox;
   }
 

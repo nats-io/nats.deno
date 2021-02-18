@@ -28,6 +28,7 @@ import {
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
 import { defaultPort } from "./transport.ts";
+import { createInbox } from "./mod.ts";
 
 export function defaultOptions(): ConnectionOptions {
   return {
@@ -95,6 +96,14 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
       }
       return options.reconnectTimeWait + extra;
     };
+  }
+
+  if (options.inboxPrefix) {
+    try {
+      createInbox(options.inboxPrefix);
+    } catch (err) {
+      throw new NatsError(err.message, ErrorCode.API_ERROR);
+    }
   }
 
   return options;

@@ -15,6 +15,7 @@
 import {
   assert,
   assertEquals,
+  assertThrows,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
@@ -22,6 +23,7 @@ import {
   createInbox,
   Empty,
   ErrorCode,
+  JSONCodec,
   Msg,
   NatsError,
   StringCodec,
@@ -714,5 +716,61 @@ Deno.test("basics - subs pending count", async () => {
   }
   await nc.flush();
   await done;
+  await nc.close();
+});
+
+Deno.test("basics - create inbox", () => {
+  type inout = [string, string, boolean?];
+  const t: inout[] = [];
+  t.push(["", "_INBOX."]);
+  //@ts-ignore testing
+  t.push([undefined, "_INBOX."]);
+  //@ts-ignore testing
+  t.push([null, "_INBOX."]);
+  //@ts-ignore testing
+  t.push([5, "5.", true]);
+  t.push(["hello", "hello."]);
+
+  t.forEach((v, index) => {
+    if (v[2]) {
+      assertThrows(() => {
+        createInbox(v[0]);
+      });
+    } else {
+      const out = createInbox(v[0]);
+      assert(out.startsWith(v[1]), `test ${index}`);
+    }
+  });
+});
+
+Deno.test("basics - custom prefix", async () => {
+  const nc = await connect({ servers: u, inboxPrefix: "_x" });
+  const jc = JSONCodec();
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    max: 1,
+    callback: (err, msg) => {
+      msg.respond(jc.encode(msg.reply!.startsWith("_x.")));
+    },
+  });
+
+  const v = await nc.request(subj);
+  assert(jc.decode(v.data));
+  await nc.close();
+});
+
+Deno.test("basics - custom prefix noMux", async () => {
+  const nc = await connect({ servers: u, inboxPrefix: "_y" });
+  const jc = JSONCodec();
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    max: 1,
+    callback: (err, msg) => {
+      msg.respond(jc.encode(msg.reply!.startsWith("_y.")));
+    },
+  });
+
+  const v = await nc.request(subj);
+  assert(jc.decode(v.data));
   await nc.close();
 });

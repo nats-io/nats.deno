@@ -145,7 +145,9 @@ export class NatsConnectionImpl implements NatsConnection {
     }
 
     if (opts.noMux) {
-      const inbox = opts.reply ? opts.reply : createInbox();
+      const inbox = opts.reply
+        ? opts.reply
+        : createInbox(this.options.inboxPrefix);
       const d = deferred<Msg>();
       this.subscribe(
         inbox,
