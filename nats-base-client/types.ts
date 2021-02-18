@@ -99,6 +99,7 @@ export interface ConnectionOptions {
   verbose?: boolean;
   waitOnFirstConnect?: boolean;
   ignoreClusterUpdates?: boolean;
+  inboxPrefix?: string;
 }
 
 // these may not be supported on all environments

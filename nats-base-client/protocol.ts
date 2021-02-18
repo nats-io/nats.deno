@@ -54,8 +54,12 @@ const FLUSH_THRESHOLD = 1024 * 32;
 
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
-export function createInbox(): string {
-  return `_INBOX.${nuid.next()}`;
+export function createInbox(prefix: string = ""): string {
+  prefix = prefix || "_INBOX";
+  if (typeof prefix !== "string") {
+    throw (new Error("prefix must be a string"));
+  }
+  return `${prefix}.${nuid.next()}`;
 }
 
 const PONG_CMD = fastEncoder("PONG\r\n");
@@ -684,7 +688,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   private initMux(): void {
     const mux = this.subscriptions.getMux();
     if (!mux) {
-      const inbox = this.muxSubscriptions.init();
+      const inbox = this.muxSubscriptions.init(
+        createInbox(this.options.inboxPrefix),
+      );
       // dot is already part of mux
       const sub = new SubscriptionImpl(this, `${inbox}*`);
       sub.callback = this.muxSubscriptions.dispatcher();
