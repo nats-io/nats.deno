@@ -18,6 +18,7 @@ import { Deferred, deferred } from "https://deno.land/std@0.83.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   checkOptions,
+  checkUnsupportedOption,
   ConnectionOptions,
   DataBuffer,
   ErrorCode,
@@ -131,6 +132,14 @@ export class DenoTransport implements Transport {
     const tls = this.options && this.options.tls
       ? this.options.tls
       : {} as TlsOptions;
+
+    // these options are not available in Deno
+    checkUnsupportedOption("tls.ca", tls.ca);
+    checkUnsupportedOption("tls.cert", tls.cert);
+    checkUnsupportedOption("tls.certFile", tls.certFile);
+    checkUnsupportedOption("tls.key", tls.key);
+    checkUnsupportedOption("tls.keyFile", tls.keyFile);
+
     this.conn = await Deno.startTls(
       this.conn,
       { hostname, certFile: tls.caFile },

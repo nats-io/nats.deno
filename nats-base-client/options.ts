@@ -109,3 +109,9 @@ export function checkOptions(info: ServerInfo, options: ConnectionOptions) {
     throw new NatsError("tls", ErrorCode.SERVER_OPTION_NA);
   }
 }
+
+export function checkUnsupportedOption(prop: string, v?: string) {
+  if (v) {
+    throw new NatsError(prop, ErrorCode.INVALID_OPTION);
+  }
+}

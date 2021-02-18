@@ -36,7 +36,7 @@ export { Heartbeat } from "./heartbeats.ts";
 export type { PH } from "./heartbeats.ts";
 export { MuxSubscription } from "./muxsubscription.ts";
 export { DataBuffer } from "./databuffer.ts";
-export { checkOptions } from "./options.ts";
+export { checkOptions, checkUnsupportedOption } from "./options.ts";
 export { Request } from "./request.ts";
 export type { Authenticator } from "./authenticator.ts";
 export {
