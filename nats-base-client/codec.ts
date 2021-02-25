@@ -32,7 +32,7 @@ export function StringCodec(): Codec<string> {
   };
 }
 
-export function JSONCodec(): Codec<unknown> {
+export function JSONCodec<T = unknown>(): Codec<T> {
   return {
     encode(d: unknown): Uint8Array {
       try {
