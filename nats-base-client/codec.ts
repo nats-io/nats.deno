@@ -34,9 +34,10 @@ export function StringCodec(): Codec<string> {
 
 export function JSONCodec<T = unknown>(): Codec<T> {
   return {
-    encode(d: unknown): Uint8Array {
+    encode(d: T): Uint8Array {
       try {
         if (d === undefined) {
+          // @ts-ignore: json will not handle undefined
           d = null;
         }
         return TE.encode(JSON.stringify(d));
@@ -45,7 +46,7 @@ export function JSONCodec<T = unknown>(): Codec<T> {
       }
     },
 
-    decode(a: Uint8Array): unknown {
+    decode(a: Uint8Array): T {
       try {
         return JSON.parse(TD.decode(a));
       } catch (err) {
