@@ -134,6 +134,30 @@ nc.publish("hello", sc.encode("again"));
 await nc.drain();
 ```
 
+JSONCodec allows you to encode and decode JSON and if you are using typescript,
+you can even use generics to have the compiler help you:
+
+```typescript
+// create a codec
+const sc = JSONCodec<Person>();
+
+// create a simple subscriber and iterate over messages
+// matching the subscription
+const sub = nc.subscribe("people");
+(async () => {
+  for await (const m of sub) {
+    // typescript will see this as a Person
+    const p = sc.decode(m.data);
+    console.log(`[${sub.getProcessed()}]: ${p.name}`);
+  }
+})();
+
+// if you made a typo or added other properties
+// the compiler will get angry
+const p = { name: "Memo" } as Person;
+nc.publish("people", sc.encode(p));
+```
+
 ### Wildcard Subscriptions
 
 Subjects can be used to organize messages into hierarchies. For example, a
