@@ -149,7 +149,7 @@ Deno.test("auth - pub perm", async () => {
   await lock;
   await iter;
   const es = await errStatus;
-  assertEquals(es.type, Events.ERROR);
+  assertEquals(es.type, Events.Error);
   assertEquals(es.data, ErrorCode.PERMISSIONS_VIOLATION);
   await ns.stop();
 });

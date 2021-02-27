@@ -69,10 +69,10 @@ Deno.test("reconnect - events", async () => {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnects++;
           break;
-        case DebugEvents.RECONNECTING:
+        case DebugEvents.Reconnecting:
           reconnecting++;
           break;
       }
@@ -99,10 +99,10 @@ Deno.test("reconnect - reconnect not emitted if suppressed", async () => {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnects++;
           break;
-        case DebugEvents.RECONNECTING:
+        case DebugEvents.Reconnecting:
           fail("shouldn't have emitted reconnecting");
           break;
       }
@@ -126,7 +126,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case DebugEvents.RECONNECTING: {
+        case DebugEvents.Reconnecting: {
           const elapsed = Date.now() - serverLastConnect;
           dt.resolve(elapsed);
           break;
@@ -155,14 +155,14 @@ Deno.test("reconnect - indefinite reconnects", async () => {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnects++;
           break;
-        case Events.RECONNECT:
+        case Events.Reconnect:
           reconnect = true;
           nc.close();
           break;
-        case DebugEvents.RECONNECTING:
+        case DebugEvents.Reconnecting:
           reconnects++;
           break;
       }
@@ -228,13 +228,13 @@ Deno.test("reconnect - internal disconnect forces reconnect", async () => {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case DebugEvents.STALE_CONNECTION:
+        case DebugEvents.StaleConnection:
           stale = true;
           break;
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnect = true;
           break;
-        case Events.RECONNECT:
+        case Events.Reconnect:
           lock.unlock();
           break;
       }

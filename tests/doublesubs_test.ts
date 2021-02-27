@@ -70,10 +70,10 @@ async function runDoubleSubsTest(tls: boolean) {
   (async () => {
     for await (const e of nc.status()) {
       switch (e.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnected.resolve();
           break;
-        case Events.RECONNECT:
+        case Events.Reconnect:
           reconnected.resolve();
           break;
       }
