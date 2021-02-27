@@ -24,7 +24,7 @@ To connect to a server you use the `connect()` function. It returns a connection
 that you can use to interact with the server. You can customize the behavior of
 the client by specifying many [`ConnectionOptions`](#Connection_Options).
 
-By default, a connection will attempt a connection on`127.0.0.1:4222`. If the
+By default, a connection will attempt a connection on `127.0.0.1:4222`. If the
 connection is dropped, the client will attempt to reconnect. You can customize
 the server you want to connect to by specifying `port` (for local connections),
 or full host port on the `servers` option. Note that the `servers` option can be
@@ -638,11 +638,11 @@ When making a request, there are several options you can pass:
 
 #### `noMux` and `reply`
 
-Under the hood the request API simply uses a wildcard subscription to handle all
-requests you send.
+Under the hood, the request API simply uses a wildcard subscription to handle
+all requests you send.
 
-In some cases the default subscription strategy doesn't work correctly. For
-example a client may be constrained by the subjects where it can receive
+In some cases, the default subscription strategy doesn't work correctly. For
+example, a client may be constrained by the subjects where it can receive
 replies.
 
 When `noMux` is set to `true`, the client will create a normal subscription for
@@ -711,6 +711,13 @@ const nc = await connect(opts);
     console.info(`${s.type}: ${s.data}`);
   }
 })().then();
+
+nc.closed()
+  .then((err) => {
+    console.log(
+      `connection closed ${err ? " with error: " + err.message : ""}`,
+    );
+  });
 ```
 
 Be aware that when a client closes, you will need to wait for the `closed()`
@@ -743,12 +750,12 @@ subscription options. The signature for a callback is
 iterator will never yield a message, as the callback will intercept all
 messages.
 
-Note that `callback` likely shouldn't be documented, as it may be a workaround
-to an underlying application problem where you should be considering a different
-strategy to horizontally scale your application, or reduce pressure on the
-clients, such as using queue workers, or more explicitly targeting messages.
-With that said, there are many situations where using callbacks can be more
-performant or appropriate.
+Note that `callback` likely shouldn't even be documented, as likely it is a
+workaround to an underlying application problem where you should be considering
+a different strategy to horizontally scale your application, or reduce pressure
+on the clients, such as using queue workers, or more explicitly targeting
+messages. With that said, there are many situations where using callbacks can be
+more performant or appropriate.
 
 ## Connection Options
 
