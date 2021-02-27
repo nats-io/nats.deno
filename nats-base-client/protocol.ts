@@ -226,14 +226,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   public disconnect(): void {
-    this.dispatchStatus({ type: DebugEvents.STALE_CONNECTION, data: "" });
+    this.dispatchStatus({ type: DebugEvents.StaleConnection, data: "" });
     this.transport.disconnect();
   }
 
   async disconnected(err?: Error): Promise<void> {
     this.dispatchStatus(
       {
-        type: Events.DISCONNECT,
+        type: Events.Disconnect,
         data: this.servers.getCurrentServer().toString(),
       },
     );
@@ -242,7 +242,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         .then(() => {
           this.dispatchStatus(
             {
-              type: Events.RECONNECT,
+              type: Events.Reconnect,
               data: this.servers.getCurrentServer().toString(),
             },
           );
@@ -313,7 +313,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         srv.lastConnect = Date.now();
         try {
           this.dispatchStatus(
-            { type: DebugEvents.RECONNECTING, data: srv.toString() },
+            { type: DebugEvents.Reconnecting, data: srv.toString() },
           );
           await this.dial(srv);
           break;
@@ -387,7 +387,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const err = ProtocolHandler.toError(s);
     const handled = this.subscriptions.handleError(err);
     if (!handled) {
-      this.dispatchStatus({ type: Events.ERROR, data: err.code });
+      this.dispatchStatus({ type: Events.Error, data: err.code });
     }
     await this.handleError(err);
   }
@@ -460,7 +460,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     }
     if (updates) {
-      this.dispatchStatus({ type: Events.UPDATE, data: updates });
+      this.dispatchStatus({ type: Events.Update, data: updates });
     }
     const ldm = info.ldm !== undefined ? info.ldm : false;
     if (ldm) {

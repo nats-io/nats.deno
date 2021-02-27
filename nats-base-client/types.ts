@@ -19,22 +19,22 @@ import type { Authenticator } from "./authenticator.ts";
 export const Empty = new Uint8Array(0);
 
 export enum Events {
-  DISCONNECT = "disconnect",
-  RECONNECT = "reconnect",
-  UPDATE = "update",
+  Disconnect = "disconnect",
+  Reconnect = "reconnect",
+  Update = "update",
   LDM = "ldm",
-  ERROR = "error",
+  Error = "error",
 }
 
 export interface Status {
   type: Events | DebugEvents;
-  data: string | ServersChanged;
+  data: string | ServersChanged | number;
 }
 
 export enum DebugEvents {
-  RECONNECTING = "reconnecting",
-  PING_TIMER = "pingTimer",
-  STALE_CONNECTION = "staleConnection",
+  Reconnecting = "reconnecting",
+  PingTimer = "pingTimer",
+  StaleConnection = "staleConnection",
 }
 
 export const DEFAULT_PORT = 4222;

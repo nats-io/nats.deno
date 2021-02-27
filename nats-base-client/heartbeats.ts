@@ -60,7 +60,7 @@ export class Heartbeat {
     // @ts-ignore: node is not a number - we treat this opaquely
     this.timer = setTimeout(() => {
       this.ph.dispatchStatus(
-        { type: DebugEvents.PING_TIMER, data: `${this.pendings.length + 1}` },
+        { type: DebugEvents.PingTimer, data: `${this.pendings.length + 1}` },
       );
       if (this.pendings.length === this.maxOut) {
         this.cancel(true);

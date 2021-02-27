@@ -68,7 +68,7 @@ Deno.test("heartbeat - timers fire", async () => {
   hb.cancel();
   assertEquals(hb.timer, undefined);
   assert(status.length >= 3);
-  assertEquals(status[0].type, DebugEvents.PING_TIMER);
+  assertEquals(status[0].type, DebugEvents.PingTimer);
 });
 
 Deno.test("heartbeat - errors fire on missed maxOut", async () => {
@@ -86,7 +86,7 @@ Deno.test("heartbeat - errors fire on missed maxOut", async () => {
   await disconnect;
   assertEquals(hb.timer, undefined);
   assert(status.length >= 7, `${status.length} >= 7`);
-  assertEquals(status[0].type, DebugEvents.PING_TIMER);
+  assertEquals(status[0].type, DebugEvents.PingTimer);
 });
 
 Deno.test("heartbeat - recovers from missed", async () => {

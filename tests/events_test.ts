@@ -16,7 +16,6 @@ import { Lock, NatsServer, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
-import { assert } from "../nats-base-client/denobuffer.ts";
 
 Deno.test("events - close on close", async () => {
   const ns = await NatsServer.start();
@@ -38,7 +37,7 @@ Deno.test("events - disconnect and close", async () => {
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           lock.unlock();
           break;
       }
@@ -70,10 +69,10 @@ Deno.test("events - disconnect, reconnect", async () => {
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
-        case Events.DISCONNECT:
+        case Events.Disconnect:
           disconnect.unlock();
           break;
-        case Events.RECONNECT:
+        case Events.Reconnect:
           reconnect.unlock();
           break;
       }
@@ -97,7 +96,7 @@ Deno.test("events - update", async () => {
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
-        case Events.UPDATE: {
+        case Events.Update: {
           const u = s.data as ServersChanged;
           assertEquals(u.added.length, 1);
           lock.unlock();
