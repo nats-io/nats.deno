@@ -15,10 +15,8 @@
 import {
   assert,
   assertEquals,
-  fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { connect, createInbox } from "../src/mod.ts";
-import { NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
   SubscriptionImpl,
@@ -29,7 +27,7 @@ const u = "demo.nats.io:4222";
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
-  const sub = nc.subscribe(subj, { callback: (err, msg) => {}, max: 1 });
+  const sub = nc.subscribe(subj, { callback: () => {}, max: 1 });
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
@@ -46,11 +44,11 @@ Deno.test("extensions - cleanup fn called at auto unsub", async () => {
 Deno.test("extensions - cleanup fn called at unsubscribe", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
-  const sub = nc.subscribe(subj, { callback: (err, msg) => {} });
+  const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = ((sub, info) => {
+  subimpl.cleanupFn = (() => {
     d.resolve("hello");
   });
   sub.unsubscribe();
@@ -62,11 +60,11 @@ Deno.test("extensions - cleanup fn called at unsubscribe", async () => {
 Deno.test("extensions - cleanup fn called at sub drain", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
-  const sub = nc.subscribe(subj, { callback: (err, msg) => {} });
+  const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = ((sub, info) => {
+  subimpl.cleanupFn = (() => {
     d.resolve("hello");
   });
   await sub.drain();
@@ -78,15 +76,26 @@ Deno.test("extensions - cleanup fn called at sub drain", async () => {
 Deno.test("extensions - cleanup fn called at conn drain", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
-  const sub = nc.subscribe(subj, { callback: (err, msg) => {} });
+  const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = ((sub, info) => {
+  subimpl.cleanupFn = (() => {
     d.resolve("hello");
   });
   await nc.drain();
   assertEquals(await d, "hello");
+  assert(sub.isClosed());
+  await nc.close();
+});
+
+Deno.test("extensions - closed resolves on unsub", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { callback: () => {} });
+  const closed = (sub as SubscriptionImpl).closed;
+  sub.unsubscribe();
+  await closed;
   assert(sub.isClosed());
   await nc.close();
 });

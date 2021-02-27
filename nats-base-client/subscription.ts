@@ -14,7 +14,7 @@
  */
 import { QueuedIterator } from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
-import { deferred, extend, Timeout, timeout } from "./util.ts";
+import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
@@ -33,6 +33,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
   info?: unknown;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
   yieldedCb?: YieldedMsgCallback;
+  closed: Deferred<void>;
 
   constructor(
     protocol: ProtocolHandler,
@@ -45,6 +46,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     this.subject = subject;
     this.draining = false;
     this.noIterator = typeof opts.callback === "function";
+    this.closed = deferred();
 
     if (opts.timeout) {
       this.timer = timeout<void>(opts.timeout);
@@ -83,6 +85,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     if (!this.isClosed()) {
       this.cancelTimeout();
       this.stop();
+      this.closed.resolve();
     }
   }
 
