@@ -174,7 +174,7 @@ export interface ServersChanged {
   readonly deleted: string[];
 }
 
-export interface Subscription extends AsyncIterable<Msg> {
+export interface Sub<T> extends AsyncIterable<T> {
   unsubscribe(max?: number): void;
   drain(): Promise<void>;
   isDraining(): boolean;
@@ -187,6 +187,8 @@ export interface Subscription extends AsyncIterable<Msg> {
   getID(): number;
   getMax(): number | undefined;
 }
+
+export type Subscription = Sub<Msg>;
 
 export interface RequestOptions {
   timeout: number;
