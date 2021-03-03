@@ -122,12 +122,14 @@ export interface Msg {
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
 }
 
-export interface SubscriptionOptions {
+export interface SubOpts<T> {
   queue?: string;
   max?: number;
   timeout?: number;
-  callback?: (err: NatsError | null, msg: Msg) => void;
+  callback?: (err: NatsError | null, msg: T) => void;
 }
+
+export type SubscriptionOptions = SubOpts<Msg>;
 
 export interface Base {
   subject: string;
