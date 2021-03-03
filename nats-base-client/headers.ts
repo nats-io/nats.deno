@@ -21,7 +21,7 @@ import { TD, TE } from "./encoders.ts";
 export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
-  code?: number;
+  code: number;
   get(k: string): string;
   set(k: string, v: string): void;
   append(k: string, v: string): void;
@@ -37,11 +37,12 @@ export function headers(): MsgHdrs {
 const HEADER = "NATS/1.0";
 
 export class MsgHdrsImpl implements MsgHdrs {
-  code?: number;
+  code: number;
   headers: Map<string, string[]>;
   description: string;
 
   constructor() {
+    this.code = 0;
     this.headers = new Map();
     this.description = "";
   }
@@ -219,10 +220,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   get hasError() {
-    if (this.code) {
-      return this.code > 0 && (this.code < 200 || this.code >= 300);
-    }
-    return false;
+    return this.code > 0 && (this.code < 200 || this.code >= 300);
   }
 
   get status(): string {

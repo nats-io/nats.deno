@@ -54,7 +54,7 @@ const FLUSH_THRESHOLD = 1024 * 32;
 
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
 
-export function createInbox(prefix: string = ""): string {
+export function createInbox(prefix = ""): string {
   prefix = prefix || "_INBOX";
   if (typeof prefix !== "string") {
     throw (new Error("prefix must be a string"));
