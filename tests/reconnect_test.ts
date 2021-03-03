@@ -82,7 +82,7 @@ Deno.test("reconnect - events", async () => {
   try {
     await nc.closed();
   } catch (err) {
-    assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
+    assertErrorCode(err, ErrorCode.ConnectionRefused);
   }
   assertEquals(disconnects, 1);
   assertEquals(reconnecting, 10);
@@ -279,7 +279,7 @@ Deno.test("reconnect - wait on first connect", async () => {
   await srv.stop();
   // no reconnect, will quit the client
   const what = await nc.closed() as NatsError;
-  assertEquals(what.code, ErrorCode.CONNECTION_REFUSED);
+  assertEquals(what.code, ErrorCode.ConnectionRefused);
 });
 
 Deno.test("reconnect - wait on first connect off", async () => {
@@ -297,6 +297,6 @@ Deno.test("reconnect - wait on first connect off", async () => {
     await pnc;
   } catch (err) {
     const nerr = err as NatsError;
-    assertEquals(nerr.code, ErrorCode.CONNECTION_REFUSED);
+    assertEquals(nerr.code, ErrorCode.ConnectionRefused);
   }
 });

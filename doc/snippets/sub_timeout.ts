@@ -27,7 +27,7 @@ const sub = nc.subscribe("hello", { timeout: 1000 });
     // handle the messages
   }
 })().catch((err) => {
-  if (err.code === ErrorCode.TIMEOUT) {
+  if (err.code === ErrorCode.Timeout) {
     console.log(`sub timed out!`);
   } else {
     console.log(`sub iterator got an error!`);

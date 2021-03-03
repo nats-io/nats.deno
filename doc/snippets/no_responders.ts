@@ -3,8 +3,6 @@ import { connect, ErrorCode, NatsError } from "../../src/mod.ts";
 const nc = await connect(
   {
     servers: `demo.nats.io`,
-    noResponders: true,
-    headers: true,
   },
 );
 
@@ -14,10 +12,10 @@ try {
 } catch (err) {
   const nerr = err as NatsError;
   switch (nerr.code) {
-    case ErrorCode.NO_RESPONDERS:
+    case ErrorCode.NoResponders:
       console.log("no one is listening to 'hello.world'");
       break;
-    case ErrorCode.TIMEOUT:
+    case ErrorCode.Timeout:
       console.log("someone is listening but didn't respond");
       break;
     default:

@@ -40,7 +40,7 @@ Deno.test("protocol - mux subscription unknown return null", async () => {
 
   const p = Promise.race([r.deferred, r.timer])
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.CANCELLED);
+      assertErrorCode(err, ErrorCode.Cancelled);
     });
 
   r.cancel();
