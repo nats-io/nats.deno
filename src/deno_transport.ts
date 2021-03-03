@@ -87,7 +87,7 @@ export class DenoTransport implements Transport {
       }
     } catch (err) {
       throw err.name === "ConnectionRefused"
-        ? NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED)
+        ? NatsError.errorForCode(ErrorCode.ConnectionRefused)
         : err;
     }
   }

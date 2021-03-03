@@ -28,7 +28,7 @@ Deno.test("tls - fail if server doesn't support TLS", async () => {
       fail("shouldn't have connected");
     })
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.SERVER_OPTION_NA);
+      assertErrorCode(err, ErrorCode.ServerOptionNotAvailable);
       lock.unlock();
     });
   await lock;

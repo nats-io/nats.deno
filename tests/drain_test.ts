@@ -129,8 +129,8 @@ Deno.test("drain - publish after drain fails", async () => {
   });
   assertErrorCode(
     err,
-    ErrorCode.CONNECTION_CLOSED,
-    ErrorCode.CONNECTION_DRAINING,
+    ErrorCode.ConnectionClosed,
+    ErrorCode.ConnectionDraining,
   );
 });
 
@@ -166,7 +166,7 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
           fail("shouldn't have been able to request");
           lock.unlock();
         } catch (err) {
-          assertEquals(err.code, ErrorCode.CONNECTION_DRAINING);
+          assertEquals(err.code, ErrorCode.ConnectionDraining);
           lock.unlock();
         }
       }
@@ -186,7 +186,7 @@ Deno.test("drain - reject drain on closed", async () => {
   const err = await assertThrowsAsync(() => {
     return nc.drain();
   });
-  assertErrorCode(err, ErrorCode.CONNECTION_CLOSED);
+  assertErrorCode(err, ErrorCode.ConnectionClosed);
 });
 
 Deno.test("drain - reject drain on draining", async () => {
@@ -196,7 +196,7 @@ Deno.test("drain - reject drain on draining", async () => {
     return nc.drain();
   });
   await done;
-  assertErrorCode(err, ErrorCode.CONNECTION_DRAINING);
+  assertErrorCode(err, ErrorCode.ConnectionDraining);
 });
 
 Deno.test("drain - reject subscribe on draining", async () => {
@@ -205,7 +205,7 @@ Deno.test("drain - reject subscribe on draining", async () => {
   const err = await assertThrows(() => {
     return nc.subscribe("foo");
   });
-  assertErrorCode(err, ErrorCode.CONNECTION_DRAINING);
+  assertErrorCode(err, ErrorCode.ConnectionDraining);
   await done;
 });
 
@@ -217,7 +217,7 @@ Deno.test("drain - reject subscription drain on closed sub", async () => {
     return sub.drain();
   });
   await nc.close();
-  assertErrorCode(err, ErrorCode.SUB_CLOSED);
+  assertErrorCode(err, ErrorCode.SubClosed);
 });
 
 Deno.test("drain - connection is closed after drain", async () => {
@@ -234,7 +234,7 @@ Deno.test("drain - reject subscription drain on closed", async () => {
   const err = await assertThrowsAsync(() => {
     return sub.drain();
   });
-  assertErrorCode(err, ErrorCode.CONNECTION_CLOSED);
+  assertErrorCode(err, ErrorCode.ConnectionClosed);
 });
 
 Deno.test("drain - multiple sub drain returns same promise", async () => {

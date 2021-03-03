@@ -129,7 +129,7 @@ export function timeout<T>(ms: number): Timeout<T> {
     methods = { cancel };
     // @ts-ignore: node is not a number
     timer = setTimeout(() => {
-      reject(NatsError.errorForCode(ErrorCode.TIMEOUT));
+      reject(NatsError.errorForCode(ErrorCode.Timeout));
     }, ms);
   });
   // noinspection JSUnusedAssignment

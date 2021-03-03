@@ -42,7 +42,7 @@ export function JSONCodec<T = unknown>(): Codec<T> {
         }
         return TE.encode(JSON.stringify(d));
       } catch (err) {
-        throw NatsError.errorForCode(ErrorCode.BAD_JSON, err);
+        throw NatsError.errorForCode(ErrorCode.BadJson, err);
       }
     },
 
@@ -50,7 +50,7 @@ export function JSONCodec<T = unknown>(): Codec<T> {
       try {
         return JSON.parse(TD.decode(a));
       } catch (err) {
-        throw NatsError.errorForCode(ErrorCode.BAD_JSON, err);
+        throw NatsError.errorForCode(ErrorCode.BadJson, err);
       }
     },
   };

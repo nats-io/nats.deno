@@ -83,11 +83,11 @@ export class NatsConnectionImpl implements NatsConnection {
   ): void {
     subject = subject || "";
     if (subject.length === 0) {
-      throw NatsError.errorForCode(ErrorCode.BAD_SUBJECT);
+      throw NatsError.errorForCode(ErrorCode.BadSubject);
     }
     // if argument is not undefined/null and not a Uint8Array, toss
     if (data && !isUint8Array(data)) {
-      throw NatsError.errorForCode(ErrorCode.BAD_PAYLOAD);
+      throw NatsError.errorForCode(ErrorCode.BadPayload);
     }
     this.protocol.publish(subject, data, options);
   }
@@ -97,14 +97,14 @@ export class NatsConnectionImpl implements NatsConnection {
     opts: SubscriptionOptions = {},
   ): Subscription {
     if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
+      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
     }
     if (this.isDraining()) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING);
+      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
     }
     subject = subject || "";
     if (subject.length === 0) {
-      throw NatsError.errorForCode(ErrorCode.BAD_SUBJECT);
+      throw NatsError.errorForCode(ErrorCode.BadSubject);
     }
 
     const sub = new SubscriptionImpl(this.protocol, subject, opts);
@@ -119,27 +119,27 @@ export class NatsConnectionImpl implements NatsConnection {
   ): Promise<Msg> {
     if (this.isClosed()) {
       return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED),
+        NatsError.errorForCode(ErrorCode.ConnectionClosed),
       );
     }
     if (this.isDraining()) {
       return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING),
+        NatsError.errorForCode(ErrorCode.ConnectionDraining),
       );
     }
     subject = subject || "";
     if (subject.length === 0) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.BAD_SUBJECT));
+      return Promise.reject(NatsError.errorForCode(ErrorCode.BadSubject));
     }
     opts.timeout = opts.timeout || 1000;
     if (opts.timeout < 1) {
-      return Promise.reject(new NatsError("timeout", ErrorCode.INVALID_OPTION));
+      return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
     }
     if (!opts.noMux && opts.reply) {
       return Promise.reject(
         new NatsError(
           "reply can only be used with noMux",
-          ErrorCode.INVALID_OPTION,
+          ErrorCode.InvalidOption,
         ),
       );
     }
@@ -206,12 +206,12 @@ export class NatsConnectionImpl implements NatsConnection {
   drain(): Promise<void> {
     if (this.isClosed()) {
       return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED),
+        NatsError.errorForCode(ErrorCode.ConnectionClosed),
       );
     }
     if (this.isDraining()) {
       return Promise.reject(
-        NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING),
+        NatsError.errorForCode(ErrorCode.ConnectionDraining),
       );
     }
     this.draining = true;

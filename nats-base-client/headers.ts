@@ -157,7 +157,7 @@ export class MsgHdrsImpl implements MsgHdrs {
       if (c === colon || c < start || c > end) {
         throw new NatsError(
           `'${k[i]}' is not a valid character for a header key`,
-          ErrorCode.BAD_HEADER,
+          ErrorCode.BadHeader,
         );
       }
       if (upper && a <= c && c <= z) {
@@ -176,7 +176,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     if (inv.test(k)) {
       throw new NatsError(
         "invalid header value - \\r and \\n are not allowed.",
-        ErrorCode.BAD_HEADER,
+        ErrorCode.BadHeader,
       );
     }
     return k.trim();

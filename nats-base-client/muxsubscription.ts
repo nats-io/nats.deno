@@ -74,7 +74,7 @@ export class MuxSubscription {
   }
 
   close() {
-    const err = NatsError.errorForCode(ErrorCode.TIMEOUT);
+    const err = NatsError.errorForCode(ErrorCode.Timeout);
     this.reqs.forEach((req) => {
       req.resolver(err, {} as Msg);
     });

@@ -63,7 +63,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
 
   // tokens don't get users
   if (opts.user && opts.token) {
-    throw NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION);
+    throw NatsError.errorForCode(ErrorCode.BadAuthentication);
   }
 
   // if authenticator, no other options allowed
@@ -72,7 +72,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
       opts.token || opts.user || opts.pass
     )
   ) {
-    throw NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION);
+    throw NatsError.errorForCode(ErrorCode.BadAuthentication);
   }
   options.authenticator = buildAuthenticator(options);
 
@@ -80,7 +80,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
     if (options[n] && typeof options[n] !== "function") {
       throw new NatsError(
         `${n} option should be a function`,
-        ErrorCode.NOT_FUNC,
+        ErrorCode.NotFunction,
       );
     }
   });
@@ -102,7 +102,7 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
     try {
       createInbox(options.inboxPrefix);
     } catch (err) {
-      throw new NatsError(err.message, ErrorCode.API_ERROR);
+      throw new NatsError(err.message, ErrorCode.ApiError);
     }
   }
 
@@ -112,15 +112,15 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
 export function checkOptions(info: ServerInfo, options: ConnectionOptions) {
   const { proto, tls_required: tlsRequired } = info;
   if ((proto === undefined || proto < 1) && options.noEcho) {
-    throw new NatsError("noEcho", ErrorCode.SERVER_OPTION_NA);
+    throw new NatsError("noEcho", ErrorCode.ServerOptionNotAvailable);
   }
   if (options.tls && !tlsRequired) {
-    throw new NatsError("tls", ErrorCode.SERVER_OPTION_NA);
+    throw new NatsError("tls", ErrorCode.ServerOptionNotAvailable);
   }
 }
 
 export function checkUnsupportedOption(prop: string, v?: string) {
   if (v) {
-    throw new NatsError(prop, ErrorCode.INVALID_OPTION);
+    throw new NatsError(prop, ErrorCode.InvalidOption);
   }
 }

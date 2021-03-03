@@ -183,7 +183,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.pongs = [];
     // reject the pongs
     pongs.forEach((p) => {
-      p.reject(NatsError.errorForCode(ErrorCode.DISCONNECT));
+      p.reject(NatsError.errorForCode(ErrorCode.Disconnect));
     });
     this.parser = new Parser(this);
     this.infoReceived = false;
@@ -306,7 +306,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       let maxWait = wait;
       const srv = this.selectServer();
       if (!srv || this.abortReconnect) {
-        throw lastError || NatsError.errorForCode(ErrorCode.CONNECTION_REFUSED);
+        throw lastError || NatsError.errorForCode(ErrorCode.ConnectionRefused);
       }
       const now = Date.now();
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
@@ -350,13 +350,13 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   static toError(s: string) {
     const t = s ? s.toLowerCase() : "";
     if (t.indexOf("permissions violation") !== -1) {
-      return new NatsError(s, ErrorCode.PERMISSIONS_VIOLATION);
+      return new NatsError(s, ErrorCode.PermissionsViolation);
     } else if (t.indexOf("authorization violation") !== -1) {
-      return new NatsError(s, ErrorCode.AUTHORIZATION_VIOLATION);
+      return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
-      return new NatsError(s, ErrorCode.AUTHENTICATION_EXPIRED);
+      return new NatsError(s, ErrorCode.AuthenticationExpired);
     } else {
-      return new NatsError(s, ErrorCode.NATS_PROTOCOL_ERR);
+      return new NatsError(s, ErrorCode.ProtocolError);
     }
   }
 
@@ -455,7 +455,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         this.transport.send(PING_CMD);
       } catch (err) {
         this._close(
-          NatsError.errorForCode(ErrorCode.BAD_AUTHENTICATION, err),
+          NatsError.errorForCode(ErrorCode.BadAuthentication, err),
         );
       }
     }
@@ -522,10 +522,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     options?: PublishOptions,
   ) {
     if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_CLOSED);
+      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
     }
     if (this.noMorePublishing) {
-      throw NatsError.errorForCode(ErrorCode.CONNECTION_DRAINING);
+      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
     }
 
     let len = data.length;
@@ -536,7 +536,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     let hlen = 0;
     if (options.headers) {
       if (this.info && !this.info.headers) {
-        throw new NatsError("headers", ErrorCode.SERVER_OPTION_NA);
+        throw new NatsError("headers", ErrorCode.ServerOptionNotAvailable);
       }
       const hdrs = options.headers as MsgHdrsImpl;
       headers = hdrs.encode();
@@ -545,7 +545,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
 
     if (this.info && len > this.info.max_payload) {
-      throw NatsError.errorForCode((ErrorCode.MAX_PAYLOAD_EXCEEDED));
+      throw NatsError.errorForCode((ErrorCode.MaxPayloadExceeded));
     }
     this.outBytes += len;
     this.outMsgs++;

@@ -36,7 +36,7 @@ Deno.test("json - bad json error in callback", () => {
   const jc = JSONCodec();
   assertThrowsErrorCode(() => {
     jc.encode(o);
-  }, ErrorCode.BAD_JSON);
+  }, ErrorCode.BadJson);
 });
 
 function macro(input: unknown) {

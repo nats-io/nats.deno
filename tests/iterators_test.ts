@@ -86,7 +86,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
 
   await lock;
   await nc.closed().then((err) => {
-    assertErrorCode(err as NatsError, ErrorCode.PERMISSIONS_VIOLATION);
+    assertErrorCode(err as NatsError, ErrorCode.PermissionsViolation);
   });
   await nc.close();
   await ns.stop();
@@ -149,7 +149,7 @@ Deno.test("iterators - cb subs fail iterator", async () => {
       lock.unlock();
     }
   })().catch((err) => {
-    assertErrorCode(err, ErrorCode.API_ERROR);
+    assertErrorCode(err, ErrorCode.ApiError);
     lock.unlock();
   });
   nc.publish(subj);

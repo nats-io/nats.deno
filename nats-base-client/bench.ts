@@ -133,7 +133,7 @@ export class Bench {
         if (err) {
           throw new NatsError(
             `bench closed with an error: ${err.message}`,
-            ErrorCode.UNKNOWN,
+            ErrorCode.Unknown,
             err,
           );
         }
