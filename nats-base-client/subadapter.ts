@@ -1,3 +1,17 @@
+/*
+ * Copyright 2020-2021 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import {
   Deferred,
   Msg,
@@ -7,37 +21,58 @@ import {
   Sub,
   SubOpts,
   SubscriptionImpl,
-} from "./nbc_mod.ts";
-import type { Subscription } from "./nbc_mod.ts";
+} from "./internal_mod.ts";
+import type { Subscription } from "./internal_mod.ts";
 import { DispatchedFn } from "./queued_iterator.ts";
-
-export type AdapterCallback<T> = (err: NatsError | null, msg: T | null) => void;
+import { ErrorCode } from "./error.ts";
 
 /**
- * the adapter is a function that looks like a callback, but returns
- * a tuple of error or the new message type. If it is handled an
- * error, it is expected, to simply return it along with a no-op type
+ * Converts a NATS message into some other type. Implementers are expected to:
+ * return [err, null] if the message callback is invoked with an error.
+ * return [err, null] if converting the message yielded an error, note that
+ * iterators will stop on the error, but callbacks will be presented with
+ * the error.
+ * return [null, T] if the conversion worked correctly
  */
 export type MsgAdapter<T> = (
   err: NatsError | null,
   msg: Msg,
 ) => [NatsError | null, T | null];
 
-export interface ConsumerAdapterOpts<T> extends SubOpts<T> {
-  callback?: AdapterCallback<T>;
-  dispatchedFn?: DispatchedFn<T>;
+/**
+ * Callback presented to the user with the converted type
+ */
+export type TypedCallback<T> = (err: NatsError | null, msg: T | null) => void;
+
+export interface TypedSubscriptionOptions<T> extends SubOpts<T> {
   adapter: MsgAdapter<T>;
+  callback?: TypedCallback<T>;
+  dispatchedFn?: DispatchedFn<T>;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
 }
 
+function checkFn(fn: unknown, name: string, required = false) {
+  if (required === true && !fn) {
+    throw NatsError.errorForCode(
+      ErrorCode.ApiError,
+      new Error(`${name} is not a function`),
+    );
+  }
+  if (fn && typeof fn !== "function") {
+    throw NatsError.errorForCode(
+      ErrorCode.ApiError,
+      new Error(`${name} is not a function`),
+    );
+  }
+}
+
 /**
- * SubscriptionAdapter wraps a subscription to provide payload specific
+ * TypedSubscription wraps a subscription to provide payload specific
  * subscription semantics. That is messages are a transport
- * for user data, but the user code wants to avoid repetitive encoding
- * and decoding.
+ * for user data, and the data is presented as application specific
+ * data to the client.
  */
-export class SubscriptionAdapter<T> extends QueuedIterator<T>
-  implements Sub<T> {
+export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
   nc: NatsConnection;
   sub: SubscriptionImpl;
   adapter: MsgAdapter<T>;
@@ -45,17 +80,27 @@ export class SubscriptionAdapter<T> extends QueuedIterator<T>
   constructor(
     nc: NatsConnection,
     subject: string,
-    opts: ConsumerAdapterOpts<T>,
+    opts: TypedSubscriptionOptions<T>,
   ) {
     super();
     this.nc = nc;
-    if (typeof opts.adapter !== "function") {
-    }
+
+    checkFn(opts.adapter, "adapter", true);
     this.adapter = opts.adapter;
+
+    if (opts.callback) {
+      checkFn(opts.callback, "callback");
+    }
     this.noIterator = typeof opts.callback === "function";
+
     if (opts.dispatchedFn) {
+      checkFn(opts.dispatchedFn, "dispatchedFn");
       this.dispatchedFn = opts.dispatchedFn;
     }
+    if (opts.cleanupFn) {
+      checkFn(opts.cleanupFn, "cleanupFn");
+    }
+
     let callback = (err: NatsError | null, msg: Msg) => {
       this.callback(err, msg);
     };
@@ -64,8 +109,8 @@ export class SubscriptionAdapter<T> extends QueuedIterator<T>
       callback = (err: NatsError | null, msg: Msg) => {
         const [jer, tm] = this.adapter(err, msg);
         uh(jer, tm);
-        if (this.yieldedCb && tm) {
-          this.yieldedCb(tm);
+        if (this.dispatchedFn && tm) {
+          this.dispatchedFn(tm);
         }
       };
     }
@@ -75,10 +120,12 @@ export class SubscriptionAdapter<T> extends QueuedIterator<T>
     if (opts.cleanupFn) {
       this.sub.cleanupFn = opts.cleanupFn;
     }
-    (async () => {
-      await this.closed;
+    (async (s) => {
+      await s.closed;
       this.stop();
-    })().catch();
+    })(this.sub).catch((err) => {
+      console.log("err", err);
+    });
   }
 
   unsubscribe(max?: number): void {

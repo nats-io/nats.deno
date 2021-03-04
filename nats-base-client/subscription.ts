@@ -18,8 +18,6 @@ import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
-type YieldedMsgCallback = (m: Msg | null) => void;
-
 export class SubscriptionImpl extends QueuedIterator<Msg>
   implements Base, Subscription {
   sid!: number;
@@ -65,11 +63,10 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     // user specified callback
     if (this.noIterator) {
       const uc = this.callback;
-      const wc = (err: NatsError | null, msg: Msg) => {
+      this.callback = (err: NatsError | null, msg: Msg) => {
         uc(err, msg);
         cb(msg);
       };
-      this.callback = wc;
     } else {
       this.dispatchedFn = cb;
     }
@@ -84,6 +81,13 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     if (!this.isClosed()) {
       this.cancelTimeout();
       this.stop();
+      if (this.cleanupFn) {
+        try {
+          this.cleanupFn(this, this.info);
+        } catch (err) {
+          // ignoring
+        }
+      }
       this.closed.resolve();
     }
   }
