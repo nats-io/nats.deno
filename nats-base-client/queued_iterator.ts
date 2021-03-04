@@ -56,7 +56,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
 
   async *iterate(): AsyncIterableIterator<T> {
     if (this.noIterator) {
-      throw new NatsError("unsupported iterator", ErrorCode.API_ERROR);
+      throw new NatsError("unsupported iterator", ErrorCode.ApiError);
     }
     while (true) {
       if (this.yields.length === 0) {

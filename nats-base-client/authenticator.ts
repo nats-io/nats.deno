@@ -149,13 +149,13 @@ export function credsAuthenticator(creds: Uint8Array): Authenticator {
   // get the JWT
   let m = CREDS.exec(s);
   if (!m) {
-    throw NatsError.errorForCode(ErrorCode.BAD_CREDS);
+    throw NatsError.errorForCode(ErrorCode.BadCreds);
   }
   const jwt = m[1].trim();
   // get the nkey
   m = CREDS.exec(s);
   if (!m) {
-    throw NatsError.errorForCode(ErrorCode.BAD_CREDS);
+    throw NatsError.errorForCode(ErrorCode.BadCreds);
   }
   const seed = TE.encode(m[1].trim());
   return jwtAuthenticator(jwt, seed);

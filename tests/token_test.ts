@@ -30,7 +30,7 @@ Deno.test("token - empty", async () => {
     await nc.close();
     fail("should not have connected");
   } catch (err) {
-    assertErrorCode(err, ErrorCode.AUTHORIZATION_VIOLATION);
+    assertErrorCode(err, ErrorCode.AuthorizationViolation);
   }
   await ns.stop();
 });
@@ -44,7 +44,7 @@ Deno.test("token - bad", async () => {
     await nc.close();
     fail("should not have connected");
   } catch (err) {
-    assertErrorCode(err, ErrorCode.AUTHORIZATION_VIOLATION);
+    assertErrorCode(err, ErrorCode.AuthorizationViolation);
   }
   await ns.stop();
 });

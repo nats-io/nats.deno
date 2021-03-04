@@ -79,7 +79,7 @@ Deno.test("basics - fail connect", async () => {
       fail();
     })
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.CONNECTION_REFUSED);
+      assertErrorCode(err, ErrorCode.ConnectionRefused);
     });
 });
 
@@ -96,7 +96,7 @@ Deno.test("basics - no publish without subject", async () => {
     nc.publish("");
     fail("should not be able to publish without a subject");
   } catch (err) {
-    assertEquals(err.code, ErrorCode.BAD_SUBJECT);
+    assertEquals(err.code, ErrorCode.BadSubject);
   } finally {
     await nc.close();
   }
@@ -363,7 +363,7 @@ Deno.test("basics - request timeout", async () => {
       fail();
     })
     .catch((err) => {
-      assertEquals(err.code, ErrorCode.NO_RESPONDERS);
+      assertEquals(err.code, ErrorCode.NoResponders);
       lock.unlock();
     });
 
@@ -381,7 +381,7 @@ Deno.test("basics - request cancel rejects", async () => {
       fail();
     })
     .catch((err) => {
-      assertEquals(err.code, ErrorCode.CANCELLED);
+      assertEquals(err.code, ErrorCode.Cancelled);
       lock.unlock();
     });
 
@@ -431,7 +431,7 @@ Deno.test("basics - request with custom subject", async () => {
     fail("should have failed");
   } catch (err) {
     const nerr = err as NatsError;
-    assertEquals(ErrorCode.INVALID_OPTION, nerr.code);
+    assertEquals(ErrorCode.InvalidOption, nerr.code);
   }
 
   await nc.close();
@@ -485,7 +485,7 @@ Deno.test("basics - subscription with timeout", async () => {
       // ignored
     }
   })().catch((err) => {
-    assertErrorCode(err, ErrorCode.TIMEOUT);
+    assertErrorCode(err, ErrorCode.Timeout);
     lock.unlock();
   });
   await lock;
@@ -554,7 +554,7 @@ Deno.test("basics - no mux requests timeout", async () => {
     { timeout: 1000, noMux: true },
   )
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.NO_RESPONDERS);
+      assertErrorCode(err, ErrorCode.NoResponders);
       lock.unlock();
     });
   await lock;
@@ -587,14 +587,14 @@ Deno.test("basics - no max_payload messages", async () => {
     nc.publish(subj, big);
     fail();
   } catch (err) {
-    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+    assertErrorCode(err, ErrorCode.MaxPayloadExceeded);
   }
 
   try {
     await nc.request(subj, big).then();
     fail();
   } catch (err) {
-    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+    assertErrorCode(err, ErrorCode.MaxPayloadExceeded);
   }
 
   const sub = nc.subscribe(subj);
@@ -604,13 +604,13 @@ Deno.test("basics - no max_payload messages", async () => {
       fail();
     }
   })().catch((err) => {
-    assertErrorCode(err, ErrorCode.MAX_PAYLOAD_EXCEEDED);
+    assertErrorCode(err, ErrorCode.MaxPayloadExceeded);
   });
 
   await nc.request(subj).then(() => {
     fail();
   }).catch((err) => {
-    assertErrorCode(err, ErrorCode.TIMEOUT);
+    assertErrorCode(err, ErrorCode.Timeout);
   });
 
   await nc.close();

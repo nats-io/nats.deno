@@ -52,7 +52,7 @@ Deno.test("auth - none", async () => {
     await nc.close();
     fail("shouldnt have been able to connect");
   } catch (ex) {
-    assertErrorCode(ex, ErrorCode.AUTHORIZATION_VIOLATION);
+    assertErrorCode(ex, ErrorCode.AuthorizationViolation);
   }
   await ns.stop();
 });
@@ -66,7 +66,7 @@ Deno.test("auth - bad", async () => {
     await nc.close();
     fail("shouldnt have been able to connect");
   } catch (ex) {
-    assertErrorCode(ex, ErrorCode.AUTHORIZATION_VIOLATION);
+    assertErrorCode(ex, ErrorCode.AuthorizationViolation);
   }
   await ns.stop();
 });
@@ -106,7 +106,7 @@ Deno.test("auth - sub permissions", async () => {
     }
   })().catch((err) => {
     lock.unlock();
-    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
+    assertErrorCode(err as Error, ErrorCode.PermissionsViolation);
     notifications++;
   });
 
@@ -133,7 +133,7 @@ Deno.test("auth - pub perm", async () => {
   })().then();
 
   nc.closed().then((err) => {
-    assertErrorCode(err as Error, ErrorCode.PERMISSIONS_VIOLATION);
+    assertErrorCode(err as Error, ErrorCode.PermissionsViolation);
     lock.unlock();
   });
 
@@ -150,7 +150,7 @@ Deno.test("auth - pub perm", async () => {
   await iter;
   const es = await errStatus;
   assertEquals(es.type, Events.Error);
-  assertEquals(es.data, ErrorCode.PERMISSIONS_VIOLATION);
+  assertEquals(es.data, ErrorCode.PermissionsViolation);
   await ns.stop();
 });
 
@@ -161,7 +161,7 @@ Deno.test("auth - user and token is rejected", () => {
       fail("should not have connected");
     })
     .catch((err) => {
-      assertErrorCode(err, ErrorCode.BAD_AUTHENTICATION);
+      assertErrorCode(err, ErrorCode.BadAuthentication);
     });
 });
 
@@ -302,7 +302,7 @@ Deno.test("auth - custom error", async () => {
   ).then(() => {
     fail("shouldn't have connected");
   }).catch((err) => {
-    assertErrorCode(err, ErrorCode.BAD_AUTHENTICATION);
+    assertErrorCode(err, ErrorCode.BadAuthentication);
   });
   await ns.stop();
 });
@@ -318,6 +318,6 @@ Deno.test("basics - bad auth", async () => {
       },
     );
   } catch (err) {
-    assertErrorCode(err, ErrorCode.AUTHORIZATION_VIOLATION);
+    assertErrorCode(err, ErrorCode.AuthorizationViolation);
   }
 });

@@ -26,11 +26,11 @@ export function isRequestError(msg: Msg): (NatsError | null) {
     const headers = msg.headers as MsgHdrsImpl;
     if (headers.hasError) {
       if (headers.status === noResponders) {
-        return NatsError.errorForCode(ErrorCode.NO_RESPONDERS);
+        return NatsError.errorForCode(ErrorCode.NoResponders);
       } else {
         return new NatsError(
           headers.status,
-          ErrorCode.REQUEST_ERROR,
+          ErrorCode.RequestError,
         );
       }
     }

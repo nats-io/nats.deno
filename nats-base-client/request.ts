@@ -55,7 +55,7 @@ export class Request {
     }
     this.mux.cancel(this);
     this.deferred.reject(
-      err ? err : NatsError.errorForCode(ErrorCode.CANCELLED),
+      err ? err : NatsError.errorForCode(ErrorCode.Cancelled),
     );
   }
 }

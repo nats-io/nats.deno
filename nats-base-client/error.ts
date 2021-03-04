@@ -15,38 +15,38 @@
 
 export enum ErrorCode {
   // emitted by the client
-  API_ERROR = "BAD API",
-  BAD_AUTHENTICATION = "BAD_AUTHENTICATION",
-  BAD_CREDS = "BAD_CREDS",
-  BAD_HEADER = "BAD_HEADER",
-  BAD_JSON = "BAD_JSON",
-  BAD_PAYLOAD = "BAD_PAYLOAD",
-  BAD_SUBJECT = "BAD_SUBJECT",
-  CANCELLED = "CANCELLED",
-  CONNECTION_CLOSED = "CONNECTION_CLOSED",
-  CONNECTION_DRAINING = "CONNECTION_DRAINING",
-  CONNECTION_REFUSED = "CONNECTION_REFUSED",
-  CONNECTION_TIMEOUT = "CONNECTION_TIMEOUT",
-  DISCONNECT = "DISCONNECT",
-  INVALID_OPTION = "INVALID_OPTION",
-  INVALID_PAYLOAD_TYPE = "INVALID_PAYLOAD",
-  MAX_PAYLOAD_EXCEEDED = "MAX_PAYLOAD_EXCEEDED",
-  NO_RESPONDERS = "NO_RESPONDERS",
-  NOT_FUNC = "NOT_FUNC",
-  REQUEST_ERROR = "REQUEST_ERROR",
-  SERVER_OPTION_NA = "SERVER_OPT_NA",
-  SUB_CLOSED = "SUB_CLOSED",
-  SUB_DRAINING = "SUB_DRAINING",
-  TIMEOUT = "TIMEOUT",
-  TLS = "TLS",
-  UNKNOWN = "UNKNOWN_ERROR",
-  WSS_REQUIRED = "WSS_REQUIRED",
+  ApiError = "BAD API",
+  BadAuthentication = "BAD_AUTHENTICATION",
+  BadCreds = "BAD_CREDS",
+  BadHeader = "BAD_HEADER",
+  BadJson = "BAD_JSON",
+  BadPayload = "BAD_PAYLOAD",
+  BadSubject = "BAD_SUBJECT",
+  Cancelled = "CANCELLED",
+  ConnectionClosed = "CONNECTION_CLOSED",
+  ConnectionDraining = "CONNECTION_DRAINING",
+  ConnectionRefused = "CONNECTION_REFUSED",
+  ConnectionTimeout = "CONNECTION_TIMEOUT",
+  Disconnect = "DISCONNECT",
+  InvalidOption = "INVALID_OPTION",
+  InvalidPayload = "INVALID_PAYLOAD",
+  MaxPayloadExceeded = "MAX_PAYLOAD_EXCEEDED",
+  NoResponders = "NO_RESPONDERS",
+  NotFunction = "NOT_FUNC",
+  RequestError = "REQUEST_ERROR",
+  ServerOptionNotAvailable = "SERVER_OPT_NA",
+  SubClosed = "SUB_CLOSED",
+  SubDraining = "SUB_DRAINING",
+  Timeout = "TIMEOUT",
+  Tls = "TLS",
+  Unknown = "UNKNOWN_ERROR",
+  WssRequired = "WSS_REQUIRED",
 
   // emitted by the server
-  AUTHORIZATION_VIOLATION = "AUTHORIZATION_VIOLATION",
-  AUTHENTICATION_EXPIRED = "AUTHENTICATION_EXPIRED",
-  NATS_PROTOCOL_ERR = "NATS_PROTOCOL_ERR",
-  PERMISSIONS_VIOLATION = "PERMISSIONS_VIOLATION",
+  AuthorizationViolation = "AUTHORIZATION_VIOLATION",
+  AuthenticationExpired = "AUTHENTICATION_EXPIRED",
+  ProtocolError = "NATS_PROTOCOL_ERR",
+  PermissionsViolation = "PERMISSIONS_VIOLATION",
 }
 
 export class Messages {
@@ -55,12 +55,12 @@ export class Messages {
   constructor() {
     this.messages = new Map<string, string>();
     this.messages.set(
-      ErrorCode.INVALID_PAYLOAD_TYPE,
+      ErrorCode.InvalidPayload,
       "Invalid payload type - payloads can be 'binary', 'string', or 'json'",
     );
-    this.messages.set(ErrorCode.BAD_JSON, "Bad JSON");
+    this.messages.set(ErrorCode.BadJson, "Bad JSON");
     this.messages.set(
-      ErrorCode.WSS_REQUIRED,
+      ErrorCode.WssRequired,
       "TLS is required, therefore a secure websocket connection is also required",
     );
   }
@@ -105,15 +105,15 @@ export class NatsError extends Error {
   }
 
   isAuthError(): boolean {
-    return this.code === ErrorCode.AUTHENTICATION_EXPIRED ||
-      this.code === ErrorCode.AUTHORIZATION_VIOLATION;
+    return this.code === ErrorCode.AuthenticationExpired ||
+      this.code === ErrorCode.AuthorizationViolation;
   }
 
   isPermissionError(): boolean {
-    return this.code === ErrorCode.PERMISSIONS_VIOLATION;
+    return this.code === ErrorCode.PermissionsViolation;
   }
 
   isProtocolError(): boolean {
-    return this.code === ErrorCode.NATS_PROTOCOL_ERR;
+    return this.code === ErrorCode.ProtocolError;
   }
 }
