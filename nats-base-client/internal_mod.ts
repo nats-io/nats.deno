@@ -62,5 +62,5 @@ export type {
   MsgAdapter,
   TypedCallback,
   TypedSubscriptionOptions,
-} from "./subadapter.ts";
-export { TypedSubscription } from "./subadapter.ts";
+} from "./typedsub.ts";
+export { TypedSubscription } from "./typedsub.ts";

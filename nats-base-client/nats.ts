@@ -34,6 +34,7 @@ import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
 import { isRequestError } from "./msg.ts";
+import { TypedSubscription, TypedSubscriptionOptions } from "./typedsub.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
@@ -110,6 +111,13 @@ export class NatsConnectionImpl implements NatsConnection {
     const sub = new SubscriptionImpl(this.protocol, subject, opts);
     this.protocol.subscribe(sub);
     return sub;
+  }
+
+  consumer<T>(
+    subject: string,
+    opts: TypedSubscriptionOptions<T>,
+  ): TypedSubscription<T> {
+    return new TypedSubscription<T>(this, subject, opts);
   }
 
   request(

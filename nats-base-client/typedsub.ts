@@ -14,6 +14,7 @@
  */
 import {
   Deferred,
+  ErrorCode,
   Msg,
   NatsConnection,
   NatsError,
@@ -22,9 +23,8 @@ import {
   SubOpts,
   SubscriptionImpl,
 } from "./internal_mod.ts";
-import type { Subscription } from "./internal_mod.ts";
+import type { Subscription } from "./types.ts";
 import { DispatchedFn } from "./queued_iterator.ts";
-import { ErrorCode } from "./error.ts";
 
 /**
  * Converts a NATS message into some other type. Implementers are expected to:
@@ -51,7 +51,7 @@ export interface TypedSubscriptionOptions<T> extends SubOpts<T> {
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
 }
 
-function checkFn(fn: unknown, name: string, required = false) {
+export function checkFn(fn: unknown, name: string, required = false) {
   if (required === true && !fn) {
     throw NatsError.errorForCode(
       ErrorCode.ApiError,
@@ -73,7 +73,6 @@ function checkFn(fn: unknown, name: string, required = false) {
  * data to the client.
  */
 export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
-  nc: NatsConnection;
   sub: SubscriptionImpl;
   adapter: MsgAdapter<T>;
 
@@ -83,7 +82,6 @@ export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
     opts: TypedSubscriptionOptions<T>,
   ) {
     super();
-    this.nc = nc;
 
     checkFn(opts.adapter, "adapter", true);
     this.adapter = opts.adapter;
@@ -116,16 +114,14 @@ export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
     }
     const { max, queue, timeout } = opts;
     const sopts = { max, queue, timeout, callback };
-    this.sub = this.nc.subscribe(subject, sopts) as SubscriptionImpl;
+    this.sub = nc.subscribe(subject, sopts) as SubscriptionImpl;
     if (opts.cleanupFn) {
       this.sub.cleanupFn = opts.cleanupFn;
     }
     (async (s) => {
       await s.closed;
       this.stop();
-    })(this.sub).catch((err) => {
-      console.log("err", err);
-    });
+    })(this.sub).then().catch();
   }
 
   unsubscribe(max?: number): void {
