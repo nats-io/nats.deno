@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
-import { connect, createInbox } from "../src/mod.ts";
+import { connect, createInbox, Msg } from "../src/mod.ts";
 import {
   deferred,
   SubscriptionImpl,
@@ -97,5 +97,41 @@ Deno.test("extensions - closed resolves on unsub", async () => {
   sub.unsubscribe();
   await closed;
   assert(sub.isClosed());
+  await nc.close();
+});
+
+Deno.test("extensions - dispatched called on callback", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { callback: () => {} }) as SubscriptionImpl;
+  let count = 0;
+  sub.setDispatchedFn((msg: Msg | null) => {
+    if (msg) {
+      count++;
+    }
+  });
+  nc.publish(subj);
+  await nc.flush();
+  assertEquals(count, 1);
+  await nc.close();
+});
+
+Deno.test("extensions - dispatched called on iterator", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1 }) as SubscriptionImpl;
+  let count = 0;
+  sub.setDispatchedFn((msg: Msg | null) => {
+    if (msg) {
+      count++;
+    }
+  });
+  const done = (async () => {
+    for await (const m of sub) {}
+  })();
+
+  nc.publish(subj);
+  await done;
+  assertEquals(count, 1);
   await nc.close();
 });

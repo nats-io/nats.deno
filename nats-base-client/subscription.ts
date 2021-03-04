@@ -12,13 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { QueuedIterator } from "./queued_iterator.ts";
+import { DispatchedFn, QueuedIterator } from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
 import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
-type YieldedMsgCallback = (m: Msg) => void;
+type YieldedMsgCallback = (m: Msg | null) => void;
 
 export class SubscriptionImpl extends QueuedIterator<Msg>
   implements Base, Subscription {
@@ -32,7 +32,6 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
   timer?: Timeout<void>;
   info?: unknown;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
-  yieldedCb?: YieldedMsgCallback;
   closed: Deferred<void>;
 
   constructor(
@@ -62,7 +61,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
     }
   }
 
-  setYieldedCb(cb: YieldedMsgCallback) {
+  setDispatchedFn(cb: DispatchedFn<Msg>) {
     // user specified callback
     if (this.noIterator) {
       const uc = this.callback;
@@ -72,7 +71,7 @@ export class SubscriptionImpl extends QueuedIterator<Msg>
       };
       this.callback = wc;
     } else {
-      this.yieldedCb = cb;
+      this.dispatchedFn = cb;
     }
   }
 
