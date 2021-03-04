@@ -13,6 +13,8 @@ export type {
   Status,
   Subscription,
   SubscriptionOptions,
+  SubOpts,
+  Sub
 } from "./types.ts";
 export { DebugEvents, Empty, Events } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
