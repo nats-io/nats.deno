@@ -19,6 +19,8 @@ export interface Dispatcher<T> {
   push(v: T): void;
 }
 
+export type DispatchedFn<T> = (data: T | null) => void;
+
 export class QueuedIterator<T> implements Dispatcher<T> {
   inflight: number;
   processed: number;
@@ -27,7 +29,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
-  yieldedCb?: (data: T) => void;
+  dispatchedFn?: DispatchedFn<T>;
   private err?: Error;
 
   constructor() {
@@ -69,8 +71,8 @@ export class QueuedIterator<T> implements Dispatcher<T> {
       for (let i = 0; i < yields.length; i++) {
         this.processed++;
         yield yields[i];
-        if (this.yieldedCb) {
-          this.yieldedCb(yields[i]);
+        if (this.dispatchedFn && yields[i]) {
+          this.dispatchedFn(yields[i]);
         }
         this.inflight--;
       }

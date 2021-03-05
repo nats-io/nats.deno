@@ -122,12 +122,14 @@ export interface Msg {
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
 }
 
-export interface SubscriptionOptions {
+export interface SubOpts<T> {
   queue?: string;
   max?: number;
   timeout?: number;
-  callback?: (err: NatsError | null, msg: Msg) => void;
+  callback?: (err: NatsError | null, msg: T) => void;
 }
+
+export type SubscriptionOptions = SubOpts<Msg>;
 
 export interface Base {
   subject: string;
@@ -174,7 +176,7 @@ export interface ServersChanged {
   readonly deleted: string[];
 }
 
-export interface Subscription extends AsyncIterable<Msg> {
+export interface Sub<T> extends AsyncIterable<T> {
   unsubscribe(max?: number): void;
   drain(): Promise<void>;
   isDraining(): boolean;
@@ -187,6 +189,8 @@ export interface Subscription extends AsyncIterable<Msg> {
   getID(): number;
   getMax(): number | undefined;
 }
+
+export type Subscription = Sub<Msg>;
 
 export interface RequestOptions {
   timeout: number;

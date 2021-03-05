@@ -11,6 +11,8 @@ export type {
   ServerInfo,
   ServersChanged,
   Status,
+  Sub,
+  SubOpts,
   Subscription,
   SubscriptionOptions,
 } from "./types.ts";
@@ -47,7 +49,7 @@ export {
 export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
-export type { Dispatcher } from "./queued_iterator.ts";
+export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
 export { QueuedIterator } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
