@@ -49,7 +49,7 @@ export {
 export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
-export type { Dispatcher } from "./queued_iterator.ts";
+export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
 export { QueuedIterator } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
@@ -58,9 +58,3 @@ export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
-export type {
-  MsgAdapter,
-  TypedCallback,
-  TypedSubscriptionOptions,
-} from "./typedsub.ts";
-export { TypedSubscription } from "./typedsub.ts";

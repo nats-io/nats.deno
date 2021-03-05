@@ -25,7 +25,7 @@ const argv = parse(
       i: 0,
       t: 1000,
     },
-    boolean: true,
+    boolean: ["debug"],
     string: ["server", "count", "interval", "headers", "creds"],
   },
 );
