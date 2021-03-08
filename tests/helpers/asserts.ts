@@ -16,13 +16,18 @@
 import { assert, fail } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 
 export function assertErrorCode(err: Error, ...codes: string[]) {
+  assert(err, "expected an error");
   const { code } = err as { code?: string };
+  if (code === undefined) {
+    fail(`didn't get a nats error - got: ${err.message}`);
+  }
   assert(code);
-
   const ok = codes.find((c) => {
     return code.indexOf(c) !== -1;
   });
-  assert(ok);
+  if (ok === "") {
+    fail(`got ${code} - expected any of [${codes.join(", ")}]`);
+  }
 }
 
 export function assertThrowsErrorCode(fn: () => unknown, ...codes: string[]) {

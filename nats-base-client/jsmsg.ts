@@ -1,11 +1,27 @@
+/*
+ * Copyright 2021 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import {
-  DataBuffer,
-  JSONCodec,
+  DeliveryInfo,
+  JsMsg,
   Msg,
-  MsgHdrs,
+  NextRequest,
   RequestOptions,
-} from "../internal_mod.ts";
-import { NextRequest } from "./types.ts";
+} from "./types.ts";
+import { MsgHdrs } from "./headers.ts";
+import { DataBuffer } from "./databuffer.ts";
+import { JSONCodec } from "./codec.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);
@@ -13,33 +29,6 @@ const WPI = Uint8Array.of(43, 87, 80, 73);
 const NXT = Uint8Array.of(43, 78, 88, 84);
 const TERM = Uint8Array.of(43, 84, 69, 82, 77);
 const SPACE = Uint8Array.of(32);
-
-export interface JsMsg {
-  redelivered: boolean;
-  info: DeliveryInfo;
-  seq: number;
-  headers: MsgHdrs | undefined;
-  data: Uint8Array;
-  subject: string;
-  sid: number;
-
-  ack(): void;
-  nak(): void;
-  working(): void;
-  // next(subj?: string): void;
-  term(): void;
-}
-
-export interface DeliveryInfo {
-  stream: string;
-  consumer: string;
-  redeliveryCount: number;
-  streamSequence: number;
-  deliverySequence: number;
-  timestampNanos: number;
-  pending: number;
-  redelivered: boolean;
-}
 
 export function toJsMsg(m: Msg): JsMsg {
   return new JsMsgImpl(m);

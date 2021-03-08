@@ -42,6 +42,10 @@ export enum ErrorCode {
   Unknown = "UNKNOWN_ERROR",
   WssRequired = "WSS_REQUIRED",
 
+  // jetstream
+  JetStreamNotEnabled = "jetstream-not-enabled",
+  JetStreamInvalidAck = "invalid-jetstream-ack",
+
   // emitted by the server
   AuthorizationViolation = "AUTHORIZATION_VIOLATION",
   AuthenticationExpired = "AUTHENTICATION_EXPIRED",

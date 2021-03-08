@@ -12,29 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { BaseApiClient } from "./base_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./lister.ts";
-import { NatsConnection } from "../internal_mod.ts";
 import {
+  ConsumerAPI,
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
   CreateConsumerRequest,
+  JetStreamOptions,
+  Lister,
+  NatsConnection,
   SuccessResponse,
 } from "./types.ts";
-import { validateDurableName, validateStreamName } from "./util.ts";
-import { JetStreamOptions } from "./jetstream.ts";
-
-export interface ConsumerAPI {
-  info(stream: string, consumer: string): Promise<ConsumerInfo>;
-
-  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
-
-  delete(stream: string, consumer: string): Promise<boolean>;
-
-  list(stream: string): Lister<ConsumerInfo>;
-}
+import { BaseApiClient } from "./jsbase_api.ts";
+import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { validateDurableName, validateStreamName } from "./jsutil.ts";
 
 // export interface PushConsumerConfig extends ConsumerConfig {
 //   "deliver_subject": string;

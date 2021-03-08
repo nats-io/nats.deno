@@ -13,155 +13,56 @@
  * limitations under the License.
  */
 
-import { InvalidJestreamAck, JetStreamOptions } from "./jetstream.ts";
-import { BaseApiClient } from "./base_api.ts";
 import {
-  createInbox,
+  AckPolicy,
+  ConsumerAPI,
+  ConsumerConfig,
+  ConsumerOpts,
+  DeliverPolicy,
   Empty,
-  headers,
+  JetStreamClient,
+  JetStreamOptions,
+  JetStreamPublishOptions,
+  JetStreamPullSubscription,
+  JetStreamSubscription,
+  JetStreamSubscriptionOptions,
+  JsMsg,
+  JsMsgCallback,
   Msg,
+  Nanos,
   NatsConnection,
-  NatsError,
-  QueuedIterator,
+  PubAck,
+  Pullable,
+  PullOptions,
   RequestOptions,
   Subscription,
-  SubscriptionImpl,
-  Timeout,
-  timeout,
-} from "../internal_mod.ts";
-import { AckPolicy, ConsumerConfig, DeliverPolicy, Nanos } from "./types.ts";
+} from "./types.ts";
+import { BaseApiClient } from "./jsbase_api.ts";
 import {
   defaultConsumer,
   ns,
   validateDurableName,
   validateStreamName,
-} from "./util.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./consumer_api.ts";
-import { ACK, JsMsg, toJsMsg } from "./jsmsg.ts";
+} from "./jsutil.ts";
+import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
+import { ACK, toJsMsg } from "./jsmsg.ts";
 import { TypedSubscription, TypedSubscriptionOptions } from "./typedsub.ts";
+import { ErrorCode, NatsError } from "./error.ts";
+import { SubscriptionImpl } from "./subscription.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
+import { Timeout, timeout } from "./util.ts";
+import { createInbox } from "./protocol.ts";
+import { headers } from "./headers.ts";
 
-export enum PubHeaders {
+interface JetStreamInfoable {
+  info: JetStreamSubscriptionInfo | null;
+}
+
+enum PubHeaders {
   MsgIdHdr = "Nats-Msg-Id",
   ExpectedStreamHdr = "Nats-Expected-Stream",
   ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
   ExpectedLastMsgIdHdr = "Nats-Expected-Last-Msg-Id",
-}
-
-export interface PullOptions {
-  batch: number;
-  "no_wait": boolean; // no default here
-  expires: number;
-}
-
-export interface PubAck {
-  stream: string;
-  seq: number;
-  duplicate: boolean;
-}
-
-export type JetStreamSubscription = TypedSubscription<JsMsg>;
-export type JetStreamSubscriptionOptions = TypedSubscriptionOptions<JsMsg>;
-interface Pullable {
-  pull(batch: number, opts?: Partial<PullOptions>): void;
-}
-export interface JetStreamInfoable {
-  info: JetStreamSubscriptionInfo | null;
-}
-export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
-
-export type JsMsgCallback = (err: NatsError | null, msg: JsMsg | null) => void;
-
-function jsMsgAdapter(
-  err: NatsError | null,
-  msg: Msg,
-): [NatsError | null, JsMsg | null] {
-  if (err) {
-    return [err, null];
-  }
-  const jm = toJsMsg(msg);
-  try {
-    // this will throw if not a JsMsg
-    jm.info;
-    return [null, jm];
-  } catch (err) {
-    return [err, null];
-  }
-}
-
-function autoAckJsMsg(data: JsMsg | null) {
-  if (data) {
-    data.ack();
-  }
-}
-
-function jsCleanupFn(sub: Subscription, info?: unknown) {
-  const jinfo = info as JetStreamSubscriptionInfo;
-  // FIXME: need a property on the subscription that tells if drained
-  // drained subs should be skipped as well
-  if (jinfo.attached || jinfo.config.durable_name) {
-    return;
-  }
-  jinfo.api._request(
-    `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${jinfo.config.durable_name}`,
-  )
-    .catch((err) => {
-      // FIXME: dispatch an error
-    });
-}
-
-export function autoAck(sub: Subscription) {
-  const s = sub as SubscriptionImpl;
-  s.setDispatchedFn((msg) => {
-    if (msg) {
-      msg.respond(ACK);
-    }
-  });
-}
-
-function checkJsError(msg: Msg): Error | null {
-  const h = msg.headers;
-  if (!h) {
-    return null;
-  }
-  if (h.code === 0 || (h.code >= 200 && h.code < 300)) {
-    return null;
-  }
-  switch (h.code) {
-    case 404:
-      return new Error("no messages");
-    case 408:
-      return new Error("too many pulls");
-    case 409:
-      return new Error("max ack pending exceeded");
-    default:
-      return new Error(h.status);
-  }
-}
-
-export interface JetStreamClient {
-  publish(
-    subj: string,
-    data?: Uint8Array,
-    options?: Partial<JetStreamPublishOptions>,
-  ): Promise<PubAck>;
-
-  pull(stream: string, durable: string): Promise<JsMsg>;
-
-  pullBatch(
-    stream: string,
-    durable: string,
-    opts: Partial<PullOptions>,
-  ): QueuedIterator<JsMsg>;
-
-  pullSubscribe(
-    subject: string,
-    opts: ConsumerOpts,
-  ): Promise<JetStreamPullSubscription>;
-
-  subscribe(
-    subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts,
-  ): Promise<JetStreamSubscription>;
 }
 
 export class JetStreamClientImpl extends BaseApiClient
@@ -207,7 +108,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const r = await this.nc.request(subj, data, ro);
     const pa = this.parseJsResponse(r) as PubAck;
     if (pa.stream === "") {
-      throw NatsError.errorForCode(InvalidJestreamAck);
+      throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
     }
     pa.duplicate = pa.duplicate ? pa.duplicate : false;
     return pa;
@@ -278,7 +179,7 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     };
 
-    const inbox = createInbox();
+    const inbox = createInbox(this.nc.options.inboxPrefix);
     const sub = this.nc.subscribe(inbox, {
       max: opts.batch,
       callback: (err: Error | null, msg) => {
@@ -375,11 +276,12 @@ export class JetStreamClientImpl extends BaseApiClient
     if (cso.attached) {
       cso.config.filter_subject = subject;
       if (cso.pullCount === 0) {
-        cso.config.deliver_subject = createInbox();
+        cso.config.deliver_subject = createInbox(this.nc.options.inboxPrefix);
       }
     }
 
-    cso.config.deliver_subject = cso.config.deliver_subject ?? createInbox();
+    cso.config.deliver_subject = cso.config.deliver_subject ??
+      createInbox(this.nc.options.inboxPrefix);
 
     // configure the typed subscription
     const so = {} as TypedSubscriptionOptions<JsMsg>;
@@ -474,47 +376,49 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
   }
 }
 
-interface JetStreamPublishOptions {
-  msgID: string;
-  timeout: number;
-  expect: Partial<{
-    lastMsgID: string;
-    streamName: string;
-    lastSequence: number;
-  }>;
-}
-
-export interface ConsumerOpts {
-  config: Partial<ConsumerConfig>;
-  consumer: string;
-  mack: boolean;
-  pullCount: number;
-  subQueue: string;
-  stream: string;
-  callbackFn?: JsMsgCallback;
-
-  // standard
-  max?: number;
-
-  debug?: boolean;
-}
-
 interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
   attached: boolean;
 }
 
 export function consumerOpts(): ConsumerOptsBuilder {
-  return new ConsumerOptsBuilder();
+  return new ConsumerOptsBuilderImpl();
 }
 
 function isConsumerOptsBuilder(
   o: ConsumerOptsBuilder | ConsumerOpts,
-): o is ConsumerOptsBuilder {
-  return typeof (o as ConsumerOptsBuilder).getOpts === "function";
+): o is ConsumerOptsBuilderImpl {
+  return typeof (o as ConsumerOptsBuilderImpl).getOpts === "function";
 }
 
-class ConsumerOptsBuilder {
+export interface ConsumerOptsBuilder {
+  pull(batch: number): void;
+  pullDirect(
+    stream: string,
+    consumer: string,
+    batchSize: number,
+  ): void;
+
+  deliverTo(subject: string): void;
+  queue(name: string): void;
+  manualAck(): void;
+  durable(name: string): void;
+  deliverAll(): void;
+  deliverLast(): void;
+  deliverNew(): void;
+  startSequence(seq: number): void;
+  startTime(time: Date | Nanos): void;
+  ackNone(): void;
+  ackAll(): void;
+  ackExplicit(): void;
+  maxDeliver(max: number): void;
+  maxAckPending(max: number): void;
+  maxWaiting(max: number): void;
+  maxMessages(max: number): void;
+  callback(fn: JsMsgCallback): void;
+}
+
+class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   config: Partial<ConsumerConfig>;
   consumer: string;
   mack: boolean;
@@ -650,5 +554,72 @@ class ConsumerOptsBuilder {
 
   _debug(tf: boolean) {
     this.debug = tf;
+  }
+}
+
+function jsMsgAdapter(
+  err: NatsError | null,
+  msg: Msg,
+): [NatsError | null, JsMsg | null] {
+  if (err) {
+    return [err, null];
+  }
+  const jm = toJsMsg(msg);
+  try {
+    // this will throw if not a JsMsg
+    jm.info;
+    return [null, jm];
+  } catch (err) {
+    return [err, null];
+  }
+}
+
+function autoAckJsMsg(data: JsMsg | null) {
+  if (data) {
+    data.ack();
+  }
+}
+
+function jsCleanupFn(sub: Subscription, info?: unknown) {
+  const jinfo = info as JetStreamSubscriptionInfo;
+  // FIXME: need a property on the subscription that tells if drained
+  // drained subs should be skipped as well
+  if (jinfo.attached || jinfo.config.durable_name) {
+    return;
+  }
+  jinfo.api._request(
+    `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${jinfo.config.durable_name}`,
+  )
+    .catch((err) => {
+      // FIXME: dispatch an error
+    });
+}
+
+export function autoAck(sub: Subscription) {
+  const s = sub as SubscriptionImpl;
+  s.setDispatchedFn((msg) => {
+    if (msg) {
+      msg.respond(ACK);
+    }
+  });
+}
+
+function checkJsError(msg: Msg): Error | null {
+  const h = msg.headers;
+  if (!h) {
+    return null;
+  }
+  if (h.code === 0 || (h.code >= 200 && h.code < 300)) {
+    return null;
+  }
+  switch (h.code) {
+    case 404:
+      return new Error("no messages");
+    case 408:
+      return new Error("too many pulls");
+    case 409:
+      return new Error("max ack pending exceeded");
+    default:
+      return new Error(h.status);
   }
 }

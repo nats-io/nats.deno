@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,19 +12,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  Deferred,
+
+import type {
   DispatchedFn,
-  ErrorCode,
   Msg,
   NatsConnection,
-  NatsError,
-  QueuedIterator,
   Sub,
   SubOpts,
+  Subscription,
+} from "./internal_mod.ts";
+import {
+  ErrorCode,
+  NatsError,
+  QueuedIterator,
   SubscriptionImpl,
-} from "../internal_mod.ts";
-import type { Subscription } from "../internal_mod.ts";
+} from "./internal_mod.ts";
 
 /**
  * Converts a NATS message into some other type. Implementers are expected to:
@@ -174,7 +176,7 @@ export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
     return this.sub.getMax();
   }
 
-  get closed(): Deferred<void> {
+  get closed(): Promise<void> {
     return this.sub.closed;
   }
 }

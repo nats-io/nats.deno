@@ -15,53 +15,24 @@
 
 import {
   Empty,
-  headers,
-  MsgHdrs,
-  MsgHdrsImpl,
-  NatsConnection,
-} from "../internal_mod.ts";
-import { BaseApiClient } from "./base_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./lister.ts";
-import {
+  JetStreamOptions,
+  Lister,
   MsgDeleteRequest,
   MsgRequest,
+  NatsConnection,
   PurgeResponse,
+  StoredMsg,
+  StreamAPI,
   StreamConfig,
   StreamInfo,
   StreamListResponse,
   StreamMsgResponse,
   SuccessResponse,
 } from "./types.ts";
-import { validateStreamName } from "./util.ts";
-import { JetStreamOptions } from "./jetstream.ts";
-
-export interface StoredMsg {
-  subject: string;
-  seq: number;
-  header?: MsgHdrs;
-  data: Uint8Array;
-  time: Date;
-}
-
-export interface StreamAPI {
-  info(name: string): Promise<StreamInfo>;
-
-  add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
-
-  update(cfg: StreamConfig): Promise<StreamInfo>;
-
-  purge(name: string): Promise<PurgeResponse>;
-
-  delete(name: string): Promise<boolean>;
-
-  list(): Lister<StreamInfo>;
-
-  deleteMessage(name: string, seq: number): Promise<boolean>;
-
-  getMessage(name: string, seq: number): Promise<StoredMsg>;
-
-  find(subject: string): Promise<string>;
-}
+import { BaseApiClient } from "./jsbase_api.ts";
+import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { validateStreamName } from "./jsutil.ts";
+import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 
 export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {

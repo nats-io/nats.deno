@@ -13,30 +13,26 @@
  * limitations under the License.
  */
 
-import type { NatsConnection } from "../internal_mod.ts";
-import { QueuedIterator } from "../internal_mod.ts";
-import { BaseApiClient } from "./base_api.ts";
-import { StreamAPI, StreamAPIImpl } from "./stream_api.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./consumer_api.ts";
 import {
   AccountInfoResponse,
   Advisory,
   AdvisoryKind,
   ApiResponse,
+  ConsumerAPI,
   JetStreamAccountStats,
+  JetStreamManager,
+  JetStreamOptions,
+  NatsConnection,
+  StreamAPI,
 } from "./types.ts";
-import { JetStreamOptions } from "./jetstream.ts";
 
-export interface JSM {
-  consumers: ConsumerAPI;
-  streams: StreamAPI;
+import { BaseApiClient } from "./jsbase_api.ts";
+import { StreamAPIImpl } from "./jsstream_api.ts";
+import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
 
-  getAccountInfo(): Promise<JetStreamAccountStats>;
-
-  advisories(): AsyncIterable<Advisory>;
-}
-
-export class JetStreamManagerImpl extends BaseApiClient implements JSM {
+export class JetStreamManagerImpl extends BaseApiClient
+  implements JetStreamManager {
   streams: StreamAPI;
   consumers: ConsumerAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {

@@ -14,26 +14,38 @@
  */
 
 import {
-  defaultPrefix,
-  defaultTimeout,
-  JetstreamNotEnabled,
+  ApiResponse,
+  Empty,
   JetStreamOptions,
-} from "./jetstream.ts";
+  Msg,
+  NatsConnection,
+  RequestOptions,
+  StreamNameBySubject,
+  StreamNames,
+} from "./types.ts";
+import { Codec, JSONCodec } from "./codec.ts";
+import { ErrorCode, NatsError } from "./error.ts";
+import { extend } from "./util.ts";
+import { NatsConnectionImpl } from "./nats.ts";
 
-import type { Codec, NatsConnection, RequestOptions } from "../internal_mod.ts";
-import { Empty, JSONCodec, Msg, NatsError } from "../internal_mod.ts";
-import { ApiResponse, StreamNameBySubject, StreamNames } from "./types.ts";
+const defaultPrefix = "$JS.API";
+const defaultTimeout = 5000;
+
+function defaultJsOptions(opts?: JetStreamOptions): JetStreamOptions {
+  opts = opts ?? {} as JetStreamOptions;
+  return extend({ apiPrefix: defaultPrefix, timeout: defaultTimeout }, opts);
+}
 
 export class BaseApiClient {
-  nc: NatsConnection;
+  nc: NatsConnectionImpl;
   opts: JetStreamOptions;
   prefix: string;
   timeout: number;
   jc: Codec<unknown>;
 
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
-    this.nc = nc;
-    this.opts = opts ? opts : {} as JetStreamOptions;
+    this.nc = nc as NatsConnectionImpl;
+    this.opts = defaultJsOptions(opts);
     this._parseOpts();
     this.prefix = this.opts.apiPrefix!;
     this.timeout = this.opts.timeout!;
@@ -41,7 +53,7 @@ export class BaseApiClient {
   }
 
   _parseOpts() {
-    let prefix = this.opts.apiPrefix || defaultPrefix;
+    let prefix = this.opts.apiPrefix;
     if (!prefix || prefix.length === 0) {
       throw new Error("invalid empty prefix");
     }
@@ -50,7 +62,6 @@ export class BaseApiClient {
       prefix = prefix.substr(0, prefix.length - 1);
     }
     this.opts.apiPrefix = prefix;
-    this.opts.timeout = this.opts.timeout || defaultTimeout;
   }
 
   async _request(
@@ -91,7 +102,7 @@ export class BaseApiClient {
     if (r.error) {
       if (r.error.code === 503) {
         throw NatsError.errorForCode(
-          JetstreamNotEnabled,
+          ErrorCode.JetStreamNotEnabled,
           new Error(r.error.description),
         );
       }

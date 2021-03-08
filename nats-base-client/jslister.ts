@@ -12,15 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { BaseApiClient } from "./base_api.ts";
-import { ApiPaged, ApiPagedRequest } from "./types.ts";
+import { ApiPaged, ApiPagedRequest, Lister } from "./types.ts";
+import { BaseApiClient } from "./jsbase_api.ts";
 
 export type ListerFieldFilter<T> = (v: unknown) => T[];
-
-export interface Lister<T> {
-  next(): Promise<T[]>;
-}
 
 export class ListerImpl<T> implements Lister<T> {
   err?: Error;
