@@ -76,7 +76,7 @@ export interface NatsConnection {
   stats(): Stats;
 
   jetstreamManager(opts?: JetStreamOptions): Promise<JetStreamManager>;
-  jetStream(opts?: JetStreamOptions): JetStreamClient;
+  jetstream(opts?: JetStreamOptions): JetStreamClient;
 }
 
 export interface ConnectionOptions {

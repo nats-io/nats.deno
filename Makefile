@@ -4,7 +4,7 @@ build: test
 
 test:
 	rm -rf ./coverage
-	deno test --allow-all --unstable --coverage=coverage --failfast tests/
+	deno test --allow-all --unstable --reload --coverage=coverage --failfast tests/
 
 cover:
 	deno coverage --unstable ./coverage --lcov > ./coverage/out.lcov

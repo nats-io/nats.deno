@@ -255,21 +255,31 @@ export class JetStreamClientImpl extends BaseApiClient
         throw new Error("ack policy for pull consumers must be explicit");
       }
     }
-    cso.stream = cso.stream === ""
-      ? await this.findStream(subject)
-      : cso.stream;
+    // deduce the stream
+    cso.stream = cso.stream ? cso.stream : await this.findStream(subject);
+    // deduce if durable
+    if (cso.config.durable_name) {
+      cso.consumer = cso.config.durable_name;
+    }
 
     cso.attached = false;
     if (cso.consumer) {
-      const info = await this.api.info(cso.stream, cso.consumer);
-      if (info) {
-        if (
-          info.config.filter_subject && info.config.filter_subject !== subject
-        ) {
-          throw new Error("subject does not match consumer");
+      try {
+        const info = await this.api.info(cso.stream, cso.consumer);
+        if (info) {
+          if (
+            info.config.filter_subject && info.config.filter_subject !== subject
+          ) {
+            throw new Error("subject does not match consumer");
+          }
+          cso.config = info.config;
+          cso.attached = true;
         }
-        cso.config = info.config;
-        cso.attached = true;
+      } catch (err) {
+        //consumer doesn't exist
+        if (err.code !== "404") {
+          throw err;
+        }
       }
     }
 

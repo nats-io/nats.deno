@@ -358,7 +358,7 @@ Deno.test("basics - request timeout", async () => {
   const nc = await connect({ servers: u });
   const s = createInbox();
   const err = await assertThrowsAsync(async () => {
-    await nc.request(s, Empty, { timeout: 100 })
+    await nc.request(s, Empty, { timeout: 100 });
   });
   assertErrorCode(err, ErrorCode.NoResponders);
   await nc.close();
