@@ -15,14 +15,18 @@
 
 import { cleanup, initStream, JetStreamConfig, setup } from "./jstest_util.ts";
 import {
+  AckPolicy,
   ConsumerOpts,
   consumerOpts,
+  Empty,
   JsMsg,
   JsMsgCallback,
   NatsError,
+  StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
+  assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 
@@ -40,6 +44,108 @@ function callbackConsumer(debug = false): JsMsgCallback {
     }
   };
 }
+
+Deno.test("jetstream - publish basic", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  let pa = await js.publish(subj);
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 1);
+
+  pa = await js.publish(subj);
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 2);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish id", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  let pa = await js.publish(subj, Empty, { msgID: "a" });
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 1);
+
+  const jsm = await nc.jetstreamManager();
+  const sm = await jsm.streams.getMessage(stream, 1);
+  assertEquals(sm.header.get("nats-msg-id"), "a");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish require stream", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  let err = await assertThrowsAsync(async () => {
+    await js.publish(subj, Empty, { expect: { streamName: "xxx" } });
+  });
+  assertEquals(err.message, `expected stream does not match`);
+
+  const pa = await js.publish(subj, Empty, { expect: { streamName: stream } });
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish require last message id", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  let pa = await js.publish(subj, Empty, { msgID: "a" });
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 1);
+
+  let err = await assertThrowsAsync(async () => {
+    await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
+  });
+  assertEquals(err.message, `wrong last msg ID: a`);
+
+  pa = await js.publish(subj, Empty, {
+    msgID: "b",
+    expect: { lastMsgID: "a" },
+  });
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 2);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish require last sequence", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  let pa = await js.publish(subj, Empty);
+
+  let err = await assertThrowsAsync(async () => {
+    await js.publish(subj, Empty, { msgID: "b", expect: { lastSequence: 2 } });
+  });
+  assertEquals(err.message, `wrong last sequence: 1`);
+
+  pa = await js.publish(subj, Empty, {
+    msgID: "b",
+    expect: { lastSequence: 1 },
+  });
+  assertEquals(pa.stream, stream);
+  assertEquals(pa.duplicate, false);
+  assertEquals(pa.seq, 2);
+
+  await cleanup(ns, nc);
+});
 
 Deno.test("jetstream - ephemeral push", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
@@ -92,6 +198,110 @@ Deno.test("jetstream - durable", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - pull no messages", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  const err = await assertThrowsAsync(async () => {
+    await js.pull(stream, "me");
+  });
+  assertEquals(err.message, "404 No Messages");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { msgID: "a" });
+  let ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 1);
+
+  const jm = await js.pull(stream, "me");
+  jm.ack();
+  ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.stream_seq, 1);
+  assertEquals(ci.ack_floor.stream_seq, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull batch no messages", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+
+  const err = await assertThrowsAsync(async () => {
+    await js.pull(stream, "me");
+  });
+  assertEquals(err.message, "404 No Messages");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull batch some messages", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { msgID: "a" });
+  await js.publish(subj, Empty, { msgID: "b" });
+  await js.publish(subj, Empty, { msgID: "c" });
+
+  let sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  await (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  assertEquals(sub.processed, 2);
+  let ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 1);
+  assertEquals(ci.delivered.stream_seq, 2);
+  assertEquals(ci.ack_floor.stream_seq, 2);
+
+  console.log('second set');
+  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  await (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  assertEquals(sub.processed, 1);
+  ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.stream_seq, 3);
+  assertEquals(ci.ack_floor.stream_seq, 3);
+
+  console.log("will toss")
+  const err = await assertThrowsAsync(async () => {
+    await js.pullBatch(stream, "me", { batch: 2, no_wait: true })
+  })
+  assertEquals(err.message, "no messages");
+
+  await cleanup(ns, nc);
+});
 
 // Deno.test("jetstream - ephemeral", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
@@ -117,7 +327,7 @@ Deno.test("jetstream - durable", async () => {
 //     }
 //   })();
 //
-//   const js = await JetStream(nc);
+//   const js = nc.jetstream();
 //   const pa = await js.publish(subj, Empty, { msgID: "a" });
 //   console.log(pa);
 //   assertEquals(pa.stream, stream);
@@ -133,7 +343,7 @@ Deno.test("jetstream - durable", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
 //   const { stream, subj } = await initStream(nc);
 //   const jsm = await nc.jetstreamManager();
-//   const js = await JetStream(nc);
+//   const js = nc.jetstream();
 //   const pa = await js.publish(subj, Empty, { msgID: "a" });
 //
 //   let consumers = await jsm.consumers.list(stream).next();
@@ -169,7 +379,7 @@ Deno.test("jetstream - durable", async () => {
 //   const sc = StringCodec();
 //   const d = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 //   const buf: Promise<PubAck>[] = [];
-//   const js = await JetStream(nc);
+//   const js = nc.jetstream();
 //   d.forEach((v) => {
 //     buf.push(js.publish(subj, sc.encode(v), { msgID: v }));
 //   });
@@ -196,32 +406,6 @@ Deno.test("jetstream - durable", async () => {
 //   await cleanup(ns, nc);
 // });
 //
-// Deno.test("jetstream - pull", async () => {
-//   const { ns, nc } = await setup(JetStreamConfig({}, true));
-//   const { stream, subj } = await initStream(nc);
-//   const jsm = await nc.jetstreamManager();
-//   await jsm.consumers.add(stream, {
-//     durable_name: "me",
-//     ack_policy: AckPolicy.Explicit,
-//   });
-//   const js = await JetStream(nc);
-//
-//   const err = await assertThrowsAsync(async () => {
-//     await js.pull(stream, "me");
-//   });
-//   assertEquals(err.message, "404 No Messages");
-//
-//   const sc = StringCodec();
-//   const data = sc.encode("hello");
-//   await js.publish(subj, data, { msgID: "a" });
-//
-//   const jm = await js.pull(stream, "me");
-//   console.log(sc.decode(jm.data));
-//   jm.ack();
-//   assertEquals(jm.data, data);
-//
-//   await cleanup(ns, nc);
-// });
 
 // Deno.test("jetstream - fetch", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
@@ -251,7 +435,7 @@ Deno.test("jetstream - durable", async () => {
 //   jsm.consumers.fetch(stream, "me", inbox, { no_wait: true });
 //   await noMessages;
 //
-//   const js = await JetStream(nc);
+//   const js = nc.jetstream();
 //   const sc = StringCodec();
 //   const data = sc.encode("hello");
 //   await js.publish(subj, data, { msgID: "a" });
@@ -381,7 +565,7 @@ Deno.test("jetstream - durable", async () => {
 //   });
 //
 //   const sc = StringCodec();
-//   const js = await JetStream(nc);
+//   const js = nc.jetstream();
 //   const data = "0123456789a";
 //
 //   for (const c of data) {

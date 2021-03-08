@@ -349,7 +349,7 @@ export interface StreamAPI {
   delete(name: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
   deleteMessage(name: string, seq: number): Promise<boolean>;
-  getMessage(name: string, seq: number): Promise<StoredMsg>;
+  getMessage(stream: string, seq: number): Promise<StoredMsg>;
   find(subject: string): Promise<string>;
 }
 
@@ -383,7 +383,7 @@ export interface DeliveryInfo {
 export interface StoredMsg {
   subject: string;
   seq: number;
-  header?: MsgHdrs;
+  header: MsgHdrs;
   data: Uint8Array;
   time: Date;
 }

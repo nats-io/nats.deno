@@ -29,6 +29,7 @@ import {
   nuid,
   StreamConfig,
   StreamInfo,
+  StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, initStream, JetStreamConfig, setup } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
@@ -401,6 +402,29 @@ Deno.test("jsm - get message", async () => {
     await jsm.streams.getMessage(stream, 3);
   });
   assertEquals(err.message, "stream store EOF");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - get message payload", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(subj, Empty, { msgID: "empty" });
+  await js.publish(subj, sc.encode(""), { msgID: "empty2" });
+
+  const jsm = await nc.jetstreamManager();
+  let sm = await jsm.streams.getMessage(stream, 1);
+  assertEquals(sm.subject, subj);
+  assertEquals(sm.seq, 1);
+  assertEquals(sm.data, Empty);
+
+  sm = await jsm.streams.getMessage(stream, 2);
+  assertEquals(sm.subject, subj);
+  assertEquals(sm.seq, 2);
+  assertEquals(sm.data, Empty);
+  assertEquals(sc.decode(sm.data), "");
 
   await cleanup(ns, nc);
 });

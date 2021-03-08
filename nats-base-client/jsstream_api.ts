@@ -126,13 +126,13 @@ export class StoredMsgImpl implements StoredMsg {
   seq: number;
   data: Uint8Array;
   time: Date;
-  header?: MsgHdrs;
+  header: MsgHdrs;
 
   constructor(smr: StreamMsgResponse) {
     this.subject = smr.message.subject;
     this.seq = smr.message.seq;
     this.time = new Date(smr.message.time);
-    this.data = smr.message.data === "" ? Empty : this._parse(smr.message.data);
+    this.data = smr.message.data ? this._parse(smr.message.data) : Empty;
     if (smr.message.hdrs) {
       const hd = this._parse(smr.message.hdrs);
       this.header = MsgHdrsImpl.decode(hd);
