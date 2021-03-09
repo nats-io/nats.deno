@@ -20,6 +20,7 @@ import {
   ConsumerOpts,
   DeliverPolicy,
   Empty,
+  Events,
   JetStreamClient,
   JetStreamOptions,
   JetStreamPublishOptions,
@@ -34,6 +35,7 @@ import {
   PullOptions,
   ReplayPolicy,
   RequestOptions,
+  Status,
   Subscription,
 } from "./types.ts";
 import { BaseApiClient } from "./jsbase_api.ts";
@@ -483,16 +485,17 @@ function autoAckJsMsg(data: JsMsg | null) {
 
 function jsCleanupFn(sub: Subscription, info?: unknown) {
   const jinfo = info as JetStreamSubscriptionInfo;
-  // FIXME: need a property on the subscription that tells if drained
-  // drained subs should be skipped as well
-  if (jinfo.attached || jinfo.config.durable_name) {
+  const si = sub as SubscriptionImpl;
+  if (si.drained || jinfo.attached || jinfo.config.durable_name) {
     return;
   }
-  jinfo.api._request(
-    `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${jinfo.config.durable_name}`,
-  )
+  const subj =
+    `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${jinfo.config.durable_name}`;
+  jinfo.api._request(subj)
     .catch((err) => {
-      // FIXME: dispatch an error
+      const desc = `${subj}: ${err.message}`;
+      const s = { type: Events.Error, data: desc } as Status;
+      jinfo.api.nc.protocol.dispatchStatus(s);
     });
 }
 
