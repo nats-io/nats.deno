@@ -20,6 +20,7 @@ import type {
   Sub,
   SubOpts,
   Subscription,
+  SubscriptionOptions,
 } from "./internal_mod.ts";
 import {
   ErrorCode,
@@ -115,7 +116,10 @@ export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
       };
     }
     const { max, queue, timeout } = opts;
-    const sopts = { max, queue, timeout, callback };
+    const sopts = { queue, timeout, callback } as SubscriptionOptions;
+    if (max && max > 0) {
+      sopts.max = max;
+    }
     this.sub = nc.subscribe(subject, sopts) as SubscriptionImpl;
     if (opts.cleanupFn) {
       this.sub.cleanupFn = opts.cleanupFn;

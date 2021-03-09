@@ -50,7 +50,7 @@ export function defaultConsumer(
     name: name,
     deliver_policy: DeliverPolicy.All,
     ack_policy: AckPolicy.Explicit,
-    ack_wait: ns(30 * 1000),
+    ack_wait: nanos(30 * 1000),
     replay_policy: ReplayPolicy.Instant,
   }, opts);
 }
@@ -95,10 +95,10 @@ export function defaultConsumer(
 //   return { stream_name: stream, config: c };
 // }
 
-export function ns(millis: number): Nanos {
+export function nanos(millis: number): Nanos {
   return millis * 1000000;
 }
 
-export function ms(ns: Nanos) {
+export function millis(ns: Nanos) {
   return ns / 1000000;
 }

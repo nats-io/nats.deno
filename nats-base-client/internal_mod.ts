@@ -34,7 +34,8 @@ export type {
 
 export { AckPolicy, AdvisoryKind } from "./types.ts";
 
-export { consumerOpts } from "./jsclient.ts";
+export { consumerOpts } from "./consumeropts.ts";
+export type { ConsumerOptsBuilder } from "./consumeropts.ts";
 
 export { DebugEvents, Empty, Events } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
@@ -80,3 +81,4 @@ export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
+export { millis, nanos } from "./jsutil.ts";

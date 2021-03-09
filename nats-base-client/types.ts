@@ -260,7 +260,7 @@ export type JetStreamSubscription = TypedSubscription<JsMsg>;
 export type JetStreamSubscriptionOptions = TypedSubscriptionOptions<JsMsg>;
 
 export interface Pullable {
-  pull(batch: number, opts?: Partial<PullOptions>): void;
+  pull(opts?: Partial<PullOptions>): void;
 }
 
 export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
@@ -281,7 +281,7 @@ export interface JetStreamClient {
   ): QueuedIterator<JsMsg>;
   pullSubscribe(
     subject: string,
-    opts: ConsumerOpts,
+    opts: ConsumerOptsBuilder | ConsumerOpts,
   ): Promise<JetStreamPullSubscription>;
   subscribe(
     subject: string,

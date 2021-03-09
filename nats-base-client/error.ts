@@ -45,9 +45,9 @@ export enum ErrorCode {
   // jetstream
   JetStreamNotEnabled = "JETSTREAM_NOT_ENABLED",
   JetStreamInvalidAck = "JESTREAM_INVALID_ACK",
-  JetStream404NoMessages = "NO_MESSAGES",
-  JetStream408TooManyPulls = "TOO_MANY_PULLS",
-  JetStream409MaxAckPendingExceeded = "MAX_ACK_PENDING_EXCEEDED",
+  JetStream404NoMessages = "404_NO_MESSAGES",
+  JetStream408RequestTimeout = "408_REQUEST_TIMEOUT",
+  JetStream409MaxAckPendingExceeded = "409_MAX_ACK_PENDING_EXCEEDED",
 
   // emitted by the server
   AuthorizationViolation = "AUTHORIZATION_VIOLATION",
