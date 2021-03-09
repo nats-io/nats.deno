@@ -220,7 +220,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   get hasError() {
-    return this.code > 0 && (this.code < 200 || this.code >= 300);
+    return this.code >= 300;
   }
 
   get status(): string {

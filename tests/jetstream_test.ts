@@ -13,7 +13,13 @@
  * limitations under the License.
  */
 
-import { cleanup, initStream, JetStreamConfig, setup } from "./jstest_util.ts";
+import {
+  cleanup,
+  initStream,
+  JetStreamConfig,
+  setup,
+  time,
+} from "./jstest_util.ts";
 import {
   AckPolicy,
   ConsumerOpts,
@@ -21,6 +27,7 @@ import {
   Empty,
   JsMsg,
   JsMsgCallback,
+  NatsConnectionImpl,
   NatsError,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
@@ -29,6 +36,8 @@ import {
   assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import { assert } from "../nats-base-client/denobuffer.ts";
+import { PubAck } from "../nats-base-client/types.ts";
 
 function callbackConsumer(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -68,7 +77,7 @@ Deno.test("jetstream - publish id", async () => {
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  let pa = await js.publish(subj, Empty, { msgID: "a" });
+  const pa = await js.publish(subj, Empty, { msgID: "a" });
   assertEquals(pa.stream, stream);
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 1);
@@ -85,7 +94,7 @@ Deno.test("jetstream - publish require stream", async () => {
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  let err = await assertThrowsAsync(async () => {
+  const err = await assertThrowsAsync(async () => {
     await js.publish(subj, Empty, { expect: { streamName: "xxx" } });
   });
   assertEquals(err.message, `expected stream does not match`);
@@ -108,7 +117,7 @@ Deno.test("jetstream - publish require last message id", async () => {
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 1);
 
-  let err = await assertThrowsAsync(async () => {
+  const err = await assertThrowsAsync(async () => {
     await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
   });
   assertEquals(err.message, `wrong last msg ID: a`);
@@ -131,7 +140,7 @@ Deno.test("jetstream - publish require last sequence", async () => {
   const js = nc.jetstream();
   let pa = await js.publish(subj, Empty);
 
-  let err = await assertThrowsAsync(async () => {
+  const err = await assertThrowsAsync(async () => {
     await js.publish(subj, Empty, { msgID: "b", expect: { lastSequence: 2 } });
   });
   assertEquals(err.message, `wrong last sequence: 1`);
@@ -215,6 +224,18 @@ Deno.test("jetstream - pull no messages", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - pull batch requires no_wait or expires", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream } = await initStream(nc);
+  const js = nc.jetstream();
+
+  const err = await assertThrowsAsync(async () => {
+    await js.pullBatch(stream, "me", { batch: 10 });
+  });
+  assertEquals(err.message, "expires or no_wait is required");
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - pull", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
@@ -264,12 +285,24 @@ Deno.test("jetstream - pull batch some messages", async () => {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
+
   const js = nc.jetstream();
+  // try to get messages = none available
+  let sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  await (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  assertEquals(sub.processed, 0);
+
+  // seed some messages
   await js.publish(subj, Empty, { msgID: "a" });
   await js.publish(subj, Empty, { msgID: "b" });
   await js.publish(subj, Empty, { msgID: "c" });
 
-  let sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  // try to get 2 messages - OK
+  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
       m.ack();
@@ -281,7 +314,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
   assertEquals(ci.delivered.stream_seq, 2);
   assertEquals(ci.ack_floor.stream_seq, 2);
 
-  console.log('second set');
+  // try to get 2 messages - OK, but only gets 1
   sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
@@ -294,11 +327,50 @@ Deno.test("jetstream - pull batch some messages", async () => {
   assertEquals(ci.delivered.stream_seq, 3);
   assertEquals(ci.ack_floor.stream_seq, 3);
 
-  console.log("will toss")
-  const err = await assertThrowsAsync(async () => {
-    await js.pullBatch(stream, "me", { batch: 2, no_wait: true })
-  })
-  assertEquals(err.message, "no messages");
+  // try to get 2 messages - OK, none available
+  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  await (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  assertEquals(sub.processed, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - max ack pending", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  const sc = StringCodec();
+  const d = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+  const buf: Promise<PubAck>[] = [];
+  const js = nc.jetstream();
+  d.forEach((v) => {
+    buf.push(js.publish(subj, sc.encode(v), { msgID: v }));
+  });
+  await Promise.all(buf);
+
+  const consumers = await jsm.consumers.list(stream).next();
+  assert(consumers.length === 0);
+
+  const opts = consumerOpts();
+  opts.maxAckPending(2);
+  opts.maxMessages(10);
+  opts.manualAck();
+
+  const sub = await js.subscribe(subj, opts);
+  await (async () => {
+    for await (const m of sub) {
+      assert(
+        sub.getPending() < 3,
+        `didn't expect pending messages greater than 2`,
+      );
+      m.ack();
+    }
+  })();
 
   await cleanup(ns, nc);
 });
@@ -371,42 +443,6 @@ Deno.test("jetstream - pull batch some messages", async () => {
 //   await cleanup(ns, nc);
 // });
 //
-// Deno.test("jetstream - max ack pending", async () => {
-//   const { ns, nc } = await setup(JetStreamConfig({}, true));
-//   const { stream, subj } = await initStream(nc);
-//
-//   const jsm = await nc.jetstreamManager();
-//   const sc = StringCodec();
-//   const d = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-//   const buf: Promise<PubAck>[] = [];
-//   const js = nc.jetstream();
-//   d.forEach((v) => {
-//     buf.push(js.publish(subj, sc.encode(v), { msgID: v }));
-//   });
-//   await Promise.all(buf);
-//
-//   const consumers = await jsm.consumers.list(stream).next();
-//   assert(consumers.length === 0);
-//
-//   const sub = await js.subscribe(stream, { max_ack_pending: 10 }, {
-//     manualAcks: true,
-//     max: 10,
-//   });
-//   await (async () => {
-//     for await (const m of sub) {
-//       console.log(
-//         `${sub.getProcessed()} - pending: ${sub.getPending()}: ${
-//           sc.decode(m.data)
-//         }`,
-//       );
-//       m.respond();
-//     }
-//   })();
-//
-//   await cleanup(ns, nc);
-// });
-//
-
 // Deno.test("jetstream - fetch", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
 //   const { stream, subj } = await initStream(nc);
@@ -456,45 +492,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
 //   console.log(d.toISOString());
 // });
 //
-// Deno.test("jetstream - pull batch requires no_wait or expires", async () => {
-//   const { ns, nc } = await setup(JetStreamConfig({}, true));
-//   const { stream } = await initStream(nc);
-//   const js = JetStream(nc);
-//
-//   const err = await assertThrowsAsync(async () => {
-//     await js.pullBatch(stream, "me", { batch: 10 });
-//   });
-//   assertEquals(err.message, "expires or no_wait is required");
-//   await cleanup(ns, nc);
-// });
-//
-// Deno.test("jetstream - pull batch none - no_wait", async () => {
-//   const { ns, nc } = await setup(JetStreamConfig({}, true));
-//   const { stream } = await initStream(nc);
-//   const jsm = await nc.jetstreamManager();
-//   await jsm.consumers.add(stream, {
-//     durable_name: "me",
-//     ack_policy: AckPolicy.Explicit,
-//   });
-//
-//   const js = JetStream(nc);
-//
-//   const batch = js.pullBatch(stream, "me", {
-//     batch: 10,
-//     no_wait: true,
-//   });
-//
-//   const err = await assertThrowsAsync(async () => {
-//     for await (const m of batch) {
-//       console.log(m.info);
-//       fail("expected no messages");
-//     }
-//   });
-//   assertEquals(err.message, "no messages");
-//   assertEquals(batch.received, 0);
-//   await cleanup(ns, nc);
-// });
-//
+
 // Deno.test("jetstream - pull batch none - breaks after expires", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
 //   const { stream } = await initStream(nc);
@@ -504,7 +502,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
 //     ack_policy: AckPolicy.Explicit,
 //   });
 //
-//   const js = JetStream(nc);
+//   const js = nc.jetstream();
 //
 //   const sw = time();
 //   const batch = js.pullBatch(stream, "me", {
@@ -525,35 +523,127 @@ Deno.test("jetstream - pull batch some messages", async () => {
 //   await cleanup(ns, nc);
 // });
 
-// Deno.test("jetstream - pull batch one - breaks after expires", async () => {
-//   const { ns, nc } = await setup(JetStreamConfig({}, true));
-//   const { stream, subj } = await initStream(nc);
-//   const jsm = await nc.jetstreamManager();
-//   await jsm.consumers.add(stream, {
-//     durable_name: "me",
-//     ack_policy: AckPolicy.Explicit,
-//   });
-//   nc.publish(subj);
-//
-//   const js = JetStream(nc);
-//
-//   const sw = time();
-//   const batch = js.pullBatch(stream, "me", {
-//     batch: 10,
-//     expires: 1000,
-//   });
-//   const done = (async () => {
-//     for await (const m of batch) {
-//       console.log(m.info);
-//     }
-//   })();
-//
-//   await done;
-//   sw.mark();
-//   sw.assertInRange(1000);
-//   assertEquals(batch.received, 1);
-//   await cleanup(ns, nc);
-// });
+Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const sw = time();
+  const batch = js.pullBatch(stream, "me", {
+    batch: 10,
+    no_wait: true,
+  });
+  const done = (async () => {
+    for await (const m of batch) {
+      m.ack();
+    }
+  })();
+
+  await done;
+  sw.mark();
+  assert(25 > sw.duration());
+  assertEquals(batch.received, 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  await js.publish(subj);
+
+  const sw = time();
+  const batch = js.pullBatch(stream, "me", {
+    batch: 10,
+    no_wait: true,
+  });
+  const done = (async () => {
+    for await (const m of batch) {
+      m.ack();
+    }
+  })();
+
+  await done;
+  sw.mark();
+  assert(25 > sw.duration());
+  assertEquals(batch.received, 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull batch none - cancel timers", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const sw = time();
+  const batch = js.pullBatch(stream, "me", {
+    batch: 10,
+    expires: 1000,
+  });
+  const done = (async () => {
+    for await (const m of batch) {
+      m.ack();
+    }
+  })();
+
+  const nci = nc as NatsConnectionImpl;
+  const last = nci.protocol.subscriptions.sidCounter;
+  const sub = nci.protocol.subscriptions.get(last);
+  assert(sub);
+  sub.unsubscribe();
+
+  await done;
+  sw.mark();
+  assert(25 > sw.duration());
+  assertEquals(batch.received, 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull batch one - breaks after expires", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  nc.publish(subj);
+
+  const js = nc.jetstream();
+
+  const sw = time();
+  const batch = js.pullBatch(stream, "me", {
+    batch: 10,
+    expires: 1000,
+  });
+  const done = (async () => {
+    for await (const m of batch) {
+      m.ack();
+    }
+  })();
+
+  await done;
+  sw.mark();
+  sw.assertInRange(1000);
+  assertEquals(batch.received, 1);
+  await cleanup(ns, nc);
+});
 //
 // Deno.test("jetstream - pull batch full", async () => {
 //   const { ns, nc } = await setup(JetStreamConfig({}, true));
@@ -599,7 +689,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
 //   });
 //
 //   const sc = StringCodec();
-//   const js = JetStream(nc);
+//   const js = nc.jetstream();
 //   await js.publish(subj, sc.encode("one"));
 //   await js.publish(subj, sc.encode("two"));
 //   await js.publish(subj, sc.encode("three"));

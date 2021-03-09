@@ -34,6 +34,7 @@ import {
   PubAck,
   Pullable,
   PullOptions,
+  ReplayPolicy,
   RequestOptions,
   Subscription,
 } from "./types.ts";
@@ -47,10 +48,10 @@ import {
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
 import { ACK, toJsMsg } from "./jsmsg.ts";
 import { TypedSubscription, TypedSubscriptionOptions } from "./typedsub.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import { ErrorCode, isNatsError, NatsError } from "./error.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
-import { Timeout, timeout } from "./util.ts";
+import { extend, Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
 
@@ -132,7 +133,7 @@ export class JetStreamClientImpl extends BaseApiClient
   /*
   * Returns available messages upto specified batch count.
   * If expires is set the iterator will wait for the specified
-  * ammount of millis before closing the subscription.
+  * amount of millis before closing the subscription.
   * If no_wait is specified, the iterator will return no messages.
   * @param stream
   * @param durable
@@ -186,12 +187,18 @@ export class JetStreamClientImpl extends BaseApiClient
         if (err === null) {
           err = checkJsError(msg);
         }
-        if (err) {
+        if (err !== null) {
           if (timer) {
             timer.cancel();
             timer = null;
           }
-          qi.stop(err);
+          if (
+            isNatsError(err) && err.code === ErrorCode.JetStream404NoMessages
+          ) {
+            qi.stop();
+          } else {
+            qi.stop(err);
+          }
         } else {
           qi.received++;
           qi.push(toJsMsg(msg));
@@ -217,6 +224,7 @@ export class JetStreamClientImpl extends BaseApiClient
       await (sub as SubscriptionImpl).closed;
       if (timer !== null) {
         timer.cancel();
+        timer = null;
       }
       qi.stop();
     })().catch();
@@ -247,6 +255,7 @@ export class JetStreamClientImpl extends BaseApiClient
       (isConsumerOptsBuilder(opts)
         ? opts.getOpts()
         : opts) as JetStreamSubscriptionInfo;
+
     cso.api = this;
     cso.config = cso.config ?? {} as ConsumerConfig;
     if (cso.pullCount) {
@@ -322,6 +331,14 @@ export class JetStreamClientImpl extends BaseApiClient
     if (!cso.attached) {
       // create the consumer
       try {
+        // make sure that we have some defaults
+        cso.config = Object.assign({
+          deliver_policy: DeliverPolicy.All,
+          ack_policy: AckPolicy.Explicit,
+          ack_wait: ns(30 * 1000),
+          replay_policy: ReplayPolicy.Instant,
+        }, cso.config);
+
         const ci = await this.api.add(cso.stream, cso.config);
         cso.config = ci.config;
       } catch (err) {
@@ -447,7 +464,7 @@ class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.mack = false;
     this.config = defaultConsumer("");
     // not set
-    this.config.ack_policy = AckPolicy.None;
+    this.config.ack_policy = AckPolicy.All;
   }
 
   getOpts(): ConsumerOpts {
@@ -614,22 +631,24 @@ export function autoAck(sub: Subscription) {
   });
 }
 
-function checkJsError(msg: Msg): Error | null {
+function checkJsError(msg: Msg): NatsError | null {
   const h = msg.headers;
   if (!h) {
     return null;
   }
-  if (h.code === 0 || (h.code >= 200 && h.code < 300)) {
+  if (h.code < 300) {
     return null;
   }
   switch (h.code) {
     case 404:
-      return new Error("no messages");
+      return NatsError.errorForCode(ErrorCode.JetStream404NoMessages);
     case 408:
-      return new Error("too many pulls");
+      return NatsError.errorForCode(ErrorCode.JetStream408TooManyPulls);
     case 409:
-      return new Error("max ack pending exceeded");
+      return NatsError.errorForCode(
+        ErrorCode.JetStream409MaxAckPendingExceeded,
+      );
     default:
-      return new Error(h.status);
+      return NatsError.errorForCode(ErrorCode.Unknown, new Error(h.status));
   }
 }
