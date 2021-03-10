@@ -26,6 +26,7 @@ import {
   TypedSubscriptionOptions,
 } from "../nats-base-client/internal_mod.ts";
 import { assertThrowsErrorCode } from "./helpers/asserts.ts";
+import { checkFn } from "../nats-base-client/typedsub.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -62,6 +63,8 @@ Deno.test("typedsub - iterator gets data", async () => {
   tso.max = out.length;
 
   const sa = new TypedSubscription<string>(nc, subj, tso);
+  assertEquals(sa.getMax(), out.length);
+
   const d: string[] = [];
   const done = (async () => {
     for await (const s of sa) {
@@ -69,8 +72,11 @@ Deno.test("typedsub - iterator gets data", async () => {
     }
   })();
 
+  assertEquals(sa.getSubject(), subj);
   out.forEach((v) => nc.publish(subj, sc.encode(v)));
   await done;
+  assertEquals(sa.getProcessed(), out.length);
+  assertEquals(sa.getPending(), 0);
   assertEquals(d, out);
   await nc.close();
 });
@@ -179,4 +185,69 @@ Deno.test("typedsub - cleanup on close", async () => {
   new TypedSubscription<Msg>(nc, subj, tso);
   await nc.close();
   await d;
+});
+
+Deno.test("typedsub - checkFn", () => {
+  assertThrowsErrorCode(() => {
+    checkFn(undefined, "t", true);
+  }, ErrorCode.ApiError);
+
+  assertThrowsErrorCode(() => {
+    checkFn("what", "t", false);
+  }, ErrorCode.ApiError);
+});
+
+Deno.test("typedsub - unsubscribe", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  const done = (async () => {
+    for await (const s of sa) {
+      // nothing
+    }
+  })();
+  sa.unsubscribe();
+  await done;
+  assertEquals(sa.isClosed(), true);
+  await nc.close();
+});
+
+Deno.test("typedsub - drain", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  (async () => {
+    for await (const s of sa) {
+      // nothing
+    }
+  })().then();
+  await sa.drain();
+  assertEquals(sa.isClosed(), true);
+  await nc.close();
 });

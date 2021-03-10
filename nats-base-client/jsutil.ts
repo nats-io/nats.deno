@@ -28,7 +28,7 @@ export function validateStreamName(name?: string) {
   return validateName("stream", name);
 }
 
-function validateName(context: string, name = "") {
+export function validateName(context: string, name = "") {
   if (name === "") {
     throw Error(`${context} name required`);
   }

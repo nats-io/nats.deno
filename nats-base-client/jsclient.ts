@@ -274,6 +274,11 @@ export class JetStreamClientImpl extends BaseApiClient
       try {
         const info = await this.api.info(cso.stream, cso.consumer);
         if (info) {
+          if (cso.pullCount === 0 && !info.config.deliver_subject) {
+            throw new Error(
+              "consumer info specifies a pull consumer - pullCount must be specified",
+            );
+          }
           if (
             info.config.filter_subject && info.config.filter_subject !== subject
           ) {

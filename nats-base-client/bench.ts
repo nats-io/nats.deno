@@ -123,7 +123,7 @@ export class Bench {
     this.payload = this.size ? new Uint8Array(this.size) : Empty;
 
     if (!this.pub && !this.sub && !this.req && !this.rep) {
-      throw new Error("No bench option selected");
+      throw new Error("no bench option selected");
     }
   }
 

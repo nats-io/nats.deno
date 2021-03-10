@@ -17,6 +17,7 @@ import {
   assertEquals,
   assertThrows,
   assertThrowsAsync,
+  fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
   AckPolicy,
@@ -34,6 +35,7 @@ import {
 import { cleanup, initStream, JetStreamConfig, setup } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
 import { assertErrorCode } from "./helpers/mod.ts";
+import { validateName } from "../nats-base-client/jsutil.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -444,4 +446,34 @@ Deno.test("jsm - advisories", async () => {
   await initStream(nc);
   await streamAction;
   await cleanup(ns, nc);
+});
+
+Deno.test("jsm - validate name", () => {
+  type t = [string, boolean];
+  const tests: t[] = [
+    ["", false],
+    [".", false],
+    ["*", false],
+    [">", false],
+    ["hello.", false],
+    ["hello.*", false],
+    ["hello.>", false],
+    ["one.two", false],
+    ["one*two", false],
+    ["one>two", false],
+    ["stream", true],
+  ];
+
+  tests.forEach((v, idx) => {
+    try {
+      validateName(`${idx}`, v[0]);
+      if (!v[1]) {
+        fail(`${v[0]} should have been rejected`);
+      }
+    } catch (err) {
+      if (v[1]) {
+        fail(`${v[0]} should have been valid`);
+      }
+    }
+  });
 });

@@ -12,43 +12,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { connect, createInbox } from "../src/mod.ts";
-import { Lock } from "./helpers/mod.ts";
+import {
+  assert,
+  assertEquals,
+  assertThrowsAsync,
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import { Bench, connect, createInbox, headers } from "../src/mod.ts";
+import { BenchOpts, Metric } from "../nats-base-client/bench.ts";
 
 const u = "demo.nats.io:4222";
 
-const max = 1000;
-Deno.test(`bench - pubsub`, async () => {
-  const lock = Lock(max, 30000);
+async function runBench(opts: BenchOpts): Promise<Metric[]> {
   const nc = await connect({ servers: u });
-  const subj = createInbox();
-  nc.subscribe(subj, {
-    callback: () => {
-      lock.unlock();
-    },
-    max: max,
+  const bench = new Bench(nc, opts);
+  const m = await bench.run();
+  await nc.close();
+  return m;
+}
+
+function pubSub(m: Metric[]) {
+  assertEquals(m.length, 3);
+  const pubsub = m.find((v) => {
+    return v.name === "pubsub";
   });
-  await nc.flush();
-  for (let i = 0; i < max; i++) {
-    nc.publish(subj);
-  }
-  await nc.drain();
-  try {
-    await nc.close();
-  } catch (err) {
-    console.log(err);
-  }
-  await lock;
+  assert(pubsub);
+
+  const sub = m.find((v) => {
+    return v.name === "sub";
+  });
+  assert(sub);
+
+  const pub = m.find((v) => {
+    return v.name === "pub";
+  });
+  assert(pub);
+
+  m.forEach((v) => {
+    assertEquals(v.payload, 8);
+    assert(v.lang);
+    assert(v.version);
+    assert(v.toString() !== "");
+    csv(v);
+  });
+}
+
+function reqRep(m: Metric[]) {
+  assertEquals(m.length, 1);
+  assertEquals(m[0].payload, 8);
+  assert(m[0].lang);
+  assert(m[0].version);
+  csv(m[0]);
+}
+
+function csv(m: Metric) {
+  assertEquals(Metric.header().split(",").length, 9);
+  const lines = m.toCsv().split("\n");
+  assertEquals(lines.length, 2);
+
+  const fields = lines[0].split(",");
+  assertEquals(fields.length, 9);
+}
+
+Deno.test("bench - no opts toss", async () => {
+  const nc = await connect({ servers: u });
+  assertThrowsAsync(
+    async () => {
+      new Bench(nc, {});
+    },
+    Error,
+    "no bench option selected",
+  );
+
+  await nc.close();
 });
 
-Deno.test(`bench - pubonly`, async () => {
-  const nc = await connect({ servers: u });
-  const subj = createInbox();
+Deno.test(`bench - pubsub`, async () => {
+  const m = await runBench({
+    pub: true,
+    sub: true,
+    msgs: 5,
+    size: 8,
+    callbacks: true,
+    subject: createInbox(),
+  });
+  pubSub(m);
+});
 
-  for (let i = 0; i < max; i++) {
-    nc.publish(subj);
-  }
-  await nc.drain();
-  await nc.closed();
+Deno.test(`bench - pubsub async`, async () => {
+  const m = await runBench({
+    pub: true,
+    sub: true,
+    msgs: 5,
+    size: 8,
+    subject: createInbox(),
+  });
+  pubSub(m);
+});
+
+Deno.test(`bench - req`, async () => {
+  const m = await runBench({
+    req: true,
+    callbacks: true,
+    msgs: 5,
+    size: 8,
+    subject: createInbox(),
+  });
+  reqRep(m);
+});
+
+Deno.test(`bench - req async`, async () => {
+  const m = await runBench({
+    req: true,
+    asyncRequests: true,
+    callbacks: true,
+    msgs: 5,
+    size: 8,
+    subject: createInbox(),
+  });
+  reqRep(m);
 });
