@@ -243,11 +243,14 @@ export interface PubAck {
   stream: string;
   seq: number;
   duplicate: boolean;
+
+  ack(): void;
 }
 
 export interface JetStreamPublishOptions {
   msgID: string;
   timeout: number;
+  ackWait: Nanos;
   expect: Partial<{
     lastMsgID: string;
     streamName: string;
@@ -267,6 +270,7 @@ export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
 
 export type JsMsgCallback = (err: NatsError | null, msg: JsMsg | null) => void;
 
+// FIXME: pulls must limit to maxAcksInFlight
 export interface JetStreamClient {
   publish(
     subj: string,
@@ -325,6 +329,7 @@ export interface ConsumerOptsBuilder {
   ackExplicit(): void;
   maxDeliver(max: number): void;
   maxAckPending(max: number): void;
+  // FIXME: pullMaxWaiting
   maxWaiting(max: number): void;
   maxMessages(max: number): void;
   callback(fn: JsMsgCallback): void;

@@ -29,7 +29,9 @@ import {
 } from "./jsutil.ts";
 
 export interface ConsumerOptsBuilder {
+  // FIXME: kill this
   pull(batch: number): void;
+  // FIXME: kill this
   pullDirect(
     stream: string,
     consumer: string,
@@ -53,6 +55,14 @@ export interface ConsumerOptsBuilder {
   maxWaiting(max: number): void;
   maxMessages(max: number): void;
   callback(fn: JsMsgCallback): void;
+
+  // FIXME: 503:
+  // maxRetries()
+  // retryBackoff()
+
+  // ackWait(time)
+  // replayOriginal()
+  // rateLimit(bytesPerSec)
 }
 
 export function consumerOpts(): ConsumerOptsBuilder {

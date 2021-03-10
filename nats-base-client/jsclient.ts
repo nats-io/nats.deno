@@ -41,7 +41,7 @@ import {
 import { BaseApiClient } from "./jsbase_api.ts";
 import { nanos, validateDurableName, validateStreamName } from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
-import { ACK, toJsMsg } from "./jsmsg.ts";
+import { ACK, PubAckImpl, toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
   TypedSubscription,
@@ -108,12 +108,13 @@ export class JetStreamClientImpl extends BaseApiClient
     }
 
     const r = await this.nc.request(subj, data, ro);
+
     const pa = this.parseJsResponse(r) as PubAck;
     if (pa.stream === "") {
       throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
     }
     pa.duplicate = pa.duplicate ? pa.duplicate : false;
-    return pa;
+    return new PubAckImpl(msg, pa);
   }
 
   async pull(stream: string, durable: string): Promise<JsMsg> {

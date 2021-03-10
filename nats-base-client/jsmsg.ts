@@ -17,6 +17,7 @@ import {
   JsMsg,
   Msg,
   NextRequest,
+  PubAck,
   RequestOptions,
 } from "./types.ts";
 import { MsgHdrs } from "./headers.ts";
@@ -49,6 +50,32 @@ export function parseInfo(s: string): DeliveryInfo {
   di.timestampNanos = parseInt(tokens[7], 10);
   di.pending = parseInt(tokens[8], 10);
   return di;
+}
+
+export class PubAckImpl implements PubAck {
+  msg: Msg;
+  pa: PubAck;
+
+  constructor(msg: Msg, pa: PubAck) {
+    this.msg = msg;
+    this.pa = pa;
+  }
+
+  get stream(): string {
+    return this.pa.stream;
+  }
+
+  get seq(): number {
+    return this.pa.seq;
+  }
+
+  get duplicate(): boolean {
+    return this.pa.duplicate;
+  }
+
+  ack(): void {
+    this.msg.respond();
+  }
 }
 
 class JsMsgImpl implements JsMsg {
