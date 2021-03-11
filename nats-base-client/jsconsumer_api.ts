@@ -23,17 +23,9 @@ import {
   NatsConnection,
   SuccessResponse,
 } from "./types.ts";
-import { BaseApiClient } from "./jsbase_api.ts";
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import { validateDurableName, validateStreamName } from "./jsutil.ts";
-
-// export interface PushConsumerConfig extends ConsumerConfig {
-//   "deliver_subject": string;
-// }
-//
-// export interface PushConsumer extends Consumer {
-//   config: PushConsumerConfig;
-// }
 
 export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {

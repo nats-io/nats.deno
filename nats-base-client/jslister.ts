@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { ApiPaged, ApiPagedRequest, Lister } from "./types.ts";
-import { BaseApiClient } from "./jsbase_api.ts";
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 
 export type ListerFieldFilter<T> = (v: unknown) => T[];
 

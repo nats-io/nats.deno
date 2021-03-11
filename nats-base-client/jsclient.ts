@@ -17,10 +17,12 @@ import {
   AckPolicy,
   ConsumerAPI,
   ConsumerConfig,
+  ConsumerInfo,
+  ConsumerInfoable,
   ConsumerOpts,
   DeliverPolicy,
+  Destroyable,
   Empty,
-  Events,
   JetStreamClient,
   JetStreamOptions,
   JetStreamPublishOptions,
@@ -35,13 +37,11 @@ import {
   PullOptions,
   ReplayPolicy,
   RequestOptions,
-  Status,
-  Subscription,
 } from "./types.ts";
-import { BaseApiClient } from "./jsbase_api.ts";
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { nanos, validateDurableName, validateStreamName } from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
-import { ACK, toJsMsg } from "./jsmsg.ts";
+import { toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
   TypedSubscription,
@@ -56,7 +56,7 @@ import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./consumeropts.ts";
 import type { ConsumerOptsBuilder } from "./consumeropts.ts";
 
-export interface JetStreamInfoable {
+export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
 }
 
@@ -121,6 +121,7 @@ export class JetStreamClientImpl extends BaseApiClient
     validateStreamName(stream);
     validateDurableName(durable);
     const msg = await this.nc.request(
+      // FIXME: specify expires
       `${this.prefix}.CONSUMER.MSG.NEXT.${stream}.${durable}`,
       this.jc.encode({ no_wait: true, batch: 1 }),
       { noMux: true, timeout: this.timeout },
@@ -144,7 +145,7 @@ export class JetStreamClientImpl extends BaseApiClient
   pullBatch(
     stream: string,
     durable: string,
-    opts: Partial<PullOptions> = { batch: 1 },
+    opts: Partial<PullOptions> = {},
   ): QueuedIterator<JsMsg> {
     validateStreamName(stream);
     validateDurableName(durable);
@@ -163,7 +164,7 @@ export class JetStreamClientImpl extends BaseApiClient
     }
 
     const qi = new QueuedIterator<JsMsg>();
-    const wants = opts.batch;
+    const wants = args.batch;
     let received = 0;
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
@@ -348,7 +349,6 @@ export class JetStreamClientImpl extends BaseApiClient
   ): TypedSubscriptionOptions<JsMsg> {
     const so = {} as TypedSubscriptionOptions<JsMsg>;
     so.adapter = msgAdapter(jsi.callbackFn === undefined);
-    so.cleanupFn = jsCleanupFn;
     if (jsi.callbackFn) {
       so.callback = jsi.callbackFn;
     }
@@ -371,12 +371,13 @@ export class JetStreamClientImpl extends BaseApiClient
     }, jsi.config);
 
     const ci = await this.api.add(jsi.stream, jsi.config);
+    jsi.name = ci.name;
     jsi.config = ci.config;
   }
 }
 
 class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
-  implements JetStreamInfoable {
+  implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
   constructor(
     js: BaseApiClient,
     subject: string,
@@ -390,10 +391,24 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   }
 
   get info(): JetStreamSubscriptionInfo | null {
-    if (this.sub.info) {
-      return this.sub.info as JetStreamSubscriptionInfo;
+    return this.sub.info as JetStreamSubscriptionInfo;
+  }
+
+  async destroy(): Promise<void> {
+    if (!this.isClosed()) {
+      await this.drain();
     }
-    return null;
+    const jinfo = this.sub.info as JetStreamSubscriptionInfo;
+    const name = jinfo.config.durable_name ?? jinfo.name;
+    const subj = `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${name}`;
+    await jinfo.api._request(subj);
+  }
+
+  async consumerInfo(): Promise<ConsumerInfo> {
+    const jinfo = this.sub.info as JetStreamSubscriptionInfo;
+    const name = jinfo.config.durable_name ?? jinfo.name;
+    const subj = `${jinfo.api.prefix}.CONSUMER.INFO.${jinfo.stream}.${name}`;
+    return await jinfo.api._request(subj) as ConsumerInfo;
   }
 }
 
@@ -452,6 +467,10 @@ function cbMsgAdapter(
   if (err) {
     return [err, null];
   }
+  if (isFlowControlMsg(msg)) {
+    msg.respond();
+    return [null, null];
+  }
   const jm = toJsMsg(msg);
   try {
     // this will throw if not a JsMsg
@@ -483,6 +502,10 @@ function iterMsgAdapter(
         return [ne, null];
     }
   }
+  if (isFlowControlMsg(msg)) {
+    msg.respond();
+    return [null, null];
+  }
   const jm = toJsMsg(msg);
   try {
     // this will throw if not a JsMsg
@@ -499,29 +522,12 @@ function autoAckJsMsg(data: JsMsg | null) {
   }
 }
 
-function jsCleanupFn(sub: Subscription, info?: unknown) {
-  const jinfo = info as JetStreamSubscriptionInfo;
-  const si = sub as SubscriptionImpl;
-  if (si.drained || jinfo.attached || jinfo.config.durable_name) {
-    return;
+function isFlowControlMsg(msg: Msg): boolean {
+  const h = msg.headers;
+  if (!h) {
+    return false;
   }
-  const subj =
-    `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${jinfo.config.durable_name}`;
-  jinfo.api._request(subj)
-    .catch((err) => {
-      const desc = `${subj}: ${err.message}`;
-      const s = { type: Events.Error, data: desc } as Status;
-      jinfo.api.nc.protocol.dispatchStatus(s);
-    });
-}
-
-export function autoAck(sub: Subscription) {
-  const s = sub as SubscriptionImpl;
-  s.setDispatchedFn((msg) => {
-    if (msg) {
-      msg.respond(ACK);
-    }
-  });
+  return h.code >= 100 && h.code < 200;
 }
 
 function checkJsError(msg: Msg): NatsError | null {

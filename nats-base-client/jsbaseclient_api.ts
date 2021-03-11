@@ -31,7 +31,7 @@ import { NatsConnectionImpl } from "./nats.ts";
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;
 
-function defaultJsOptions(opts?: JetStreamOptions): JetStreamOptions {
+export function defaultJsOptions(opts?: JetStreamOptions): JetStreamOptions {
   opts = opts ?? {} as JetStreamOptions;
   return extend({ apiPrefix: defaultPrefix, timeout: defaultTimeout }, opts);
 }

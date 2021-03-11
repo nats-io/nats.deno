@@ -258,12 +258,23 @@ export interface JetStreamPublishOptions {
   }>;
 }
 
-export type JetStreamSubscription = TypedSubscription<JsMsg>;
+export interface ConsumerInfoable {
+  consumerInfo(): Promise<ConsumerInfo>;
+}
+
+export type JetStreamSubscription =
+  & TypedSubscription<JsMsg>
+  & Destroyable
+  & ConsumerInfoable;
 
 export type JetStreamSubscriptionOptions = TypedSubscriptionOptions<JsMsg>;
 
 export interface Pullable {
   pull(opts?: Partial<PullOptions>): void;
+}
+
+export interface Destroyable {
+  destroy(): Promise<void>;
 }
 
 export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
@@ -281,7 +292,7 @@ export interface JetStreamClient {
   pullBatch(
     stream: string,
     durable: string,
-    opts: Partial<PullOptions>,
+    opts?: Partial<PullOptions>,
   ): QueuedIterator<JsMsg>;
   pullSubscribe(
     subject: string,
@@ -300,6 +311,7 @@ export interface ConsumerOpts {
   subQueue: string;
   stream: string;
   callbackFn?: JsMsgCallback;
+  name?: string;
 
   // standard
   max?: number;

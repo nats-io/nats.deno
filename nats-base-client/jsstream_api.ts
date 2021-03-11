@@ -29,7 +29,7 @@ import {
   StreamMsgResponse,
   SuccessResponse,
 } from "./types.ts";
-import { BaseApiClient } from "./jsbase_api.ts";
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";

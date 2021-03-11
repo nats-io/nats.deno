@@ -26,7 +26,7 @@ import {
   StreamAPI,
 } from "./types.ts";
 
-import { BaseApiClient } from "./jsbase_api.ts";
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { StreamAPIImpl } from "./jsstream_api.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
