@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        deno-version: [1.6.1]
+        deno-version: [1.8.1]
 
     steps:
       - name: Git Checkout Deno Module
@@ -44,10 +44,19 @@ jobs:
         env:
           TMPDIR: ${{ runner.temp }}
           CI: true
-        run: deno test --allow-all --unstable --failfast
+        run: deno test --allow-all --unstable --failfast --coverage=./cov
 
       - name: build nats.js
         run: deno bundle --unstable src/connect.ts nats.js
+
+      - name: generate lcov
+        run: deno coverage --unstable --lcov ./cov > cov.lcov
+
+      - name: upload coverage
+        uses: coverallsapp/github-action@v1.1.2
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: ./cov.lcov
 
       - name: Release
         uses: softprops/action-gh-release@v1
