@@ -370,6 +370,7 @@ export interface JsMsg {
   working(): void;
   // next(subj?: string): void;
   term(): void;
+  ackAck(): Promise<boolean>;
 }
 
 export interface DeliveryInfo {

@@ -22,6 +22,9 @@ import {
 import { MsgHdrs } from "./headers.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { JSONCodec } from "./codec.ts";
+import { MsgImpl } from "./msg.ts";
+import { ProtocolHandler } from "./protocol.ts";
+import { Request } from "./request.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);
@@ -101,6 +104,38 @@ class JsMsgImpl implements JsMsg {
       this.didAck = true;
       this.msg.respond(payload);
     }
+  }
+
+  // this has to dig into the internals as the message has access
+  // to the protocol but not the high-level client.
+  async ackAck(): Promise<boolean> {
+    if (!this.didAck) {
+      this.didAck = true;
+      if (this.msg.reply) {
+        const mi = this.msg as MsgImpl;
+        const proto = mi.publisher as unknown as ProtocolHandler;
+        const r = new Request(proto.muxSubscriptions);
+        proto.request(r);
+        try {
+          proto.publish(
+            this.msg.reply,
+            ACK,
+            {
+              reply: `${proto.muxSubscriptions.baseInbox}${r.token}`,
+            },
+          );
+        } catch (err) {
+          r.cancel(err);
+        }
+        try {
+          await Promise.race([r.timer, r.deferred]);
+          return true;
+        } catch (err) {
+          r.cancel(err);
+        }
+      }
+    }
+    return false;
   }
 
   ack() {

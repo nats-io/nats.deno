@@ -87,6 +87,23 @@ Deno.test("jetstream - publish basic", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - ackAck", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  await js.publish(subj);
+
+  const ms = await js.pull(stream, "me");
+  assertEquals(await ms.ackAck(), true);
+  assertEquals(await ms.ackAck(), false);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - publish id", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
