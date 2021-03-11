@@ -295,7 +295,6 @@ export interface JetStreamClient {
 
 export interface ConsumerOpts {
   config: Partial<ConsumerConfig>;
-  consumer: string;
   mack: boolean;
   pullCount: number;
   subQueue: string;
@@ -304,7 +303,6 @@ export interface ConsumerOpts {
 
   // standard
   max?: number;
-
   debug?: boolean;
 }
 

@@ -41,7 +41,7 @@ import {
 import { BaseApiClient } from "./jsbase_api.ts";
 import { nanos, validateDurableName, validateStreamName } from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
-import { ACK, PubAckImpl, toJsMsg } from "./jsmsg.ts";
+import { ACK, toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
   TypedSubscription,
@@ -114,7 +114,7 @@ export class JetStreamClientImpl extends BaseApiClient
       throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
     }
     pa.duplicate = pa.duplicate ? pa.duplicate : false;
-    return new PubAckImpl(msg, pa);
+    return pa;
   }
 
   async pull(stream: string, durable: string): Promise<JsMsg> {
@@ -239,54 +239,89 @@ export class JetStreamClientImpl extends BaseApiClient
     return qi;
   }
 
-  pullSubscribe(
+  async pullSubscribe(
     subject: string,
     opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
   ): Promise<JetStreamPullSubscription> {
-    const co =
-      (isConsumerOptsBuilder(opts) ? opts.getOpts() : opts) as ConsumerOpts;
-    co.pullCount = co.pullCount > 0 ? co.pullCount : 1;
-    return this.subscribe(
-      subject,
-      co,
-    ) as unknown as Promise<JetStreamPullSubscription>;
+    const cso = await this._processOptions(subject, opts);
+    if (!cso.attached) {
+      cso.config.filter_subject = subject;
+    }
+
+    const ackPolicy = cso.config.ack_policy;
+    if (ackPolicy === AckPolicy.None || ackPolicy === AckPolicy.All) {
+      throw new Error("ack policy for pull consumers must be explicit");
+    }
+
+    const so = this._buildTypedSubscriptionOpts(cso);
+    const sub = new JetStreamPullSubscriptionImpl(
+      this,
+      cso.deliver,
+      so,
+    );
+
+    try {
+      await this._maybeCreateConsumer(cso);
+    } catch (err) {
+      sub.unsubscribe();
+      throw err;
+    }
+    sub.info = cso;
+    return sub as JetStreamPullSubscription;
   }
 
   async subscribe(
     subject: string,
     opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
   ): Promise<JetStreamSubscription> {
-    const cso =
+    const cso = await this._processOptions(subject, opts);
+    if (cso.attached && !cso.config.deliver_subject) {
+      throw new Error(
+        "consumer info specifies a pull consumer - pullCount must be specified",
+      );
+    }
+
+    const so = this._buildTypedSubscriptionOpts(cso);
+    const sub = new JetStreamSubscriptionImpl(
+      this,
+      cso.deliver,
+      so,
+    );
+    try {
+      await this._maybeCreateConsumer(cso);
+    } catch (err) {
+      sub.unsubscribe();
+      throw err;
+    }
+    sub.info = cso;
+    return sub;
+  }
+
+  async _processOptions(
+    subject: string,
+    opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
+  ): Promise<JetStreamSubscriptionInfo> {
+    const jsi =
       (isConsumerOptsBuilder(opts)
         ? opts.getOpts()
         : opts) as JetStreamSubscriptionInfo;
 
-    cso.api = this;
-    cso.config = cso.config ?? {} as ConsumerConfig;
-    // deduce the stream
-    cso.stream = cso.stream ? cso.stream : await this.findStream(subject);
-    // deduce if durable
-    if (cso.config.durable_name) {
-      cso.consumer = cso.config.durable_name;
-    }
+    jsi.api = this;
+    jsi.config = jsi.config ?? {} as ConsumerConfig;
+    jsi.stream = jsi.stream ? jsi.stream : await this.findStream(subject);
 
-    cso.attached = false;
-    if (cso.consumer) {
+    jsi.attached = false;
+    if (jsi.config.durable_name) {
       try {
-        const info = await this.api.info(cso.stream, cso.consumer);
+        const info = await this.api.info(jsi.stream, jsi.config.durable_name);
         if (info) {
-          if (cso.pullCount === 0 && !info.config.deliver_subject) {
-            throw new Error(
-              "consumer info specifies a pull consumer - pullCount must be specified",
-            );
-          }
           if (
             info.config.filter_subject && info.config.filter_subject !== subject
           ) {
             throw new Error("subject does not match consumer");
           }
-          cso.config = info.config;
-          cso.attached = true;
+          jsi.config = info.config;
+          jsi.attached = true;
         }
       } catch (err) {
         //consumer doesn't exist
@@ -296,74 +331,47 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     }
 
-    if (cso.attached) {
-      cso.config.filter_subject = subject;
-      if (cso.pullCount === 0) {
-        cso.config.deliver_subject = createInbox(this.nc.options.inboxPrefix);
-      }
-    } else if (cso.pullCount) {
-      const ackPolicy = cso.config.ack_policy;
-      if (ackPolicy === AckPolicy.None || ackPolicy === AckPolicy.All) {
-        throw new Error("ack policy for pull consumers must be explicit");
-      }
+    if (!jsi.attached) {
+      jsi.config.filter_subject = subject;
+      jsi.config.deliver_subject = jsi.config.deliver_subject ??
+        createInbox(this.nc.options.inboxPrefix);
     }
 
-    cso.config.deliver_subject = cso.config.deliver_subject ??
+    jsi.deliver = jsi.config.deliver_subject ??
       createInbox(this.nc.options.inboxPrefix);
 
-    // configure the typed subscription
+    return jsi;
+  }
+
+  _buildTypedSubscriptionOpts(
+    jsi: JetStreamSubscriptionInfo,
+  ): TypedSubscriptionOptions<JsMsg> {
     const so = {} as TypedSubscriptionOptions<JsMsg>;
-    so.adapter = msgAdapter(cso.callbackFn === undefined);
+    so.adapter = msgAdapter(jsi.callbackFn === undefined);
     so.cleanupFn = jsCleanupFn;
-    if (cso.callbackFn) {
-      so.callback = cso.callbackFn;
+    if (jsi.callbackFn) {
+      so.callback = jsi.callbackFn;
     }
-    if (!cso.mack) {
+    if (!jsi.mack) {
       so.dispatchedFn = autoAckJsMsg;
     }
-    so.max = cso.max ?? 0;
+    so.max = jsi.max ?? 0;
+    return so;
+  }
 
-    let sub: JetStreamSubscription & JetStreamInfoable;
-    if (cso.pullCount) {
-      sub = new JetStreamPullSubscriptionImpl(
-        this,
-        cso.config.deliver_subject,
-        so,
-      );
-    } else {
-      sub = new JetStreamSubscriptionImpl(
-        this,
-        cso.config.deliver_subject,
-        so,
-      );
+  async _maybeCreateConsumer(jsi: JetStreamSubscriptionInfo): Promise<void> {
+    if (jsi.attached) {
+      return;
     }
-    if (!cso.attached) {
-      // create the consumer
-      try {
-        // make sure that we have some defaults
-        cso.config = Object.assign({
-          deliver_policy: DeliverPolicy.All,
-          ack_policy: AckPolicy.Explicit,
-          ack_wait: nanos(30 * 1000),
-          replay_policy: ReplayPolicy.Instant,
-        }, cso.config);
+    jsi.config = Object.assign({
+      deliver_policy: DeliverPolicy.All,
+      ack_policy: AckPolicy.Explicit,
+      ack_wait: nanos(30 * 1000),
+      replay_policy: ReplayPolicy.Instant,
+    }, jsi.config);
 
-        const ci = await this.api.add(cso.stream, cso.config);
-        cso.config = ci.config;
-      } catch (err) {
-        sub.unsubscribe();
-        throw err;
-      }
-    }
-    sub.info = cso;
-
-    if (cso.pullCount) {
-      (sub as unknown as JetStreamPullSubscription).pull({
-        batch: cso.pullCount,
-      });
-    }
-
-    return sub;
+    const ci = await this.api.add(jsi.stream, jsi.config);
+    jsi.config = ci.config;
   }
 }
 
@@ -399,7 +407,8 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     super(js, subject, opts);
   }
   pull(opts: Partial<PullOptions> = { batch: 1 }): void {
-    const { stream, consumer } = this.sub.info as JetStreamSubscriptionInfo;
+    const { stream, config } = this.sub.info as JetStreamSubscriptionInfo;
+    const consumer = config.durable_name;
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch ?? 1;
     args.no_wait = opts.no_wait ?? false;
@@ -421,6 +430,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
 interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
   attached: boolean;
+  deliver: string;
 }
 
 function msgAdapter(iterator: boolean): MsgAdapter<JsMsg> {

@@ -390,7 +390,7 @@ Deno.test("jetstream - max ack pending", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pullsubscribe - attached iterator", async () => {
+Deno.test("jetstream - pullsub - attached iterator", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -415,6 +415,7 @@ Deno.test("jetstream - pullsubscribe - attached iterator", async () => {
       msg.ack();
     }
   })().then();
+  sub.pull({ expires: nanos(500), batch: 5 });
 
   const subin = sub as unknown as JetStreamInfoable;
   assert(subin.info);
@@ -457,7 +458,7 @@ Deno.test("jetstream - pullsubscribe - attached iterator", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pullsubscribe - attached callback", async () => {
+Deno.test("jetstream - pullsub - attached callback", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -491,6 +492,7 @@ Deno.test("jetstream - pullsubscribe - attached callback", async () => {
 
   const js = nc.jetstream();
   const sub = await js.pullSubscribe(subj, opts);
+  sub.pull({ expires: nanos(500), batch: 5 });
   const subin = sub as unknown as JetStreamInfoable;
   assert(subin.info);
   assertEquals(subin.info.attached, true);

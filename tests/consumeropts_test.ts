@@ -74,12 +74,12 @@ Deno.test("consumeropts - pulldirect", () => {
 
   opts.pullDirect("stream", "consumer", 5);
   assertEquals(opts.stream, "stream");
-  assertEquals(opts.consumer, "consumer");
+  assertEquals(opts.config.durable_name, "consumer");
   assertEquals(opts.pullCount, 5);
 
   const args = opts.getOpts();
   assertEquals(args.stream, "stream");
-  assertEquals(args.consumer, "consumer");
+  assertEquals(args.config.durable_name, "consumer");
   assertEquals(args.pullCount, 5);
 });
 

@@ -71,7 +71,6 @@ export function consumerOpts(): ConsumerOptsBuilder {
 
 export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   config: Partial<ConsumerConfig>;
-  consumer: string;
   mack: boolean;
   pullCount: number;
   subQueue: string;
@@ -82,7 +81,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   constructor() {
     this.stream = "";
-    this.consumer = "";
     this.pullCount = 0;
     this.subQueue = "";
     this.mack = false;
@@ -94,7 +92,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   getOpts(): ConsumerOpts {
     const o = {} as ConsumerOpts;
     o.config = this.config;
-    o.consumer = this.consumer;
     o.mack = this.mack;
     o.pullCount = this.pullCount;
     o.subQueue = this.subQueue;
@@ -117,9 +114,8 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     batchSize: number,
   ): void {
     validateStreamName(stream);
-    validateDurableName(consumer);
     this.stream = stream;
-    this.consumer = consumer;
+    this.durable(consumer);
     this.pull(batchSize);
   }
 
