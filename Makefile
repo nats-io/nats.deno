@@ -2,8 +2,7 @@
 
 build: test
 
-test:
-	rm -rf ./coverage
+test: clean
 	deno test --allow-all --unstable --reload --coverage=coverage --failfast tests/
 
 cover:
@@ -11,3 +10,5 @@ cover:
 	genhtml -o ./coverage/html ./coverage/out.lcov
 	open ./coverage/html/index.html
 
+clean:
+	rm -rf ./coverage

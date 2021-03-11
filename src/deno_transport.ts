@@ -172,7 +172,7 @@ export class DenoTransport implements Transport {
         break;
       }
     }
-    this._closed(reason);
+    this._closed(reason).then().catch();
   }
 
   private enqueue(frame: Uint8Array): Promise<void> {

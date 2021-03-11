@@ -77,7 +77,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   stream: string;
   callbackFn?: JsMsgCallback;
   max?: number;
-  debug?: boolean;
 
   constructor() {
     this.stream = "";
@@ -198,10 +197,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   callback(fn: JsMsgCallback) {
     this.callbackFn = fn;
-  }
-
-  _debug(tf: boolean) {
-    this.debug = tf;
   }
 }
 

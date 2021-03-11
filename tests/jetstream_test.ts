@@ -126,10 +126,13 @@ Deno.test("jetstream - publish require stream", async () => {
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  const err = await assertThrowsAsync(async () => {
-    await js.publish(subj, Empty, { expect: { streamName: "xxx" } });
-  });
-  assertEquals(err.message, `expected stream does not match`);
+  await assertThrowsAsync(
+    async () => {
+      await js.publish(subj, Empty, { expect: { streamName: "xxx" } });
+    },
+    Error,
+    "expected stream does not match",
+  );
 
   const pa = await js.publish(subj, Empty, { expect: { streamName: stream } });
   assertEquals(pa.stream, stream);
@@ -149,10 +152,13 @@ Deno.test("jetstream - publish require last message id", async () => {
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 1);
 
-  const err = await assertThrowsAsync(async () => {
-    await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
-  });
-  assertEquals(err.message, `wrong last msg ID: a`);
+  await assertThrowsAsync(
+    async () => {
+      await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
+    },
+    Error,
+    "wrong last msg ID: a",
+  );
 
   pa = await js.publish(subj, Empty, {
     msgID: "b",
@@ -172,10 +178,16 @@ Deno.test("jetstream - publish require last sequence", async () => {
   const js = nc.jetstream();
   await js.publish(subj, Empty);
 
-  const err = await assertThrowsAsync(async () => {
-    await js.publish(subj, Empty, { msgID: "b", expect: { lastSequence: 2 } });
-  });
-  assertEquals(err.message, `wrong last sequence: 1`);
+  await assertThrowsAsync(
+    async () => {
+      await js.publish(subj, Empty, {
+        msgID: "b",
+        expect: { lastSequence: 2 },
+      });
+    },
+    Error,
+    "wrong last sequence: 1",
+  );
 
   const pa = await js.publish(subj, Empty, {
     msgID: "b",
@@ -248,10 +260,13 @@ Deno.test("jetstream - pull no messages", async () => {
     ack_policy: AckPolicy.Explicit,
   });
   const js = nc.jetstream();
-  const err = await assertThrowsAsync(async () => {
-    await js.pull(stream, "me");
-  });
-  assertEquals(err.message, "404 No Messages");
+  assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    Error,
+    "404 No Messages",
+  );
 
   await cleanup(ns, nc);
 });
@@ -289,11 +304,13 @@ Deno.test("jetstream - pull batch no messages", async () => {
   });
   const js = nc.jetstream();
 
-  const err = await assertThrowsAsync(async () => {
-    await js.pull(stream, "me");
-  });
-  assertEquals(err.message, "404 No Messages");
-
+  await assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    Error,
+    "404 No Messages",
+  );
   await cleanup(ns, nc);
 });
 
@@ -302,10 +319,13 @@ Deno.test("jetstream - pullBatch requires no_wait or expires", async () => {
   const { stream } = await initStream(nc);
   const js = nc.jetstream();
 
-  const err = await assertThrowsAsync(async () => {
-    await js.pullBatch(stream, "me", { batch: 10 });
-  });
-  assertEquals(err.message, "expires or no_wait is required");
+  await assertThrowsAsync(
+    async () => {
+      await js.pullBatch(stream, "me", { batch: 10 });
+    },
+    Error,
+    "expires or no_wait is required",
+  );
   await cleanup(ns, nc);
 });
 
@@ -586,12 +606,16 @@ Deno.test("jetstream - pullsub requires explicit", async () => {
 
   const js = nc.jetstream();
 
-  await assertThrowsAsync(async () => {
-    const opts = consumerOpts();
-    opts.durable("me");
-    opts.ackAll();
-    await js.pullSubscribe(subj, opts);
-  }, Error, "ack policy for pull");
+  await assertThrowsAsync(
+    async () => {
+      const opts = consumerOpts();
+      opts.durable("me");
+      opts.ackAll();
+      await js.pullSubscribe(subj, opts);
+    },
+    Error,
+    "ack policy for pull",
+  );
   await cleanup(ns, nc);
 });
 
@@ -819,7 +843,7 @@ Deno.test("jetstream - pull consumer info without pull", async () => {
   const js = nc.jetstream();
   await js.publish(subj);
 
-  let ci = await jsm.consumers.info(stream, "me");
+  const ci = await jsm.consumers.info(stream, "me");
   assertEquals(ci.num_pending, 1);
 
   const sopts = consumerOpts();

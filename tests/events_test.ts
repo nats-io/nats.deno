@@ -22,7 +22,7 @@ Deno.test("events - close on close", async () => {
   const nc = await connect(
     { port: ns.port },
   );
-  nc.close();
+  nc.close().then().catch();
   const status = await nc.closed();
   await ns.stop();
   assertEquals(status, undefined);

@@ -160,7 +160,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
           break;
         case Events.Reconnect:
           reconnect = true;
-          nc.close();
+          nc.close().then().catch();
           break;
         case DebugEvents.Reconnecting:
           reconnects++;

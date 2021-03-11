@@ -1,5 +1,4 @@
 import { connect, Empty } from "../src/nats_deno.ts";
-import { JetStream } from "../src/jetstream.ts";
 import { JetStreamManager } from "../src/jetstream.ts";
 
 const nc = await connect();

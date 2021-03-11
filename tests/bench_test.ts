@@ -15,9 +15,9 @@
 import {
   assert,
   assertEquals,
-  assertThrowsAsync,
+  assertThrows,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
-import { Bench, connect, createInbox, headers } from "../src/mod.ts";
+import { Bench, connect, createInbox } from "../src/mod.ts";
 import { BenchOpts, Metric } from "../nats-base-client/bench.ts";
 
 const u = "demo.nats.io:4222";
@@ -75,8 +75,8 @@ function csv(m: Metric) {
 
 Deno.test("bench - no opts toss", async () => {
   const nc = await connect({ servers: u });
-  assertThrowsAsync(
-    async () => {
+  assertThrows(
+    () => {
       new Bench(nc, {});
     },
     Error,

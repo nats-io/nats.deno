@@ -1,6 +1,6 @@
 import { connect, StringCodec } from "../src/nats_deno.ts";
 import { nuid } from "../src/nbc_mod.ts";
-import { JetStream, JetStreamManager } from "../src/jetstream.ts";
+import { JetStreamManager } from "../src/jetstream.ts";
 import { AckPolicy } from "../src/types.ts";
 
 const nc = await connect();

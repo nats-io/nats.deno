@@ -15,7 +15,6 @@
 
 import { NatsServer } from "./mod.ts";
 import { parse } from "https://deno.land/std@0.83.0/flags/mod.ts";
-import { deferred } from "../../nats-base-client/internal_mod.ts";
 
 const defaults = {
   c: 2,
