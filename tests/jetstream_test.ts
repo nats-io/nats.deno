@@ -580,6 +580,21 @@ Deno.test("jetstream - pullsubscribe - not attached callback", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - pullsub requires explicit", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+
+  await assertThrowsAsync(async () => {
+    const opts = consumerOpts();
+    opts.durable("me");
+    opts.ackAll();
+    await js.pullSubscribe(subj, opts);
+  }, Error, "ack policy for pull");
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - subscribe - not attached callback", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
