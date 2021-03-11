@@ -36,9 +36,10 @@ jobs:
           wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
           unzip tmp.zip
           mv nats-server-$NATS_VERSION-linux-amd64 nats-server
+          rm nats-server/README.md LICENSE
 
       - name: Lint Deno Module
-        run: deno fmt --check --unstable --ignore=README.md
+        run: deno fmt --check
 
       - name: Test Deno Module
         env:
