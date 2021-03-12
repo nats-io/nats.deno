@@ -28,7 +28,7 @@ import {
   StringCodec,
 } from "../src/mod.ts";
 
-import { assertErrorCode, Lock } from "./helpers/mod.ts";
+import { assertErrorCode, assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -183,8 +183,8 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
 Deno.test("drain - reject drain on closed", async () => {
   const nc = await connect({ servers: u });
   await nc.close();
-  const err = await assertThrowsAsync(() => {
-    return nc.drain();
+  const err = await assertThrowsAsync(async () => {
+    await nc.drain();
   });
   assertErrorCode(err, ErrorCode.ConnectionClosed);
 });
@@ -202,10 +202,9 @@ Deno.test("drain - reject drain on draining", async () => {
 Deno.test("drain - reject subscribe on draining", async () => {
   const nc = await connect({ servers: u });
   const done = nc.drain();
-  const err = await assertThrows(() => {
+  assertThrowsErrorCode(() => {
     return nc.subscribe("foo");
-  });
-  assertErrorCode(err, ErrorCode.ConnectionDraining);
+  }, ErrorCode.ConnectionDraining);
   await done;
 });
 
@@ -213,7 +212,7 @@ Deno.test("drain - reject subscription drain on closed sub", async () => {
   const nc = await connect({ servers: u });
   const sub = nc.subscribe("foo");
   sub.unsubscribe();
-  const err = await assertThrows(() => {
+  const err = await assertThrowsAsync(() => {
     return sub.drain();
   });
   await nc.close();

@@ -20,6 +20,9 @@ import { ErrorCode, NatsError } from "./error.ts";
 import {
   ConnectionOptions,
   Empty,
+  JetStreamClient,
+  JetStreamManager,
+  JetStreamOptions,
   Msg,
   NatsConnection,
   PublishOptions,
@@ -34,6 +37,8 @@ import { parseOptions } from "./options.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
 import { isRequestError } from "./msg.ts";
+import { JetStreamManagerImpl } from "./jsm.ts";
+import { JetStreamClientImpl } from "./jsclient.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
@@ -248,5 +253,27 @@ export class NatsConnectionImpl implements NatsConnection {
       inMsgs: this.protocol.inMsgs,
       outMsgs: this.protocol.outMsgs,
     };
+  }
+
+  async jetstreamManager(
+    opts: JetStreamOptions = {},
+  ): Promise<JetStreamManager> {
+    const adm = new JetStreamManagerImpl(this, opts);
+    try {
+      await adm.getAccountInfo();
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.code === ErrorCode.NoResponders) {
+        throw NatsError.errorForCode(ErrorCode.JetStreamNotEnabled);
+      }
+      throw ne;
+    }
+    return adm;
+  }
+
+  jetstream(
+    opts: JetStreamOptions = {},
+  ): JetStreamClient {
+    return new JetStreamClientImpl(this, opts);
   }
 }

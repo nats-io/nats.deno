@@ -16,6 +16,7 @@ import {
   assert,
   assertEquals,
   assertThrows,
+  assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
@@ -356,18 +357,10 @@ Deno.test("basics - request", async () => {
 Deno.test("basics - request timeout", async () => {
   const nc = await connect({ servers: u });
   const s = createInbox();
-  const lock = Lock();
-
-  nc.request(s, Empty, { timeout: 100 })
-    .then(() => {
-      fail();
-    })
-    .catch((err) => {
-      assertEquals(err.code, ErrorCode.NoResponders);
-      lock.unlock();
-    });
-
-  await lock;
+  const err = await assertThrowsAsync(async () => {
+    await nc.request(s, Empty, { timeout: 100 });
+  });
+  assertErrorCode(err, ErrorCode.NoResponders);
   await nc.close();
 });
 

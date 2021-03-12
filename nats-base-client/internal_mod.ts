@@ -2,7 +2,6 @@ export { NatsConnectionImpl } from "./nats.ts";
 export { Nuid, nuid } from "./nuid.ts";
 export { ErrorCode, NatsError } from "./error.ts";
 export type {
-  ConnectionOptions,
   Msg,
   NatsConnection,
   PublishOptions,
@@ -16,6 +15,28 @@ export type {
   Subscription,
   SubscriptionOptions,
 } from "./types.ts";
+
+export type {
+  ConnectionOptions,
+  ConsumerOpts,
+  JetStreamClient,
+  JetStreamManager,
+  JetStreamOptions,
+  JetStreamPublishOptions,
+  JetStreamPullSubscription,
+  JetStreamSubscription,
+  JetStreamSubscriptionOptions,
+  JsMsg,
+  JsMsgCallback,
+  StreamConfig,
+  StreamInfo,
+} from "./types.ts";
+
+export { AckPolicy, AdvisoryKind } from "./types.ts";
+
+export { consumerOpts } from "./consumeropts.ts";
+export type { ConsumerOptsBuilder } from "./consumeropts.ts";
+
 export { DebugEvents, Empty, Events } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
 export { SubscriptionImpl } from "./subscription.ts";
@@ -58,3 +79,6 @@ export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
+export { TypedSubscription } from "./typedsub.ts";
+export type { TypedSubscriptionOptions } from "./typedsub.ts";
+export { millis, nanos } from "./jsutil.ts";

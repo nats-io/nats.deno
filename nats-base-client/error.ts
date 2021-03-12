@@ -42,6 +42,13 @@ export enum ErrorCode {
   Unknown = "UNKNOWN_ERROR",
   WssRequired = "WSS_REQUIRED",
 
+  // jetstream
+  JetStreamNotEnabled = "JETSTREAM_NOT_ENABLED",
+  JetStreamInvalidAck = "JESTREAM_INVALID_ACK",
+  JetStream404NoMessages = "404_NO_MESSAGES",
+  JetStream408RequestTimeout = "408_REQUEST_TIMEOUT",
+  JetStream409MaxAckPendingExceeded = "409_MAX_ACK_PENDING_EXCEEDED",
+
   // emitted by the server
   AuthorizationViolation = "AUTHORIZATION_VIOLATION",
   AuthenticationExpired = "AUTHENTICATION_EXPIRED",
@@ -76,6 +83,10 @@ export class Messages {
 
 // safari doesn't support static class members
 const messages: Messages = new Messages();
+
+export function isNatsError(err: NatsError | Error): err is NatsError {
+  return typeof (err as NatsError).code === "string";
+}
 
 export class NatsError extends Error {
   name: string;

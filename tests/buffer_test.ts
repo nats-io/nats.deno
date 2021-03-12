@@ -288,7 +288,7 @@ Deno.test("buffer - read from sync", () => {
     const fub = new Uint8Array(testString.length);
     empty(b, s, fub);
   }
-  assertThrows(function () {
+  assertThrows(() => {
     new DenoBuffer().readFrom(null!);
   });
 });
