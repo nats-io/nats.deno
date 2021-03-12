@@ -36,53 +36,6 @@ Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder({} as ConsumerOpts), false);
 });
 
-Deno.test("consumeropts - pull", () => {
-  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
-  assertThrows(
-    () => {
-      opts.pull(0);
-    },
-    Error,
-    "batch must be greater than 0",
-  );
-
-  opts.pull(5);
-  assertEquals(opts.pullCount, 5);
-
-  const args = opts.getOpts();
-  assertEquals(args.pullCount, 5);
-});
-
-Deno.test("consumeropts - pulldirect", () => {
-  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
-
-  assertThrows(
-    () => {
-      opts.pullDirect("bad.name", "consumer", 5);
-    },
-    Error,
-    "invalid stream name",
-  );
-
-  assertThrows(
-    () => {
-      opts.pullDirect("stream", "bad.name", 5);
-    },
-    Error,
-    "invalid durable name",
-  );
-
-  opts.pullDirect("stream", "consumer", 5);
-  assertEquals(opts.stream, "stream");
-  assertEquals(opts.config.durable_name, "consumer");
-  assertEquals(opts.pullCount, 5);
-
-  const args = opts.getOpts();
-  assertEquals(args.stream, "stream");
-  assertEquals(args.config.durable_name, "consumer");
-  assertEquals(args.pullCount, 5);
-});
-
 Deno.test("consumeropts - deliverTo", () => {
   const opts = consumerOpts() as ConsumerOptsBuilderImpl;
 
@@ -91,16 +44,6 @@ Deno.test("consumeropts - deliverTo", () => {
 
   const args = opts.getOpts();
   assertEquals(args.config.deliver_subject, "a.b");
-});
-
-Deno.test("consumeropts - queue", () => {
-  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
-
-  opts.queue("queue");
-  assertEquals(opts.subQueue, "queue");
-
-  const args = opts.getOpts();
-  assertEquals(args.subQueue, "queue");
 });
 
 Deno.test("consumeropts - manualAck", () => {
@@ -182,13 +125,13 @@ Deno.test("consumeropts - startSequence", () => {
 Deno.test("consumeropts - startTime Nanos", () => {
   const opts = consumerOpts() as ConsumerOptsBuilderImpl;
 
-  const ns = nanos(100);
-  opts.startTime(ns);
-  assertEquals(opts.config.opt_start_time, ns);
+  const d = new Date();
+  opts.startTime(d);
+  assertEquals(opts.config.opt_start_time, d.toISOString());
   assertEquals(opts.config.deliver_policy, DeliverPolicy.StartTime);
 
   const args = opts.getOpts();
-  assertEquals(args.config.opt_start_time, ns);
+  assertEquals(args.config.opt_start_time, d.toISOString());
   assertEquals(args.config.deliver_policy, DeliverPolicy.StartTime);
 });
 

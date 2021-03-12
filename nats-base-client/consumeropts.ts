@@ -21,25 +21,10 @@ import {
   JsMsgCallback,
   Nanos,
 } from "./types.ts";
-import {
-  defaultConsumer,
-  nanos,
-  validateDurableName,
-  validateStreamName,
-} from "./jsutil.ts";
+import { defaultConsumer, validateDurableName } from "./jsutil.ts";
 
 export interface ConsumerOptsBuilder {
-  // FIXME: kill this
-  pull(batch: number): void;
-  // FIXME: kill this
-  pullDirect(
-    stream: string,
-    consumer: string,
-    batchSize: number,
-  ): void;
-
   deliverTo(subject: string): void;
-  queue(name: string): void;
   manualAck(): void;
   durable(name: string): void;
   deliverAll(): void;
@@ -72,16 +57,12 @@ export function consumerOpts(): ConsumerOptsBuilder {
 export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   config: Partial<ConsumerConfig>;
   mack: boolean;
-  pullCount: number;
-  subQueue: string;
   stream: string;
   callbackFn?: JsMsgCallback;
   max?: number;
 
   constructor() {
     this.stream = "";
-    this.pullCount = 0;
-    this.subQueue = "";
     this.mack = false;
     this.config = defaultConsumer("");
     // not set
@@ -92,38 +73,14 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     const o = {} as ConsumerOpts;
     o.config = this.config;
     o.mack = this.mack;
-    o.pullCount = this.pullCount;
-    o.subQueue = this.subQueue;
     o.stream = this.stream;
     o.callbackFn = this.callbackFn;
     o.max = this.max;
     return o;
   }
 
-  pull(batch: number) {
-    if (batch <= 0) {
-      throw new Error("batch must be greater than 0");
-    }
-    this.pullCount = batch;
-  }
-
-  pullDirect(
-    stream: string,
-    consumer: string,
-    batchSize: number,
-  ): void {
-    validateStreamName(stream);
-    this.stream = stream;
-    this.durable(consumer);
-    this.pull(batchSize);
-  }
-
   deliverTo(subject: string) {
     this.config.deliver_subject = subject;
-  }
-
-  queue(name: string) {
-    this.subQueue = name;
   }
 
   manualAck() {
@@ -155,16 +112,9 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.opt_start_seq = seq;
   }
 
-  startTime(time: Date | Nanos) {
-    let n: Nanos;
-    if (typeof time === "number") {
-      n = time as Nanos;
-    } else {
-      const d = time as Date;
-      n = nanos(d.getTime());
-    }
+  startTime(time: Date) {
     this.config.deliver_policy = DeliverPolicy.StartTime;
-    this.config.opt_start_time = n;
+    this.config.opt_start_time = time.toISOString();
   }
 
   ackNone() {

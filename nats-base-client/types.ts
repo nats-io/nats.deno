@@ -307,7 +307,6 @@ export interface JetStreamClient {
 export interface ConsumerOpts {
   config: Partial<ConsumerConfig>;
   mack: boolean;
-  pullCount: number;
   subQueue: string;
   stream: string;
   callbackFn?: JsMsgCallback;
@@ -319,14 +318,7 @@ export interface ConsumerOpts {
 }
 
 export interface ConsumerOptsBuilder {
-  pull(batch: number): void;
-  pullDirect(
-    stream: string,
-    consumer: string,
-    batchSize: number,
-  ): void;
   deliverTo(subject: string): void;
-  queue(name: string): void;
   manualAck(): void;
   durable(name: string): void;
   deliverAll(): void;
@@ -655,7 +647,7 @@ export interface ConsumerConfig {
   "deliver_subject"?: string;
   "deliver_policy": DeliverPolicy;
   "opt_start_seq"?: number;
-  "opt_start_time"?: Nanos;
+  "opt_start_time"?: string;
   "ack_policy": AckPolicy;
   "ack_wait"?: number;
   "max_deliver"?: number;

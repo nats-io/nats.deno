@@ -275,13 +275,13 @@ Deno.test("jetstream - ephemeral push", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - ephemeral pull", async () => {
+Deno.test("jetstream - ephemeral", async () => {
   const { ns, nc } = await setup(JetStreamConfig({}, true));
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
   await js.publish(subj);
 
-  const opts = { max: 1, pullCount: 10 } as ConsumerOpts;
+  const opts = { max: 1 } as ConsumerOpts;
   opts.callbackFn = callbackConsume();
   const sub = await js.subscribe(subj, opts);
   await sub.closed;
@@ -679,11 +679,11 @@ Deno.test("jetstream - pull sub - not attached callback", async () => {
   const opts = consumerOpts();
   opts.durable("me");
   opts.ackExplicit();
-  opts.pull(5);
   opts.maxMessages(1);
   opts.callback(callbackConsume(false));
 
   const sub = await js.pullSubscribe(subj, opts);
+  sub.pull();
   const subin = sub as unknown as JetStreamSubscriptionInfoable;
   assert(subin.info);
   assertEquals(subin.info.attached, false);
@@ -1022,5 +1022,111 @@ Deno.test("jetstream - subscribe - info", async () => {
     "consumer not found",
   );
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deliver new", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 1 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 2 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 3 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 4 } });
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.deliverNew();
+  opts.maxMessages(1);
+
+  const sub = await js.subscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.seq, 6);
+    }
+  })();
+  await js.publish(subj, Empty, { expect: { lastSequence: 5 } });
+  await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deliver last", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 1 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 2 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 3 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 4 } });
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.deliverLast();
+  opts.maxMessages(1);
+
+  const sub = await js.subscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.seq, 5);
+    }
+  })();
+  await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deliver seq", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 1 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 2 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 3 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 4 } });
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.startSequence(2);
+  opts.maxMessages(1);
+
+  const sub = await js.subscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.seq, 2);
+    }
+  })();
+  await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deliver start time", async () => {
+  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await js.publish(subj, Empty, { expect: { lastSequence: 1 } });
+
+  await delay(1000);
+  const now = new Date();
+  await js.publish(subj, Empty, { expect: { lastSequence: 2 } });
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.startTime(now);
+  opts.maxMessages(1);
+
+  const sub = await js.subscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.seq, 3);
+    }
+  })();
+  await done;
   await cleanup(ns, nc);
 });
