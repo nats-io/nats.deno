@@ -42,8 +42,8 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     cr.config = cfg;
     cr.stream_name = stream;
 
-    if (cfg.durable_name) {
-      validateDurableName(cfg.durable_name);
+    if (cr.config.durable_name) {
+      validateDurableName(cr.config.durable_name);
     }
 
     const subj = cfg.durable_name

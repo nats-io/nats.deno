@@ -1,10 +1,11 @@
 import * as path from "https://deno.land/std@0.83.0/path/mod.ts";
-import { NatsServer } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/tests/helpers/mod.ts";
+import { NatsServer } from "../tests/helpers/mod.ts";
 import { connect } from "../src/mod.ts";
 import { assert } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
   ConnectionOptions,
   extend,
+  JetStreamOptions,
   NatsConnection,
   nuid,
 } from "../nats-base-client/internal_mod.ts";
@@ -19,8 +20,37 @@ export const jsopts = {
   },
 };
 
-export function JetStreamConfig(
-  opts = {},
+export function jetstreamExportServerConf(
+  opts: {} = {},
+  prefix = "IPA.>",
+  randomStoreDir = true,
+): Record<string, unknown> {
+  const template = {
+    no_auth_user: "a",
+    accounts: {
+      JS: {
+        jetstream: "enabled",
+        users: [{ user: "js", password: "js" }],
+        exports: [{ service: "$JS.API.>" }, {
+          stream: "A.>",
+          accounts: ["A"],
+        }],
+      },
+      A: {
+        users: [{ user: "a", password: "s3cret" }],
+        imports: [
+          { service: { subject: "$JS.API.>", account: "JS" }, to: prefix },
+          { stream: { subject: "A.>", account: "JS" } },
+        ],
+      },
+    },
+  };
+  const conf = Object.assign(template, opts);
+  return jetstreamServerConf(conf, randomStoreDir);
+}
+
+export function jetstreamServerConf(
+  opts: {} = {},
   randomStoreDir = true,
 ): Record<string, unknown> {
   const conf = Object.assign(opts, jsopts);
@@ -45,9 +75,13 @@ export async function setup(
 
 export async function cleanup(
   ns: NatsServer,
-  nc: NatsConnection,
+  ...nc: NatsConnection[]
 ): Promise<void> {
-  await nc.close();
+  const conns: Promise<void>[] = [];
+  nc.forEach((v) => {
+    conns.push(v.close());
+  });
+  await Promise.all(conns);
   await ns.stop();
 }
 

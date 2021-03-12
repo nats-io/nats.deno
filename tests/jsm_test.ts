@@ -32,7 +32,13 @@ import {
   StreamInfo,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, initStream, JetStreamConfig, setup } from "./jstest_util.ts";
+import {
+  cleanup,
+  initStream,
+  jetstreamExportServerConf,
+  jetstreamServerConf,
+  setup,
+} from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
@@ -50,7 +56,7 @@ Deno.test("jsm - jetstream not enabled", async () => {
 });
 
 Deno.test("jsm - account info", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const ai = await jsm.getAccountInfo();
   assert(ai.limits.max_memory > 0);
@@ -70,7 +76,7 @@ Deno.test("jsm - account not enabled", async () => {
       },
     },
   };
-  const { ns, nc } = await setup(JetStreamConfig(conf, true));
+  const { ns, nc } = await setup(jetstreamServerConf(conf, true));
   await assertThrowsAsyncErrorCode(async () => {
     await nc.jetstreamManager();
   }, ErrorCode.JetStreamNotEnabled);
@@ -84,7 +90,7 @@ Deno.test("jsm - account not enabled", async () => {
 });
 
 Deno.test("jsm - empty stream config fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -97,7 +103,7 @@ Deno.test("jsm - empty stream config fails", async () => {
 });
 
 Deno.test("jsm - empty stream config update fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
   let ci = await jsm.streams.add({ name: name, subjects: [`${name}.>`] });
@@ -117,7 +123,7 @@ Deno.test("jsm - empty stream config update fails", async () => {
 });
 
 Deno.test("jsm - delete empty stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -130,7 +136,7 @@ Deno.test("jsm - delete empty stream name fails", async () => {
 });
 
 Deno.test("jsm - info empty stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -143,7 +149,7 @@ Deno.test("jsm - info empty stream name fails", async () => {
 });
 
 Deno.test("jsm - info msg not found stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
   await assertThrowsAsync(
@@ -157,7 +163,7 @@ Deno.test("jsm - info msg not found stream name fails", async () => {
 });
 
 Deno.test("jsm - delete msg empty stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -170,7 +176,7 @@ Deno.test("jsm - delete msg empty stream name fails", async () => {
 });
 
 Deno.test("jsm - delete msg not found stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
   await assertThrowsAsync(
@@ -184,7 +190,7 @@ Deno.test("jsm - delete msg not found stream name fails", async () => {
 });
 
 Deno.test("jsm - no stream lister is empty", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
@@ -192,7 +198,7 @@ Deno.test("jsm - no stream lister is empty", async () => {
 });
 
 Deno.test("jsm - lister after empty, empty", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const lister = jsm.streams.list();
   let streams = await lister.next();
@@ -203,7 +209,7 @@ Deno.test("jsm - lister after empty, empty", async () => {
 });
 
 Deno.test("jsm - add stream", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
   let si = await jsm.streams.add({ name });
@@ -230,7 +236,7 @@ Deno.test("jsm - add stream", async () => {
 });
 
 Deno.test("jsm - purge not found stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
   await assertThrowsAsync(
@@ -244,7 +250,7 @@ Deno.test("jsm - purge not found stream name fails", async () => {
 });
 
 Deno.test("jsm - purge empty stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -257,7 +263,7 @@ Deno.test("jsm - purge empty stream name fails", async () => {
 });
 
 Deno.test("jsm - stream purge", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -274,7 +280,7 @@ Deno.test("jsm - stream purge", async () => {
 });
 
 Deno.test("jsm - stream delete", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -291,7 +297,7 @@ Deno.test("jsm - stream delete", async () => {
 });
 
 Deno.test("jsm - stream delete message", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -312,7 +318,7 @@ Deno.test("jsm - stream delete message", async () => {
 });
 
 Deno.test("jsm - consumer info on empty stream name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -325,7 +331,7 @@ Deno.test("jsm - consumer info on empty stream name fails", async () => {
 });
 
 Deno.test("jsm - consumer info on empty consumer name fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -338,7 +344,7 @@ Deno.test("jsm - consumer info on empty consumer name fails", async () => {
 });
 
 Deno.test("jsm - consumer info on not found stream fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
     async () => {
@@ -351,7 +357,7 @@ Deno.test("jsm - consumer info on not found stream fails", async () => {
 });
 
 Deno.test("jsm - consumer info on not found consumer", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await assertThrowsAsync(
@@ -365,7 +371,7 @@ Deno.test("jsm - consumer info on not found consumer", async () => {
 });
 
 Deno.test("jsm - consumer info", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(
@@ -380,7 +386,7 @@ Deno.test("jsm - consumer info", async () => {
 });
 
 Deno.test("jsm - no consumer lister with empty stream fails", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   assertThrows(
     () => {
@@ -393,7 +399,7 @@ Deno.test("jsm - no consumer lister with empty stream fails", async () => {
 });
 
 Deno.test("jsm - no consumer lister with no consumers empty", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   const consumers = await jsm.consumers.list(stream).next();
@@ -402,7 +408,7 @@ Deno.test("jsm - no consumer lister with no consumers empty", async () => {
 });
 
 Deno.test("jsm - lister", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(
@@ -421,7 +427,7 @@ Deno.test("jsm - lister", async () => {
 });
 
 Deno.test("jsm - update stream", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -435,7 +441,7 @@ Deno.test("jsm - update stream", async () => {
 });
 
 Deno.test("jsm - get message", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const jc = JSONCodec();
@@ -467,7 +473,7 @@ Deno.test("jsm - get message", async () => {
 });
 
 Deno.test("jsm - get message payload", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
   const sc = StringCodec();
@@ -490,7 +496,7 @@ Deno.test("jsm - get message payload", async () => {
 });
 
 Deno.test("jsm - advisories", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const iter = jsm.advisories();
   const streamAction = deferred();
@@ -534,4 +540,150 @@ Deno.test("jsm - validate name", () => {
       }
     }
   });
+});
+
+Deno.test("jsm - cross account streams", async () => {
+  const { ns, nc } = await setup(
+    jetstreamExportServerConf(),
+    {
+      user: "a",
+      pass: "s3cret",
+    },
+  );
+
+  const sawIPA = deferred();
+  nc.subscribe("IPA.>", {
+    callback: (err, msg) => {
+      sawIPA.resolve();
+    },
+    max: 1,
+  });
+
+  const jsm = await nc.jetstreamManager({ apiPrefix: "IPA" });
+  await sawIPA;
+
+  // no streams
+  let streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  // add a stream
+  const stream = nuid.next();
+  const subj = `${stream}.A`;
+  await jsm.streams.add({ name: stream, subjects: [subj] });
+
+  // list the stream
+  streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 1);
+
+  // cannot publish to the stream from the client account
+  // publish from the js account
+  const admin = await connect({ port: ns.port, user: "js", pass: "js" });
+  admin.publish(subj);
+  admin.publish(subj);
+  await admin.flush();
+
+  // info
+  let si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 2);
+
+  // get message
+  const sm = await jsm.streams.getMessage(stream, 1);
+  assertEquals(sm.seq, 1);
+
+  // delete message
+  let ok = await jsm.streams.deleteMessage(stream, 1);
+  assertEquals(ok, true);
+  si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 1);
+
+  // purge
+  const pr = await jsm.streams.purge(stream);
+  assertEquals(pr.success, true);
+  assertEquals(pr.purged, 1);
+  si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 0);
+
+  // update
+  const config = streams[0].config;
+  config.subjects!.push(`${stream}.B`);
+  si = await jsm.streams.update(config);
+  assertEquals(si.config.subjects!.length, 2);
+
+  // find
+  const sn = await jsm.streams.find(`${stream}.B`);
+  assertEquals(sn, stream);
+
+  // delete
+  ok = await jsm.streams.delete(stream);
+  assertEquals(ok, true);
+
+  streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  await cleanup(ns, nc, admin);
+});
+
+Deno.test("jsm - cross account consumers", async () => {
+  const { ns, nc } = await setup(
+    jetstreamExportServerConf(),
+    {
+      user: "a",
+      pass: "s3cret",
+    },
+  );
+
+  const sawIPA = deferred();
+  nc.subscribe("IPA.>", {
+    callback: (err, msg) => {
+      sawIPA.resolve();
+    },
+    max: 1,
+  });
+
+  const jsm = await nc.jetstreamManager({ apiPrefix: "IPA" });
+  await sawIPA;
+
+  // add a stream
+  const stream = nuid.next();
+  const subj = `${stream}.A`;
+  await jsm.streams.add({ name: stream, subjects: [subj] });
+
+  let consumers = await jsm.consumers.list(stream).next();
+  assertEquals(consumers.length, 0);
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  // cannot publish to the stream from the client account
+  // publish from the js account
+  const admin = await connect({ port: ns.port, user: "js", pass: "js" });
+  admin.publish(subj);
+  admin.publish(subj);
+  await admin.flush();
+
+  consumers = await jsm.consumers.list(stream).next();
+  assertEquals(consumers.length, 1);
+  assertEquals(consumers[0].name, "me");
+  assertEquals(consumers[0].config.durable_name, "me");
+  assertEquals(consumers[0].num_pending, 2);
+
+  let ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.name, "me");
+  assertEquals(ci.config.durable_name, "me");
+  assertEquals(ci.num_pending, 2);
+
+  const ok = await jsm.consumers.delete(stream, "me");
+  assertEquals(ok, true);
+
+  await assertThrowsAsync(
+    async () => {
+      await jsm.consumers.info(stream, "me");
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await cleanup(ns, nc, admin);
 });

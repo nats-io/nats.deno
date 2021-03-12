@@ -16,7 +16,8 @@
 import {
   cleanup,
   initStream,
-  JetStreamConfig,
+  jetstreamExportServerConf,
+  jetstreamServerConf,
   setup,
   time,
 } from "./jstest_util.ts";
@@ -25,6 +26,7 @@ import {
   ConsumerOpts,
   consumerOpts,
   createInbox,
+  deferred,
   delay,
   Empty,
   ErrorCode,
@@ -34,6 +36,7 @@ import {
   nanos,
   NatsConnectionImpl,
   NatsError,
+  nuid,
   QueuedIterator,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
@@ -44,12 +47,14 @@ import {
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { PubAck } from "../nats-base-client/types.ts";
+import { ConsumerOptsBuilder, PubAck } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionInfoable,
 } from "../nats-base-client/jsclient.ts";
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
+import { connect } from "../src/connect.ts";
+import { ConsumerOptsBuilderImpl } from "../nats-base-client/consumeropts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -102,7 +107,7 @@ Deno.test("jetstream - default override prefix", () => {
 });
 
 Deno.test("jetstream - options rejects empty prefix", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   assertThrows(() => {
     nc.jetstream({ apiPrefix: "" });
   });
@@ -110,14 +115,14 @@ Deno.test("jetstream - options rejects empty prefix", async () => {
 });
 
 Deno.test("jetstream - options removes trailing dot", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const js = nc.jetstream({ apiPrefix: "hello." }) as JetStreamClientImpl;
   assertEquals(js.opts.apiPrefix, "hello");
   await cleanup(ns, nc);
 });
 
 Deno.test("jetstream - find stream throws when not found", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const js = nc.jetstream() as JetStreamClientImpl;
   await assertThrowsAsync(
     async () => {
@@ -131,7 +136,7 @@ Deno.test("jetstream - find stream throws when not found", async () => {
 });
 
 Deno.test("jetstream - publish basic", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -149,7 +154,7 @@ Deno.test("jetstream - publish basic", async () => {
 });
 
 Deno.test("jetstream - ackAck", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -166,7 +171,7 @@ Deno.test("jetstream - ackAck", async () => {
 });
 
 Deno.test("jetstream - publish id", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -183,7 +188,7 @@ Deno.test("jetstream - publish id", async () => {
 });
 
 Deno.test("jetstream - publish require stream", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -204,7 +209,7 @@ Deno.test("jetstream - publish require stream", async () => {
 });
 
 Deno.test("jetstream - publish require last message id", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -233,7 +238,7 @@ Deno.test("jetstream - publish require last message id", async () => {
 });
 
 Deno.test("jetstream - publish require last sequence", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -262,7 +267,7 @@ Deno.test("jetstream - publish require last sequence", async () => {
 });
 
 Deno.test("jetstream - ephemeral push", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
   await js.publish(subj);
@@ -276,7 +281,7 @@ Deno.test("jetstream - ephemeral push", async () => {
 });
 
 Deno.test("jetstream - ephemeral", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
   await js.publish(subj);
@@ -290,7 +295,7 @@ Deno.test("jetstream - ephemeral", async () => {
 });
 
 Deno.test("jetstream - durable", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
   await js.publish(subj);
@@ -324,7 +329,7 @@ Deno.test("jetstream - durable", async () => {
 });
 
 Deno.test("jetstream - pull no messages", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -344,7 +349,7 @@ Deno.test("jetstream - pull no messages", async () => {
 });
 
 Deno.test("jetstream - pull", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -367,7 +372,7 @@ Deno.test("jetstream - pull", async () => {
 });
 
 Deno.test("jetstream - pull batch no messages", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -387,7 +392,7 @@ Deno.test("jetstream - pull batch no messages", async () => {
 });
 
 Deno.test("jetstream - expires or no_wait is required", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -408,7 +413,7 @@ Deno.test("jetstream - expires or no_wait is required", async () => {
 });
 
 Deno.test("jetstream - pull batch: no_wait with more left", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -427,7 +432,7 @@ Deno.test("jetstream - pull batch: no_wait with more left", async () => {
 });
 
 Deno.test("jetstream - pull batch some messages", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -489,7 +494,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
 });
 
 Deno.test("jetstream - max ack pending", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
@@ -525,7 +530,7 @@ Deno.test("jetstream - max ack pending", async () => {
 });
 
 Deno.test("jetstream - pull sub - attached iterator", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -593,7 +598,7 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
 });
 
 Deno.test("jetstream - pull sub - attached callback", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -670,7 +675,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
 });
 
 Deno.test("jetstream - pull sub - not attached callback", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -699,7 +704,7 @@ Deno.test("jetstream - pull sub - not attached callback", async () => {
 });
 
 Deno.test("jetstream - pull sub requires explicit", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -718,7 +723,7 @@ Deno.test("jetstream - pull sub requires explicit", async () => {
 });
 
 Deno.test("jetstream - subscribe - not attached callback", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -752,7 +757,7 @@ Deno.test("jetstream - subscribe - not attached callback", async () => {
 });
 
 Deno.test("jetstream - subscribe - not attached non-durable", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -778,7 +783,7 @@ Deno.test("jetstream - subscribe - not attached non-durable", async () => {
 });
 
 Deno.test("jetstream - pull batch none - breaks after expires", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -807,7 +812,7 @@ Deno.test("jetstream - pull batch none - breaks after expires", async () => {
 });
 
 Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -835,7 +840,7 @@ Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
 });
 
 Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -865,7 +870,7 @@ Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
 });
 
 Deno.test("jetstream - pull batch none - cancel timers", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -899,7 +904,7 @@ Deno.test("jetstream - pull batch none - cancel timers", async () => {
 });
 
 Deno.test("jetstream - pull batch one - breaks after expires", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -929,7 +934,7 @@ Deno.test("jetstream - pull batch one - breaks after expires", async () => {
 });
 
 Deno.test("jetstream - pull consumer info without pull", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -958,7 +963,7 @@ Deno.test("jetstream - pull consumer info without pull", async () => {
 });
 
 Deno.test("jetstream - autoack", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -993,7 +998,7 @@ Deno.test("jetstream - autoack", async () => {
 });
 
 Deno.test("jetstream - subscribe - info", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -1026,7 +1031,7 @@ Deno.test("jetstream - subscribe - info", async () => {
 });
 
 Deno.test("jetstream - deliver new", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -1053,7 +1058,7 @@ Deno.test("jetstream - deliver new", async () => {
 });
 
 Deno.test("jetstream - deliver last", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -1079,7 +1084,7 @@ Deno.test("jetstream - deliver last", async () => {
 });
 
 Deno.test("jetstream - deliver seq", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -1105,7 +1110,7 @@ Deno.test("jetstream - deliver seq", async () => {
 });
 
 Deno.test("jetstream - deliver start time", async () => {
-  const { ns, nc } = await setup(JetStreamConfig({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -1130,3 +1135,209 @@ Deno.test("jetstream - deliver start time", async () => {
   await done;
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - cross account subscribe", async () => {
+  const { ns, nc: admin } = await setup(
+    jetstreamExportServerConf(),
+    {
+      user: "js",
+      pass: "js",
+    },
+  );
+
+  // add a stream
+  const { stream, subj } = await initStream(admin);
+  const adminjs = admin.jetstream();
+  await adminjs.publish(subj);
+  await adminjs.publish(subj);
+
+  // create a durable config
+  const bo = consumerOpts() as ConsumerOptsBuilderImpl;
+  bo.durable("me");
+  bo.manualAck();
+  bo.maxMessages(2);
+  bo.deliverTo(createInbox("A"));
+
+  const nc = await connect({
+    port: ns.port,
+    user: "a",
+    pass: "s3cret",
+  });
+  const js = nc.jetstream({ apiPrefix: "IPA" });
+
+  const opts = bo.getOpts();
+  const sub = await js.subscribe(subj, opts);
+  await (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  let ci = await sub.consumerInfo();
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.stream_seq, 2);
+  await sub.destroy();
+  await assertThrowsAsync(
+    async () => {
+      await sub.consumerInfo();
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await cleanup(ns, admin, nc);
+});
+
+Deno.test("jetstream - cross account pull subscribe", async () => {
+  const { ns, nc: admin } = await setup(
+    jetstreamExportServerConf(),
+    {
+      user: "js",
+      pass: "js",
+    },
+  );
+
+  // add a stream
+  const { stream, subj } = await initStream(admin);
+  const adminjs = admin.jetstream();
+  await adminjs.publish(subj);
+  await adminjs.publish(subj);
+
+  // create a durable config
+  const bo = consumerOpts() as ConsumerOptsBuilderImpl;
+  bo.manualAck();
+  bo.ackExplicit();
+  bo.deliverTo(createInbox("A"));
+  bo.maxMessages(2);
+
+  const nc = await connect({
+    port: ns.port,
+    user: "a",
+    pass: "s3cret",
+  });
+  const js = nc.jetstream({ apiPrefix: "IPA" });
+
+  const opts = bo.getOpts();
+  const sub = await js.pullSubscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })();
+  sub.pull({ batch: 2 });
+  await done;
+  assertEquals(sub.getProcessed(), 2);
+
+  let ci = await sub.consumerInfo();
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.stream_seq, 2);
+
+  await sub.destroy();
+  await assertThrowsAsync(
+    async () => {
+      await sub.consumerInfo();
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await cleanup(ns, admin, nc);
+});
+
+Deno.test("jetstream - cross account pull", async () => {
+  const { ns, nc: admin } = await setup(
+    jetstreamExportServerConf(),
+    {
+      user: "js",
+      pass: "js",
+    },
+  );
+
+  // add a stream
+  const { stream, subj } = await initStream(admin);
+  const admjs = admin.jetstream();
+  await admjs.publish(subj);
+  await admjs.publish(subj);
+
+  const admjsm = await admin.jetstreamManager();
+
+  // create a durable config
+  const bo = consumerOpts() as ConsumerOptsBuilderImpl;
+  bo.manualAck();
+  bo.ackExplicit();
+  bo.durable("me");
+  const opts = bo.getOpts();
+  await admjsm.consumers.add(stream, opts.config);
+
+  const nc = await connect({
+    port: ns.port,
+    user: "a",
+    pass: "s3cret",
+    inboxPrefix: "A",
+  });
+
+  // the api prefix is not used for pull/pullBatch()
+  const js = nc.jetstream({ apiPrefix: "IPA" });
+  let msg = await js.pull(stream, "me");
+  assertEquals(msg.seq, 1);
+  msg = await js.pull(stream, "me");
+  assertEquals(msg.seq, 2);
+  await assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    Error,
+    "No Messages",
+  );
+
+  await cleanup(ns, admin, nc);
+});
+
+// Deno.test("jetstream - cross account pull batch", async () => {
+//   const { ns, nc: admin } = await setup(
+//     jetstreamExportServerConf(),
+//     {
+//       user: "js",
+//       pass: "js",
+//     },
+//   );
+//
+//   // add a stream
+//   const { stream, subj } = await initStream(admin);
+//   const admjs = admin.jetstream();
+//   await admjs.publish(subj, Empty, {msgID: "1"});
+//   await admjs.publish(subj, Empty, {msgID: "2"});
+//
+//   const admjsm = await admin.jetstreamManager();
+//
+//   // create a durable config
+//   const bo = consumerOpts() as ConsumerOptsBuilderImpl;
+//   bo.manualAck();
+//   bo.ackExplicit();
+//   bo.durable("me");
+//   bo.maxAckPending(10);
+//   const opts = bo.getOpts();
+//   await admjsm.consumers.add(stream, opts.config);
+//
+//   const nc = await connect({
+//     port: ns.port,
+//     user: "a",
+//     pass: "s3cret",
+//     inboxPrefix: "A",
+//     debug: true,
+//   });
+//
+//   // the api prefix is not used for pull/pullBatch()
+//   const js = nc.jetstream({ apiPrefix: "IPA" });
+//   let iter = js.pullBatch(stream, "me", { batch: 20, expires: 1000 });
+//   const msgs = await consume(iter);
+//
+//   assertEquals(msgs.length, 2);
+//
+//   // msg = await js.pull(stream, "me");
+//   // assertEquals(msg.seq, 2);
+//   // await assertThrowsAsync(async () => {
+//   //   await js.pull(stream, "me");
+//   // }, Error, "No Messages");
+//
+//   await cleanup(ns, admin, nc);
+// });

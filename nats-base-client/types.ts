@@ -349,13 +349,13 @@ export interface ConsumerAPI {
 }
 
 export interface StreamAPI {
-  info(name: string): Promise<StreamInfo>;
+  info(stream: string): Promise<StreamInfo>;
   add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
   update(cfg: StreamConfig): Promise<StreamInfo>;
-  purge(name: string): Promise<PurgeResponse>;
-  delete(name: string): Promise<boolean>;
+  purge(stream: string): Promise<PurgeResponse>;
+  delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
-  deleteMessage(name: string, seq: number): Promise<boolean>;
+  deleteMessage(stream: string, seq: number): Promise<boolean>;
   getMessage(stream: string, seq: number): Promise<StoredMsg>;
   find(subject: string): Promise<string>;
 }
