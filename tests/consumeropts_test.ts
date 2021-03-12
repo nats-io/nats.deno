@@ -122,30 +122,16 @@ Deno.test("consumeropts - startSequence", () => {
   assertEquals(args.config.deliver_policy, DeliverPolicy.StartSequence);
 });
 
-Deno.test("consumeropts - startTime Nanos", () => {
-  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
-
-  const d = new Date();
-  opts.startTime(d);
-  assertEquals(opts.config.opt_start_time, d.toISOString());
-  assertEquals(opts.config.deliver_policy, DeliverPolicy.StartTime);
-
-  const args = opts.getOpts();
-  assertEquals(args.config.opt_start_time, d.toISOString());
-  assertEquals(args.config.deliver_policy, DeliverPolicy.StartTime);
-});
-
 Deno.test("consumeropts - startTime Date", () => {
   const opts = consumerOpts() as ConsumerOptsBuilderImpl;
 
-  const epoch = new Date(0);
-  const ns = nanos(epoch.getTime());
-  opts.startTime(epoch);
-  assertEquals(opts.config.opt_start_time, ns);
+  const start = new Date();
+  opts.startTime(start);
+  assertEquals(opts.config.opt_start_time, start.toISOString());
   assertEquals(opts.config.deliver_policy, DeliverPolicy.StartTime);
 
   const args = opts.getOpts();
-  assertEquals(args.config.opt_start_time, ns);
+  assertEquals(args.config.opt_start_time, start.toISOString());
   assertEquals(args.config.deliver_policy, DeliverPolicy.StartTime);
 });
 
