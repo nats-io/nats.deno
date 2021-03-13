@@ -15,7 +15,7 @@
 import { NatsError } from "./error.ts";
 import type { MsgHdrs } from "./headers.ts";
 import type { Authenticator } from "./authenticator.ts";
-import { TypedSubscription, TypedSubscriptionOptions } from "./typedsub.ts";
+import { TypedSubscriptionOptions } from "./typedsub.ts";
 import { QueuedIterator } from "./queued_iterator.ts";
 
 export const Empty = new Uint8Array(0);
@@ -262,9 +262,14 @@ export interface ConsumerInfoable {
   consumerInfo(): Promise<ConsumerInfo>;
 }
 
+export interface Closed {
+  closed: Promise<void>;
+}
+
 export type JetStreamSubscription =
-  & TypedSubscription<JsMsg>
+  & Sub<JsMsg>
   & Destroyable
+  & Closed
   & ConsumerInfoable;
 
 export type JetStreamSubscriptionOptions = TypedSubscriptionOptions<JsMsg>;

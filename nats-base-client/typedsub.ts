@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+import {Deferred} from './util.ts'
 import type { DispatchedFn } from "./queued_iterator.ts";
 import type {
   Msg,
@@ -75,6 +76,7 @@ export function checkFn(fn: unknown, name: string, required = false) {
 export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
   sub: SubscriptionImpl;
   adapter: MsgAdapter<T>;
+  subIterDone: Deferred<void>;
 
   constructor(
     nc: NatsConnection,
@@ -121,6 +123,15 @@ export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
     if (opts.cleanupFn) {
       this.sub.cleanupFn = opts.cleanupFn;
     }
+
+    this.subIterDone = deferred<void>();
+    Promise.all([this.sub.closed, this.iterClosed])
+      .then(() => {
+        this.subIterDone.resolve();
+      })
+      .catch(() => {
+        this.subIterDone.resolve();
+      });
     (async (s) => {
       await s.closed;
       this.stop();

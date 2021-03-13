@@ -26,6 +26,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
   processed: number;
   received: number; // this is updated by the protocol
   protected noIterator: boolean;
+  protected iterClosed: Deferred<void>;
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
@@ -40,6 +41,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
     this.done = false;
     this.signal = deferred<void>();
     this.yields = [];
+    this.iterClosed = deferred<void>();
   }
 
   [Symbol.asyncIterator]() {
@@ -93,6 +95,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
     this.err = err;
     this.done = true;
     this.signal.resolve();
+    this.iterClosed.resolve();
   }
 
   getProcessed(): number {

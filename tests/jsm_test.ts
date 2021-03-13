@@ -669,7 +669,7 @@ Deno.test("jsm - cross account consumers", async () => {
   assertEquals(consumers[0].config.durable_name, "me");
   assertEquals(consumers[0].num_pending, 2);
 
-  let ci = await jsm.consumers.info(stream, "me");
+  const ci = await jsm.consumers.info(stream, "me");
   assertEquals(ci.name, "me");
   assertEquals(ci.config.durable_name, "me");
   assertEquals(ci.num_pending, 2);
