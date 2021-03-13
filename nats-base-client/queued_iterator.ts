@@ -21,7 +21,15 @@ export interface Dispatcher<T> {
 
 export type DispatchedFn<T> = (data: T | null) => void;
 
-export class QueuedIterator<T> implements Dispatcher<T> {
+export interface QueuedIterator<T> extends Dispatcher<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T>;
+  stop(err?: Error): void;
+  getProcessed(): number;
+  getPending(): number;
+  getReceived(): number;
+}
+
+export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   inflight: number;
   processed: number;
   received: number; // this is updated by the protocol
@@ -48,7 +56,7 @@ export class QueuedIterator<T> implements Dispatcher<T> {
     return this.iterate();
   }
 
-  push(v: T) {
+  push(v: T): void {
     if (this.done) {
       return;
     }

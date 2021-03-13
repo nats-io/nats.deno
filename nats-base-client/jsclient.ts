@@ -49,7 +49,7 @@ import {
 } from "./typedsub.ts";
 import { ErrorCode, isNatsError, NatsError } from "./error.ts";
 import { SubscriptionImpl } from "./subscription.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
@@ -163,7 +163,7 @@ export class JetStreamClientImpl extends BaseApiClient
       throw new Error("expires or no_wait is required");
     }
 
-    const qi = new QueuedIterator<JsMsg>();
+    const qi = new QueuedIteratorImpl<JsMsg>();
     const wants = args.batch;
     let received = 0;
     qi.dispatchedFn = (m: JsMsg | null) => {

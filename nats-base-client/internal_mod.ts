@@ -71,7 +71,7 @@ export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
 export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
-export { QueuedIterator } from "./queued_iterator.ts";
+export type { QueuedIterator } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";

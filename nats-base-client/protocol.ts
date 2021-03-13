@@ -39,7 +39,11 @@ import {
 import { nuid } from "./nuid.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { ServerImpl, Servers } from "./servers.ts";
-import { Dispatcher, QueuedIterator } from "./queued_iterator.ts";
+import {
+  Dispatcher,
+  QueuedIterator,
+  QueuedIteratorImpl,
+} from "./queued_iterator.ts";
 import type { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 import { Subscriptions } from "./subscriptions.ts";
@@ -196,7 +200,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   status(): AsyncIterable<Status> {
-    const iter = new QueuedIterator<Status>();
+    const iter = new QueuedIteratorImpl<Status>();
     this.listeners.push(iter);
     return iter;
   }

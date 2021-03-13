@@ -12,13 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { DispatchedFn, QueuedIterator } from "./queued_iterator.ts";
+import { DispatchedFn, QueuedIteratorImpl } from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
 import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import type { ProtocolHandler } from "./protocol.ts";
 
-export class SubscriptionImpl extends QueuedIterator<Msg>
+export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
   implements Base, Subscription {
   sid!: number;
   queue?: string;
