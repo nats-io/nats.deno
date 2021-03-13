@@ -23,7 +23,7 @@ import type {
   Subscription,
   SubscriptionOptions,
 } from "./types.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import { SubscriptionImpl } from "./subscription.ts";
 
@@ -73,7 +73,8 @@ export function checkFn(fn: unknown, name: string, required = false) {
  * for user data, and the data is presented as application specific
  * data to the client.
  */
-export class TypedSubscription<T> extends QueuedIterator<T> implements Sub<T> {
+export class TypedSubscription<T> extends QueuedIteratorImpl<T>
+  implements Sub<T> {
   sub: SubscriptionImpl;
   adapter: MsgAdapter<T>;
   subIterDone: Deferred<void>;

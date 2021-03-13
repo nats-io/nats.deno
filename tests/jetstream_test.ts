@@ -446,7 +446,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
       m.ack();
     }
   })();
-  assertEquals(sub.processed, 0);
+  assertEquals(sub.getProcessed(), 0);
 
   // seed some messages
   await js.publish(subj, Empty, { msgID: "a" });
@@ -460,7 +460,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
       m.ack();
     }
   })();
-  assertEquals(sub.processed, 2);
+  assertEquals(sub.getProcessed(), 2);
   let ci = await jsm.consumers.info(stream, "me");
   assertEquals(ci.num_pending, 1);
   assertEquals(ci.delivered.stream_seq, 2);
@@ -473,7 +473,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
       m.ack();
     }
   })();
-  assertEquals(sub.processed, 1);
+  assertEquals(sub.getProcessed(), 1);
   ci = await jsm.consumers.info(stream, "me");
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 3);
@@ -486,7 +486,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
       m.ack();
     }
   })();
-  assertEquals(sub.processed, 0);
+  assertEquals(sub.getProcessed(), 0);
 
   await cleanup(ns, nc);
 });
@@ -805,7 +805,7 @@ Deno.test("jetstream - pull batch none - breaks after expires", async () => {
   await done;
   sw.mark();
   sw.assertInRange(1000);
-  assertEquals(batch.received, 0);
+  assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });
 
@@ -833,7 +833,7 @@ Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
   await done;
   sw.mark();
   assert(25 > sw.duration());
-  assertEquals(batch.received, 0);
+  assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });
 
@@ -863,7 +863,7 @@ Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
   await done;
   sw.mark();
   assert(25 > sw.duration());
-  assertEquals(batch.received, 1);
+  assertEquals(batch.getReceived(), 1);
   await cleanup(ns, nc);
 });
 
@@ -897,7 +897,7 @@ Deno.test("jetstream - pull batch none - cancel timers", async () => {
   await done;
   sw.mark();
   assert(25 > sw.duration());
-  assertEquals(batch.received, 0);
+  assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });
 
@@ -927,7 +927,7 @@ Deno.test("jetstream - pull batch one - breaks after expires", async () => {
   await done;
   sw.mark();
   sw.assertInRange(1000);
-  assertEquals(batch.received, 1);
+  assertEquals(batch.getReceived(), 1);
   await cleanup(ns, nc);
 });
 

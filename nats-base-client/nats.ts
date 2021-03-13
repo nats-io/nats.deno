@@ -34,7 +34,7 @@ import {
   SubscriptionOptions,
 } from "./types.ts";
 import { parseOptions } from "./options.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
 import { isRequestError } from "./msg.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
@@ -237,7 +237,7 @@ export class NatsConnectionImpl implements NatsConnection {
   }
 
   status(): AsyncIterable<Status> {
-    const iter = new QueuedIterator<Status>();
+    const iter = new QueuedIteratorImpl<Status>();
     this.listeners.push(iter);
     return iter;
   }

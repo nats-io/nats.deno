@@ -16,6 +16,7 @@ import { connect, createInbox, ErrorCode, NatsError } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -180,4 +181,26 @@ Deno.test("iterators - cb message counts", async () => {
   assertEquals(sub.getProcessed(), 3);
   assertEquals(sub.getPending(), 0);
   await nc.close();
+});
+
+Deno.test("iterators - push on done is noop", async () => {
+  const qi = new QueuedIteratorImpl<string>();
+  const buf: string[] = [];
+  const done = (async () => {
+    for await (const s of qi) {
+      buf.push(s);
+    }
+  })();
+
+  qi.push("a");
+  qi.push("b");
+  qi.push("c");
+  qi.stop();
+  await done;
+  assertEquals(buf.length, 3);
+  assertEquals("a,b,c", buf.join(","));
+
+  qi.push("d");
+  assertEquals(buf.length, 3);
+  assertEquals("a,b,c", buf.join(","));
 });

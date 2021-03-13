@@ -29,7 +29,7 @@ import {
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { StreamAPIImpl } from "./jsstream_api.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
 
 export class JetStreamManagerImpl extends BaseApiClient
   implements JetStreamManager {
@@ -47,7 +47,7 @@ export class JetStreamManagerImpl extends BaseApiClient
   }
 
   advisories(): AsyncIterable<Advisory> {
-    const iter = new QueuedIterator<Advisory>();
+    const iter = new QueuedIteratorImpl<Advisory>();
     this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
       callback: (err, msg) => {
         try {
