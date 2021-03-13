@@ -26,7 +26,6 @@ import {
   ConsumerOpts,
   consumerOpts,
   createInbox,
-  deferred,
   delay,
   Empty,
   ErrorCode,
@@ -36,7 +35,6 @@ import {
   nanos,
   NatsConnectionImpl,
   NatsError,
-  nuid,
   QueuedIterator,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
@@ -47,7 +45,7 @@ import {
   fail,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { ConsumerOptsBuilder, PubAck } from "../nats-base-client/types.ts";
+import { PubAck } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionInfoable,
@@ -1172,7 +1170,7 @@ Deno.test("jetstream - cross account subscribe", async () => {
       m.ack();
     }
   })();
-  let ci = await sub.consumerInfo();
+  const ci = await sub.consumerInfo();
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 2);
   await sub.destroy();
@@ -1227,7 +1225,7 @@ Deno.test("jetstream - cross account pull subscribe", async () => {
   await done;
   assertEquals(sub.getProcessed(), 2);
 
-  let ci = await sub.consumerInfo();
+  const ci = await sub.consumerInfo();
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 2);
 

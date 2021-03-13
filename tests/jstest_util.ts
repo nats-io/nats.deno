@@ -5,7 +5,6 @@ import { assert } from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import {
   ConnectionOptions,
   extend,
-  JetStreamOptions,
   NatsConnection,
   nuid,
 } from "../nats-base-client/internal_mod.ts";
@@ -21,12 +20,12 @@ export const jsopts = {
 };
 
 export function jetstreamExportServerConf(
-  opts: {} = {},
+  opts: unknown = {},
   prefix = "IPA.>",
   randomStoreDir = true,
 ): Record<string, unknown> {
   const template = {
-    no_auth_user: "a",
+    "no_auth_user": "a",
     accounts: {
       JS: {
         jetstream: "enabled",
@@ -50,7 +49,7 @@ export function jetstreamExportServerConf(
 }
 
 export function jetstreamServerConf(
-  opts: {} = {},
+  opts: unknown = {},
   randomStoreDir = true,
 ): Record<string, unknown> {
   const conf = Object.assign(opts, jsopts);
@@ -58,7 +57,7 @@ export function jetstreamServerConf(
     conf.jetstream.store_dir = path.join("/tmp", "jetstream", nuid.next());
   }
   Deno.mkdirSync(conf.jetstream.store_dir, { recursive: true });
-  return opts;
+  return opts as Record<string, unknown>;
 }
 export async function setup(
   serverConf?: Record<string, unknown>,

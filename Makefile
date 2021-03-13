@@ -3,6 +3,7 @@
 build: test
 
 test: clean
+	deno lint --unstable
 	deno test --allow-all --unstable --reload --coverage=coverage --failfast tests/
 
 cover:
