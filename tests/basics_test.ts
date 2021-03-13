@@ -767,3 +767,10 @@ Deno.test("basics - custom prefix noMux", async () => {
   assert(jc.decode(v.data));
   await nc.close();
 });
+
+Deno.test("basics - debug", async () => {
+  const nc = await connect({ servers: ["demo.nats.io"], debug: true });
+  await nc.flush();
+  await nc.close();
+  assertEquals(nc.isClosed(), true);
+});

@@ -13,21 +13,18 @@
  * limitations under the License.
  */
 
+import type { DispatchedFn } from "./queued_iterator.ts";
 import type {
-  DispatchedFn,
   Msg,
   NatsConnection,
   Sub,
   SubOpts,
   Subscription,
   SubscriptionOptions,
-} from "./internal_mod.ts";
-import {
-  ErrorCode,
-  NatsError,
-  QueuedIterator,
-  SubscriptionImpl,
-} from "./internal_mod.ts";
+} from "./types.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
+import { ErrorCode, NatsError } from "./error.ts";
+import { SubscriptionImpl } from "./subscription.ts";
 
 /**
  * Converts a NATS message into some other type. Implementers are expected to:
