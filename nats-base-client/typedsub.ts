@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import {Deferred} from './util.ts'
+import { Deferred, deferred } from "./util.ts";
 import type { DispatchedFn } from "./queued_iterator.ts";
 import type {
   Msg,
