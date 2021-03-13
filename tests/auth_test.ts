@@ -25,9 +25,12 @@ import {
   jwtAuthenticator,
   nkeyAuthenticator,
   Status,
+  StringCodec,
 } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
+import { NKeyAuth } from "../nats-base-client/authenticator.ts";
+import { assert } from "../nats-base-client/denobuffer.ts";
 
 const conf = {
   authorization: {
@@ -277,7 +280,7 @@ Deno.test("auth - jwt", async () => {
     },
   };
   const ns = await NatsServer.start(conf);
-  const nc = await connect(
+  let nc = await connect(
     {
       port: ns.port,
       authenticator: jwtAuthenticator(jwt, new TextEncoder().encode(useed)),
@@ -285,6 +288,18 @@ Deno.test("auth - jwt", async () => {
   );
   await nc.flush();
   await nc.close();
+
+  nc = await connect(
+    {
+      port: ns.port,
+      authenticator: jwtAuthenticator((): string => {
+        return jwt;
+      }, new TextEncoder().encode(useed)),
+    },
+  );
+  await nc.flush();
+  await nc.close();
+
   await ns.stop();
 });
 
@@ -320,4 +335,83 @@ Deno.test("basics - bad auth", async () => {
   } catch (err) {
     assertErrorCode(err, ErrorCode.AuthorizationViolation);
   }
+});
+
+Deno.test("auth - nkey authentication", async () => {
+  const ukp = nkeys.createUser();
+  const conf = {
+    authorization: {
+      users: [{
+        nkey: ukp.getPublicKey(),
+      }],
+    },
+  };
+
+  // static
+  const ns = await NatsServer.start(conf);
+  let nc = await connect({
+    port: ns.port,
+    authenticator: nkeyAuthenticator(ukp.getSeed()),
+  });
+  await nc.flush();
+  await nc.close();
+
+  // from function
+  nc = await connect({
+    port: ns.port,
+    authenticator: nkeyAuthenticator((): Uint8Array => {
+      return ukp.getSeed();
+    }),
+  });
+  await nc.flush();
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("auth - creds authenticator validation", () => {
+  const jwt =
+    `eyJ0eXAiOiJqd3QiLCJhbGciOiJlZDI1NTE5In0.eyJqdGkiOiJFU1VQS1NSNFhGR0pLN0FHUk5ZRjc0STVQNTZHMkFGWERYQ01CUUdHSklKUEVNUVhMSDJBIiwiaWF0IjoxNTQ0MjE3NzU3LCJpc3MiOiJBQ1pTV0JKNFNZSUxLN1FWREVMTzY0VlgzRUZXQjZDWENQTUVCVUtBMzZNSkpRUlBYR0VFUTJXSiIsInN1YiI6IlVBSDQyVUc2UFY1NTJQNVNXTFdUQlAzSDNTNUJIQVZDTzJJRUtFWFVBTkpYUjc1SjYzUlE1V002IiwidHlwZSI6InVzZXIiLCJuYXRzIjp7InB1YiI6e30sInN1YiI6e319fQ.kCR9Erm9zzux4G6M-V2bp7wKMKgnSNqMBACX05nwePRWQa37aO_yObbhcJWFGYjo1Ix-oepOkoyVLxOJeuD8Bw`;
+  const ukp = nkeys.createUser();
+  const upk = ukp.getPublicKey();
+  const sc = StringCodec();
+  const seed = sc.decode(ukp.getSeed());
+
+  function creds(ajwt = "", aseed = ""): string {
+    return `-----BEGIN NATS USER JWT-----
+    ${ajwt}
+  ------END NATS USER JWT------
+
+************************* IMPORTANT *************************
+  NKEY Seed printed below can be used sign and prove identity.
+    NKEYs are sensitive and should be treated as secrets.
+
+  -----BEGIN USER NKEY SEED-----
+    ${aseed}
+  ------END USER NKEY SEED------
+ `;
+  }
+
+  type test = [string, string, boolean, string];
+  const tests: test[] = [];
+  tests.push(["", "", false, "no jwt, no seed"]);
+  tests.push([jwt, "", false, "no seed"]);
+  tests.push(["", seed, false, "no jwt"]);
+  tests.push([jwt, seed, true, "jwt and seed"]);
+
+  tests.forEach((v) => {
+    const d = sc.encode(creds(v[0], v[1]));
+    try {
+      const auth = credsAuthenticator(d);
+      if (!v[2]) {
+        fail(`should have failed: ${v[3]}`);
+      }
+      const { nkey, sig } = auth("helloworld") as unknown as NKeyAuth;
+      assertEquals(nkey, upk);
+      assert(sig.length > 0);
+    } catch (err) {
+      if (v[2]) {
+        fail(`should have passed: ${v[3]}`);
+      }
+    }
+  });
 });

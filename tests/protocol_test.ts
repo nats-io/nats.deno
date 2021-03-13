@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 import {
+  Empty,
   ErrorCode,
+  extractProtocolMessage,
   Msg,
   MuxSubscription,
   ProtocolHandler,
@@ -26,6 +28,7 @@ import {
   assertEquals,
   equal,
 } from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import { protoLen } from "../nats-base-client/util.ts";
 
 Deno.test("protocol - mux subscription unknown return null", async () => {
   const mux = new MuxSubscription();
@@ -76,4 +79,9 @@ Deno.test("protocol - cancel unknown sub", () => {
   assertEquals(subs.size(), 1);
   subs.cancel(s);
   assertEquals(subs.size(), 0);
+});
+
+Deno.test("protocol - protolen -1 on empty", () => {
+  assertEquals(protoLen(Empty), -1);
+  assertEquals(extractProtocolMessage(Empty), "");
 });
