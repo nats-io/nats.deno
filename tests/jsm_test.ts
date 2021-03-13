@@ -466,7 +466,7 @@ Deno.test("jsm - get message", async () => {
       await jsm.streams.getMessage(stream, 3);
     },
     Error,
-    "stream store EOF",
+    "stream store eof",
   );
 
   await cleanup(ns, nc);

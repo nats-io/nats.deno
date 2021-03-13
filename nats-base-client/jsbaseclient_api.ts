@@ -24,9 +24,9 @@ import {
   StreamNames,
 } from "./types.ts";
 import { Codec, JSONCodec } from "./codec.ts";
-import { ErrorCode, NatsError } from "./error.ts";
 import { extend } from "./util.ts";
 import { NatsConnectionImpl } from "./nats.ts";
+import { checkJsErrorCode } from "./jsutil.ts";
 
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;
@@ -98,15 +98,11 @@ export class BaseApiClient {
   parseJsResponse(m: Msg): unknown {
     const v = this.jc.decode(m.data);
     const r = v as ApiResponse;
-
     if (r.error) {
-      if (r.error.code === 503) {
-        throw NatsError.errorForCode(
-          ErrorCode.JetStreamNotEnabled,
-          new Error(r.error.description),
-        );
+      const err = checkJsErrorCode(r.error.code, r.error.description);
+      if (err !== null) {
+        throw err;
       }
-      throw new NatsError(r.error.description, `${r.error.code}`);
     }
     return v;
   }

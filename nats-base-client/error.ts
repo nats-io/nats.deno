@@ -31,7 +31,7 @@ export enum ErrorCode {
   InvalidOption = "INVALID_OPTION",
   InvalidPayload = "INVALID_PAYLOAD",
   MaxPayloadExceeded = "MAX_PAYLOAD_EXCEEDED",
-  NoResponders = "NO_RESPONDERS",
+  NoResponders = "503",
   NotFunction = "NOT_FUNC",
   RequestError = "REQUEST_ERROR",
   ServerOptionNotAvailable = "SERVER_OPT_NA",
@@ -43,11 +43,11 @@ export enum ErrorCode {
   WssRequired = "WSS_REQUIRED",
 
   // jetstream
-  JetStreamNotEnabled = "JETSTREAM_NOT_ENABLED",
   JetStreamInvalidAck = "JESTREAM_INVALID_ACK",
-  JetStream404NoMessages = "404_NO_MESSAGES",
-  JetStream408RequestTimeout = "408_REQUEST_TIMEOUT",
-  JetStream409MaxAckPendingExceeded = "409_MAX_ACK_PENDING_EXCEEDED",
+  JetStream404NoMessages = "404",
+  JetStream408RequestTimeout = "408",
+  JetStream409MaxAckPendingExceeded = "409",
+  JetStreamNotEnabled = "503",
 
   // emitted by the server
   AuthorizationViolation = "AUTHORIZATION_VIOLATION",

@@ -16,9 +16,11 @@ import {
   AckPolicy,
   ConsumerConfig,
   DeliverPolicy,
+  Msg,
   Nanos,
   ReplayPolicy,
 } from "./types.ts";
+import { ErrorCode, NatsError } from "./error.ts";
 
 export function validateDurableName(name?: string) {
   return validateName("durable", name);
@@ -61,4 +63,42 @@ export function nanos(millis: number): Nanos {
 
 export function millis(ns: Nanos) {
   return ns / 1000000;
+}
+
+export function isFlowControlMsg(msg: Msg): boolean {
+  const h = msg.headers;
+  if (!h) {
+    return false;
+  }
+  return h.code >= 100 && h.code < 200;
+}
+
+export function checkJsError(msg: Msg): NatsError | null {
+  const h = msg.headers;
+  if (!h) {
+    return null;
+  }
+  return checkJsErrorCode(h.code, h.status);
+}
+
+export function checkJsErrorCode(
+  code: number,
+  description = "",
+): NatsError | null {
+  if (code < 300) {
+    return null;
+  }
+  description = description.toLowerCase();
+  switch (code) {
+    case 503:
+      return NatsError.errorForCode(
+        ErrorCode.JetStreamNotEnabled,
+        new Error(description),
+      );
+    default:
+      if (description === "") {
+        description = ErrorCode.Unknown;
+      }
+      return new NatsError(description, `${code}`);
+  }
 }

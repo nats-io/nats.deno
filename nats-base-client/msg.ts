@@ -19,19 +19,19 @@ import type { MsgArg } from "./parser.ts";
 import { TD } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
-const noResponders = "503";
-
 export function isRequestError(msg: Msg): (NatsError | null) {
   if (msg && msg.headers) {
     const headers = msg.headers as MsgHdrsImpl;
     if (headers.hasError) {
-      if (headers.status === noResponders) {
+      if (headers.status === "503") {
         return NatsError.errorForCode(ErrorCode.NoResponders);
       } else {
-        return new NatsError(
-          headers.status,
-          ErrorCode.RequestError,
-        );
+        let desc = headers.get("description");
+        if (desc === "") {
+          desc = ErrorCode.RequestError;
+        }
+        desc = desc.toLowerCase();
+        return new NatsError(desc, headers.status);
       }
     }
   }
