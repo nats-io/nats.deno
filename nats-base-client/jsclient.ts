@@ -254,6 +254,11 @@ export class JetStreamClientImpl extends BaseApiClient
     if (!cso.attached) {
       cso.config.filter_subject = subject;
     }
+    if (cso.config.deliver_subject) {
+      throw new Error(
+        "consumer info specifies deliver_subject - pull consumers cannot have deliver_subject set",
+      );
+    }
 
     const ackPolicy = cso.config.ack_policy;
     if (ackPolicy === AckPolicy.None || ackPolicy === AckPolicy.All) {
@@ -442,10 +447,13 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
 
     if (this.info) {
       const api = (this.info.api as BaseApiClient);
+      const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
+      const reply = this.sub.subject;
+
       api.nc.publish(
-        `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`,
+        subj,
         api.jc.encode(args),
-        { reply: this.sub.subject },
+        { reply: reply },
       );
     }
   }
