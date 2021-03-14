@@ -221,7 +221,7 @@ Deno.test("jetstream - publish require last message id", async () => {
       await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
     },
     Error,
-    "wrong last msg ID: a",
+    "wrong last msg id: a",
   );
 
   pa = await js.publish(subj, Empty, {
@@ -335,12 +335,12 @@ Deno.test("jetstream - pull no messages", async () => {
     ack_policy: AckPolicy.Explicit,
   });
   const js = nc.jetstream();
-  assertThrowsAsync(
+  await assertThrowsAsync(
     async () => {
       await js.pull(stream, "me");
     },
     Error,
-    "404 No Messages",
+    "no messages",
   );
 
   await cleanup(ns, nc);
@@ -384,7 +384,7 @@ Deno.test("jetstream - pull batch no messages", async () => {
       await js.pull(stream, "me");
     },
     Error,
-    "404 No Messages",
+    "no messages",
   );
   await cleanup(ns, nc);
 });
@@ -1284,7 +1284,7 @@ Deno.test("jetstream - cross account pull", async () => {
       await js.pull(stream, "me");
     },
     Error,
-    "No Messages",
+    "no messages",
   );
 
   await cleanup(ns, admin, nc);

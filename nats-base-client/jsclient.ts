@@ -39,7 +39,13 @@ import {
   RequestOptions,
 } from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { nanos, validateDurableName, validateStreamName } from "./jsutil.ts";
+import {
+  checkJsError,
+  isFlowControlMsg,
+  nanos,
+  validateDurableName,
+  validateStreamName,
+} from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
 import { toJsMsg } from "./jsmsg.ts";
 import {
@@ -53,8 +59,8 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
-import { consumerOpts, isConsumerOptsBuilder } from "./consumeropts.ts";
 import type { ConsumerOptsBuilder } from "./consumeropts.ts";
+import { consumerOpts, isConsumerOptsBuilder } from "./consumeropts.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -519,35 +525,5 @@ function iterMsgAdapter(
 function autoAckJsMsg(data: JsMsg | null) {
   if (data) {
     data.ack();
-  }
-}
-
-function isFlowControlMsg(msg: Msg): boolean {
-  const h = msg.headers;
-  if (!h) {
-    return false;
-  }
-  return h.code >= 100 && h.code < 200;
-}
-
-function checkJsError(msg: Msg): NatsError | null {
-  const h = msg.headers;
-  if (!h) {
-    return null;
-  }
-  if (h.code < 300) {
-    return null;
-  }
-  switch (h.code) {
-    case 404:
-      return NatsError.errorForCode(ErrorCode.JetStream404NoMessages);
-    case 408:
-      return NatsError.errorForCode(ErrorCode.JetStream408RequestTimeout);
-    case 409:
-      return NatsError.errorForCode(
-        ErrorCode.JetStream409MaxAckPendingExceeded,
-      );
-    default:
-      return NatsError.errorForCode(ErrorCode.Unknown, new Error(h.status));
   }
 }
