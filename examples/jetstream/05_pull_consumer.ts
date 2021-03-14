@@ -1,29 +1,28 @@
-import { connect } from "../src/nats_deno.ts";
-import { AckPolicy } from "../src/types.ts";
-import { JetStreamManager } from "../src/jsm.ts";
+import { AckPolicy, connect, ErrorCode } from "../../src/mod.ts";
 
 const nc = await connect();
+const jsm = await nc.jetstreamManager();
 
-const jsm = await JetStreamManager(nc);
 await jsm.consumers.add("A", {
   durable_name: "b",
   ack_policy: AckPolicy.Explicit,
 });
 
-let m = await jsm.consumers.pull("A", "b");
+const js = nc.jetstream();
+let m = await js.pull("A", "b");
 console.log(m.subject);
 m.ack();
-m = await jsm.consumers.pull("A", "b");
+m = await js.pull("A", "b");
 console.log(m.subject);
 m.ack();
-m = await jsm.consumers.pull("A", "b");
+m = await js.pull("A", "b");
 console.log(m.subject);
 m.ack();
 
 try {
-  await jsm.consumers.pull("A", "b");
+  await js.pull("A", "b");
 } catch (err) {
-  if (err.message === "404 No Messages") {
+  if (err.code === ErrorCode.JetStream404NoMessages) {
     console.log("no messages!");
   }
 }

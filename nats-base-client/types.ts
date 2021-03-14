@@ -301,11 +301,11 @@ export interface JetStreamClient {
   ): QueuedIterator<JsMsg>;
   pullSubscribe(
     subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts,
+    opts: ConsumerOptsBuilder | Partial<ConsumerOpts>,
   ): Promise<JetStreamPullSubscription>;
   subscribe(
     subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts,
+    opts: ConsumerOptsBuilder | Partial<ConsumerOpts>,
   ): Promise<JetStreamSubscription>;
 }
 

@@ -1,7 +1,4 @@
-import { connect } from "../src/nats_deno.ts";
-import { toJsMsg } from "../src/jsmsg.ts";
-import { AckPolicy } from "../src/types.ts";
-import { JetStreamManager } from "../src/jsm.ts";
+import { AckPolicy, connect, toJsMsg } from "../../src/mod.ts";
 
 const nc = await connect();
 
@@ -10,7 +7,9 @@ const sub = nc.subscribe("my.messages", { max: 3 });
 const done = (async () => {
   for await (const m of sub) {
     const jm = toJsMsg(m);
-    console.log(`stream msg# ${jm.info.streamSequence}`);
+    console.log(
+      `${jm.info.stream}[${jm.seq}] - redelivered? ${jm.redelivered}`,
+    );
     if (jm.redelivered) {
       console.log("seen this before");
     }
@@ -19,7 +18,7 @@ const done = (async () => {
 })();
 
 // create an ephemeral consumer - the subscription must exist
-const jsm = await JetStreamManager(nc);
+const jsm = await nc.jetstreamManager();
 await jsm.consumers.add("A", {
   ack_policy: AckPolicy.Explicit,
   deliver_subject: "my.messages",
