@@ -129,7 +129,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const msg = await this.nc.request(
       // FIXME: specify expires
       `${this.prefix}.CONSUMER.MSG.NEXT.${stream}.${durable}`,
-      this.jc.encode({ no_wait: true, batch: 1 }),
+      this.jc.encode({ no_wait: true, batch: 1, expires: nanos(this.timeout) }),
       { noMux: true, timeout: this.timeout },
     );
     const err = checkJsError(msg);
@@ -282,9 +282,11 @@ export class JetStreamClientImpl extends BaseApiClient
     opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
   ): Promise<JetStreamSubscription> {
     const cso = await this._processOptions(subject, opts);
-    if (cso.attached && !cso.config.deliver_subject) {
+    // this effectively requires deliver subject to be specified
+    // as an option otherwise we have a pull consumer
+    if (!cso.config.deliver_subject) {
       throw new Error(
-        "consumer info specifies a pull consumer - pullCount must be specified",
+        "consumer info specifies a pull consumer - deliver_subject is required",
       );
     }
 
@@ -340,8 +342,8 @@ export class JetStreamClientImpl extends BaseApiClient
 
     if (!jsi.attached) {
       jsi.config.filter_subject = subject;
-      jsi.config.deliver_subject = jsi.config.deliver_subject ??
-        createInbox(this.nc.options.inboxPrefix);
+      // jsi.config.deliver_subject = jsi.config.deliver_subject ??
+      //   createInbox(this.nc.options.inboxPrefix);
     }
 
     jsi.deliver = jsi.config.deliver_subject ??
@@ -433,6 +435,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch ?? 1;
     args.no_wait = opts.no_wait ?? false;
+    // FIXME: this is nanos
     if (opts.expires && opts.expires > 0) {
       args.expires = opts.expires;
     }
