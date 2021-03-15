@@ -258,6 +258,7 @@ export class NatsConnectionImpl implements NatsConnection {
   async jetstreamManager(
     opts: JetStreamOptions = {},
   ): Promise<JetStreamManager> {
+    jetstreamBetaNotice();
     const adm = new JetStreamManagerImpl(this, opts);
     try {
       await adm.getAccountInfo();
@@ -274,6 +275,19 @@ export class NatsConnectionImpl implements NatsConnection {
   jetstream(
     opts: JetStreamOptions = {},
   ): JetStreamClient {
+    jetstreamBetaNotice();
     return new JetStreamClientImpl(this, opts);
   }
 }
+
+const jetstreamBetaNotice = (() => {
+  let once = false;
+  return () => {
+    if (!once) {
+      once = true;
+      console.log(
+        `\u001B[33m jetstream client functionality is beta \u001B[0m`,
+      );
+    }
+  };
+})();
