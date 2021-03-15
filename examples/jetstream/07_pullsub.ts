@@ -23,7 +23,12 @@ await js.publish(subj);
 await js.publish(subj);
 await js.publish(subj);
 
-const psub = await js.pullSubscribe(subj, { config: { durable_name: "c" } });
+// this is similar to pullBatch, but the consumer is created
+// behind the scenes. To pull messages, you call `pull()` on
+// the PullSubscription.
+const psub = await js.pullSubscribe(subj, {
+  config: { durable_name: "c" },
+});
 const done = (async () => {
   for await (const m of psub) {
     console.log(`${m.info.stream}[${m.seq}]`);

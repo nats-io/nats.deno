@@ -3,7 +3,7 @@ import { nuid } from "../../nats-base-client/nuid.ts";
 
 const nc = await connect();
 
-// create a plain old nats subscription
+// create a regular subscription - this is plain nats
 const sub = nc.subscribe("my.messages", { max: 5 });
 const done = (async () => {
   for await (const m of sub) {

@@ -6,7 +6,11 @@ const jsm = await nc.jetstreamManager();
 await jsm.streams.add({ name: "B", subjects: ["b.a"] });
 
 const js = await nc.jetstream();
-
+// the jetstream client provides a publish that returns
+// a confirmation that the message was received and stored
+// by the server. You can associate various expectations
+// when publishing a message to prevent duplicates.
+// If the expectations are not met, the message is rejected.
 let pa = await js.publish("b.a", Empty, {
   msgID: "a",
   expect: { streamName: "B" },

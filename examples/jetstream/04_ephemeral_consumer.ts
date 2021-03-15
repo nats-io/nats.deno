@@ -1,8 +1,11 @@
 import { connect, consumerOpts } from "../../src/mod.ts";
 
 const nc = await connect();
-
 const js = nc.jetstream();
+
+// note the consumer is not a durable - so when after the
+// subscription ends, the server will auto destroy the
+// consumer
 const opts = consumerOpts();
 opts.manualAck();
 opts.maxMessages(2);

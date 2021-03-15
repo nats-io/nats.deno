@@ -29,9 +29,12 @@ await jsm.consumers.add(stream, {
   deliver_policy: DeliverPolicy.All,
 });
 
-// ask for 25 messages
 const js = nc.jetstream();
 
+// similar to pull, but this time we can ask for many messages
+// if `expire` is set, the request will wait for the specified
+// number of messages until then. The `no_wait` returns an empty
+// result if no messages are available.
 const batch = js.pullBatch(stream, "me", { batch: 25, no_wait: true });
 await (async () => {
   for await (const m of batch) {
