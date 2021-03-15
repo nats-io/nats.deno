@@ -148,7 +148,7 @@ export class JetStreamClientImpl extends BaseApiClient
   * @param durable
   * @param opts
   */
-  pullBatch(
+  fetch(
     stream: string,
     durable: string,
     opts: Partial<PullOptions> = {},

@@ -399,7 +399,7 @@ Deno.test("jetstream - expires or no_wait is required", async () => {
   const js = nc.jetstream();
   assertThrows(
     () => {
-      js.pullBatch(stream, "me");
+      js.fetch(stream, "me");
     },
     Error,
     "expires or no_wait is required",
@@ -421,7 +421,7 @@ Deno.test("jetstream - pull batch: no_wait with more left", async () => {
   await js.publish(subj);
   await js.publish(subj);
 
-  const iter = js.pullBatch(stream, "me", { no_wait: true });
+  const iter = js.fetch(stream, "me", { no_wait: true });
   await consume(iter);
 
   await cleanup(ns, nc);
@@ -438,7 +438,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
 
   const js = nc.jetstream();
   // try to get messages = none available
-  let sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  let sub = await js.fetch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
       m.ack();
@@ -452,7 +452,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
   await js.publish(subj, Empty, { msgID: "c" });
 
   // try to get 2 messages - OK
-  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  sub = await js.fetch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
       m.ack();
@@ -465,7 +465,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
   assertEquals(ci.ack_floor.stream_seq, 2);
 
   // try to get 2 messages - OK, but only gets 1
-  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  sub = await js.fetch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
       m.ack();
@@ -478,7 +478,7 @@ Deno.test("jetstream - pull batch some messages", async () => {
   assertEquals(ci.ack_floor.stream_seq, 3);
 
   // try to get 2 messages - OK, none available
-  sub = await js.pullBatch(stream, "me", { batch: 2, no_wait: true });
+  sub = await js.fetch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
     for await (const m of sub) {
       m.ack();
@@ -792,7 +792,7 @@ Deno.test("jetstream - pull batch none - breaks after expires", async () => {
 
   const js = nc.jetstream();
   const sw = time();
-  const batch = js.pullBatch(stream, "me", {
+  const batch = js.fetch(stream, "me", {
     batch: 10,
     expires: 1000,
   });
@@ -821,7 +821,7 @@ Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
 
   const js = nc.jetstream();
   const sw = time();
-  const batch = js.pullBatch(stream, "me", {
+  const batch = js.fetch(stream, "me", {
     batch: 10,
     no_wait: true,
   });
@@ -851,7 +851,7 @@ Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
   await js.publish(subj);
 
   const sw = time();
-  const batch = js.pullBatch(stream, "me", {
+  const batch = js.fetch(stream, "me", {
     batch: 10,
     no_wait: true,
   });
@@ -879,7 +879,7 @@ Deno.test("jetstream - pull batch none - cancel timers", async () => {
 
   const js = nc.jetstream();
   const sw = time();
-  const batch = js.pullBatch(stream, "me", {
+  const batch = js.fetch(stream, "me", {
     batch: 10,
     expires: 1000,
   });
@@ -915,7 +915,7 @@ Deno.test("jetstream - pull batch one - breaks after expires", async () => {
   const js = nc.jetstream();
 
   const sw = time();
-  const batch = js.pullBatch(stream, "me", {
+  const batch = js.fetch(stream, "me", {
     batch: 10,
     expires: 1000,
   });
