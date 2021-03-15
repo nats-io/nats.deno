@@ -151,7 +151,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 }
 
 export function isConsumerOptsBuilder(
-  o: ConsumerOptsBuilder | ConsumerOpts,
+  o: ConsumerOptsBuilder | Partial<ConsumerOpts>,
 ): o is ConsumerOptsBuilderImpl {
   return typeof (o as ConsumerOptsBuilderImpl).getOpts === "function";
 }

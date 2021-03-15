@@ -248,7 +248,7 @@ export class JetStreamClientImpl extends BaseApiClient
 
   async pullSubscribe(
     subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
+    opts: ConsumerOptsBuilder | Partial<ConsumerOpts> = consumerOpts(),
   ): Promise<JetStreamPullSubscription> {
     const cso = await this._processOptions(subject, opts);
     if (!cso.attached) {
@@ -284,7 +284,7 @@ export class JetStreamClientImpl extends BaseApiClient
 
   async subscribe(
     subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
+    opts: ConsumerOptsBuilder | Partial<ConsumerOpts> = consumerOpts(),
   ): Promise<JetStreamSubscription> {
     const cso = await this._processOptions(subject, opts);
     // this effectively requires deliver subject to be specified
@@ -313,7 +313,7 @@ export class JetStreamClientImpl extends BaseApiClient
 
   async _processOptions(
     subject: string,
-    opts: ConsumerOptsBuilder | ConsumerOpts = consumerOpts(),
+    opts: ConsumerOptsBuilder | Partial<ConsumerOpts> = consumerOpts(),
   ): Promise<JetStreamSubscriptionInfo> {
     const jsi =
       (isConsumerOptsBuilder(opts)

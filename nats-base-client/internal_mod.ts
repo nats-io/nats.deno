@@ -17,8 +17,15 @@ export type {
 } from "./types.ts";
 
 export type {
+  AccountLimits,
+  ClusterInfo,
   ConnectionOptions,
+  Consumer,
+  ConsumerConfig,
   ConsumerOpts,
+  DeliveryInfo,
+  JetStreamAccountStats,
+  JetStreamApiStats,
   JetStreamClient,
   JetStreamManager,
   JetStreamOptions,
@@ -28,14 +35,37 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsg,
   JsMsgCallback,
+  Lister,
+  LostStreamData,
+  MsgDeleteRequest,
+  MsgRequest,
+  Nanos,
+  PeerInfo,
+  Placement,
+  PullOptions,
+  SequencePair,
+  StoredMsg,
   StreamConfig,
   StreamInfo,
+  StreamNames,
+  StreamSource,
+  StreamSourceInfo,
+  StreamState,
 } from "./types.ts";
 
-export { AckPolicy, AdvisoryKind } from "./types.ts";
+export {
+  AckPolicy,
+  AdvisoryKind,
+  DeliverPolicy,
+  DiscardPolicy,
+  ReplayPolicy,
+  RetentionPolicy,
+  StorageType,
+} from "./types.ts";
 
 export { consumerOpts } from "./consumeropts.ts";
 export type { ConsumerOptsBuilder } from "./consumeropts.ts";
+export { toJsMsg } from "./jsmsg.ts";
 
 export { DebugEvents, Empty, Events } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
