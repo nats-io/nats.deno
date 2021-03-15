@@ -367,7 +367,7 @@ Deno.test("jetstream - pull", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch no messages", async () => {
+Deno.test("jetstream - fetch no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -408,7 +408,7 @@ Deno.test("jetstream - expires or no_wait is required", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch: no_wait with more left", async () => {
+Deno.test("jetstream - fetch: no_wait with more left", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -427,7 +427,7 @@ Deno.test("jetstream - pull batch: no_wait with more left", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch some messages", async () => {
+Deno.test("jetstream - fetch some messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -781,7 +781,7 @@ Deno.test("jetstream - subscribe - not attached non-durable", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch none - breaks after expires", async () => {
+Deno.test("jetstream - fetch none - breaks after expires", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -810,7 +810,7 @@ Deno.test("jetstream - pull batch none - breaks after expires", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
+Deno.test("jetstream - fetch none - no wait breaks fast", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -838,7 +838,7 @@ Deno.test("jetstream - pull batch none - no wait breaks fast", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
+Deno.test("jetstream - fetch one - no wait breaks fast", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -868,7 +868,7 @@ Deno.test("jetstream - pull batch one - no wait breaks fast", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch none - cancel timers", async () => {
+Deno.test("jetstream - fetch none - cancel timers", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -902,7 +902,7 @@ Deno.test("jetstream - pull batch none - cancel timers", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - pull batch one - breaks after expires", async () => {
+Deno.test("jetstream - fetch one - breaks after expires", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -1282,7 +1282,7 @@ Deno.test("jetstream - cross account pull", async () => {
     inboxPrefix: "A",
   });
 
-  // the api prefix is not used for pull/pullBatch()
+  // the api prefix is not used for pull/fetch()
   const js = nc.jetstream({ apiPrefix: "IPA" });
   let msg = await js.pull(stream, "me");
   assertEquals(msg.seq, 1);
@@ -1299,7 +1299,7 @@ Deno.test("jetstream - cross account pull", async () => {
   await cleanup(ns, admin, nc);
 });
 
-// Deno.test("jetstream - cross account pull batch", async () => {
+// Deno.test("jetstream - cross account fetch", async () => {
 //   const { ns, nc: admin } = await setup(
 //     jetstreamExportServerConf(),
 //     {
@@ -1333,9 +1333,9 @@ Deno.test("jetstream - cross account pull", async () => {
 //     debug: true,
 //   });
 //
-//   // the api prefix is not used for pull/pullBatch()
+//   // the api prefix is not used for pull/fetch()
 //   const js = nc.jetstream({ apiPrefix: "IPA" });
-//   let iter = js.pullBatch(stream, "me", { batch: 20, expires: 1000 });
+//   let iter = js.fetch(stream, "me", { batch: 20, expires: 1000 });
 //   const msgs = await consume(iter);
 //
 //   assertEquals(msgs.length, 2);

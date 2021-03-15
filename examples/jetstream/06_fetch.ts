@@ -31,9 +31,9 @@ await jsm.consumers.add(stream, {
 
 const js = nc.jetstream();
 
-// similar to `pull()`, `fetch()` requests for one or more messages.
+// similar to `pull()`, `fetch()` requests one or more messages.
 // if `expire` is set, the returned iterator will wait for the specified
-// number of messages or expire at the specified time. The `no_wait`
+// number of messages or expire at the specified time. The `no_wait`d option
 // returns an empty result if no messages are available.
 const batch = js.fetch(stream, "me", { batch: 25, expires: 1000 });
 await (async () => {

@@ -23,7 +23,7 @@ await js.publish(subj);
 await js.publish(subj);
 await js.publish(subj);
 
-// this is similar to pullBatch, but the consumer is created
+// this is similar to fetch, but the consumer is created
 // behind the scenes. To pull messages, you call `pull()` on
 // the PullSubscription.
 const psub = await js.pullSubscribe(subj, {
