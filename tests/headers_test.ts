@@ -26,7 +26,7 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
-} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+} from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("headers - option", async () => {

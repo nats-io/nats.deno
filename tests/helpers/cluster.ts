@@ -14,7 +14,7 @@
  */
 
 import { NatsServer } from "./mod.ts";
-import { parse } from "https://deno.land/std@0.83.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.90.0/flags/mod.ts";
 
 const defaults = {
   c: 2,

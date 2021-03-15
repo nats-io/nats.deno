@@ -25,7 +25,7 @@ import { DataBuffer, deferred } from "../nats-base-client/internal_mod.ts";
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+} from "https://deno.land/std@0.90.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
 
