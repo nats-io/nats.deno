@@ -53,7 +53,7 @@ import {
 } from "../nats-base-client/jsclient.ts";
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
-import { ConsumerOptsBuilderImpl } from "../nats-base-client/consumeropts.ts";
+import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -1191,8 +1191,8 @@ Deno.test("jetstream - cross account subscribe", async () => {
   await cleanup(ns, admin, nc);
 });
 
-Deno.test("jetstream - cross account pull subscribe", async () => {
-  console.error(yellow("FAILING - ignoring"));
+Deno.test("jetstream - cross account pull subscribe", () => {
+  console.error(yellow("cross account pull subscribe is failing - ignoring"));
   // const { ns, nc: admin } = await setup(
   //   jetstreamExportServerConf(),
   //   {
