@@ -8,11 +8,19 @@ A Deno client for the [NATS messaging system](https://nats.io).
 
 # Installation
 
-** :warning: NATS.deno is a release candidate** you can get the current
-development version by:
+You can get the latest release version like this:
 
-```bash
-import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts"
+```typescript
+import * as nats from "https://deno.land/x/nats/src/mod.ts";
+```
+
+To specify a specific released version, simply replace nats with
+nats@_versionTag_.
+
+You can get the current development version by:
+
+```typescript
+import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
 ```
 
 To see a list of items that are under development see [TODO](TODO.md).
@@ -822,3 +830,10 @@ The relationship between these is:
   0 and `reconnectJitterTLS` and add it to `reconnectTimeWait`.
 - If the client didn't specify TLS options, the client will generate a number
   between 0 and `reconnectJitter` and add it to `reconnectTimeWait`.
+
+## JetStream
+
+[Support for JetStream is built-in](jetstream.md). However, the JetStream API
+extensions are still in beta. Feel free to use them. The client will emit a
+console message when either `nc.jetstream()` or `nc.jetstreamManager()` apis are
+used to remind you they are in beta.

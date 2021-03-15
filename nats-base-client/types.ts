@@ -294,7 +294,7 @@ export interface JetStreamClient {
     options?: Partial<JetStreamPublishOptions>,
   ): Promise<PubAck>;
   pull(stream: string, durable: string): Promise<JsMsg>;
-  pullBatch(
+  fetch(
     stream: string,
     durable: string,
     opts?: Partial<PullOptions>,

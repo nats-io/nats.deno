@@ -22,7 +22,7 @@ import {
   consumerOpts,
   ConsumerOptsBuilderImpl,
   isConsumerOptsBuilder,
-} from "../nats-base-client/consumeropts.ts";
+} from "../nats-base-client/jsconsumeropts.ts";
 import {
   AckPolicy,
   ConsumerOpts,

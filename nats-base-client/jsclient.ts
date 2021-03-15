@@ -59,8 +59,8 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
-import type { ConsumerOptsBuilder } from "./consumeropts.ts";
-import { consumerOpts, isConsumerOptsBuilder } from "./consumeropts.ts";
+import type { ConsumerOptsBuilder } from "./jsconsumeropts.ts";
+import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -148,7 +148,7 @@ export class JetStreamClientImpl extends BaseApiClient
   * @param durable
   * @param opts
   */
-  pullBatch(
+  fetch(
     stream: string,
     durable: string,
     opts: Partial<PullOptions> = {},

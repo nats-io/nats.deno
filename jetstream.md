@@ -25,8 +25,8 @@ The new generation of Javascript clients:
 - [nats.ws](https://github.com/nats-io/nats.ws)
 - [nats.deno](https://github.com/nats-io/nats.deno)
 
-all support JetStream, however the functionality is still on _beta_, and the
-APIs are subject to change. Please report any issues you find.
+all support JetStream, however the functionality is a _preview_, and the APIs
+are subject to change. Please report any issues you find.
 
 ## JetStreamManager
 
@@ -133,7 +133,7 @@ let msg = await js.pull(stream, durableName);
 msg.ack();
 ```
 
-#### Requesting a batch of messages
+#### Fetching batch of messages
 
 You can also request more than one message at time. The request is a _long_
 poll. So it remains open until the desired number of messages is received, or
@@ -141,7 +141,7 @@ the expiration time triggers.
 
 ```typescript
 // To get multiple messages in one request you can:
-let msgs = await js.pullBatch(stream, durable, { batch: 10, expires: 5000 });
+let msgs = await js.fetch(stream, durable, { batch: 10, expires: 5000 });
 // the request returns an iterator that will get at most 10 seconds or wait
 // for 5000ms for messages to arrive.
 

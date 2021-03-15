@@ -63,8 +63,8 @@ export {
   StorageType,
 } from "./types.ts";
 
-export { consumerOpts } from "./consumeropts.ts";
-export type { ConsumerOptsBuilder } from "./consumeropts.ts";
+export { consumerOpts } from "./jsconsumeropts.ts";
+export type { ConsumerOptsBuilder } from "./jsconsumeropts.ts";
 export { toJsMsg } from "./jsmsg.ts";
 
 export { DebugEvents, Empty, Events } from "./types.ts";

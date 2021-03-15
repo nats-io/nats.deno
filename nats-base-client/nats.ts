@@ -258,6 +258,7 @@ export class NatsConnectionImpl implements NatsConnection {
   async jetstreamManager(
     opts: JetStreamOptions = {},
   ): Promise<JetStreamManager> {
+    jetstreamPreview(this);
     const adm = new JetStreamManagerImpl(this, opts);
     try {
       await adm.getAccountInfo();
@@ -274,6 +275,26 @@ export class NatsConnectionImpl implements NatsConnection {
   jetstream(
     opts: JetStreamOptions = {},
   ): JetStreamClient {
+    jetstreamPreview(this);
     return new JetStreamClientImpl(this, opts);
   }
 }
+
+const jetstreamPreview = (() => {
+  let once = false;
+  return (nci: NatsConnectionImpl) => {
+    if (!once) {
+      once = true;
+      const { lang } = nci?.protocol?.transport;
+      if (lang) {
+        console.log(
+          `\u001B[33m >> jetstream functionality in ${lang} is preview functionality \u001B[0m`,
+        );
+      } else {
+        console.log(
+          `\u001B[33m >> jetstream functionality is preview functionality \u001B[0m`,
+        );
+      }
+    }
+  };
+})();
