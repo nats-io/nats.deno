@@ -25,8 +25,8 @@ The new generation of Javascript clients:
 - [nats.ws](https://github.com/nats-io/nats.ws)
 - [nats.deno](https://github.com/nats-io/nats.deno)
 
-all support JetStream, however the functionality is a _preview_, and the
-APIs are subject to change. Please report any issues you find.
+all support JetStream, however the functionality is a _preview_, and the APIs
+are subject to change. Please report any issues you find.
 
 ## JetStreamManager
 
