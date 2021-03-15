@@ -156,7 +156,7 @@ const done = (async () => {
 await done;
 ```
 
-### Push Subscriptions
+#### Push Subscriptions
 
 A push subscription is similar to a standard NATS subscription. The consumer
 configuration registers for messages to be delivered to a specific subject. When
@@ -189,7 +189,7 @@ const done = (async () => {
 sub.destroy();
 ```
 
-### Pull Subscriptions
+#### Pull Subscriptions
 
 Pull subscriber API is similar to the _push subscriber_, but messages will be
 delivered by `pull()`. The subscription remains open, but the client has to
@@ -235,7 +235,7 @@ message's reply subject. This metadata includes:
   - `term()` - specifies that you failed to process the server and instructs the
     server to not send it againn (to any consumer).
 
-If you implement a standard nats subscription to process your JetStream
+If you implement a standard NATS subscription to process your JetStream
 messages, you can use `toJsMsg()` to convert a message. Note that subscriptions
 processing stream data can contain nats Msgs that are not convertible to
 `JsMsg`.
@@ -250,7 +250,9 @@ JetStream callbacks look like this:
 
 As you can see, it is possible for your callback to get `null` for both the
 error and the message argument. The reason for this, is that JetStream sends
-standard nats `Msg` that contains headers to inform the client of various
+standard NATS `Msg` that contains headers to inform the client of various
 things. When using iterators, any control message is handled, so your iterator
-won't see them. When using callbacks this is not possible. Protocol messages
-will be handled behind the scenes, but your callback will still be invoked.
+won't see them. When specifying callbacks to process your
+`JetStreamSubscription` or `JetStreamPullSubscription`, this is not possible.
+Protocol messages will be handled behind the scenes, but your callback will
+still be invoked.
