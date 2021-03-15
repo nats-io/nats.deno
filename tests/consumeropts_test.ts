@@ -16,7 +16,7 @@
 import {
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+} from "https://deno.land/std@0.90.0/testing/asserts.ts";
 
 import {
   consumerOpts,
@@ -29,7 +29,6 @@ import {
   DeliverPolicy,
   JsMsgCallback,
 } from "../nats-base-client/types.ts";
-import { nanos } from "../nats-base-client/jsutil.ts";
 
 Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder(consumerOpts()), true);

@@ -4,5 +4,5 @@ This file lists the dependencies used in this repository.
 
 | Dependency                                | License     |
 | ----------------------------------------- | ----------- |
-| https://deno.land/std@0.83.0/flags/mod.ts | MIT License |
+| https://deno.land/std@0.90.0/flags/mod.ts | MIT License |
 | http://github.com/nats-io/nkeys.js        | Apache-2.0  |
