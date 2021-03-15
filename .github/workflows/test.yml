@@ -30,13 +30,21 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.1.7" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.2.0" >> $GITHUB_ENV
+
       - name: Get nats-server
         run: |
-          wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
+          wget "https://github.com/nats-io/nats-server/releases/download/$NATS_VERSION/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
           unzip tmp.zip
           mv nats-server-$NATS_VERSION-linux-amd64 nats-server
           rm nats-server/README.md LICENSE
+
+#      - name: Get nats-server
+#        run: |
+#          wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
+#          unzip tmp.zip
+#          mv nats-server-$NATS_VERSION-linux-amd64 nats-server
+#          rm nats-server/README.md LICENSE
 
       - name: Lint Deno Module
         run: deno fmt --check
