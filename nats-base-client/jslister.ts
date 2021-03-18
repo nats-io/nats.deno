@@ -17,7 +17,7 @@ import { BaseApiClient } from "./jsbaseclient_api.ts";
 
 export type ListerFieldFilter<T> = (v: unknown) => T[];
 
-export class ListerImpl<T> implements Lister<T> {
+export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   err?: Error;
   offset: number;
   pageInfo: ApiPaged;
@@ -62,6 +62,16 @@ export class ListerImpl<T> implements Lister<T> {
     } catch (err) {
       this.err = err;
       throw err;
+    }
+  }
+
+  async *[Symbol.asyncIterator]() {
+    let page = await this.next();
+    while (page.length > 0) {
+      for (const item of page) {
+        yield item;
+      }
+      page = await this.next();
     }
   }
 }
