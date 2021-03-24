@@ -2,6 +2,7 @@ export {
   Bench,
   createInbox,
   credsAuthenticator,
+  DebugEvents,
   Empty,
   ErrorCode,
   Events,
