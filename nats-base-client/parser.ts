@@ -545,7 +545,7 @@ export class Parser {
     this.argBuf = new DenoBuffer(buf);
     this.ma.subject = buf.subarray(0, s);
     if (this.ma.reply) {
-      this.ma.reply = buf.subarray(r);
+      this.ma.reply = buf.subarray(s);
     }
   }
 

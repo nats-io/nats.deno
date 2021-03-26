@@ -412,6 +412,29 @@ Deno.test("parser - header", () => {
   assertEquals(td.decode(payload!.subarray(d.msgs[0].msg?.hdr)), "bar");
 });
 
+Deno.test("parser - subject", () => {
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  p.parse(
+    te.encode(
+      `MSG foo 1 _INBOX.4E66Z7UREYUY9VKDNFBT1A.4E66Z7UREYUY9VKDNFBT72.4E66Z7UREYUY9VKDNFBSVI 102400\r\n`,
+    ),
+  );
+  for (let i = 0; i < 100; i++) {
+    p.parse(new Uint8Array(1024));
+  }
+  assertEquals(p.ma.size, 102400, `size ${p.ma.size}`);
+  assertEquals(p.ma.sid, 1, "sid");
+  assertEquals(p.ma.subject, te.encode("foo"), "subject");
+  assertEquals(
+    p.ma.reply,
+    te.encode(
+      "_INBOX.4E66Z7UREYUY9VKDNFBT1A.4E66Z7UREYUY9VKDNFBT72.4E66Z7UREYUY9VKDNFBSVI",
+    ),
+    "reply",
+  );
+});
+
 Deno.test("parser - msg buffers don't clobber", () => {
   parserClobberTest(false);
 });
