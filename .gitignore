@@ -10,7 +10,7 @@ src/version.json
 old_tests/
 examples/certs/
 
-
+debug/
 .idea/
 
 # nyc test coverage
