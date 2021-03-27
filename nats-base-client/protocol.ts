@@ -693,7 +693,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const mux = this.subscriptions.getMux();
     if (!mux) {
       const inbox = this.muxSubscriptions.init(
-        createInbox(this.options.inboxPrefix),
+        this.options.inboxPrefix,
       );
       // dot is already part of mux
       const sub = new SubscriptionImpl(this, `${inbox}*`);
