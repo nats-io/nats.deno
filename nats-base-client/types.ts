@@ -149,6 +149,7 @@ export interface ServerInfo {
   "auth_required"?: boolean;
   "client_id": number;
   "client_ip"?: string;
+  cluster?: string;
   "connect_urls"?: string[];
   "git_commit"?: string;
   go: string;
