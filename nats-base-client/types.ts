@@ -465,7 +465,7 @@ export interface StreamConfig {
   "max_msgs": number;
   "max_bytes": number;
   discard?: DiscardPolicy;
-  "max_age": number;
+  "max_age": Nanos;
   "max_msg_size"?: number;
   storage: StorageType;
   "num_replicas": number;
