@@ -29,6 +29,7 @@ import {
   delay,
   Empty,
   ErrorCode,
+  headers,
   JsMsg,
   JsMsgCallback,
   JSONCodec,
@@ -1297,6 +1298,25 @@ Deno.test("jetstream - cross account pull", async () => {
   );
 
   await cleanup(ns, admin, nc);
+});
+
+Deno.test("jetstream - publish headers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({ debug: true }, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  const h = headers();
+  h.set("a", "b");
+
+  await js.publish(subj, Empty, { headers: h });
+  const ms = await js.pull(stream, "me");
+  ms.ack();
+  assertEquals(ms.headers!.get("a"), "b");
+  await cleanup(ns, nc);
 });
 
 // Deno.test("jetstream - cross account fetch", async () => {
