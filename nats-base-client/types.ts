@@ -252,6 +252,7 @@ export interface JetStreamPublishOptions {
   msgID: string;
   timeout: number;
   ackWait: Nanos;
+  headers: { [key: string]: string }
   expect: Partial<{
     lastMsgID: string;
     streamName: string;

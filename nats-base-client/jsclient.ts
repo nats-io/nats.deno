@@ -102,6 +102,11 @@ export class JetStreamClientImpl extends BaseApiClient
       if (opts.expect.lastSequence) {
         mh.set(PubHeaders.ExpectedLastSeqHdr, `${opts.expect.lastSequence}`);
       }
+      if (opts.headers) {
+        for (const key in opts.headers) {
+          mh.set(key, opts.headers[key])
+        }
+      }
     }
 
     const to = opts.timeout ?? this.timeout;
