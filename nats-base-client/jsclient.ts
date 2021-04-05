@@ -88,7 +88,7 @@ export class JetStreamClientImpl extends BaseApiClient
   ): Promise<PubAck> {
     opts = opts ?? {};
     opts.expect = opts.expect ?? {};
-    const mh = headers();
+    const mh = opts?.headers ?? headers();
     if (opts) {
       if (opts.msgID) {
         mh.set(PubHeaders.MsgIdHdr, opts.msgID);
