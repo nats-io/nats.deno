@@ -32,7 +32,7 @@ const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;
 
 export function defaultJsOptions(opts?: JetStreamOptions): JetStreamOptions {
-  opts = opts ?? {} as JetStreamOptions;
+  opts = opts || {} as JetStreamOptions;
   return extend({ apiPrefix: defaultPrefix, timeout: defaultTimeout }, opts);
 }
 
