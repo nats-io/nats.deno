@@ -86,9 +86,9 @@ export class JetStreamClientImpl extends BaseApiClient
     data: Uint8Array = Empty,
     opts?: Partial<JetStreamPublishOptions>,
   ): Promise<PubAck> {
-    opts = opts ?? {};
-    opts.expect = opts.expect ?? {};
-    const mh = opts?.headers ?? headers();
+    opts = opts || {};
+    opts.expect = opts.expect || {};
+    const mh = opts?.headers || headers();
     if (opts) {
       if (opts.msgID) {
         mh.set(PubHeaders.MsgIdHdr, opts.msgID);
@@ -104,7 +104,7 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     }
 
-    const to = opts.timeout ?? this.timeout;
+    const to = opts.timeout || this.timeout;
     const ro = {} as RequestOptions;
     if (to) {
       ro.timeout = to;
@@ -159,9 +159,9 @@ export class JetStreamClientImpl extends BaseApiClient
     let timer: Timeout<void> | null = null;
 
     const args: Partial<PullOptions> = {};
-    args.batch = opts.batch ?? 1;
-    args.no_wait = opts.no_wait ?? false;
-    const expires = opts.expires ?? 0;
+    args.batch = opts.batch || 1;
+    args.no_wait = opts.no_wait || false;
+    const expires = opts.expires || 0;
     if (expires) {
       args.expires = nanos(expires);
     }
@@ -321,7 +321,7 @@ export class JetStreamClientImpl extends BaseApiClient
         : opts) as JetStreamSubscriptionInfo;
 
     jsi.api = this;
-    jsi.config = jsi.config ?? {} as ConsumerConfig;
+    jsi.config = jsi.config || {} as ConsumerConfig;
     jsi.stream = jsi.stream ? jsi.stream : await this.findStream(subject);
 
     jsi.attached = false;
@@ -351,7 +351,7 @@ export class JetStreamClientImpl extends BaseApiClient
       //   createInbox(this.nc.options.inboxPrefix);
     }
 
-    jsi.deliver = jsi.config.deliver_subject ??
+    jsi.deliver = jsi.config.deliver_subject ||
       createInbox(this.nc.options.inboxPrefix);
 
     return jsi;
@@ -368,7 +368,7 @@ export class JetStreamClientImpl extends BaseApiClient
     if (!jsi.mack) {
       so.dispatchedFn = autoAckJsMsg;
     }
-    so.max = jsi.max ?? 0;
+    so.max = jsi.max || 0;
     return so;
   }
 
@@ -412,14 +412,14 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
       await this.drain();
     }
     const jinfo = this.sub.info as JetStreamSubscriptionInfo;
-    const name = jinfo.config.durable_name ?? jinfo.name;
+    const name = jinfo.config.durable_name || jinfo.name;
     const subj = `${jinfo.api.prefix}.CONSUMER.DELETE.${jinfo.stream}.${name}`;
     await jinfo.api._request(subj);
   }
 
   async consumerInfo(): Promise<ConsumerInfo> {
     const jinfo = this.sub.info as JetStreamSubscriptionInfo;
-    const name = jinfo.config.durable_name ?? jinfo.name;
+    const name = jinfo.config.durable_name || jinfo.name;
     const subj = `${jinfo.api.prefix}.CONSUMER.INFO.${jinfo.stream}.${name}`;
     return await jinfo.api._request(subj) as ConsumerInfo;
   }
@@ -438,8 +438,8 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     const { stream, config } = this.sub.info as JetStreamSubscriptionInfo;
     const consumer = config.durable_name;
     const args: Partial<PullOptions> = {};
-    args.batch = opts.batch ?? 1;
-    args.no_wait = opts.no_wait ?? false;
+    args.batch = opts.batch || 1;
+    args.no_wait = opts.no_wait || false;
     // FIXME: this is nanos
     if (opts.expires && opts.expires > 0) {
       args.expires = opts.expires;

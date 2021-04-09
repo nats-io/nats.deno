@@ -92,7 +92,7 @@ class JsMsgImpl implements JsMsg {
   }
 
   get reply(): string {
-    return this.msg.reply ?? "";
+    return this.msg.reply || "";
   }
 
   get seq(): number {
