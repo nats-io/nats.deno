@@ -55,6 +55,9 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
         .catch((err) => {
           // timer fired
           this.stop(err);
+          if (this.noIterator) {
+            this.callback(err, {} as Msg);
+          }
         });
     }
   }

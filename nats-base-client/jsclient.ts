@@ -127,7 +127,6 @@ export class JetStreamClientImpl extends BaseApiClient
     validateStreamName(stream);
     validateDurableName(durable);
     const msg = await this.nc.request(
-      // FIXME: specify expires
       `${this.prefix}.CONSUMER.MSG.NEXT.${stream}.${durable}`,
       this.jc.encode({ no_wait: true, batch: 1, expires: nanos(this.timeout) }),
       { noMux: true, timeout: this.timeout },

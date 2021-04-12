@@ -388,6 +388,35 @@ Deno.test("jetstream - fetch no messages", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - pull stream doesn't exist", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream({ timeout: 1000 });
+  // this error could change if the server returns a meaningful value
+  await assertThrowsAsync(
+    async () => {
+      await js.pull("helloworld", "me");
+    },
+    NatsError,
+    "TIMEOUT",
+  );
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer doesn't exist", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream({ timeout: 1000 });
+  // this error could change if the server returns a meaningful value
+  await assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    NatsError,
+    "TIMEOUT",
+  );
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - expires or no_wait is required", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
@@ -1301,7 +1330,7 @@ Deno.test("jetstream - cross account pull", async () => {
 });
 
 Deno.test("jetstream - publish headers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({ debug: true }, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {

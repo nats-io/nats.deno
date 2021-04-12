@@ -485,6 +485,24 @@ Deno.test("basics - subscription with timeout", async () => {
   await nc.close();
 });
 
+Deno.test("basics - callback subscription with timeout", async () => {
+  const nc = await connect({ servers: u });
+  const d = deferred<NatsError | null>();
+  const sub = nc.subscribe(createInbox(), {
+    max: 1,
+    timeout: 500,
+    callback: (err, msg) => {
+      d.resolve(err);
+    },
+  });
+
+  const err = await d;
+  assert(err !== null);
+  assertEquals((err as NatsError).code, ErrorCode.Timeout);
+  assertEquals(sub.isClosed(), true);
+  await nc.close();
+});
+
 Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => {
   const nc = await connect({ servers: u });
   const subj = createInbox();
@@ -773,4 +791,23 @@ Deno.test("basics - debug", async () => {
   await nc.flush();
   await nc.close();
   assertEquals(nc.isClosed(), true);
+});
+
+Deno.test("basics - noMux requests timeout", async () => {
+  const nc = await connect({ servers: ["demo.nats.io"] });
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    max: 1,
+    callback: (err, msg) => {
+      // do nothing
+    },
+  });
+  await assertThrowsAsync(
+    async () => {
+      await nc.request(subj, Empty, { timeout: 500, noMux: true });
+    },
+    NatsError,
+    "TIMEOUT",
+  );
+  await nc.close();
 });
