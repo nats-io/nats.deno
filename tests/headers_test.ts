@@ -118,3 +118,58 @@ Deno.test("headers - status", () => {
   checkStatus(503, "No Responders");
   checkStatus(404, "No Messages");
 });
+
+Deno.test("headers - non MIME", () => {
+  const h = headers();
+  h.set("a", "aa");
+  assertEquals(h.get("A"), "aa");
+  assertEquals(h.get("A", false), "aa");
+  assertEquals(h.get("a", false), "");
+
+  h.set("b", "bb", false);
+  assertEquals(h.get("B"), "");
+  assertEquals(h.get("b"), "");
+  assertEquals(h.get("b", false), "bb");
+
+  h.append("c", "cc");
+  assertEquals(h.values("c"), ["cc"]);
+  assertEquals(h.values("C"), ["cc"]);
+  assertEquals(h.values("c", false), []);
+
+  h.append("d", "cc", false);
+  assertEquals(h.values("d"), []);
+  assertEquals(h.values("D"), []);
+  assertEquals(h.values("d", false), ["cc"]);
+
+  h.delete("c", false);
+  assertEquals(h.values("c"), ["cc"]);
+  assertEquals(h.values("C"), ["cc"]);
+
+  h.delete("c");
+  assertEquals(h.values("c"), []);
+  assertEquals(h.values("C"), []);
+});
+
+Deno.test("headers - values should be arrays", () => {
+  const h = headers();
+  h.set("a", "aa");
+  h.append("a", "bb");
+  assertEquals(h.get("a"), "aa");
+  assertEquals(h.values("a"), ["aa", "bb"]);
+});
+
+Deno.test("headers - equality", () => {
+  const a = headers() as MsgHdrsImpl;
+  const b = headers() as MsgHdrsImpl;
+  assert(a.equals(b));
+
+  a.set("a", "b");
+  b.set("a", "b");
+  assert(a.equals(b));
+
+  b.append("a", "bb");
+  assert(!a.equals(b));
+
+  a.append("a", "cc");
+  assert(!a.equals(b));
+});

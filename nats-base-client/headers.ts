@@ -22,12 +22,12 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
   code: number;
-  get(k: string): string;
-  set(k: string, v: string): void;
-  append(k: string, v: string): void;
-  has(k: string): boolean;
-  values(k: string): string[];
-  delete(k: string): void;
+  get(k: string, mime?: boolean): string;
+  set(k: string, v: string, mime?: boolean): void;
+  append(k: string, v: string, mime?: boolean): void;
+  has(k: string, mime?: boolean): boolean;
+  values(k: string, mime?: boolean): string[];
+  delete(k: string, mime?: boolean): void;
 }
 
 export function headers(): MsgHdrs {
@@ -59,7 +59,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     return count;
   }
 
-  equals(mh: MsgHdrsImpl) {
+  equals(mh: MsgHdrsImpl): boolean {
     if (
       mh && this.headers.size === mh.headers.size &&
       this.code === mh.code
@@ -76,8 +76,8 @@ export class MsgHdrsImpl implements MsgHdrs {
             return false;
           }
         }
-        return true;
       }
+      return true;
     }
     return false;
   }
@@ -182,24 +182,24 @@ export class MsgHdrsImpl implements MsgHdrs {
     return k.trim();
   }
 
-  get(k: string): string {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  get(k: string, mime = true): string {
+    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
     const a = this.headers.get(key);
     return a ? a[0] : "";
   }
 
-  has(k: string): boolean {
-    return this.get(k) !== "";
+  has(k: string, mime = true): boolean {
+    return this.get(k, mime) !== "";
   }
 
-  set(k: string, v: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  set(k: string, v: string, mime = true): void {
+    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
     const value = MsgHdrsImpl.validHeaderValue(v);
     this.headers.set(key, [value]);
   }
 
-  append(k: string, v: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  append(k: string, v: string, mime = true): void {
+    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
     const value = MsgHdrsImpl.validHeaderValue(v);
     let a = this.headers.get(key);
     if (!a) {
@@ -209,13 +209,13 @@ export class MsgHdrsImpl implements MsgHdrs {
     a.push(value);
   }
 
-  values(k: string): string[] {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  values(k: string, mime = true): string[] {
+    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
     return this.headers.get(key) || [];
   }
 
-  delete(k: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  delete(k: string, mime = true): void {
+    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
     this.headers.delete(key);
   }
 
