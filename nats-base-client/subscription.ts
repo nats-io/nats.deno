@@ -46,19 +46,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
     this.closed = deferred();
 
     if (opts.timeout) {
-      this.timer = timeout<void>(opts.timeout);
-      this.timer
-        .then(() => {
-          // timer was cancelled
-          this.timer = undefined;
-        })
-        .catch((err) => {
-          // timer fired
-          this.stop(err);
-          if (this.noIterator) {
-            this.callback(err, {} as Msg);
-          }
-        });
+      this.setTimeout(opts.timeout);
     }
   }
 
@@ -97,6 +85,22 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
 
   unsubscribe(max?: number): void {
     this.protocol.unsubscribe(this, max);
+  }
+
+  setTimeout(millis: number): void {
+    this.timer = timeout<void>(millis);
+    this.timer
+      .then(() => {
+        // timer was cancelled
+        this.timer = undefined;
+      })
+      .catch((err) => {
+        // timer fired
+        this.stop(err);
+        if (this.noIterator) {
+          this.callback(err, {} as Msg);
+        }
+      });
   }
 
   cancelTimeout(): void {

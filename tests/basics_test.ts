@@ -485,13 +485,28 @@ Deno.test("basics - subscription with timeout", async () => {
   await nc.close();
 });
 
+Deno.test("basics - subscription with timeout cancels on message", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1, timeout: 500 }) as SubscriptionImpl;
+  const done = (async () => {
+    for await (const m of sub) {
+      // ignored
+    }
+  })();
+  nc.publish(subj);
+  await done;
+  assertEquals(sub.timer, undefined);
+  await nc.close();
+});
+
 Deno.test("basics - callback subscription with timeout", async () => {
   const nc = await connect({ servers: u });
   const d = deferred<NatsError | null>();
   const sub = nc.subscribe(createInbox(), {
     max: 1,
     timeout: 500,
-    callback: (err, msg) => {
+    callback: (err) => {
       d.resolve(err);
     },
   });
@@ -500,6 +515,31 @@ Deno.test("basics - callback subscription with timeout", async () => {
   assert(err !== null);
   assertEquals((err as NatsError).code, ErrorCode.Timeout);
   assertEquals(sub.isClosed(), true);
+  await nc.close();
+});
+
+Deno.test("basics - recurring subscription timeout", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const errP = deferred<NatsError>();
+  const sub = nc.subscribe(subj, {
+    max: 10,
+    timeout: 500,
+    callback: (err) => {
+      if (err) {
+        errP.resolve(err);
+        return;
+      }
+      sub.setTimeout(500);
+    },
+  });
+
+  nc.publish(subj);
+  nc.publish(subj);
+
+  const done = await errP;
+  assertErrorCode(done, ErrorCode.Timeout);
+  assertEquals(sub.getReceived(), 2);
   await nc.close();
 });
 
@@ -798,7 +838,7 @@ Deno.test("basics - noMux requests timeout", async () => {
   const subj = createInbox();
   nc.subscribe(subj, {
     max: 1,
-    callback: (err, msg) => {
+    callback: () => {
       // do nothing
     },
   });

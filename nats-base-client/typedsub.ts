@@ -192,4 +192,12 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
   get closed(): Promise<void> {
     return this.sub.closed;
   }
+
+  setTimeout(millis: number): void {
+    this.sub.setTimeout(millis);
+  }
+
+  cancelTimeout(): void {
+    this.sub.cancelTimeout();
+  }
 }

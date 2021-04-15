@@ -378,6 +378,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     sub.received += 1;
 
     if (sub.callback) {
+      sub.cancelTimeout();
       sub.callback(null, new MsgImpl(msg, data, this));
     }
 

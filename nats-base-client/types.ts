@@ -194,6 +194,8 @@ export interface Sub<T> extends AsyncIterable<T> {
   getPending(): number;
   getID(): number;
   getMax(): number | undefined;
+  setTimeout(millis: number): void;
+  cancelTimeout(): void;
 }
 
 export type Subscription = Sub<Msg>;
