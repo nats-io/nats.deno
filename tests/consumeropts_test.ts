@@ -16,7 +16,7 @@
 import {
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 
 import {
   consumerOpts,
@@ -200,7 +200,7 @@ Deno.test("consumeropts - maxMessages", () => {
 Deno.test("consumeropts - callback", () => {
   const opts = consumerOpts() as ConsumerOptsBuilderImpl;
 
-  const cb: JsMsgCallback = (err, msg) => {};
+  const cb: JsMsgCallback = () => {};
   opts.callback(cb);
   assertEquals(opts.callbackFn, cb);
 

@@ -217,6 +217,7 @@ export class Bench {
     if (this.req) {
       const d = deferred<void>();
       jobs.push(d);
+      // deno-lint-ignore no-unused-vars
       const sub = this.nc.subscribe(
         this.subject,
         {
@@ -235,9 +236,9 @@ export class Bench {
       const d = deferred<void>();
       jobs.push(d);
       let i = 0;
-      const sub = this.nc.subscribe(this.subject, {
+      this.nc.subscribe(this.subject, {
         max: this.msgs,
-        callback: (_, msg) => {
+        callback: () => {
           i++;
           if (i === 1) {
             this.perf.mark("subStart");

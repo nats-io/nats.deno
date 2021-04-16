@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -269,7 +269,7 @@ Deno.test("reconnect - wait on first connect", async () => {
   const nc = await pnc;
   const subj = createInbox();
   nc.subscribe(subj, {
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond();
     },
   });

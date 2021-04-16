@@ -19,7 +19,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 
 Deno.test("noresponders - option", async () => {
   const srv = await NatsServer.start();

@@ -50,6 +50,9 @@ export class JetStreamManagerImpl extends BaseApiClient
     const iter = new QueuedIteratorImpl<Advisory>();
     this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
       callback: (err, msg) => {
+        if (err) {
+          throw err;
+        }
         try {
           const d = this.parseJsResponse(msg) as ApiResponse;
           const chunks = d.type.split(".");
