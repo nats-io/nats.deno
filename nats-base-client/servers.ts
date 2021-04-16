@@ -84,7 +84,6 @@ export class Servers {
   constructor(
     randomize: boolean,
     listens: string[] = [],
-    opts: ServersOptions = {},
   ) {
     this.firstSelect = true;
     this.servers = [] as ServerImpl[];
@@ -205,7 +204,7 @@ export class Servers {
     });
 
     // remaining servers are new
-    discovered.forEach((v, k, m) => {
+    discovered.forEach((v, k) => {
       this.servers.push(v);
       added.push(k);
     });

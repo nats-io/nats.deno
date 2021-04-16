@@ -69,42 +69,6 @@ export interface Pending {
   done: boolean;
 }
 
-export function pending(): Pending {
-  const v = {} as Pending;
-  const promise = new Promise<void>((resolve) => {
-    v.promise = () => {
-      return promise;
-    };
-    v.write = (c: number) => {
-      if (v.resolved) {
-        return;
-      }
-      v.pending += c;
-    };
-    v.wrote = (c: number) => {
-      if (v.resolved) {
-        return;
-      }
-      v.pending -= c;
-      if (v.done && 0 >= v.pending) {
-        resolve();
-      }
-    };
-    v.close = () => {
-      v.done = true;
-      if (v.pending === 0) {
-        resolve();
-      }
-    };
-    v.err = () => {
-      v.pending = 0;
-      v.resolved = true;
-      v.close();
-    };
-  });
-  return v;
-}
-
 export function render(frame: Uint8Array): string {
   const cr = "␍";
   const lf = "␊";
@@ -120,7 +84,7 @@ export interface Timeout<T> extends Promise<T> {
 export function timeout<T>(ms: number): Timeout<T> {
   let methods;
   let timer: number;
-  const p = new Promise((resolve, reject) => {
+  const p = new Promise((_resolve, reject) => {
     const cancel = (): void => {
       if (timer) {
         clearTimeout(timer);

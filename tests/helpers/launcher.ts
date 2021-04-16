@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 // deno-lint-ignore-file no-explicit-any
-import * as path from "https://deno.land/std@0.90.0/path/mod.ts";
+import * as path from "https://deno.land/std@0.92.0/path/mod.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -21,7 +21,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,
@@ -153,7 +153,7 @@ export class NatsServer implements PortInfo {
               console.log(t);
             }
           }
-        } catch (err) {
+        } catch (_err) {
           break;
         }
       }

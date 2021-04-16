@@ -14,7 +14,7 @@
  */
 
 import { connect, createInbox, Subscription } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 
 const u = "demo.nats.io:4222";
 
