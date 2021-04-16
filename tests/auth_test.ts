@@ -16,7 +16,7 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   connect,
   credsAuthenticator,
@@ -408,7 +408,7 @@ Deno.test("auth - creds authenticator validation", () => {
       const { nkey, sig } = auth("helloworld") as unknown as NKeyAuth;
       assertEquals(nkey, upk);
       assert(sig.length > 0);
-    } catch (err) {
+    } catch (_err) {
       if (v[2]) {
         fail(`should have passed: ${v[3]}`);
       }

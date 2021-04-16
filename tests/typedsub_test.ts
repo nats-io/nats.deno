@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { connect } from "../src/mod.ts";
 import {
   createInbox,
@@ -99,7 +99,7 @@ Deno.test("typedsub - callback gets data", async () => {
   };
 
   const d: string[] = [];
-  tso.callback = (err, data) => {
+  tso.callback = (_err, data) => {
     d.push(data ?? "BAD");
   };
 
@@ -154,7 +154,7 @@ Deno.test("typedsub - cleanup on unsub", async () => {
   };
 
   const d = deferred<void>();
-  tso.cleanupFn = (sub, info) => {
+  tso.cleanupFn = () => {
     d.resolve();
   };
 
@@ -175,10 +175,10 @@ Deno.test("typedsub - cleanup on close", async () => {
     return [err, msg];
   };
 
-  tso.callback = (err, m) => {};
+  tso.callback = () => {};
 
   const d = deferred<void>();
-  tso.cleanupFn = (sub, info) => {
+  tso.cleanupFn = () => {
     d.resolve();
   };
 

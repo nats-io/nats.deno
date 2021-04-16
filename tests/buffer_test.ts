@@ -11,7 +11,7 @@ import {
   assert,
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   DenoBuffer,
   MAX_SIZE,
@@ -23,8 +23,6 @@ import {
 const N = 100;
 let testBytes: Uint8Array | null;
 let testString: string | null;
-
-const ignoreMaxSizeTests = true;
 
 function init(): void {
   if (testBytes == null) {
