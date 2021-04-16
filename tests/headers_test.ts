@@ -106,9 +106,8 @@ function checkStatus(code = 200, description = "") {
     assertEquals(h.code, code);
     assertEquals(h.description, description);
     assertEquals(h.status, `${code} ${description}`.trim());
-    assertEquals(h.get("status"), code.toString());
   }
-  assertEquals(h.get("description"), description);
+  assertEquals(h.description, description);
 }
 
 Deno.test("headers - status", () => {
@@ -119,43 +118,36 @@ Deno.test("headers - status", () => {
   checkStatus(404, "No Messages");
 });
 
-Deno.test("headers - non MIME", () => {
+Deno.test("headers - lookups are case insensitive", () => {
   const h = headers();
   h.set("a", "aa");
-  assertEquals(h.get("A"), "aa");
-  assertEquals(h.get("A", false), "aa");
-  assertEquals(h.get("a", false), "");
+  h.set("A", "AA");
+  const v = h.get("a");
+  assert(["aa", "AA"].indexOf(v) !== -1);
 
-  h.set("b", "bb", false);
-  assertEquals(h.get("B"), "");
-  assertEquals(h.get("b"), "");
-  assertEquals(h.get("b", false), "bb");
+  const a = h.values("a");
+  assertEquals(a, ["aa", "AA"]);
 
-  h.append("c", "cc");
-  assertEquals(h.values("c"), ["cc"]);
-  assertEquals(h.values("C"), ["cc"]);
-  assertEquals(h.values("c", false), []);
+  const A = h.values("A");
+  assertEquals(A, ["aa", "AA"]);
+});
 
-  h.append("d", "cc", false);
-  assertEquals(h.values("d"), []);
-  assertEquals(h.values("D"), []);
-  assertEquals(h.values("d", false), ["cc"]);
+Deno.test("headers - keys serialize as provided", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "b");
+  assert(h.headers.has("a"));
 
-  h.delete("c", false);
-  assertEquals(h.values("c"), ["cc"]);
-  assertEquals(h.values("C"), ["cc"]);
-
-  h.delete("c");
-  assertEquals(h.values("c"), []);
-  assertEquals(h.values("C"), []);
+  h.set("hello-world", "X");
+  assert(h.has("hello-world"));
+  assert(h.headers.has("hello-world"));
 });
 
 Deno.test("headers - values should be arrays", () => {
-  const h = headers();
+  const h = headers() as MsgHdrsImpl;
   h.set("a", "aa");
-  h.append("a", "bb");
-  assertEquals(h.get("a"), "aa");
-  assertEquals(h.values("a"), ["aa", "bb"]);
+  assertEquals(h.headers.get("a"), ["aa"]);
+  h.append("b", "bb");
+  assertEquals(h.headers.get("b"), ["bb"]);
 });
 
 Deno.test("headers - equality", () => {

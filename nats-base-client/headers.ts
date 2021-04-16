@@ -22,12 +22,14 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
   code: number;
-  get(k: string, mime?: boolean): string;
-  set(k: string, v: string, mime?: boolean): void;
-  append(k: string, v: string, mime?: boolean): void;
-  has(k: string, mime?: boolean): boolean;
-  values(k: string, mime?: boolean): string[];
-  delete(k: string, mime?: boolean): void;
+  description: string;
+
+  get(k: string): string;
+  set(k: string, v: string): void;
+  append(k: string, v: string): void;
+  has(k: string): boolean;
+  values(k: string): string[];
+  delete(k: string): void;
 }
 
 export function headers(): MsgHdrs {
@@ -91,12 +93,8 @@ export class MsgHdrsImpl implements MsgHdrs {
       let str = h.replace(HEADER, "");
       mh.code = parseInt(str, 10);
       const scode = mh.code.toString();
-      mh.set("Status", scode);
       str = str.replace(scode, "");
       mh.description = str.trim();
-      if (mh.description) {
-        mh.set("Description", mh.description);
-      }
     } else {
       lines.slice(1).map((s) => {
         if (s) {
@@ -182,41 +180,71 @@ export class MsgHdrsImpl implements MsgHdrs {
     return k.trim();
   }
 
-  get(k: string, mime = true): string {
-    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
-    const a = this.headers.get(key);
-    return a ? a[0] : "";
+  keys(): string[] {
+    const keys = [];
+    for (const sk of this.headers.keys()) {
+      keys.push(sk);
+    }
+    return keys;
   }
 
-  has(k: string, mime = true): boolean {
-    return this.get(k, mime) !== "";
+  findKeys(k: string): string[] {
+    const lci = k.toLowerCase();
+    const keys = this.keys();
+    const found = keys.filter((v) => {
+      return lci === v.toLowerCase();
+    });
+    return found;
   }
 
-  set(k: string, v: string, mime = true): void {
-    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
+  get(k: string): string {
+    const keys = this.findKeys(k);
+    if (keys.length) {
+      const v = this.headers.get(keys[0]);
+      if (v) {
+        return Array.isArray(v) ? v[0] : v;
+      }
+    }
+    return "";
+  }
+
+  has(k: string): boolean {
+    return this.findKeys(k).length > 0;
+  }
+
+  set(k: string, v: string): void {
+    this.append(k, v);
+  }
+
+  append(k: string, v: string): void {
+    // validate the key
+    MsgHdrsImpl.canonicalMIMEHeaderKey(k);
     const value = MsgHdrsImpl.validHeaderValue(v);
-    this.headers.set(key, [value]);
-  }
-
-  append(k: string, v: string, mime = true): void {
-    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
-    const value = MsgHdrsImpl.validHeaderValue(v);
-    let a = this.headers.get(key);
+    let a = this.headers.get(k);
     if (!a) {
       a = [];
-      this.headers.set(key, a);
+      this.headers.set(k, a);
     }
     a.push(value);
   }
 
-  values(k: string, mime = true): string[] {
-    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
-    return this.headers.get(key) || [];
+  values(k: string): string[] {
+    const buf: string[] = [];
+    const keys = this.findKeys(k);
+    keys.forEach((v) => {
+      const values = this.headers.get(v);
+      if (values) {
+        buf.push(...values);
+      }
+    });
+    return buf;
   }
 
-  delete(k: string, mime = true): void {
-    const key = mime ? MsgHdrsImpl.canonicalMIMEHeaderKey(k) : k;
-    this.headers.delete(key);
+  delete(k: string): void {
+    const keys = this.findKeys(k);
+    keys.forEach((v) => {
+      this.headers.delete(v);
+    });
   }
 
   get hasError() {
