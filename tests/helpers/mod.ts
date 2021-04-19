@@ -2,6 +2,7 @@ export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";
 export {
+  assertBetween,
   assertErrorCode,
   assertThrowsAsyncErrorCode,
   assertThrowsErrorCode,

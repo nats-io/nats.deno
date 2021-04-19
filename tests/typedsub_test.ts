@@ -12,7 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.92.0/testing/asserts.ts";
+import {
+  assert,
+  assertEquals,
+  assertThrowsAsync,
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { connect } from "../src/mod.ts";
 import {
   createInbox,
@@ -25,7 +29,7 @@ import {
   TypedSubscription,
   TypedSubscriptionOptions,
 } from "../nats-base-client/internal_mod.ts";
-import { assertThrowsErrorCode } from "./helpers/asserts.ts";
+import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import { checkFn } from "../nats-base-client/typedsub.ts";
 
 const u = "demo.nats.io:4222";
@@ -249,5 +253,129 @@ Deno.test("typedsub - drain", async () => {
   })().then();
   await sa.drain();
   assertEquals(sa.isClosed(), true);
+  await nc.close();
+});
+
+Deno.test("typedsub - timeout", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.timeout = 500;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  assert(sa.sub.timer !== undefined);
+  await assertThrowsAsync(
+    async () => {
+      for await (const s of sa) {
+        // nothing
+      }
+    },
+    NatsError,
+    ErrorCode.Timeout,
+  );
+
+  await nc.close();
+});
+
+Deno.test("typedsub - timeout on callback", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const d = deferred<NatsError | null>();
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.timeout = 500;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+  tso.callback = (err) => {
+    d.resolve(err);
+  };
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  const err = await d;
+  assert(err !== null);
+  assertErrorCode(err, ErrorCode.Timeout);
+  assertEquals(sa.isClosed(), true);
+
+  await nc.close();
+});
+
+Deno.test("typedsub - timeout cleared on message", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.max = 1;
+  tso.timeout = 1000;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  assert(sa.sub.timer !== undefined);
+  const done = (async () => {
+    for await (const s of sa) {
+      // nothing
+    }
+  })();
+  nc.publish(subj);
+  await nc.flush();
+  await done;
+  assertEquals(sa.sub.timer, undefined);
+  assertEquals(sa.getProcessed(), 1);
+
+  await nc.close();
+});
+
+Deno.test("typedsub - timeout callback cleared on message", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+
+  const d = deferred<string | null>();
+  const sc = StringCodec();
+  const tso = {} as TypedSubscriptionOptions<string>;
+  tso.timeout = 500;
+  tso.max = 1;
+  tso.adapter = (
+    err,
+    msg,
+  ): [NatsError | null, string | null] => {
+    if (err) {
+      return [err, null];
+    }
+    return [err, sc.decode(msg.data)];
+  };
+  tso.callback = (err, msg) => {
+    err ? d.reject(err) : d.resolve(msg);
+  };
+  const sa = new TypedSubscription<string>(nc, subj, tso);
+  nc.publish(subj, sc.encode("hello"));
+  const m = await d;
+  assertEquals(m, "hello");
+  assertEquals(sa.sub.timer, undefined);
   await nc.close();
 });

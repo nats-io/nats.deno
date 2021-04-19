@@ -156,6 +156,7 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
   }
 
   callback(e: NatsError | null, msg: Msg): void {
+    this.sub.cancelTimeout();
     const [err, tm] = this.adapter(e, msg);
     if (err) {
       this.stop(err);

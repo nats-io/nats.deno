@@ -774,3 +774,36 @@ Deno.test("basics - debug", async () => {
   await nc.close();
   assertEquals(nc.isClosed(), true);
 });
+
+Deno.test("basics - subscription with timeout cancels on message", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1, timeout: 500 }) as SubscriptionImpl;
+  assert(sub.timer !== undefined);
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(sub.timer, undefined);
+    }
+  })();
+  nc.publish(subj);
+  await done;
+  await nc.close();
+});
+
+Deno.test("basics - subscription cb with timeout cancels on message", async () => {
+  const nc = await connect({ servers: u });
+  const subj = createInbox();
+  const done = Lock();
+  const sub = nc.subscribe(subj, {
+    max: 1,
+    timeout: 500,
+    callback: () => {
+      done.unlock();
+    },
+  }) as SubscriptionImpl;
+  assert(sub.timer !== undefined);
+  nc.publish(subj);
+  await done;
+  assertEquals(sub.timer, undefined);
+  await nc.close();
+});
