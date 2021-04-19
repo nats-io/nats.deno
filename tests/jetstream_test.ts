@@ -44,8 +44,8 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { yellow } from "https://deno.land/std@0.90.0/fmt/colors.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
+import { yellow } from "https://deno.land/std@0.92.0/fmt/colors.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
 import {

@@ -14,7 +14,7 @@
  */
 import { Lock, NatsServer, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("events - close on close", async () => {

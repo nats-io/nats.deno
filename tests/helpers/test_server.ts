@@ -46,7 +46,7 @@ export class Connection {
             }
             this.processInbound(frame);
           }
-        } catch (err) {
+        } catch (_err) {
           break;
         }
       }
@@ -154,7 +154,7 @@ export class TestServer {
           ts.clients.push(c);
           c.write(ts.info);
           c.startReading();
-        } catch (err) {
+        } catch (_err) {
           ts.accept.resolve();
           return;
         }

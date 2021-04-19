@@ -15,7 +15,7 @@
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { connect, createInbox, Msg } from "../src/mod.ts";
 import {
   deferred,
@@ -31,7 +31,7 @@ Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = ((sub, info) => {
+  subimpl.cleanupFn = ((_sub, info) => {
     const id = info as { data?: string };
     d.resolve(id.data ? id.data : "");
   });

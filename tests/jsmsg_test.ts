@@ -15,7 +15,7 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -34,7 +34,7 @@ Deno.test("jsmsg - parse", async () => {
   const m = deferred<Msg>();
   const sub = nc.subscribe(subj, {
     max: 1,
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       m.resolve(msg);
     },
   });
@@ -89,6 +89,9 @@ Deno.test("jsmsg - acks", async () => {
   let counter = 1;
   nc.subscribe(subj, {
     callback: (err, msg) => {
+      if (err) {
+        fail(err.message);
+      }
       msg.respond(Empty, {
         // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
         reply:
@@ -102,6 +105,9 @@ Deno.test("jsmsg - acks", async () => {
   const replies: Msg[] = [];
   nc.subscribe("MY.TEST.*.*.*.*.*.*.*", {
     callback: (err, msg) => {
+      if (err) {
+        fail(err.message);
+      }
       replies.push(msg);
     },
   });

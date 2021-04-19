@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.90.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.90.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.92.0/io/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.92.0/async/mod.ts";
 import Conn = Deno.Conn;
 import {
   checkOptions,
@@ -54,7 +54,8 @@ export class DenoTransport implements Transport {
   private encrypted = false;
   private done = false;
   private closedNotification: Deferred<void | Error> = deferred();
-  private conn!: Conn;
+  // @ts-ignore: Deno 1.9.0 broke compatibility by adding generics to this
+  private conn!: Conn<NetAddr>;
   private writer!: BufWriter;
 
   // the async writes to the socket do not guarantee
@@ -245,7 +246,7 @@ export class DenoTransport implements Transport {
     this.done = true;
     try {
       this.conn.close();
-    } catch (err) {
+    } catch (_err) {
       // ignored
     }
 

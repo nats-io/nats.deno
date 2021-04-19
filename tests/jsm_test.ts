@@ -18,7 +18,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   AckPolicy,
   AdvisoryKind,
@@ -461,13 +461,17 @@ Deno.test("jsm - get message", async () => {
   assertEquals(sm.seq, 2);
   assertEquals(jc.decode(sm.data), 2);
 
-  await assertThrowsAsync(
+  const err = await assertThrowsAsync(
     async () => {
       await jsm.streams.getMessage(stream, 3);
     },
     Error,
-    "no message found",
   );
+  if (
+    err.message !== "stream store eof" && err.message !== "no message found"
+  ) {
+    fail(`unexpected error message ${err.message}`);
+  }
 
   await cleanup(ns, nc);
 });
@@ -534,7 +538,7 @@ Deno.test("jsm - validate name", () => {
       if (!v[1]) {
         fail(`${v[0]} should have been rejected`);
       }
-    } catch (err) {
+    } catch (_err) {
       if (v[1]) {
         fail(`${v[0]} should have been valid`);
       }
@@ -553,7 +557,7 @@ Deno.test("jsm - cross account streams", async () => {
 
   const sawIPA = deferred();
   nc.subscribe("IPA.>", {
-    callback: (err, msg) => {
+    callback: () => {
       sawIPA.resolve();
     },
     max: 1,
@@ -634,7 +638,7 @@ Deno.test("jsm - cross account consumers", async () => {
 
   const sawIPA = deferred();
   nc.subscribe("IPA.>", {
-    callback: (err, msg) => {
+    callback: () => {
       sawIPA.resolve();
     },
     max: 1,

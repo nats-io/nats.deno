@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.90.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.92.0/flags/mod.ts";
 import {
   connect,
   ConnectionOptions,
@@ -34,6 +34,8 @@ if (argv.debug) {
 
 if (argv.creds) {
   const f = await Deno.open(argv.creds, { read: true });
+  // FIXME: this needs to be changed when deno releases 2.0
+  // deno-lint-ignore no-deprecated-deno-api
   const data = await Deno.readAll(f);
   Deno.close(f.rid);
   opts.authenticator = credsAuthenticator(data);

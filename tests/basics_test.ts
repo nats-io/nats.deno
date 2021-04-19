@@ -18,7 +18,7 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
+} from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -284,7 +284,7 @@ Deno.test("basics - closed cannot subscribe", async () => {
   try {
     nc.subscribe(createInbox());
     fail("should have not been able to subscribe");
-  } catch (err) {
+  } catch (_err) {
     failed = true;
   }
   assert(failed);
@@ -297,7 +297,7 @@ Deno.test("basics - close cannot request", async () => {
   try {
     await nc.request(createInbox());
     fail("should have not been able to request");
-  } catch (err) {
+  } catch (_err) {
     failed = true;
   }
   assert(failed);
@@ -389,7 +389,7 @@ Deno.test("basics - old style requests", async () => {
   const sc = StringCodec();
   const nc = await connect({ servers: u });
   nc.subscribe("q", {
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond(sc.encode("hello"));
     },
   });
@@ -409,7 +409,7 @@ Deno.test("basics - request with custom subject", async () => {
   const sc = StringCodec();
   const nc = await connect({ servers: u });
   nc.subscribe("q", {
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond(sc.encode("hello"));
     },
   });
@@ -800,7 +800,7 @@ Deno.test("basics - custom prefix", async () => {
   const subj = createInbox();
   nc.subscribe(subj, {
     max: 1,
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond(jc.encode(msg.reply!.startsWith("_x.")));
     },
   });
@@ -816,7 +816,7 @@ Deno.test("basics - custom prefix noMux", async () => {
   const subj = createInbox();
   nc.subscribe(subj, {
     max: 1,
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond(jc.encode(msg.reply!.startsWith("_y.")));
     },
   });

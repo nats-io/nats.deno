@@ -75,7 +75,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
       if (this.cleanupFn) {
         try {
           this.cleanupFn(this, this.info);
-        } catch (err) {
+        } catch (_err) {
           // ignoring
         }
       }
