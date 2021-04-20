@@ -213,6 +213,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   set(k: string, v: string): void {
+    this.delete(k);
     this.append(k, v);
   }
 

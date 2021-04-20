@@ -123,13 +123,13 @@ Deno.test("headers - lookups are case insensitive", () => {
   h.set("a", "aa");
   h.set("A", "AA");
   const v = h.get("a");
-  assert(["aa", "AA"].indexOf(v) !== -1);
+  assertEquals(v, "AA");
 
   const a = h.values("a");
-  assertEquals(a, ["aa", "AA"]);
+  assertEquals(a, ["AA"]);
 
   const A = h.values("A");
-  assertEquals(A, ["aa", "AA"]);
+  assertEquals(A, ["AA"]);
 });
 
 Deno.test("headers - keys serialize as provided", () => {
@@ -164,4 +164,11 @@ Deno.test("headers - equality", () => {
 
   a.append("a", "cc");
   assert(!a.equals(b));
+});
+
+Deno.test("headers - set", () => {
+  const a = headers() as MsgHdrsImpl;
+  a.set("a", "b");
+  a.set("a", "c");
+  assertEquals(a.values("a"), ["c"]);
 });
