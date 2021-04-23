@@ -355,8 +355,12 @@ export interface ConsumerAPI {
   list(stream: string): Lister<ConsumerInfo>;
 }
 
+export type StreamInfoRequestOptions = {
+  "deleted_details": boolean;
+};
+
 export interface StreamAPI {
-  info(stream: string): Promise<StreamInfo>;
+  info(stream: string, opts?: StreamInfoRequestOptions): Promise<StreamInfo>;
   add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
   update(cfg: StreamConfig): Promise<StreamInfo>;
   purge(stream: string): Promise<PurgeResponse>;
@@ -533,6 +537,7 @@ export interface StreamState {
   "first_ts": number;
   "last_seq": number;
   "last_ts": string;
+  "num_deleted": number;
   deleted: number[];
   lost: LostStreamData;
   "consumer_count": number;
