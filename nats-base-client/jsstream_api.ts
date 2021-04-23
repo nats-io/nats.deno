@@ -25,6 +25,7 @@ import {
   StreamAPI,
   StreamConfig,
   StreamInfo,
+  StreamInfoRequestOptions,
   StreamListResponse,
   StreamMsgResponse,
   SuccessResponse,
@@ -64,9 +65,12 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return r as StreamInfo;
   }
 
-  async info(name: string): Promise<StreamInfo> {
+  async info(
+    name: string,
+    data?: StreamInfoRequestOptions,
+  ): Promise<StreamInfo> {
     validateStreamName(name);
-    const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`);
+    const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`, data);
     return r as StreamInfo;
   }
 
