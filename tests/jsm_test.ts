@@ -317,6 +317,25 @@ Deno.test("jsm - stream delete message", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - stream delete info", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  const js = nc.jetstream();
+  await js.publish(subj);
+  await js.publish(subj);
+  await js.publish(subj);
+  await jsm.streams.deleteMessage(stream, 2);
+
+  const si = await jsm.streams.info(stream, { deleted_details: true });
+  assertEquals(si.state.num_deleted, 1);
+  assertEquals(si.state.deleted, [2]);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - consumer info on empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
