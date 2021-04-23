@@ -28,27 +28,36 @@ const argv = parse(
       "p": ["port"],
       "c": ["count"],
       "d": ["debug"],
+      "j": ["jetstream"],
     },
     default: defaults,
+    boolean: ["debug", "jetstream"],
   },
 );
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 2] [--port 4222] [--debug]\n",
+    "usage: cluster [--count 2] [--port 4222] [--debug] [--jetstream]\n",
   );
   Deno.exit(0);
 }
 
 try {
-  const cluster = await NatsServer.cluster(
-    argv.count,
-    { port: argv.port },
-    argv.debug,
-  );
+  const cluster = argv.jetstream
+    ? await NatsServer.jetstreamCluster(
+      argv.count,
+      { port: argv.port },
+      argv.debug,
+    )
+    : await NatsServer.cluster(
+      argv.count,
+      { port: argv.port },
+      argv.debug,
+    );
+
   cluster.forEach((s) => {
     console.log(
-      `launched server [${s.process.pid}] at ${s.hostname}:${s.port} - monitor ${s.monitoring}`,
+      `nats-server -c ${s.configFile} [${s.process.pid}] at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring}`,
     );
   });
 
