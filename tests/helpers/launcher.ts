@@ -14,6 +14,7 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import * as path from "https://deno.land/std@0.92.0/path/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.92.0/fmt/colors.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -140,6 +141,7 @@ export class NatsServer implements PortInfo {
   debug: boolean;
   config: any;
   configFile: string;
+  rgb: { r: number; g: number; b: number };
 
   constructor(opts: {
     info: PortInfo;
@@ -161,6 +163,11 @@ export class NatsServer implements PortInfo {
     this.config = config;
     this.configFile = configFile;
 
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    this.rgb = { r, g, b };
+
     (async () => {
       assert(process.stderr != null);
       const td = new TextDecoder();
@@ -175,7 +182,7 @@ export class NatsServer implements PortInfo {
             const t = td.decode(buf.slice(0, c));
             this.logBuffer.push(t);
             if (debug) {
-              console.log(t);
+              console.log(rgb24(t.slice(0, t.length - 1), this!.rgb));
             }
           }
         } catch (_err) {
@@ -329,6 +336,8 @@ export class NatsServer implements PortInfo {
     const leaders: string[] = [];
     while (true) {
       try {
+        leaders.length = 0;
+        statusProms.length = 0;
         // await for all the servers to resolve and get /jsz
         servers = await Promise.all(proms);
         servers.forEach((s) => {
@@ -353,6 +362,8 @@ export class NatsServer implements PortInfo {
           if (u.length === 1) {
             return servers;
           }
+        } else {
+          console.log(`only ${leaders.length}/${servers.length} leaders`);
         }
       } catch (err) {
         err++;
@@ -527,6 +538,7 @@ export class NatsServer implements PortInfo {
         },
       );
     } catch (err) {
+      console.error(`failed to start config: ${confFile}`);
       try {
         const d = await srv.stderrOutput();
         console.error(new TextDecoder().decode(d));

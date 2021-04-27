@@ -15,6 +15,7 @@
 
 import { NatsServer } from "./mod.ts";
 import { parse } from "https://deno.land/std@0.92.0/flags/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.92.0/fmt/colors.ts";
 
 const defaults = {
   c: 2,
@@ -56,8 +57,10 @@ try {
     );
 
   cluster.forEach((s) => {
+    const pid = `[${s.process.pid}]`;
+    const cpid = rgb24(pid, s.rgb);
     console.log(
-      `nats-server -c ${s.configFile} [${s.process.pid}] at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring}`,
+      `${cpid} nats-server -c ${s.configFile}  at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring}`,
     );
   });
 
