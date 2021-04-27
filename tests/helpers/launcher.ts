@@ -259,7 +259,7 @@ export class NatsServer implements PortInfo {
   ): Promise<NatsServer[]> {
     serverConf = serverConf || {};
     // form a cluster with the specified count
-    const servers = await NatsServer.cluster(count, serverConf, debug);
+    const servers = await NatsServer.cluster(count, serverConf, false);
 
     // extract all the configs
     const configs = servers.map((s) => {
@@ -272,6 +272,10 @@ export class NatsServer implements PortInfo {
       return s.stop();
     });
     await Promise.all(proms);
+
+    servers.forEach((s) => {
+      s.debug = debug;
+    });
 
     const routes: string[] = [];
     configs.forEach((conf, idx, arr) => {
@@ -360,11 +364,20 @@ export class NatsServer implements PortInfo {
           });
           // if we have one, we fine
           if (u.length === 1) {
+            const leader = servers.filter((s) => {
+              return s.config.server_name === u[0];
+            });
+            const n = rgb24(`${u[0]}`, leader[0].rgb);
+            console.log(`leader consensus ${n}`);
             return servers;
+          } else {
+            console.log(
+              `leader contention ${leaders.length}`,
+            );
           }
         } else {
           console.log(
-            `found leader consensus on ${leaders.length}/${servers.length} leaders`,
+            `found ${leaders.length}/${servers.length} leaders`,
           );
         }
       } catch (err) {
