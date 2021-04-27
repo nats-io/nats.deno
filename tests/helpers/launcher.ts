@@ -363,7 +363,9 @@ export class NatsServer implements PortInfo {
             return servers;
           }
         } else {
-          console.log(`only ${leaders.length}/${servers.length} leaders`);
+          console.log(
+            `found leader consensus on ${leaders.length}/${servers.length} leaders`,
+          );
         }
       } catch (err) {
         err++;
