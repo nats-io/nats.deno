@@ -9,15 +9,17 @@ import {
   nuid,
 } from "../nats-base-client/internal_mod.ts";
 
-export const jsopts = {
-  // debug: true,
-  // trace: true,
-  jetstream: {
-    max_file_store: 1024 * 1024,
-    max_memory_store: 1024 * 1024,
-    store_dir: "/tmp",
-  },
-};
+export function jsopts() {
+  return {
+    // debug: true,
+    // trace: true,
+    jetstream: {
+      max_file_store: 1024 * 1024,
+      max_memory_store: 1024 * 1024,
+      store_dir: "/tmp",
+    },
+  };
+}
 
 export function jetstreamExportServerConf(
   opts: unknown = {},
@@ -52,7 +54,7 @@ export function jetstreamServerConf(
   opts: unknown = {},
   randomStoreDir = true,
 ): Record<string, unknown> {
-  const conf = Object.assign(opts, jsopts);
+  const conf = Object.assign(opts, jsopts());
   if (randomStoreDir) {
     conf.jetstream.store_dir = path.join("/tmp", "jetstream", nuid.next());
   }

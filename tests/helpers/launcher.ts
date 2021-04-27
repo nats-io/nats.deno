@@ -282,7 +282,7 @@ export class NatsServer implements PortInfo {
       let { port, cluster, monitoring, websocket, config } = conf;
 
       // jetstream defaults
-      const { jetstream } = jsopts;
+      const { jetstream } = jsopts();
       // need a server name for a cluster
       const serverName = nuid.next();
       // customize the store dir and make it
@@ -328,11 +328,12 @@ export class NatsServer implements PortInfo {
       buf.push(s.restart());
     });
 
-    return NatsServer.dataClusterFormed(buf);
+    return NatsServer.dataClusterFormed(buf, debug);
   }
 
   static async dataClusterFormed(
     proms: Promise<NatsServer>[],
+    debug = false,
   ): Promise<NatsServer[]> {
     const errs = 0;
     let servers: NatsServer[] = [];
@@ -368,17 +369,23 @@ export class NatsServer implements PortInfo {
               return s.config.server_name === u[0];
             });
             const n = rgb24(`${u[0]}`, leader[0].rgb);
-            console.log(`leader consensus ${n}`);
+            if (debug) {
+              console.log(`leader consensus ${n}`);
+            }
             return servers;
           } else {
-            console.log(
-              `leader contention ${leaders.length}`,
-            );
+            if (debug) {
+              console.log(
+                `leader contention ${leaders.length}`,
+              );
+            }
           }
         } else {
-          console.log(
-            `found ${leaders.length}/${servers.length} leaders`,
-          );
+          if (debug) {
+            console.log(
+              `found ${leaders.length}/${servers.length} leaders`,
+            );
+          }
         }
       } catch (err) {
         err++;
