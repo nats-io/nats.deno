@@ -24,12 +24,12 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   code: number;
   description: string;
 
-  get(k: string): string;
-  set(k: string, v: string): void;
+  get(k: string, exact?: boolean): string;
+  set(k: string, v: string, exact?: boolean): void;
   append(k: string, v: string): void;
-  has(k: string): boolean;
-  values(k: string): string[];
-  delete(k: string): void;
+  has(k: string, exact?: boolean): boolean;
+  values(k: string, exact?: boolean): string[];
+  delete(k: string, exact?: boolean): void;
 }
 
 export function headers(): MsgHdrs {
@@ -188,17 +188,19 @@ export class MsgHdrsImpl implements MsgHdrs {
     return keys;
   }
 
-  findKeys(k: string): string[] {
+  findKeys(k: string, exact = false): string[] {
+    if (exact) {
+      return [k];
+    }
     const lci = k.toLowerCase();
     const keys = this.keys();
-    const found = keys.filter((v) => {
+    return keys.filter((v) => {
       return lci === v.toLowerCase();
     });
-    return found;
   }
 
-  get(k: string): string {
-    const keys = this.findKeys(k);
+  get(k: string, exact = false): string {
+    const keys = this.findKeys(k, exact);
     if (keys.length) {
       const v = this.headers.get(keys[0]);
       if (v) {
@@ -208,12 +210,12 @@ export class MsgHdrsImpl implements MsgHdrs {
     return "";
   }
 
-  has(k: string): boolean {
-    return this.findKeys(k).length > 0;
+  has(k: string, exact = false): boolean {
+    return this.findKeys(k, exact).length > 0;
   }
 
-  set(k: string, v: string): void {
-    this.delete(k);
+  set(k: string, v: string, exact = false): void {
+    this.delete(k, exact);
     this.append(k, v);
   }
 
@@ -229,9 +231,9 @@ export class MsgHdrsImpl implements MsgHdrs {
     a.push(value);
   }
 
-  values(k: string): string[] {
+  values(k: string, exact = false): string[] {
     const buf: string[] = [];
-    const keys = this.findKeys(k);
+    const keys = this.findKeys(k, exact);
     keys.forEach((v) => {
       const values = this.headers.get(v);
       if (values) {
@@ -241,8 +243,8 @@ export class MsgHdrsImpl implements MsgHdrs {
     return buf;
   }
 
-  delete(k: string): void {
-    const keys = this.findKeys(k);
+  delete(k: string, exact = false): void {
+    const keys = this.findKeys(k, exact);
     keys.forEach((v) => {
       this.headers.delete(v);
     });

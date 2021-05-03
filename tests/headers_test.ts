@@ -172,3 +172,23 @@ Deno.test("headers - set", () => {
   a.set("a", "c");
   assertEquals(a.values("a"), ["c"]);
 });
+
+Deno.test("headers - exact", () => {
+  const a = headers() as MsgHdrsImpl;
+  a.set("a", "b");
+  a.set("A", "c", true);
+  assertEquals(a.get("a", true), "b");
+  assertEquals(a.values("a", true), ["b"]);
+  assertEquals(a.values("a"), ["b", "c"]);
+
+  a.append("a", "d");
+  assertEquals(a.values("a", true), ["b", "d"]);
+
+  a.delete("a", true);
+  assertEquals(a.values("a", true), []);
+  assertEquals(a.values("a"), ["c"]);
+
+  a.set("A", "x");
+  assertEquals(a.values("a", true), []);
+  assertEquals(a.values("a"), ["x"]);
+});
