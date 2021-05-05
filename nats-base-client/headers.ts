@@ -230,10 +230,7 @@ export class MsgHdrsImpl implements MsgHdrs {
 
   set(k: string, v: string, match = Match.Exact): void {
     this.delete(k, match);
-    if (match === Match.CanonicalMIME) {
-      k = canonicalMIMEHeaderKey(k);
-    }
-    this.append(k, v);
+    this.append(k, v, match);
   }
 
   append(k: string, v: string, match = Match.Exact): void {
