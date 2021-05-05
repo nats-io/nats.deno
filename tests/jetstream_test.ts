@@ -55,6 +55,7 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
+import { Match } from "../nats-base-client/headers.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -182,7 +183,7 @@ Deno.test("jetstream - publish id", async () => {
 
   const jsm = await nc.jetstreamManager();
   const sm = await jsm.streams.getMessage(stream, 1);
-  assertEquals(sm.header.get("nats-msg-id"), "a");
+  assertEquals(sm.header.get("Nats-Msg-Id"), "a");
 
   await cleanup(ns, nc);
 });
