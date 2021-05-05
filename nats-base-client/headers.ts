@@ -32,6 +32,50 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   delete(k: string, exact?: boolean): void;
 }
 
+// https://www.ietf.org/rfc/rfc822.txt
+// 3.1.2.  STRUCTURE OF HEADER FIELDS
+//
+// Once a field has been unfolded, it may be viewed as being com-
+// posed of a field-name followed by a colon (":"), followed by a
+// field-body, and  terminated  by  a  carriage-return/line-feed.
+// The  field-name must be composed of printable ASCII characters
+// (i.e., characters that  have  values  between  33.  and  126.,
+// decimal, except colon).  The field-body may be composed of any
+// ASCII characters, except CR or LF.  (While CR and/or LF may be
+// present  in the actual text, they are removed by the action of
+// unfolding the field.)
+export function canonicalMIMEHeaderKey(k: string): string {
+  const a = 97;
+  const A = 65;
+  const Z = 90;
+  const z = 122;
+  const dash = 45;
+  const colon = 58;
+  const start = 33;
+  const end = 126;
+  const toLower = a - A;
+
+  let upper = true;
+  const buf: number[] = new Array(k.length);
+  for (let i = 0; i < k.length; i++) {
+    let c = k.charCodeAt(i);
+    if (c === colon || c < start || c > end) {
+      throw new NatsError(
+        `'${k[i]}' is not a valid character for a header key`,
+        ErrorCode.BadHeader,
+      );
+    }
+    if (upper && a <= c && c <= z) {
+      c -= toLower;
+    } else if (!upper && A <= c && c <= Z) {
+      c += toLower;
+    }
+    buf[i] = c;
+    upper = c == dash;
+  }
+  return String.fromCharCode(...buf);
+}
+
 export function headers(): MsgHdrs {
   return new MsgHdrsImpl();
 }
@@ -54,11 +98,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   size(): number {
-    let count = 0;
-    for (const [_, v] of this.headers.entries()) {
-      count += v.length;
-    }
-    return count;
+    return this.headers.size;
   }
 
   equals(mh: MsgHdrsImpl): boolean {
@@ -125,50 +165,6 @@ export class MsgHdrsImpl implements MsgHdrs {
     return TE.encode(this.toString());
   }
 
-  // https://www.ietf.org/rfc/rfc822.txt
-  // 3.1.2.  STRUCTURE OF HEADER FIELDS
-  //
-  // Once a field has been unfolded, it may be viewed as being com-
-  // posed of a field-name followed by a colon (":"), followed by a
-  // field-body, and  terminated  by  a  carriage-return/line-feed.
-  // The  field-name must be composed of printable ASCII characters
-  // (i.e., characters that  have  values  between  33.  and  126.,
-  // decimal, except colon).  The field-body may be composed of any
-  // ASCII characters, except CR or LF.  (While CR and/or LF may be
-  // present  in the actual text, they are removed by the action of
-  // unfolding the field.)
-  static canonicalMIMEHeaderKey(k: string): string {
-    const a = 97;
-    const A = 65;
-    const Z = 90;
-    const z = 122;
-    const dash = 45;
-    const colon = 58;
-    const start = 33;
-    const end = 126;
-    const toLower = a - A;
-
-    let upper = true;
-    const buf: number[] = new Array(k.length);
-    for (let i = 0; i < k.length; i++) {
-      let c = k.charCodeAt(i);
-      if (c === colon || c < start || c > end) {
-        throw new NatsError(
-          `'${k[i]}' is not a valid character for a header key`,
-          ErrorCode.BadHeader,
-        );
-      }
-      if (upper && a <= c && c <= z) {
-        c -= toLower;
-      } else if (!upper && A <= c && c <= Z) {
-        c += toLower;
-      }
-      buf[i] = c;
-      upper = c == dash;
-    }
-    return String.fromCharCode(...buf);
-  }
-
   static validHeaderValue(k: string): string {
     const inv = /[\r\n]/;
     if (inv.test(k)) {
@@ -188,18 +184,20 @@ export class MsgHdrsImpl implements MsgHdrs {
     return keys;
   }
 
-  findKeys(k: string, exact = false): string[] {
+  findKeys(k: string, exact = true): string[] {
+    const keys = this.keys();
     if (exact) {
-      return [k];
+      return keys.filter((v) => {
+        return v === k;
+      });
     }
     const lci = k.toLowerCase();
-    const keys = this.keys();
     return keys.filter((v) => {
       return lci === v.toLowerCase();
     });
   }
 
-  get(k: string, exact = false): string {
+  get(k: string, exact = true): string {
     const keys = this.findKeys(k, exact);
     if (keys.length) {
       const v = this.headers.get(keys[0]);
@@ -210,18 +208,18 @@ export class MsgHdrsImpl implements MsgHdrs {
     return "";
   }
 
-  has(k: string, exact = false): boolean {
+  has(k: string, exact = true): boolean {
     return this.findKeys(k, exact).length > 0;
   }
 
-  set(k: string, v: string, exact = false): void {
+  set(k: string, v: string, exact = true): void {
     this.delete(k, exact);
     this.append(k, v);
   }
 
   append(k: string, v: string): void {
     // validate the key
-    MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+    canonicalMIMEHeaderKey(k);
     const value = MsgHdrsImpl.validHeaderValue(v);
     let a = this.headers.get(k);
     if (!a) {
@@ -231,7 +229,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     a.push(value);
   }
 
-  values(k: string, exact = false): string[] {
+  values(k: string, exact = true): string[] {
     const buf: string[] = [];
     const keys = this.findKeys(k, exact);
     keys.forEach((v) => {
@@ -243,7 +241,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     return buf;
   }
 
-  delete(k: string, exact = false): void {
+  delete(k: string, exact = true): void {
     const keys = this.findKeys(k, exact);
     keys.forEach((v) => {
       this.headers.delete(v);

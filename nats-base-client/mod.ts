@@ -1,5 +1,6 @@
 export {
   Bench,
+  canonicalMIMEHeaderKey,
   createInbox,
   credsAuthenticator,
   DebugEvents,

@@ -13,27 +13,93 @@
  * limitations under the License.
  */
 import {
+  canonicalMIMEHeaderKey,
   connect,
   createInbox,
   Empty,
   headers,
+  NatsError,
   RequestOptions,
   StringCodec,
 } from "../src/mod.ts";
 import { NatsServer } from "./helpers/launcher.ts";
-import { Lock } from "./helpers/mod.ts";
 import {
   assert,
-  assertArrayIncludes,
   assertEquals,
+  assertThrows,
 } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
 
-Deno.test("headers - option", async () => {
+Deno.test("headers - illegal key", () => {
+  const h = headers();
+  ["bad:", "bad ", String.fromCharCode(127)].forEach((v) => {
+    assertThrows(() => {
+      h.set(v, "aaa");
+    }, NatsError);
+  });
+
+  ["\r", "\n"].forEach((v) => {
+    assertThrows(() => {
+      h.set("a", v);
+    }, NatsError);
+  });
+});
+
+Deno.test("headers - case sensitive", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "a");
+  assert(h.has("a"));
+  assert(!h.has("A"));
+
+  h.set("A", "A");
+  assert(h.has("A"));
+
+  assertEquals(h.size(), 2);
+  assertEquals(h.get("a"), "a");
+  assertEquals(h.values("a"), ["a"]);
+  assertEquals(h.get("A"), "A");
+  assertEquals(h.values("A"), ["A"]);
+
+  h.append("a", "aa");
+  h.append("A", "AA");
+  assertEquals(h.size(), 2);
+  assertEquals(h.values("a"), ["a", "aa"]);
+  assertEquals(h.values("A"), ["A", "AA"]);
+
+  h.delete("a");
+  assert(!h.has("a"));
+  assert(h.has("A"));
+
+  h.set("A", "AAA");
+  assertEquals(h.values("A"), ["AAA"]);
+});
+
+Deno.test("headers - case insensitive", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "a", false);
+  // set replaces
+  h.set("A", "A", false);
+  assertEquals(h.size(), 1);
+  assert(h.has("a", false));
+  assert(h.has("A", false));
+  assertEquals(h.values("a", false), ["A"]);
+  assertEquals(h.values("A", false), ["A"]);
+
+  h.append("a", "aa");
+  assertEquals(h.size(), 2);
+  const v = h.values("a", false);
+  v.sort();
+  assertEquals(v, ["A", "aa"]);
+
+  h.delete("a", false);
+  assertEquals(h.size(), 0);
+});
+
+Deno.test("headers - publish has headers", async () => {
   const srv = await NatsServer.start();
   const nc = await connect(
     {
-      servers: `127.0.0.1:${srv.port}`,
+      port: srv.port,
     },
   );
 
@@ -41,52 +107,47 @@ Deno.test("headers - option", async () => {
   h.set("a", "aa");
   h.set("b", "bb");
 
-  const sc = StringCodec();
-
-  const lock = Lock();
-  const sub = nc.subscribe("foo");
-  (async () => {
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 1 });
+  const done = (async () => {
     for await (const m of sub) {
-      assertEquals("bar", sc.decode(m.data));
       assert(m.headers);
-      for (const [k, v] of m.headers) {
-        assert(k);
-        assert(v);
-        const vv = h.values(k);
-        assertArrayIncludes(v, vv);
-      }
-      lock.unlock();
+      const mh = m.headers as MsgHdrsImpl;
+      assertEquals(mh.size(), 2);
+      assert(mh.has("a"));
+      assert(mh.has("b"));
     }
-  })().then();
+  })();
 
-  nc.publish("foo", sc.encode("bar"), { headers: h });
-  await nc.flush();
-  await lock;
+  nc.publish(subj, Empty, { headers: h });
+  await done;
   await nc.close();
   await srv.stop();
 });
 
-Deno.test("headers - request headers", async () => {
-  const sc = StringCodec();
+Deno.test("headers - request has headers", async () => {
   const srv = await NatsServer.start();
   const nc = await connect({
-    servers: `nats://127.0.0.1:${srv.port}`,
+    port: srv.port,
   });
   const s = createInbox();
-  const sub = nc.subscribe(s);
-  (async () => {
+  const sub = nc.subscribe(s, { max: 1 });
+  const done = (async () => {
     for await (const m of sub) {
-      m.respond(sc.encode("foo"), { headers: m.headers });
+      m.respond(Empty, { headers: m.headers });
     }
-  })().then();
+  })();
+
   const opts = {} as RequestOptions;
   opts.headers = headers();
-  opts.headers.set("x", s);
+  opts.headers.set("x", "X");
   const msg = await nc.request(s, Empty, opts);
+  assert(msg.headers);
+  const mh = msg.headers;
+  assert(mh.has("x"));
+  await done;
   await nc.close();
   await srv.stop();
-  assertEquals(sc.decode(msg.data), "foo");
-  assertEquals(msg.headers?.get("x"), s);
 });
 
 function status(code: number, description: string): Uint8Array {
@@ -118,38 +179,6 @@ Deno.test("headers - status", () => {
   checkStatus(404, "No Messages");
 });
 
-Deno.test("headers - lookups are case insensitive", () => {
-  const h = headers();
-  h.set("a", "aa");
-  h.set("A", "AA");
-  const v = h.get("a");
-  assertEquals(v, "AA");
-
-  const a = h.values("a");
-  assertEquals(a, ["AA"]);
-
-  const A = h.values("A");
-  assertEquals(A, ["AA"]);
-});
-
-Deno.test("headers - keys serialize as provided", () => {
-  const h = headers() as MsgHdrsImpl;
-  h.set("a", "b");
-  assert(h.headers.has("a"));
-
-  h.set("hello-world", "X");
-  assert(h.has("hello-world"));
-  assert(h.headers.has("hello-world"));
-});
-
-Deno.test("headers - values should be arrays", () => {
-  const h = headers() as MsgHdrsImpl;
-  h.set("a", "aa");
-  assertEquals(h.headers.get("a"), ["aa"]);
-  h.append("b", "bb");
-  assertEquals(h.headers.get("b"), ["bb"]);
-});
-
 Deno.test("headers - equality", () => {
   const a = headers() as MsgHdrsImpl;
   const b = headers() as MsgHdrsImpl;
@@ -166,29 +195,8 @@ Deno.test("headers - equality", () => {
   assert(!a.equals(b));
 });
 
-Deno.test("headers - set", () => {
-  const a = headers() as MsgHdrsImpl;
-  a.set("a", "b");
-  a.set("a", "c");
-  assertEquals(a.values("a"), ["c"]);
-});
-
-Deno.test("headers - exact", () => {
-  const a = headers() as MsgHdrsImpl;
-  a.set("a", "b");
-  a.set("A", "c", true);
-  assertEquals(a.get("a", true), "b");
-  assertEquals(a.values("a", true), ["b"]);
-  assertEquals(a.values("a"), ["b", "c"]);
-
-  a.append("a", "d");
-  assertEquals(a.values("a", true), ["b", "d"]);
-
-  a.delete("a", true);
-  assertEquals(a.values("a", true), []);
-  assertEquals(a.values("a"), ["c"]);
-
-  a.set("A", "x");
-  assertEquals(a.values("a", true), []);
-  assertEquals(a.values("a"), ["x"]);
+Deno.test("msgheaders - canonical", () => {
+  assertEquals(canonicalMIMEHeaderKey("foo"), "Foo");
+  assertEquals(canonicalMIMEHeaderKey("foo-bar"), "Foo-Bar");
+  assertEquals(canonicalMIMEHeaderKey("foo-bar-baz"), "Foo-Bar-Baz");
 });
