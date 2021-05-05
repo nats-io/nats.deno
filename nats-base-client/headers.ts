@@ -24,12 +24,12 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   code: number;
   description: string;
 
-  get(k: string, exact?: boolean): string;
-  set(k: string, v: string, exact?: boolean): void;
-  append(k: string, v: string): void;
-  has(k: string, exact?: boolean): boolean;
-  values(k: string, exact?: boolean): string[];
-  delete(k: string, exact?: boolean): void;
+  get(k: string, match?: Match): string;
+  set(k: string, v: string, match?: Match): void;
+  append(k: string, v: string, match?: Match): void;
+  has(k: string, match?: Match): boolean;
+  values(k: string, match?: Match): string[];
+  delete(k: string, match?: Match): void;
 }
 
 // https://www.ietf.org/rfc/rfc822.txt
@@ -81,6 +81,15 @@ export function headers(): MsgHdrs {
 }
 
 const HEADER = "NATS/1.0";
+
+export enum Match {
+  // Exact option is case sensitive
+  Exact = 0,
+  // Case sensitive, but key is transformed to Canonical MIME representation
+  CanonicalMIME = 1,
+  // Case insensitive matches
+  IgnoreCase,
+}
 
 export class MsgHdrsImpl implements MsgHdrs {
   code: number;
@@ -184,21 +193,28 @@ export class MsgHdrsImpl implements MsgHdrs {
     return keys;
   }
 
-  findKeys(k: string, exact = true): string[] {
+  findKeys(k: string, match = Match.Exact): string[] {
     const keys = this.keys();
-    if (exact) {
-      return keys.filter((v) => {
-        return v === k;
-      });
+    switch (match) {
+      case Match.Exact:
+        return keys.filter((v) => {
+          return v === k;
+        });
+      case Match.CanonicalMIME:
+        k = canonicalMIMEHeaderKey(k);
+        return keys.filter((v) => {
+          return v === k;
+        });
+      default:
+        const lci = k.toLowerCase();
+        return keys.filter((v) => {
+          return lci === v.toLowerCase();
+        });
     }
-    const lci = k.toLowerCase();
-    return keys.filter((v) => {
-      return lci === v.toLowerCase();
-    });
   }
 
-  get(k: string, exact = true): string {
-    const keys = this.findKeys(k, exact);
+  get(k: string, match = Match.Exact): string {
+    const keys = this.findKeys(k, match);
     if (keys.length) {
       const v = this.headers.get(keys[0]);
       if (v) {
@@ -208,18 +224,24 @@ export class MsgHdrsImpl implements MsgHdrs {
     return "";
   }
 
-  has(k: string, exact = true): boolean {
-    return this.findKeys(k, exact).length > 0;
+  has(k: string, match = Match.Exact): boolean {
+    return this.findKeys(k, match).length > 0;
   }
 
-  set(k: string, v: string, exact = true): void {
-    this.delete(k, exact);
+  set(k: string, v: string, match = Match.Exact): void {
+    this.delete(k, match);
+    if (match === Match.CanonicalMIME) {
+      k = canonicalMIMEHeaderKey(k);
+    }
     this.append(k, v);
   }
 
-  append(k: string, v: string): void {
+  append(k: string, v: string, match = Match.Exact): void {
     // validate the key
-    canonicalMIMEHeaderKey(k);
+    const ck = canonicalMIMEHeaderKey(k);
+    if (match === Match.CanonicalMIME) {
+      k = ck;
+    }
     const value = MsgHdrsImpl.validHeaderValue(v);
     let a = this.headers.get(k);
     if (!a) {
@@ -229,9 +251,9 @@ export class MsgHdrsImpl implements MsgHdrs {
     a.push(value);
   }
 
-  values(k: string, exact = true): string[] {
+  values(k: string, match = Match.Exact): string[] {
     const buf: string[] = [];
-    const keys = this.findKeys(k, exact);
+    const keys = this.findKeys(k, match);
     keys.forEach((v) => {
       const values = this.headers.get(v);
       if (values) {
@@ -241,8 +263,8 @@ export class MsgHdrsImpl implements MsgHdrs {
     return buf;
   }
 
-  delete(k: string, exact = true): void {
-    const keys = this.findKeys(k, exact);
+  delete(k: string, match = Match.Exact): void {
+    const keys = this.findKeys(k, match);
     keys.forEach((v) => {
       this.headers.delete(v);
     });

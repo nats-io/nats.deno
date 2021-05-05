@@ -29,6 +29,7 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.92.0/testing/asserts.ts";
 import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
+import { Match } from "../nats-base-client/headers.ts";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();
@@ -76,22 +77,43 @@ Deno.test("headers - case sensitive", () => {
 
 Deno.test("headers - case insensitive", () => {
   const h = headers() as MsgHdrsImpl;
-  h.set("a", "a", false);
+  h.set("a", "a", Match.IgnoreCase);
   // set replaces
-  h.set("A", "A", false);
+  h.set("A", "A", Match.IgnoreCase);
   assertEquals(h.size(), 1);
-  assert(h.has("a", false));
-  assert(h.has("A", false));
-  assertEquals(h.values("a", false), ["A"]);
-  assertEquals(h.values("A", false), ["A"]);
+  assert(h.has("a", Match.IgnoreCase));
+  assert(h.has("A", Match.IgnoreCase));
+  assertEquals(h.values("a", Match.IgnoreCase), ["A"]);
+  assertEquals(h.values("A", Match.IgnoreCase), ["A"]);
 
   h.append("a", "aa");
   assertEquals(h.size(), 2);
-  const v = h.values("a", false);
+  const v = h.values("a", Match.IgnoreCase);
   v.sort();
   assertEquals(v, ["A", "aa"]);
 
-  h.delete("a", false);
+  h.delete("a", Match.IgnoreCase);
+  assertEquals(h.size(), 0);
+});
+
+Deno.test("headers - mime", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("ab", "ab", Match.CanonicalMIME);
+  assert(!h.has("ab"));
+  assert(h.has("Ab"));
+
+  // set replaces
+  h.set("aB", "A", Match.CanonicalMIME);
+  assertEquals(h.size(), 1);
+  assert(h.has("Ab"));
+
+  h.append("ab", "aa", Match.CanonicalMIME);
+  assertEquals(h.size(), 1);
+  const v = h.values("ab", Match.CanonicalMIME);
+  v.sort();
+  assertEquals(v, ["A", "aa"]);
+
+  h.delete("ab", Match.CanonicalMIME);
   assertEquals(h.size(), 0);
 });
 
