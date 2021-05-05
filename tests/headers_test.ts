@@ -217,8 +217,34 @@ Deno.test("headers - equality", () => {
   assert(!a.equals(b));
 });
 
-Deno.test("msgheaders - canonical", () => {
+Deno.test("headers - canonical", () => {
   assertEquals(canonicalMIMEHeaderKey("foo"), "Foo");
   assertEquals(canonicalMIMEHeaderKey("foo-bar"), "Foo-Bar");
   assertEquals(canonicalMIMEHeaderKey("foo-bar-baz"), "Foo-Bar-Baz");
+});
+
+Deno.test("headers - append ignore case", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "a");
+  h.append("A", "b", Match.IgnoreCase);
+  assertEquals(h.size(), 1);
+  assertEquals(h.values("a"), ["a", "b"]);
+});
+
+Deno.test("headers - append exact case", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "a");
+  h.append("A", "b");
+  assertEquals(h.size(), 2);
+  assertEquals(h.values("a"), ["a"]);
+  assertEquals(h.values("A"), ["b"]);
+});
+
+Deno.test("headers - append canonical", () => {
+  const h = headers() as MsgHdrsImpl;
+  h.set("a", "a");
+  h.append("A", "b", Match.CanonicalMIME);
+  assertEquals(h.size(), 2);
+  assertEquals(h.values("a"), ["a"]);
+  assertEquals(h.values("A"), ["b"]);
 });

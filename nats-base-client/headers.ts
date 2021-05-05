@@ -239,6 +239,11 @@ export class MsgHdrsImpl implements MsgHdrs {
     if (match === Match.CanonicalMIME) {
       k = ck;
     }
+    // if we get non-sensical ignores/etc, we should try
+    // to do the right thing and use the first key that matches
+    let keys = this.findKeys(k, match);
+    k = keys.length > 0 ? keys[0] : k;
+
     const value = MsgHdrsImpl.validHeaderValue(v);
     let a = this.headers.get(k);
     if (!a) {
