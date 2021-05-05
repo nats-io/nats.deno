@@ -86,7 +86,7 @@ export enum Match {
   // Exact option is case sensitive
   Exact = 0,
   // Case sensitive, but key is transformed to Canonical MIME representation
-  CanonicalMIME = 1,
+  CanonicalMIME,
   // Case insensitive matches
   IgnoreCase,
 }
