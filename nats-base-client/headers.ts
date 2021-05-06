@@ -22,12 +22,58 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   hasError: boolean;
   status: string;
   code: number;
-  get(k: string): string;
-  set(k: string, v: string): void;
-  append(k: string, v: string): void;
-  has(k: string): boolean;
-  values(k: string): string[];
-  delete(k: string): void;
+  description: string;
+
+  get(k: string, match?: Match): string;
+  set(k: string, v: string, match?: Match): void;
+  append(k: string, v: string, match?: Match): void;
+  has(k: string, match?: Match): boolean;
+  values(k: string, match?: Match): string[];
+  delete(k: string, match?: Match): void;
+}
+
+// https://www.ietf.org/rfc/rfc822.txt
+// 3.1.2.  STRUCTURE OF HEADER FIELDS
+//
+// Once a field has been unfolded, it may be viewed as being com-
+// posed of a field-name followed by a colon (":"), followed by a
+// field-body, and  terminated  by  a  carriage-return/line-feed.
+// The  field-name must be composed of printable ASCII characters
+// (i.e., characters that  have  values  between  33.  and  126.,
+// decimal, except colon).  The field-body may be composed of any
+// ASCII characters, except CR or LF.  (While CR and/or LF may be
+// present  in the actual text, they are removed by the action of
+// unfolding the field.)
+export function canonicalMIMEHeaderKey(k: string): string {
+  const a = 97;
+  const A = 65;
+  const Z = 90;
+  const z = 122;
+  const dash = 45;
+  const colon = 58;
+  const start = 33;
+  const end = 126;
+  const toLower = a - A;
+
+  let upper = true;
+  const buf: number[] = new Array(k.length);
+  for (let i = 0; i < k.length; i++) {
+    let c = k.charCodeAt(i);
+    if (c === colon || c < start || c > end) {
+      throw new NatsError(
+        `'${k[i]}' is not a valid character for a header key`,
+        ErrorCode.BadHeader,
+      );
+    }
+    if (upper && a <= c && c <= z) {
+      c -= toLower;
+    } else if (!upper && A <= c && c <= Z) {
+      c += toLower;
+    }
+    buf[i] = c;
+    upper = c == dash;
+  }
+  return String.fromCharCode(...buf);
 }
 
 export function headers(): MsgHdrs {
@@ -35,6 +81,15 @@ export function headers(): MsgHdrs {
 }
 
 const HEADER = "NATS/1.0";
+
+export enum Match {
+  // Exact option is case sensitive
+  Exact = 0,
+  // Case sensitive, but key is transformed to Canonical MIME representation
+  CanonicalMIME,
+  // Case insensitive matches
+  IgnoreCase,
+}
 
 export class MsgHdrsImpl implements MsgHdrs {
   code: number;
@@ -52,14 +107,10 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   size(): number {
-    let count = 0;
-    for (const [_, v] of this.headers.entries()) {
-      count += v.length;
-    }
-    return count;
+    return this.headers.size;
   }
 
-  equals(mh: MsgHdrsImpl) {
+  equals(mh: MsgHdrsImpl): boolean {
     if (
       mh && this.headers.size === mh.headers.size &&
       this.code === mh.code
@@ -76,8 +127,8 @@ export class MsgHdrsImpl implements MsgHdrs {
             return false;
           }
         }
-        return true;
       }
+      return true;
     }
     return false;
   }
@@ -91,12 +142,8 @@ export class MsgHdrsImpl implements MsgHdrs {
       let str = h.replace(HEADER, "");
       mh.code = parseInt(str, 10);
       const scode = mh.code.toString();
-      mh.set("Status", scode);
       str = str.replace(scode, "");
       mh.description = str.trim();
-      if (mh.description) {
-        mh.set("Description", mh.description);
-      }
     } else {
       lines.slice(1).map((s) => {
         if (s) {
@@ -127,50 +174,6 @@ export class MsgHdrsImpl implements MsgHdrs {
     return TE.encode(this.toString());
   }
 
-  // https://www.ietf.org/rfc/rfc822.txt
-  // 3.1.2.  STRUCTURE OF HEADER FIELDS
-  //
-  // Once a field has been unfolded, it may be viewed as being com-
-  // posed of a field-name followed by a colon (":"), followed by a
-  // field-body, and  terminated  by  a  carriage-return/line-feed.
-  // The  field-name must be composed of printable ASCII characters
-  // (i.e., characters that  have  values  between  33.  and  126.,
-  // decimal, except colon).  The field-body may be composed of any
-  // ASCII characters, except CR or LF.  (While CR and/or LF may be
-  // present  in the actual text, they are removed by the action of
-  // unfolding the field.)
-  static canonicalMIMEHeaderKey(k: string): string {
-    const a = 97;
-    const A = 65;
-    const Z = 90;
-    const z = 122;
-    const dash = 45;
-    const colon = 58;
-    const start = 33;
-    const end = 126;
-    const toLower = a - A;
-
-    let upper = true;
-    const buf: number[] = new Array(k.length);
-    for (let i = 0; i < k.length; i++) {
-      let c = k.charCodeAt(i);
-      if (c === colon || c < start || c > end) {
-        throw new NatsError(
-          `'${k[i]}' is not a valid character for a header key`,
-          ErrorCode.BadHeader,
-        );
-      }
-      if (upper && a <= c && c <= z) {
-        c -= toLower;
-      } else if (!upper && A <= c && c <= Z) {
-        c += toLower;
-      }
-      buf[i] = c;
-      upper = c == dash;
-    }
-    return String.fromCharCode(...buf);
-  }
-
   static validHeaderValue(k: string): string {
     const inv = /[\r\n]/;
     if (inv.test(k)) {
@@ -182,41 +185,91 @@ export class MsgHdrsImpl implements MsgHdrs {
     return k.trim();
   }
 
-  get(k: string): string {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
-    const a = this.headers.get(key);
-    return a ? a[0] : "";
+  keys(): string[] {
+    const keys = [];
+    for (const sk of this.headers.keys()) {
+      keys.push(sk);
+    }
+    return keys;
   }
 
-  has(k: string): boolean {
-    return this.get(k) !== "";
+  findKeys(k: string, match = Match.Exact): string[] {
+    const keys = this.keys();
+    switch (match) {
+      case Match.Exact:
+        return keys.filter((v) => {
+          return v === k;
+        });
+      case Match.CanonicalMIME:
+        k = canonicalMIMEHeaderKey(k);
+        return keys.filter((v) => {
+          return v === k;
+        });
+      default:
+        const lci = k.toLowerCase();
+        return keys.filter((v) => {
+          return lci === v.toLowerCase();
+        });
+    }
   }
 
-  set(k: string, v: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
+  get(k: string, match = Match.Exact): string {
+    const keys = this.findKeys(k, match);
+    if (keys.length) {
+      const v = this.headers.get(keys[0]);
+      if (v) {
+        return Array.isArray(v) ? v[0] : v;
+      }
+    }
+    return "";
+  }
+
+  has(k: string, match = Match.Exact): boolean {
+    return this.findKeys(k, match).length > 0;
+  }
+
+  set(k: string, v: string, match = Match.Exact): void {
+    this.delete(k, match);
+    this.append(k, v, match);
+  }
+
+  append(k: string, v: string, match = Match.Exact): void {
+    // validate the key
+    const ck = canonicalMIMEHeaderKey(k);
+    if (match === Match.CanonicalMIME) {
+      k = ck;
+    }
+    // if we get non-sensical ignores/etc, we should try
+    // to do the right thing and use the first key that matches
+    let keys = this.findKeys(k, match);
+    k = keys.length > 0 ? keys[0] : k;
+
     const value = MsgHdrsImpl.validHeaderValue(v);
-    this.headers.set(key, [value]);
-  }
-
-  append(k: string, v: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
-    const value = MsgHdrsImpl.validHeaderValue(v);
-    let a = this.headers.get(key);
+    let a = this.headers.get(k);
     if (!a) {
       a = [];
-      this.headers.set(key, a);
+      this.headers.set(k, a);
     }
     a.push(value);
   }
 
-  values(k: string): string[] {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
-    return this.headers.get(key) || [];
+  values(k: string, match = Match.Exact): string[] {
+    const buf: string[] = [];
+    const keys = this.findKeys(k, match);
+    keys.forEach((v) => {
+      const values = this.headers.get(v);
+      if (values) {
+        buf.push(...values);
+      }
+    });
+    return buf;
   }
 
-  delete(k: string): void {
-    const key = MsgHdrsImpl.canonicalMIMEHeaderKey(k);
-    this.headers.delete(key);
+  delete(k: string, match = Match.Exact): void {
+    const keys = this.findKeys(k, match);
+    keys.forEach((v) => {
+      this.headers.delete(v);
+    });
   }
 
   get hasError() {

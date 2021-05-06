@@ -444,13 +444,12 @@ const sub = nc.subscribe(subj);
       for (const [key, value] of m.headers) {
         console.log(`${key}=${value}`);
       }
-      // reading/setting a header is not case sensitive
+      // reading a header is not case sensitive
       console.log("id", m.headers.get("id"));
     }
   }
 })().then();
 
-// headers always have their names turned into a canonical mime header key
 // header names can be any printable ASCII character with the  exception of `:`.
 // header values can be any ASCII character except `\r` or `\n`.
 // see https://www.ietf.org/rfc/rfc822.txt

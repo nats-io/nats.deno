@@ -37,7 +37,6 @@ const sub = nc.subscribe(subj);
   }
 })().then();
 
-// headers always have their names turned into a cannoncal mime header key
 // header names can be any printable ASCII character with the  exception of `:`.
 // header values can be any ASCII character except `\r` or `\n`.
 // see https://www.ietf.org/rfc/rfc822.txt

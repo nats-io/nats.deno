@@ -23,10 +23,10 @@ export function isRequestError(msg: Msg): (NatsError | null) {
   if (msg && msg.headers) {
     const headers = msg.headers as MsgHdrsImpl;
     if (headers.hasError) {
-      if (headers.status === "503") {
+      if (headers.code === 503) {
         return NatsError.errorForCode(ErrorCode.NoResponders);
       } else {
-        let desc = headers.get("description");
+        let desc = headers.description;
         if (desc === "") {
           desc = ErrorCode.RequestError;
         }
