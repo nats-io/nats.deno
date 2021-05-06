@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        deno-version: [1.8.3, 1.9.0]
+        deno-version: [1.8.3, 1.9.2]
 
     steps:
       - name: Git Checkout Deno Module
@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.2.1" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.2.2" >> $GITHUB_ENV
 
       - name: Get nats-server
         run: |

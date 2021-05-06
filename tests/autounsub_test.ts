@@ -23,6 +23,7 @@ import {
 } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 import type { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { assert } from "../nats-base-client/denobuffer.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -202,7 +203,9 @@ Deno.test("autounsub - check cancelled request leaks", async () => {
   // the rejection should be timeout
   const lock = Lock();
   rp.catch((rej) => {
-    assertEquals(rej?.code, ErrorCode.NoResponders);
+    assert(
+      rej?.code === ErrorCode.NoResponders || rej?.code === ErrorCode.Timeout,
+    );
     lock.unlock();
   });
 

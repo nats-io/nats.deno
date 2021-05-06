@@ -56,6 +56,7 @@ import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
 import { Match } from "../nats-base-client/headers.ts";
+import { assertBetween } from "./helpers/mod.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -369,7 +370,7 @@ Deno.test("jetstream - pull", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - fetch no messages", async () => {
+Deno.test("jetstream - fetch expires waits", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -378,18 +379,43 @@ Deno.test("jetstream - fetch no messages", async () => {
     ack_policy: AckPolicy.Explicit,
   });
   const js = nc.jetstream();
-
-  await assertThrowsAsync(
-    async () => {
-      await js.pull(stream, "me");
-    },
-    Error,
-    "no messages",
-  );
+  const start = Date.now();
+  const iter = js.fetch(stream, "me", { expires: 1000 });
+  await (async () => {
+    for await (const m of iter) {
+      // nothing
+    }
+  })();
+  const elapsed = Date.now() - start;
+  assertBetween(elapsed, 950, 1050);
+  assertEquals(iter.getReceived(), 0);
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - expires or no_wait is required", async () => {
+Deno.test("jetstream - fetch expires waits after initial", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  await js.publish(subj, Empty);
+  const start = Date.now();
+  const iter = js.fetch(stream, "me", { expires: 1000, batch: 5 });
+  await (async () => {
+    for await (const m of iter) {
+      // nothing
+    }
+  })();
+  const elapsed = Date.now() - start;
+  assertBetween(elapsed, 950, 1050);
+  assertEquals(iter.getReceived(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch expires or no_wait is required", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -1317,6 +1343,35 @@ Deno.test("jetstream - publish headers", async () => {
   const ms = await js.pull(stream, "me");
   ms.ack();
   assertEquals(ms.headers!.get("a"), "b");
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull stream doesn't exist", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream({ timeout: 1000 });
+  await assertThrowsAsync(
+    async () => {
+      await js.pull("helloworld", "me");
+    },
+    Error,
+    ErrorCode.Timeout,
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer doesn't exist", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+  const js = nc.jetstream({ timeout: 1000 });
+  await assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    Error,
+    ErrorCode.Timeout,
+  );
+
   await cleanup(ns, nc);
 });
 

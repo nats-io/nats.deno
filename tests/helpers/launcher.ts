@@ -14,14 +14,18 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import * as path from "https://deno.land/std@0.92.0/path/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.92.0/fmt/colors.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
   deferred,
+  delay,
+  extend,
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
 import { assert } from "https://deno.land/std@0.92.0/testing/asserts.ts";
+import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: Deno.Signal.SIGQUIT,
@@ -49,6 +53,25 @@ export interface Ports {
 
 export interface VarZ {
   "connect_urls": string[];
+}
+
+export interface JSZ {
+  "server_id": string;
+  now: string;
+  config: {
+    "max_memory": number;
+    "max_storage": number;
+    "store_dir": string;
+  };
+  memory: number;
+  storage: number;
+  api: { total: number; errors: number };
+  "current_api_calls": number;
+  "meta_cluster": {
+    name: string;
+    leader: string;
+    replicas: [{ name: string; current: boolean; active: number }];
+  };
 }
 
 function parseHostport(s?: string) {
@@ -117,14 +140,17 @@ export class NatsServer implements PortInfo {
   done!: Deferred<void>;
   debug: boolean;
   config: any;
+  configFile: string;
+  rgb: { r: number; g: number; b: number };
 
   constructor(opts: {
     info: PortInfo;
     process: Deno.Process;
     debug?: boolean;
     config: any;
+    configFile: string;
   }) {
-    const { info, process, debug, config } = opts;
+    const { info, process, debug, config, configFile } = opts;
     this.hostname = info.hostname;
     this.port = info.port;
     this.cluster = info.cluster;
@@ -135,6 +161,12 @@ export class NatsServer implements PortInfo {
     this.debug = debug || false;
     this.done = deferred<void>();
     this.config = config;
+    this.configFile = configFile;
+
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    this.rgb = { r, g, b };
 
     (async () => {
       assert(process.stderr != null);
@@ -150,7 +182,7 @@ export class NatsServer implements PortInfo {
             const t = td.decode(buf.slice(0, c));
             this.logBuffer.push(t);
             if (debug) {
-              console.log(t);
+              console.log(rgb24(t.slice(0, t.length - 1), this!.rgb));
             }
           }
         } catch (_err) {
@@ -207,6 +239,164 @@ export class NatsServer implements PortInfo {
     return await resp.json();
   }
 
+  async jsz(): Promise<JSZ> {
+    if (!this.monitoring) {
+      return Promise.reject(new Error("server is not monitoring"));
+    }
+    const resp = await fetch(`http://127.0.0.1:${this.monitoring}/jsz`);
+    return await resp.json();
+  }
+
+  async dataDir(): Promise<string | null> {
+    const jsz = await this.jsz();
+    return jsz.config.store_dir;
+  }
+
+  static async jetstreamCluster(
+    count = 2,
+    serverConf?: Record<string, unknown>,
+    debug = false,
+  ): Promise<NatsServer[]> {
+    serverConf = serverConf || {};
+    // form a cluster with the specified count
+    const servers = await NatsServer.cluster(count, serverConf, false);
+
+    // extract all the configs
+    const configs = servers.map((s) => {
+      const { port, cluster, monitoring, websocket, config } = s;
+      return { port, cluster, monitoring, websocket, config };
+    });
+
+    // stop all the servers and wait
+    const proms = servers.map((s) => {
+      return s.stop();
+    });
+    await Promise.all(proms);
+
+    servers.forEach((s) => {
+      s.debug = debug;
+    });
+
+    const routes: string[] = [];
+    configs.forEach((conf, idx, arr) => {
+      let { port, cluster, monitoring, websocket, config } = conf;
+
+      // jetstream defaults
+      const { jetstream } = jsopts();
+      // need a server name for a cluster
+      const serverName = nuid.next();
+      // customize the store dir and make it
+      jetstream.store_dir = path.join("/tmp", "jetstream", serverName);
+      Deno.mkdirSync(jetstream.store_dir, { recursive: true });
+
+      config = extend(
+        config,
+        { jetstream },
+        { port, server_name: serverName },
+        serverConf || {},
+      );
+
+      // set the specific ports that we ran on before
+      config.cluster.listen = config.cluster.listen.replace("-1", `${cluster}`);
+      routes.push(`nats://${config.cluster.listen}`);
+      if (conf.monitoring) {
+        config.http = config.http.replace("-1", `${monitoring}`);
+      }
+      if (websocket) {
+        config.websocket = config.websocket || {};
+        config.websocket.port = websocket;
+      }
+
+      // replace it
+      arr[idx] = { port, cluster, monitoring, websocket, config };
+    });
+
+    // update the routes to be explicit
+    configs.forEach((c) => {
+      c.config.cluster.routes = routes.filter((v) => {
+        return v.indexOf(c.config.cluster.listen) === -1;
+      });
+    });
+
+    // reconfigure the servers
+    servers.forEach((s, idx) => {
+      s.config = configs[idx].config;
+    });
+
+    const buf: Promise<NatsServer>[] = [];
+    servers.map((s) => {
+      buf.push(s.restart());
+    });
+
+    return NatsServer.dataClusterFormed(buf, debug);
+  }
+
+  static async dataClusterFormed(
+    proms: Promise<NatsServer>[],
+    debug = false,
+  ): Promise<NatsServer[]> {
+    const errs = 0;
+    let servers: NatsServer[] = [];
+    const statusProms: Promise<JSZ>[] = [];
+    const leaders: string[] = [];
+    while (true) {
+      try {
+        leaders.length = 0;
+        statusProms.length = 0;
+        // await for all the servers to resolve and get /jsz
+        servers = await Promise.all(proms);
+        servers.forEach((s) => {
+          statusProms.push(s.jsz());
+        });
+
+        // await for all the jsz to resolve
+        const status = await Promise.all(statusProms);
+        status.forEach((i) => {
+          const leader = i.meta_cluster.leader;
+          if (leader) {
+            leaders.push(leader);
+          }
+        });
+        // if we resolved leaders on all
+        if (leaders.length === proms.length) {
+          // unique them
+          const u = leaders.filter((v, idx, a) => {
+            return a.indexOf(v) === idx;
+          });
+          // if we have one, we fine
+          if (u.length === 1) {
+            const leader = servers.filter((s) => {
+              return s.config.server_name === u[0];
+            });
+            const n = rgb24(`${u[0]}`, leader[0].rgb);
+            if (debug) {
+              console.log(`leader consensus ${n}`);
+            }
+            return servers;
+          } else {
+            if (debug) {
+              console.log(
+                `leader contention ${leaders.length}`,
+              );
+            }
+          }
+        } else {
+          if (debug) {
+            console.log(
+              `found ${leaders.length}/${servers.length} leaders`,
+            );
+          }
+        }
+      } catch (err) {
+        err++;
+        if (errs > 10) {
+          throw err;
+        }
+      }
+      await delay(250);
+    }
+  }
+
   static async cluster(
     count = 2,
     conf?: any,
@@ -222,10 +412,10 @@ export class NatsServer implements PortInfo {
     const cluster = [ns];
 
     for (let i = 1; i < count; i++) {
-      const s = await NatsServer.addClusterMember(ns, conf, debug);
+      const c = Object.assign({}, conf);
+      const s = await NatsServer.addClusterMember(ns, c, debug);
       cluster.push(s);
     }
-
     return cluster;
   }
 
@@ -276,7 +466,7 @@ export class NatsServer implements PortInfo {
       return Promise.reject(new Error("no cluster port on server"));
     }
     conf = conf || {};
-    conf = Object.assign({}, conf);
+    conf = JSON.parse(JSON.stringify(conf));
     conf.port = -1;
     conf.cluster = conf.cluster || {};
     conf.cluster.name = ns.clusterName;
@@ -361,9 +551,16 @@ export class NatsServer implements PortInfo {
       );
 
       return new NatsServer(
-        { info: ports, process: srv, debug: debug, config: conf },
+        {
+          info: ports,
+          process: srv,
+          debug: debug,
+          config: conf,
+          configFile: confFile,
+        },
       );
     } catch (err) {
+      console.error(`failed to start config: ${confFile}`);
       try {
         const d = await srv.stderrOutput();
         console.error(new TextDecoder().decode(d));

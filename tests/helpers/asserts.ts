@@ -51,3 +51,8 @@ export async function assertThrowsAsyncErrorCode<T = void>(
   const err = await assertThrowsAsync(fn);
   assertErrorCode(err, ...codes);
 }
+
+export function assertBetween(n: number, low: number, high: number) {
+  console.assert(n >= low, `${n} >= ${low}`);
+  console.assert(n <= high, `${n} <= ${low}`);
+}
