@@ -30,7 +30,7 @@ import {
   assert,
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.92.0/testing/asserts.ts";
+} from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import type { Publisher } from "../nats-base-client/protocol.ts";
 
 const te = new TextEncoder();

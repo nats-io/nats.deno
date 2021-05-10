@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { fail } from "https://deno.land/std@0.92.0/testing/asserts.ts";
+import { fail } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 
