@@ -44,8 +44,8 @@ import {
   assertThrows,
   assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.92.0/testing/asserts.ts";
-import { yellow } from "https://deno.land/std@0.92.0/fmt/colors.ts";
+} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
 import {
@@ -55,7 +55,6 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { Match } from "../nats-base-client/headers.ts";
 import { assertBetween } from "./helpers/mod.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {

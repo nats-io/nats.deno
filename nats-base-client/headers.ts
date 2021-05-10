@@ -205,11 +205,12 @@ export class MsgHdrsImpl implements MsgHdrs {
         return keys.filter((v) => {
           return v === k;
         });
-      default:
+      default: {
         const lci = k.toLowerCase();
         return keys.filter((v) => {
           return lci === v.toLowerCase();
         });
+      }
     }
   }
 
@@ -241,7 +242,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     }
     // if we get non-sensical ignores/etc, we should try
     // to do the right thing and use the first key that matches
-    let keys = this.findKeys(k, match);
+    const keys = this.findKeys(k, match);
     k = keys.length > 0 ? keys[0] : k;
 
     const value = MsgHdrsImpl.validHeaderValue(v);
