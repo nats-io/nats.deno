@@ -170,7 +170,7 @@ Deno.test("consumeropts - maxDeliver", () => {
   assertEquals(args.config.max_deliver, 100);
 });
 
-Deno.test("consumeropts - maxAcPending", () => {
+Deno.test("consumeropts - maxAckPending", () => {
   const opts = consumerOpts() as ConsumerOptsBuilderImpl;
   opts.maxAckPending(100);
   assertEquals(opts.config.max_ack_pending, 100);

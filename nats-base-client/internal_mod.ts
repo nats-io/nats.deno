@@ -23,6 +23,7 @@ export type {
   Consumer,
   ConsumerConfig,
   ConsumerOpts,
+  ConsumerOptsBuilder,
   DeliveryInfo,
   JetStreamAccountStats,
   JetStreamApiStats,
@@ -64,7 +65,6 @@ export {
 } from "./types.ts";
 
 export { consumerOpts } from "./jsconsumeropts.ts";
-export type { ConsumerOptsBuilder } from "./jsconsumeropts.ts";
 export { toJsMsg } from "./jsmsg.ts";
 
 export { DebugEvents, Empty, Events } from "./types.ts";

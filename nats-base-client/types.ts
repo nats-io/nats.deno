@@ -325,22 +325,37 @@ export interface ConsumerOpts {
 }
 
 export interface ConsumerOptsBuilder {
+  // deliverTo sets the subject a push consumer receives messages on
   deliverTo(subject: string): void;
+  // prevents the consumer implementation from auto-acking messages
   manualAck(): void;
+  // sets the durable name
   durable(name: string): void;
+  // consumer will start at first available message on the stream
   deliverAll(): void;
+  // consumer will start at the last message
   deliverLast(): void;
+  // consumer will start with new messages (not yet in the stream)
   deliverNew(): void;
+  // consumer will start at the message with the specified sequence
   startSequence(seq: number): void;
+  // consumer will start with messages received on the specified time/date
   startTime(time: Date | Nanos): void;
+  // the consumer will not ack messages
   ackNone(): void;
+  // acking a message, implicitly acks all messages with a lower sequence
   ackAll(): void;
+  // consumer will ack all messages
   ackExplicit(): void;
+  // number of re-delivery attempts for a particular message
   maxDeliver(max: number): void;
+  // max number of outstanding acks before the server stops sending new messages
   maxAckPending(max: number): void;
-  // FIXME: pullMaxWaiting
+  // max count of outstanding messages scheduled via batch pulls (pulls are additive)
   maxWaiting(max: number): void;
+  // standard nats subscribe option for the maximum number of messages to receive on the subscription
   maxMessages(max: number): void;
+  // callback to process messages (or iterator is returned)
   callback(fn: JsMsgCallback): void;
 }
 
@@ -661,7 +676,7 @@ export interface ConsumerConfig {
   "opt_start_seq"?: number;
   "opt_start_time"?: string;
   "ack_policy": AckPolicy;
-  "ack_wait"?: number;
+  "ack_wait"?: Nanos;
   "max_deliver"?: number;
   "filter_subject"?: string;
   "replay_policy": ReplayPolicy;
