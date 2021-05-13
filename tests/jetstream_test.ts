@@ -23,10 +23,12 @@ import {
 } from "./jstest_util.ts";
 import {
   AckPolicy,
+  ConsumerConfig,
   ConsumerOpts,
   consumerOpts,
   createInbox,
   delay,
+  DeliverPolicy,
   Empty,
   ErrorCode,
   headers,
@@ -36,6 +38,7 @@ import {
   nanos,
   NatsConnectionImpl,
   NatsError,
+  nuid,
   QueuedIterator,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
@@ -1112,6 +1115,39 @@ Deno.test("jetstream - deliver last", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - last of", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const n = nuid.next();
+  await jsm.streams.add({
+    name: n,
+    subjects: [`${n}.>`],
+  });
+
+  const subja = `${n}.A`;
+  const subjb = `${n}.B`;
+
+  const js = nc.jetstream();
+
+  await js.publish(subja, Empty);
+  await js.publish(subjb, Empty);
+  await js.publish(subjb, Empty);
+  await js.publish(subja, Empty);
+
+  const opts = {
+    durable_name: "B",
+    filter_subject: subjb,
+    deliver_policy: DeliverPolicy.Last,
+    ack_policy: AckPolicy.Explicit,
+  } as Partial<ConsumerConfig>;
+
+  await jsm.consumers.add(n, opts);
+  const m = await js.pull(n, "B");
+  assertEquals(m.seq, 3);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - deliver seq", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { subj } = await initStream(nc);
@@ -1423,3 +1459,72 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
 //
 //   await cleanup(ns, admin, nc);
 // });
+
+Deno.test("jetstream - pull consumer doesn't exist", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+  const js = nc.jetstream({ timeout: 1000 });
+  await assertThrowsAsync(
+    async () => {
+      await js.pull(stream, "me");
+    },
+    Error,
+    ErrorCode.Timeout,
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - ack lease extends with working", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const nci = nc as NatsConnectionImpl;
+  nci.options.debug = true;
+
+  const sn = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: sn, subjects: [`${sn}.>`] });
+
+  const js = nc.jetstream();
+  await js.publish(`${sn}.A`, Empty, { msgID: "1" });
+
+  const inbox = createInbox();
+  const cc = {
+    ack_wait: nanos(2000),
+    deliver_subject: inbox,
+    ack_policy: AckPolicy.Explicit,
+    durable_name: "me",
+  };
+  await jsm.consumers.add(sn, cc);
+
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.manualAck();
+
+  const sub = await js.subscribe(`${sn}.>`, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      const timer = setInterval(() => {
+        m.working();
+      }, 750);
+      // we got a message now we are going to delay for 31 sec
+      await delay(15);
+      const ci = await jsm.consumers.info(sn, "me");
+      assertEquals(ci.num_ack_pending, 1);
+      m.ack();
+      clearInterval(timer);
+      break;
+    }
+  })();
+
+  await done;
+
+  // make sure the message went out
+  await nc.flush();
+  const ci2 = await jsm.consumers.info(sn, "me");
+  assertEquals(ci2.delivered.stream_seq, 1);
+  assertEquals(ci2.num_redelivered, 0);
+  assertEquals(ci2.num_ack_pending, 0);
+
+  await cleanup(ns, nc);
+});
