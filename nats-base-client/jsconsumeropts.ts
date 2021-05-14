@@ -17,43 +17,25 @@ import {
   AckPolicy,
   ConsumerConfig,
   ConsumerOpts,
+  ConsumerOptsBuilder,
   DeliverPolicy,
   JsMsgCallback,
-  Nanos,
 } from "./types.ts";
 import { defaultConsumer, validateDurableName } from "./jsutil.ts";
 
-export interface ConsumerOptsBuilder {
-  deliverTo(subject: string): void;
-  manualAck(): void;
-  durable(name: string): void;
-  deliverAll(): void;
-  deliverLast(): void;
-  deliverNew(): void;
-  startSequence(seq: number): void;
-  startTime(time: Date | Nanos): void;
-  ackNone(): void;
-  ackAll(): void;
-  ackExplicit(): void;
-  maxDeliver(max: number): void;
-  maxAckPending(max: number): void;
-  maxWaiting(max: number): void;
-  maxMessages(max: number): void;
-  callback(fn: JsMsgCallback): void;
-
-  // FIXME: 503:
-  // maxRetries()
-  // retryBackoff()
-
-  // ackWait(time)
-  // replayOriginal()
-  // rateLimit(bytesPerSec)
+export function consumerOpts(
+  opts?: Partial<ConsumerConfig>,
+): ConsumerOptsBuilder {
+  return new ConsumerOptsBuilderImpl(opts);
 }
 
-export function consumerOpts(): ConsumerOptsBuilder {
-  return new ConsumerOptsBuilderImpl();
-}
-
+// FIXME: some items here that may need to be addressed
+// 503s?
+// maxRetries()
+// retryBackoff()
+// ackWait(time)
+// replayOriginal()
+// rateLimit(bytesPerSec)
 export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   config: Partial<ConsumerConfig>;
   mack: boolean;
@@ -61,10 +43,10 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   callbackFn?: JsMsgCallback;
   max?: number;
 
-  constructor() {
+  constructor(opts?: Partial<ConsumerConfig>) {
     this.stream = "";
     this.mack = false;
-    this.config = defaultConsumer("");
+    this.config = defaultConsumer("", opts || {});
     // not set
     this.config.ack_policy = AckPolicy.All;
   }
@@ -132,7 +114,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   maxDeliver(max: number) {
     this.config.max_deliver = max;
   }
-
   maxAckPending(max: number) {
     this.config.max_ack_pending = max;
   }
