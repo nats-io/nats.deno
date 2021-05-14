@@ -101,9 +101,15 @@ class JsMsgImpl implements JsMsg {
 
   doAck(payload: Uint8Array) {
     if (!this.didAck) {
-      this.didAck = true;
+      // all acks are final with the exception of +WPI
+      this.didAck = !this.isWIP(payload);
       this.msg.respond(payload);
     }
+  }
+
+  isWIP(p: Uint8Array) {
+    return p.length === 4 && p[0] === WPI[0] && p[1] === WPI[1] &&
+      p[2] === WPI[2] && p[3] === WPI[3];
   }
 
   // this has to dig into the internals as the message has access
