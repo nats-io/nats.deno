@@ -1478,9 +1478,6 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
 Deno.test("jetstream - ack lease extends with working", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
-  const nci = nc as NatsConnectionImpl;
-  nci.options.debug = true;
-
   const sn = nuid.next();
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: sn, subjects: [`${sn}.>`] });
@@ -1490,10 +1487,10 @@ Deno.test("jetstream - ack lease extends with working", async () => {
 
   const inbox = createInbox();
   const cc = {
-    ack_wait: nanos(2000),
-    deliver_subject: inbox,
-    ack_policy: AckPolicy.Explicit,
-    durable_name: "me",
+    "ack_wait": nanos(2000),
+    "deliver_subject": inbox,
+    "ack_policy": AckPolicy.Explicit,
+    "durable_name": "me",
   };
   await jsm.consumers.add(sn, cc);
 
