@@ -147,9 +147,15 @@ export class MsgHdrsImpl implements MsgHdrs {
     } else {
       lines.slice(1).map((s) => {
         if (s) {
-          const idx = s.indexOf(": ");
+          let offset = 2;
+          let idx = s.indexOf(": ");
+          if (idx === -1) {
+            // java is not writing the space
+            idx = s.indexOf(":");
+            offset = 1;
+          }
           const k = s.slice(0, idx);
-          const v = s.slice(idx + 2);
+          const v = s.slice(idx + offset);
           mh.append(k, v);
         }
       });
