@@ -40,7 +40,7 @@ class NoopDispatcher implements Dispatcher<ParserEvent> {
   push(_a: ParserEvent): void {}
 }
 
-class TestDispatcher implements Dispatcher<ParserEvent> {
+export class TestDispatcher implements Dispatcher<ParserEvent> {
   count = 0;
   pings = 0;
   pongs = 0;

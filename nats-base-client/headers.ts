@@ -147,10 +147,12 @@ export class MsgHdrsImpl implements MsgHdrs {
     } else {
       lines.slice(1).map((s) => {
         if (s) {
-          const idx = s.indexOf(": ");
-          const k = s.slice(0, idx);
-          const v = s.slice(idx + 2);
-          mh.append(k, v);
+          const idx = s.indexOf(":");
+          if (idx > -1) {
+            const k = s.slice(0, idx);
+            const v = s.slice(idx + 1).trim();
+            mh.append(k, v);
+          }
         }
       });
     }
