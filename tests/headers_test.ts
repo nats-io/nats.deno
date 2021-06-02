@@ -28,8 +28,14 @@ import {
   assertEquals,
   assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { MsgHdrsImpl } from "../nats-base-client/internal_mod.ts";
+import {
+  MsgHdrsImpl,
+  MsgImpl,
+  Parser,
+} from "../nats-base-client/internal_mod.ts";
 import { Match } from "../nats-base-client/headers.ts";
+import { Publisher } from "../nats-base-client/protocol.ts";
+import { TestDispatcher } from "./parser_test.ts";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();
@@ -247,4 +253,34 @@ Deno.test("headers - append canonical", () => {
   assertEquals(h.size(), 2);
   assertEquals(h.values("a"), ["a"]);
   assertEquals(h.values("A"), ["b"]);
+});
+
+Deno.test("headers - malformed header are ignored", () => {
+  const te = new TextEncoder();
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  p.parse(
+    te.encode(`HMSG SUBJECT 1 REPLY 17 17\r\nNATS/1.0\r\nBAD\r\n\r\n\r\n`),
+  );
+  assertEquals(d.errs.length, 0);
+  assertEquals(d.msgs.length, 1);
+  const e = d.msgs[0];
+  const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
+  const hi = m.headers as MsgHdrsImpl;
+  assertEquals(hi.size(), 0);
+});
+
+Deno.test("headers - handles no space", () => {
+  const te = new TextEncoder();
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  p.parse(
+    te.encode(`HMSG SUBJECT 1 REPLY 17 17\r\nNATS/1.0\r\nA:A\r\n\r\n\r\n`),
+  );
+  assertEquals(d.errs.length, 0);
+  assertEquals(d.msgs.length, 1);
+  const e = d.msgs[0];
+  const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
+  assert(m.headers);
+  assertEquals(m.headers.get("A"), "A");
 });
