@@ -148,9 +148,11 @@ export class MsgHdrsImpl implements MsgHdrs {
       lines.slice(1).map((s) => {
         if (s) {
           const idx = s.indexOf(":");
-          const k = s.slice(0, idx);
-          const v = s.slice(idx + 1).trim();
-          mh.append(k, v);
+          if (idx > -1) {
+            const k = s.slice(0, idx);
+            const v = s.slice(idx + 1).trim();
+            mh.append(k, v);
+          }
         }
       });
     }
