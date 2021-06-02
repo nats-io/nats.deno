@@ -284,3 +284,18 @@ Deno.test("headers - handles no space", () => {
   assert(m.headers);
   assertEquals(m.headers.get("A"), "A");
 });
+
+Deno.test("headers - trims values", () => {
+  const te = new TextEncoder();
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  p.parse(
+  te.encode(`HMSG SUBJECT 1 REPLY 23 23\r\nNATS/1.0\r\nA:   A   \r\n\r\n\r\n`),
+  );
+  assertEquals(d.errs.length, 0);
+  assertEquals(d.msgs.length, 1);
+  const e = d.msgs[0];
+  const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
+  assert(m.headers);
+  assertEquals(m.headers.get("A"), "A");
+});
