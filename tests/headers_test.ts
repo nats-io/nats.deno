@@ -290,7 +290,9 @@ Deno.test("headers - trims values", () => {
   const d = new TestDispatcher();
   const p = new Parser(d);
   p.parse(
-  te.encode(`HMSG SUBJECT 1 REPLY 23 23\r\nNATS/1.0\r\nA:   A   \r\n\r\n\r\n`),
+    te.encode(
+      `HMSG SUBJECT 1 REPLY 23 23\r\nNATS/1.0\r\nA:   A   \r\n\r\n\r\n`,
+    ),
   );
   assertEquals(d.errs.length, 0);
   assertEquals(d.msgs.length, 1);
