@@ -146,7 +146,7 @@ export class StoredMsgImpl implements StoredMsg {
   }
 
   _parse(s: string): Uint8Array {
-    const bs = window.atob(s);
+    const bs = atob(s);
     const len = bs.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
