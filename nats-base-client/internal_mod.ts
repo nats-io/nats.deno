@@ -84,7 +84,12 @@ export {
   timeout,
 } from "./util.ts";
 export type { MsgHdrs } from "./headers.ts";
-export { canonicalMIMEHeaderKey, headers, MsgHdrsImpl } from "./headers.ts";
+export {
+  canonicalMIMEHeaderKey,
+  headers,
+  Match,
+  MsgHdrsImpl,
+} from "./headers.ts";
 export { Heartbeat } from "./heartbeats.ts";
 export type { PH } from "./heartbeats.ts";
 export { MuxSubscription } from "./muxsubscription.ts";

@@ -1525,3 +1525,34 @@ Deno.test("jetstream - ack lease extends with working", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - JSON", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true), {
+    debug: true,
+  });
+  const { stream, subj } = await initStream(nc);
+  const jc = JSONCodec();
+  const js = nc.jetstream();
+  const values = [undefined, null, true, "", ["hello"], { hello: "world" }];
+  for (const v of values) {
+    await js.publish(subj, jc.encode(v));
+  }
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  for (let v of values) {
+    const m = await js.pull(stream, "me");
+    m.ack();
+    // JSON doesn't serialize undefines, but if passed to the encoder
+    // it becomes a null
+    if (v === undefined) {
+      v = null;
+    }
+    assertEquals(jc.decode(m.data), v);
+  }
+  await cleanup(ns, nc);
+});

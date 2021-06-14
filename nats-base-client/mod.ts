@@ -10,6 +10,7 @@ export {
   headers,
   JSONCodec,
   jwtAuthenticator,
+  Match,
   NatsError,
   nkeyAuthenticator,
   Nuid,
