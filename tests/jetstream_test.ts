@@ -1556,3 +1556,35 @@ Deno.test("jetstream - JSON", async () => {
   }
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - qsub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  const opts = consumerOpts();
+  opts.queue("q");
+  opts.durable("n");
+  opts.deliverTo("here");
+  opts.callback((err, m) => {
+    if (m) {
+      m.ack();
+    }
+  });
+
+  const sub = await js.subscribe(subj, opts);
+  const sub2 = await js.subscribe(subj, opts);
+
+  for (let i = 0; i < 100; i++) {
+    await js.publish(subj, Empty);
+  }
+  await nc.flush();
+  await sub.drain();
+  await sub2.drain();
+
+  assert(sub.getProcessed() > 0);
+  assert(sub2.getProcessed() > 0);
+  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
+
+  await cleanup(ns, nc);
+});

@@ -321,6 +321,7 @@ export interface ConsumerOpts {
 
   // standard
   max?: number;
+  queue?: string;
   debug?: boolean;
 }
 
@@ -355,6 +356,8 @@ export interface ConsumerOptsBuilder {
   maxWaiting(max: number): void;
   // standard nats subscribe option for the maximum number of messages to receive on the subscription
   maxMessages(max: number): void;
+  // standard nats queue group option
+  queue(n: string): void;
   // callback to process messages (or iterator is returned)
   callback(fn: JsMsgCallback): void;
 }
