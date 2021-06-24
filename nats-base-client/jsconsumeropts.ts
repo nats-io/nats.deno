@@ -42,6 +42,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   stream: string;
   callbackFn?: JsMsgCallback;
   max?: number;
+  qname?: string;
 
   constructor(opts?: Partial<ConsumerConfig>) {
     this.stream = "";
@@ -58,6 +59,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     o.stream = this.stream;
     o.callbackFn = this.callbackFn;
     o.max = this.max;
+    o.queue = this.qname;
     return o;
   }
 
@@ -128,6 +130,10 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   callback(fn: JsMsgCallback) {
     this.callbackFn = fn;
+  }
+
+  queue(n: string) {
+    this.qname = n;
   }
 }
 

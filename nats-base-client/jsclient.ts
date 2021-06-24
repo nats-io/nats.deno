@@ -369,6 +369,7 @@ export class JetStreamClientImpl extends BaseApiClient
       so.dispatchedFn = autoAckJsMsg;
     }
     so.max = jsi.max || 0;
+    so.queue = jsi.queue;
     return so;
   }
 
