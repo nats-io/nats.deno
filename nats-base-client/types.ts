@@ -493,7 +493,7 @@ export interface StreamConfig {
   "num_replicas": number;
   "no_ack"?: boolean;
   "template_owner"?: string;
-  "duplicate_window"?: number; // nanos
+  "duplicate_window"?: Nanos;
   placement?: Placement;
   mirror?: StreamSource; // same as a source
   sources?: StreamSource[];
