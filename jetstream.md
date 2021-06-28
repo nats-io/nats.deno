@@ -45,22 +45,27 @@ const stream = "mystream";
 const subj = `mystream.A`;
 await jsm.streams.add({ name: stream, subjects: [subj] });
 
+// publish a reg nats message directly to the stream
+for (let i = 0; i < 10; i++) {
+  nc.publish(subj, Empty);
+}
+
 // find a stream that stores a specific subject:
-const name = await jsm.find("mystream.A");
+const name = await jsm.streams.find("mystream.A");
 
 // retrieve info about the stream by its name
 const si = await jsm.streams.info(name);
 
 // update a stream configuration
-si.subjects.push("mystream.B");
-await jsm.streams.update(si);
+si.config.subjects?.push("mystream.B");
+await jsm.streams.update(si.config);
 
 // get a particular stored message in the stream by sequence
 // this is not associated with a consumer
 let sm = await jsm.streams.getMessage(stream, 1);
 
 // delete the 5th message in the stream, securely erasing it
-await jsm.streams.deleteMessage(stream, 5, true);
+await jsm.streams.deleteMessage(stream, 5);
 
 // purge all messages in the stream, the stream itself
 // remains.
@@ -112,7 +117,7 @@ await js.publish("a.b", Empty, { msgID: "a" });
 // For example, you can request the message to have as its
 // last sequence before accepting the new message:
 await js.publish("a.b", Empty, { expect: { lastMsgID: "a" } });
-await js.publish("a.b", Empty, { expect: { lastSequence: 2 } });
+await js.publish("a.b", Empty, { expect: { lastSequence: 3 } });
 await js.publish("a.b", Empty, { expect: { streamName: "a" } });
 // you can also mix the above combinations
 ```

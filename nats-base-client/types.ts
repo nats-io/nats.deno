@@ -314,7 +314,6 @@ export interface JetStreamClient {
 export interface ConsumerOpts {
   config: Partial<ConsumerConfig>;
   mack: boolean;
-  subQueue: string;
   stream: string;
   callbackFn?: JsMsgCallback;
   name?: string;
@@ -384,7 +383,7 @@ export interface StreamAPI {
   purge(stream: string): Promise<PurgeResponse>;
   delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
-  deleteMessage(stream: string, seq: number): Promise<boolean>;
+  deleteMessage(stream: string, seq: number, erase?: boolean): Promise<boolean>;
   getMessage(stream: string, seq: number): Promise<StoredMsg>;
   find(subject: string): Promise<string>;
 }
@@ -494,7 +493,7 @@ export interface StreamConfig {
   "num_replicas": number;
   "no_ack"?: boolean;
   "template_owner"?: string;
-  "duplicate_window"?: number; // duration
+  "duplicate_window"?: number; // nanos
   placement?: Placement;
   mirror?: StreamSource; // same as a source
   sources?: StreamSource[];
