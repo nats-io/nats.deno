@@ -256,3 +256,109 @@ won't see them. When specifying callbacks to process your
 `JetStreamSubscription` or `JetStreamPullSubscription`, this is not possible.
 Protocol messages will be handled behind the scenes, but your callback will
 still be invoked.
+
+### Flow Control
+
+JetStream added a new consumer option to control whether flow control messages
+are dispatched to a client. Flow control messages enable JetStream to
+dynamically attempt to determine an optimal delivery message rate for the
+client. This feature can help prevent the slow consumer issues when the number
+of messages in a stream are large.
+
+You don't need to do anything special to make use of the flow control feature,
+except for setting `flow_control` property on your consumer configuration.
+
+If you are creating plain NATS subscriptions, you'll need to handle these flow
+control messages yourself. To identify them, simply test to see if the message
+has headers, and if the `code` of the header is equal to `100`. If it has a
+reply subject, simply respond to it. The server will then adjust its delivery
+rate as necessary. Note that there's also the handy function
+`isFlowControlMsg(Msg)` that can perform this check for you. Note that
+`msg.respond()` is a noop if there's no reply subject (in that case it is not a
+flow control message but a heartbeat).
+
+Here's a snippet:
+
+```typescript
+let data = 0;
+let fc = 0;
+// note this is a plan NATS subscription!
+const sub = nc.subscribe("my.messages", {
+  callback: (err, msg) => {
+    // simply checking if has headers and code === 100
+    if (isFlowControlMsg(msg)) {
+      fc++;
+      msg.respond();
+      return;
+    }
+    // do something with the message
+    data++;
+    const m = toJsMsg(msg);
+    m.ack();
+    if (data === N) {
+      console.log(`processed ${data} msgs and ${fc} flow control messages`);
+      sub.drain();
+    }
+  },
+});
+
+// create a consumer that delivers to the subscription
+await jsm.consumers.add(stream, {
+  ack_policy: AckPolicy.Explicit,
+  deliver_subject: "my.messages",
+  flow_control: true,
+});
+```
+
+### Heartbeats
+
+Since JetStream is available through NATS it is possible for your network
+topology to not be directly connected to the JetStream server providing you with
+messages. In those cases, it is possible for a JetStream server to go away, and
+for the client to not notice it. This would mean your client would sit idle
+thinking there are no messages, when in reality the JetStream service may have
+restarted elsewhere.
+
+By creating a consumer that enables heartbeats, you can request JetStream to
+send you heartbeat messages every so often. This way your client can reconcile
+if the lack of messages means that you should be restarting your consumer.
+
+Currently, the library doesn't provide a notification for missed heartbeats, but
+this is not too difficult to do:
+
+```typescript
+let missed = 0;
+// this is a plain nats subscription
+const sub = nc.subscribe("my.messages", {
+  callback: (err, msg) => {
+    // if we got a message, we simply reset
+    missed = 0;
+    // simply checking if has headers and code === 100, with no reply
+    // subject set. if it has a reply it would be a flow control message
+    // which will get acknowledged at the end.
+    if (isHeartbeatMsg(msg)) {
+      console.log("alive");
+      return;
+    }
+    // do something with the message
+    const m = toJsMsg(msg);
+    m.ack();
+  },
+});
+
+setInterval(() => {
+  missed++;
+  if (missed > 3) {
+    console.error("JetStream stopped sending heartbeats!");
+  }
+}, 30000);
+
+// create a consumer that delivers to the subscription
+await jsm.consumers.add(stream, {
+  ack_policy: AckPolicy.Explicit,
+  deliver_subject: "my.messages",
+  idle_heartbeat: nanos(10000),
+});
+
+await sub.closed;
+```

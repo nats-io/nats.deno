@@ -73,6 +73,10 @@ export function isFlowControlMsg(msg: Msg): boolean {
   return h.code >= 100 && h.code < 200;
 }
 
+export function isHeartbeatMsg(msg: Msg): boolean {
+  return isFlowControlMsg(msg) && msg.reply === "";
+}
+
 export function checkJsError(msg: Msg): NatsError | null {
   const h = msg.headers;
   if (!h) {

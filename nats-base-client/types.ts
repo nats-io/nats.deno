@@ -183,6 +183,7 @@ export interface ServersChanged {
 }
 
 export interface Sub<T> extends AsyncIterable<T> {
+  closed: Promise<void>;
   unsubscribe(max?: number): void;
   drain(): Promise<void>;
   isDraining(): boolean;
@@ -360,6 +361,10 @@ export interface ConsumerOptsBuilder {
   queue(n: string): void;
   // callback to process messages (or iterator is returned)
   callback(fn: JsMsgCallback): void;
+  // idle heartbeats - server sends a status code 100 if idle longer than specified, these messages have no reply
+  idleHeartbeat(millis: number): void;
+  // flow control - server sends a status code 100 and uses the delay in response to throttle inbound messages for a client and prevent slow consumer.
+  flowControl(): void;
 }
 
 export interface Lister<T> {
@@ -687,6 +692,8 @@ export interface ConsumerConfig {
   "sample_freq"?: string;
   "max_waiting"?: number;
   "max_ack_pending"?: number;
+  "idle_heartbeat"?: Nanos; // send empty message when idle longer than this
+  "flow_control"?: boolean; // send message with status of 100 and reply subject
 }
 
 export interface Consumer {
