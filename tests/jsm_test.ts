@@ -59,7 +59,7 @@ Deno.test("jsm - account info", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const ai = await jsm.getAccountInfo();
-  assert(ai.limits.max_memory === -1);
+  assert(ai.limits.max_memory === -1 || ai.limits.max_memory > 0);
   await cleanup(ns, nc);
 });
 
