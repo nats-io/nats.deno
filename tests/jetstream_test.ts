@@ -1649,3 +1649,45 @@ Deno.test("jetstream - flow control", async () => {
   assertEquals(sub.getProcessed(), 10000 + fc + 1);
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - domain", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        domain: "afton",
+      },
+    }, true),
+  );
+
+  const jsm = await nc.jetstreamManager({ domain: "afton" });
+  const ai = await jsm.getAccountInfo();
+  assert(ai.domain, "afton");
+  //@ts-ignore: internal use
+  assertEquals(jsm.prefix, `$JS.afton.API`);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - account domain", async () => {
+  const conf = jetstreamServerConf({
+    jetstream: {
+      domain: "A",
+    },
+    accounts: {
+      A: {
+        users: [
+          { user: "a", password: "a" },
+        ],
+        jetstream: { max_memory: 10000, max_file: 10000 },
+      },
+    },
+  }, true);
+
+  const { ns, nc } = await setup(conf, { user: "a", pass: "a" });
+
+  const jsm = await nc.jetstreamManager({ domain: "A" });
+  const ai = await jsm.getAccountInfo();
+  assert(ai.domain, "A");
+  //@ts-ignore: internal use
+  assertEquals(jsm.prefix, `$JS.A.API`);
+  await cleanup(ns, nc);
+});
