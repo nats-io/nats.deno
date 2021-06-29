@@ -21,7 +21,7 @@ import {
   DeliverPolicy,
   JsMsgCallback,
 } from "./types.ts";
-import { defaultConsumer, validateDurableName } from "./jsutil.ts";
+import { defaultConsumer, nanos, validateDurableName } from "./jsutil.ts";
 
 export function consumerOpts(
   opts?: Partial<ConsumerConfig>,
@@ -134,6 +134,14 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   queue(n: string) {
     this.qname = n;
+  }
+
+  idleHeartbeat(millis: number) {
+    this.config.idle_heartbeat = nanos(millis);
+  }
+
+  flowControl() {
+    this.config.flow_control = true;
   }
 }
 

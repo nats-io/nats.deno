@@ -59,6 +59,10 @@ import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
 import { assertBetween } from "./helpers/mod.ts";
+import {
+  isFlowControlMsg,
+  isHeartbeatMsg,
+} from "../nats-base-client/jsutil.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -1527,9 +1531,7 @@ Deno.test("jetstream - ack lease extends with working", async () => {
 });
 
 Deno.test("jetstream - JSON", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true), {
-    debug: true,
-  });
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const jc = JSONCodec();
   const js = nc.jetstream();
@@ -1566,7 +1568,7 @@ Deno.test("jetstream - qsub", async () => {
   opts.queue("q");
   opts.durable("n");
   opts.deliverTo("here");
-  opts.callback((err, m) => {
+  opts.callback((_err, m) => {
     if (m) {
       m.ack();
     }
@@ -1586,5 +1588,64 @@ Deno.test("jetstream - qsub", async () => {
   assert(sub2.getProcessed() > 0);
   assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - idle heartbeats", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  const inbox = createInbox();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_subject: inbox,
+    idle_heartbeat: nanos(2000),
+  });
+
+  const sub = nc.subscribe(inbox, {
+    max: 1,
+    callback: (_err, msg) => {
+      assert(isHeartbeatMsg(msg));
+    },
+  });
+
+  await sub.closed;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - flow control", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  for (let i = 0; i < 10000; i++) {
+    nc.publish(subj, Empty);
+  }
+  await nc.flush();
+
+  const jsm = await nc.jetstreamManager();
+  const inbox = createInbox();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_subject: inbox,
+    flow_control: true,
+    idle_heartbeat: nanos(750),
+  });
+
+  let fc = 0;
+  const sub = nc.subscribe(inbox, {
+    callback: (_err, msg) => {
+      if (isHeartbeatMsg(msg)) {
+        sub.drain();
+        return;
+      }
+      if (isFlowControlMsg(msg)) {
+        fc++;
+      }
+      msg.respond();
+    },
+  });
+
+  await sub.closed;
+  assert(fc > 0);
+  assertEquals(sub.getProcessed(), 10000 + fc + 1);
   await cleanup(ns, nc);
 });
