@@ -389,7 +389,7 @@ export interface StreamAPI {
   delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
   deleteMessage(stream: string, seq: number, erase?: boolean): Promise<boolean>;
-  getMessage(stream: string, seq: number): Promise<StoredMsg>;
+  getMessage(stream: string, query: MsgRequest): Promise<StoredMsg>;
   find(subject: string): Promise<string>;
 }
 
@@ -644,11 +644,17 @@ export interface Success {
 
 export type SuccessResponse = ApiResponse & Success;
 
-export interface MsgRequest {
+export interface LastForMsgRequest {
+  "last_by_subj": string;
+}
+
+export interface SeqMsgRequest {
   seq: number;
 }
 
-export interface MsgDeleteRequest extends MsgRequest {
+export type MsgRequest = SeqMsgRequest | LastForMsgRequest;
+
+export interface MsgDeleteRequest extends SeqMsgRequest {
   "no_erase"?: boolean;
 }
 

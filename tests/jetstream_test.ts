@@ -189,7 +189,7 @@ Deno.test("jetstream - publish id", async () => {
   assertEquals(pa.seq, 1);
 
   const jsm = await nc.jetstreamManager();
-  const sm = await jsm.streams.getMessage(stream, 1);
+  const sm = await jsm.streams.getMessage(stream, { seq: 1 });
   assertEquals(sm.header.get("Nats-Msg-Id"), "a");
 
   await cleanup(ns, nc);
@@ -241,6 +241,56 @@ Deno.test("jetstream - publish require last message id", async () => {
   assertEquals(pa.stream, stream);
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 2);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish require last by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(stream);
+  si.config.subjects?.push(`${stream}.B`);
+  // @ts-ignore
+  si.config.max_msgs_per_subject = 100;
+  console.log(si.config);
+  await jsm.streams.update(si.config);
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(`${stream}.A`, sc.encode("a"));
+  await js.publish(`${stream}.A`, sc.encode("aa"), {
+    expect: {
+      lastSequence: 1,
+    },
+  });
+  await js.publish(`${stream}.B`, sc.encode("b"), {
+    expect: {
+      lastSequence: 2,
+    },
+  });
+  await js.publish(`${stream}.B`, sc.encode("bb"), {
+    expect: {
+      lastSequence: 3,
+    },
+  });
+
+  const a = await jsm.streams.getMessage(stream, {seq: 1})
+  assertEquals(sc.decode(a.data), "a");
+  const aa = await jsm.streams.getMessage(stream, {seq: 2})
+  assertEquals(sc.decode(aa.data), "aa");
+  const b = await jsm.streams.getMessage(stream, {seq: 3})
+  assertEquals(sc.decode(b.data), "b");
+  const bb = await jsm.streams.getMessage(stream, {seq: 4})
+  assertEquals(sc.decode(bb.data), "bb");
+
+  //@ts-ignore
+  nc.options.debug = true;
+  const sm = await jsm.streams.getMessage(stream, {
+    last_by_subj: `${stream}.A`,
+  });
+  assertEquals(sc.decode(sm.data), "aa");
 
   await cleanup(ns, nc);
 });

@@ -109,12 +109,11 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return cr.success;
   }
 
-  async getMessage(stream: string, seq: number): Promise<StoredMsg> {
+  async getMessage(stream: string, query: MsgRequest): Promise<StoredMsg> {
     validateStreamName(stream);
-    const dr = { seq } as MsgRequest;
     const r = await this._request(
       `${this.prefix}.STREAM.MSG.GET.${stream}`,
-      dr,
+      query,
     );
     const sm = r as StreamMsgResponse;
     return new StoredMsgImpl(sm);
