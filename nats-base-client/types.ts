@@ -226,6 +226,7 @@ export interface URLParseFn {
 export interface JetStreamOptions {
   apiPrefix?: string;
   timeout?: number;
+  domain?: string;
 }
 
 export interface JetStreamManager {
@@ -659,6 +660,7 @@ export interface JetStreamAccountStats {
   consumers: number;
   api: JetStreamApiStats;
   limits: AccountLimits;
+  domain?: string;
 }
 
 export interface JetStreamApiStats {

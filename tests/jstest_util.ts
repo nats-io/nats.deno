@@ -54,12 +54,12 @@ export function jetstreamServerConf(
   opts: unknown = {},
   randomStoreDir = true,
 ): Record<string, unknown> {
-  const conf = Object.assign(opts, jsopts());
+  const conf = Object.assign(jsopts(), opts);
   if (randomStoreDir) {
     conf.jetstream.store_dir = path.join("/tmp", "jetstream", nuid.next());
   }
   Deno.mkdirSync(conf.jetstream.store_dir, { recursive: true });
-  return opts as Record<string, unknown>;
+  return conf as Record<string, unknown>;
 }
 export async function setup(
   serverConf?: Record<string, unknown>,
