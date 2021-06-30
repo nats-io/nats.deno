@@ -646,6 +646,17 @@ Deno.test("jsm - cross account streams", async () => {
   await cleanup(ns, nc, admin);
 });
 
+Deno.test("jsm - getMessage() takes a number", async () => {
+  // get message
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  nc.publish(subj);
+  const jsm = await nc.jetstreamManager();
+  const sm = await jsm.streams.getMessage(stream, 1);
+  assertEquals(sm.seq, 1);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - cross account consumers", async () => {
   const { ns, nc } = await setup(
     jetstreamExportServerConf(),

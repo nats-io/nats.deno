@@ -653,7 +653,8 @@ export interface SeqMsgRequest {
   seq: number;
 }
 
-export type MsgRequest = SeqMsgRequest | LastForMsgRequest;
+// FIXME: remove number as it is deprecated
+export type MsgRequest = SeqMsgRequest | LastForMsgRequest | number;
 
 export interface MsgDeleteRequest extends SeqMsgRequest {
   "no_erase"?: boolean;
