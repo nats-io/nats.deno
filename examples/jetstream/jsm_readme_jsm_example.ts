@@ -6,6 +6,9 @@ const jsm = await nc.jetstreamManager();
 // list all the streams, the `next()` function
 // retrieves a paged result.
 const streams = await jsm.streams.list().next();
+streams.forEach((si) => {
+  console.log(si);
+});
 
 // add a stream
 const stream = "mystream";
@@ -29,7 +32,8 @@ await jsm.streams.update(si.config);
 
 // get a particular stored message in the stream by sequence
 // this is not associated with a consumer
-let sm = await jsm.streams.getMessage(stream, 1);
+const sm = await jsm.streams.getMessage(stream, { seq: 1 });
+console.log(sm.seq);
 
 // delete the 5th message in the stream, securely erasing it
 await jsm.streams.deleteMessage(stream, 5);
@@ -40,6 +44,9 @@ await jsm.streams.purge(stream);
 
 // list all consumers for a stream:
 const consumers = await jsm.consumers.list(stream).next();
+consumers.forEach((ci) => {
+  console.log(ci);
+});
 
 // add a new durable pull consumer
 await jsm.consumers.add(stream, {
@@ -49,6 +56,7 @@ await jsm.consumers.add(stream, {
 
 // retrieve a consumer's configuration
 const ci = await jsm.consumers.info(stream, "me");
+console.log(ci);
 
 // delete a particular consumer
 await jsm.consumers.delete(stream, "me");

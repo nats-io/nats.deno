@@ -258,6 +258,7 @@ export interface JetStreamPublishOptions {
     lastMsgID: string;
     streamName: string;
     lastSequence: number;
+    lastSubjectSequence: number;
   }>;
 }
 

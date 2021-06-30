@@ -1,20 +1,21 @@
 import { connect, Empty } from "../../src/mod.ts";
+import { PubAck } from "../../nats-base-client/types.ts";
 
 const nc = await connect();
 const jsm = await nc.jetstreamManager();
-await jsm.streams.add({ name: "a", subjects: ["a.b"] });
+await jsm.streams.add({ name: "a", subjects: ["a.*"] });
 
 // create a jetstream client:
 const js = nc.jetstream();
 
 // to publish messages to a stream:
-const pa = await js.publish("a.b");
+let pa = await js.publish("a.b");
 // the jetstream returns an acknowledgement with the
 // stream that captured the message, it's assigned sequence
 // and whether the message is a duplicate.
-const stream = pa.stream;
-const seq = pa.seq;
-const duplicate = pa.duplicate;
+console.log(
+  `stored in ${pa.stream} with sequence ${pa.seq} and is a duplicate? ${pa.duplicate}`,
+);
 
 // More interesting is the ability to prevent duplicates
 // on messages that are stored in the server. If
@@ -28,5 +29,17 @@ await js.publish("a.b", Empty, { msgID: "a" });
 // last sequence before accepting the new message:
 await js.publish("a.b", Empty, { expect: { lastMsgID: "a" } });
 await js.publish("a.b", Empty, { expect: { lastSequence: 3 } });
-await js.publish("a.b", Empty, { expect: { streamName: "a" } });
+// save the last sequence for this publish
+pa = await js.publish("a.b", Empty, { expect: { streamName: "a" } });
 // you can also mix the above combinations
+
+// now if you have a stream with different subjects, you can also
+// assert that the last recorded sequence on subject on the stream matches
+const buf: Promise<PubAck>[] = [];
+for (let i = 0; i < 100; i++) {
+  buf.push(js.publish("a.a", Empty));
+}
+await Promise.all(buf);
+// if additional "a.b" has been recorded, this will fail
+await js.publish("a.b", Empty, { expect: { lastSubjectSequence: pa.seq } });
+await nc.drain();

@@ -71,6 +71,7 @@ enum PubHeaders {
   ExpectedStreamHdr = "Nats-Expected-Stream",
   ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
   ExpectedLastMsgIdHdr = "Nats-Expected-Last-Msg-Id",
+  ExpectedLastSubjectSequenceHdr = "Nats-Expected-Last-Subject-Sequence",
 }
 
 export class JetStreamClientImpl extends BaseApiClient
@@ -101,6 +102,12 @@ export class JetStreamClientImpl extends BaseApiClient
       }
       if (opts.expect.lastSequence) {
         mh.set(PubHeaders.ExpectedLastSeqHdr, `${opts.expect.lastSequence}`);
+      }
+      if (opts.expect.lastSubjectSequence) {
+        mh.set(
+          PubHeaders.ExpectedLastSubjectSequenceHdr,
+          `${opts.expect.lastSubjectSequence}`,
+        );
       }
     }
 

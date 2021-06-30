@@ -296,6 +296,30 @@ Deno.test("jetstream - publish require last sequence", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - publish require last sequence by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add({ name: stream, subjects: [`${stream}.*`] });
+
+  const js = nc.jetstream();
+
+  await js.publish(`${stream}.A`, Empty);
+  await js.publish(`${stream}.B`, Empty);
+  const pa = await js.publish(`${stream}.A`, Empty, {
+    expect: { lastSubjectSequence: 1 },
+  });
+  for (let i = 0; i < 100; i++) {
+    await js.publish(`${stream}.B`, Empty);
+  }
+  // this will only succeed if the last recording sequence for the subject matches
+  await js.publish(`${stream}.A`, Empty, {
+    expect: { lastSubjectSequence: pa.seq },
+  });
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - ephemeral push", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { subj } = await initStream(nc);
