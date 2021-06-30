@@ -365,8 +365,6 @@ Currently, the library doesn't provide a notification for missed heartbeats, but
 this is not too difficult to do:
 
 ```typescript
-import { JsHeaders } from "./jsclient";
-
 let missed = 0;
 // this is a plain nats subscription
 const sub = nc.subscribe("my.messages", {
