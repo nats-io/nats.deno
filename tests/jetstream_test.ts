@@ -189,7 +189,7 @@ Deno.test("jetstream - publish id", async () => {
   assertEquals(pa.seq, 1);
 
   const jsm = await nc.jetstreamManager();
-  const sm = await jsm.streams.getMessage(stream, 1);
+  const sm = await jsm.streams.getMessage(stream, { seq: 1 });
   assertEquals(sm.header.get("Nats-Msg-Id"), "a");
 
   await cleanup(ns, nc);
@@ -245,6 +245,28 @@ Deno.test("jetstream - publish require last message id", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - get message last by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add({ name: stream, subjects: [`${stream}.*`] });
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(`${stream}.A`, sc.encode("a"));
+  await js.publish(`${stream}.A`, sc.encode("aa"));
+  await js.publish(`${stream}.B`, sc.encode("b"));
+  await js.publish(`${stream}.B`, sc.encode("bb"));
+
+  const sm = await jsm.streams.getMessage(stream, {
+    last_by_subj: `${stream}.A`,
+  });
+  assertEquals(sc.decode(sm.data), "aa");
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - publish require last sequence", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
@@ -270,6 +292,30 @@ Deno.test("jetstream - publish require last sequence", async () => {
   assertEquals(pa.stream, stream);
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 2);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - publish require last sequence by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add({ name: stream, subjects: [`${stream}.*`] });
+
+  const js = nc.jetstream();
+
+  await js.publish(`${stream}.A`, Empty);
+  await js.publish(`${stream}.B`, Empty);
+  const pa = await js.publish(`${stream}.A`, Empty, {
+    expect: { lastSubjectSequence: 1 },
+  });
+  for (let i = 0; i < 100; i++) {
+    await js.publish(`${stream}.B`, Empty);
+  }
+  // this will only succeed if the last recording sequence for the subject matches
+  await js.publish(`${stream}.A`, Empty, {
+    expect: { lastSubjectSequence: pa.seq },
+  });
 
   await cleanup(ns, nc);
 });

@@ -470,19 +470,19 @@ Deno.test("jsm - get message", async () => {
   nc.publish(subj, jc.encode(2));
 
   const jsm = await nc.jetstreamManager();
-  let sm = await jsm.streams.getMessage(stream, 1);
+  let sm = await jsm.streams.getMessage(stream, { seq: 1 });
   assertEquals(sm.subject, subj);
   assertEquals(sm.seq, 1);
   assertEquals(jc.decode(sm.data), 1);
 
-  sm = await jsm.streams.getMessage(stream, 2);
+  sm = await jsm.streams.getMessage(stream, { seq: 2 });
   assertEquals(sm.subject, subj);
   assertEquals(sm.seq, 2);
   assertEquals(jc.decode(sm.data), 2);
 
   const err = await assertThrowsAsync(
     async () => {
-      await jsm.streams.getMessage(stream, 3);
+      await jsm.streams.getMessage(stream, { seq: 3 });
     },
     Error,
   );
@@ -504,12 +504,12 @@ Deno.test("jsm - get message payload", async () => {
   await js.publish(subj, sc.encode(""), { msgID: "empty2" });
 
   const jsm = await nc.jetstreamManager();
-  let sm = await jsm.streams.getMessage(stream, 1);
+  let sm = await jsm.streams.getMessage(stream, { seq: 1 });
   assertEquals(sm.subject, subj);
   assertEquals(sm.seq, 1);
   assertEquals(sm.data, Empty);
 
-  sm = await jsm.streams.getMessage(stream, 2);
+  sm = await jsm.streams.getMessage(stream, { seq: 2 });
   assertEquals(sm.subject, subj);
   assertEquals(sm.seq, 2);
   assertEquals(sm.data, Empty);
@@ -610,7 +610,7 @@ Deno.test("jsm - cross account streams", async () => {
   assertEquals(si.state.messages, 2);
 
   // get message
-  const sm = await jsm.streams.getMessage(stream, 1);
+  const sm = await jsm.streams.getMessage(stream, { seq: 1 });
   assertEquals(sm.seq, 1);
 
   // delete message
@@ -644,6 +644,17 @@ Deno.test("jsm - cross account streams", async () => {
   assertEquals(streams.length, 0);
 
   await cleanup(ns, nc, admin);
+});
+
+Deno.test("jsm - getMessage() takes a number", async () => {
+  // get message
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  nc.publish(subj);
+  const jsm = await nc.jetstreamManager();
+  const sm = await jsm.streams.getMessage(stream, 1);
+  assertEquals(sm.seq, 1);
+  await cleanup(ns, nc);
 });
 
 Deno.test("jsm - cross account consumers", async () => {

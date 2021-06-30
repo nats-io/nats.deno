@@ -94,11 +94,14 @@ While you can implement your own API to interact with streams, the JetStream
 APIs make this convenient.
 
 ```typescript
+const jsm = await nc.jetstreamManager();
+await jsm.streams.add({ name: "a", subjects: ["a.*"] });
+
 // create a jetstream client:
 const js = nc.jetstream();
 
 // to publish messages to a stream:
-const pa = await js.publish("a.b");
+let pa = await js.publish("a.b");
 // the jetstream returns an acknowledgement with the
 // stream that captured the message, it's assigned sequence
 // and whether the message is a duplicate.
@@ -118,8 +121,19 @@ await js.publish("a.b", Empty, { msgID: "a" });
 // last sequence before accepting the new message:
 await js.publish("a.b", Empty, { expect: { lastMsgID: "a" } });
 await js.publish("a.b", Empty, { expect: { lastSequence: 3 } });
-await js.publish("a.b", Empty, { expect: { streamName: "a" } });
+// save the last sequence for this publish
+pa = await js.publish("a.b", Empty, { expect: { streamName: "a" } });
 // you can also mix the above combinations
+
+// this stream here accepts wildcards, you can assert that the
+// last message sequence recorded on a particular subject matches:
+const buf: Promise<PubAck>[] = [];
+for (let i = 0; i < 100; i++) {
+  buf.push(js.publish("a.a", Empty));
+}
+await Promise.all(buf);
+// if additional "a.b" has been recorded, this will fail
+await js.publish("a.b", Empty, { expect: { lastSubjectSequence: pa.seq } });
 ```
 
 ### Processing Messages

@@ -1,4 +1,4 @@
-import { connect, consumerOpts, createInbox, Empty } from "../../src/mod.ts";
+import { connect, consumerOpts, createInbox } from "../../src/mod.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 
 // HIDE THIS
@@ -17,7 +17,7 @@ opts.manualAck();
 opts.ackExplicit();
 opts.deliverTo(createInbox());
 
-let sub = await js.subscribe(subj, opts);
+const sub = await js.subscribe(subj, opts);
 const done = (async () => {
   for await (const m of sub) {
     m.ack();
