@@ -1,6 +1,12 @@
-import { AckPolicy, connect, nanos, toJsMsg } from "../../src/mod.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
-import { isHeartbeatMsg } from "../../nats-base-client/jsutil.ts";
+import {
+  AckPolicy,
+  connect,
+  isHeartbeatMsg,
+  JsHeaders,
+  nanos,
+  nuid,
+  toJsMsg,
+} from "../../src/mod.ts";
 
 const nc = await connect();
 const jsm = await nc.jetstreamManager();
@@ -18,7 +24,12 @@ const sub = nc.subscribe("my.messages", {
     // subject set. if it has a reply it would be a flow control message
     // which will get acknowledged at the end.
     if (isHeartbeatMsg(msg)) {
-      console.log("alive");
+      // the heartbeat has additional information:
+      const lastSeq = msg.headers?.get(JsHeaders.LastStreamSeqHdr);
+      const consSeq = msg.headers?.get(JsHeaders.LastConsumerSeqHdr);
+      console.log(
+        `alive - last stream seq: ${lastSeq} - last consumer seq: ${consSeq}`,
+      );
       return;
     }
     // do something with the message

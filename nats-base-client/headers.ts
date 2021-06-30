@@ -144,7 +144,8 @@ export class MsgHdrsImpl implements MsgHdrs {
       const scode = mh.code.toString();
       str = str.replace(scode, "");
       mh.description = str.trim();
-    } else {
+    }
+    if (lines.length >= 1) {
       lines.slice(1).map((s) => {
         if (s) {
           const idx = s.indexOf(":");

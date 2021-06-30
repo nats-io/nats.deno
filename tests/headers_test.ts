@@ -18,6 +18,8 @@ import {
   createInbox,
   Empty,
   headers,
+  JsHeaders,
+  Match,
   NatsError,
   RequestOptions,
   StringCodec,
@@ -33,7 +35,6 @@ import {
   MsgImpl,
   Parser,
 } from "../nats-base-client/internal_mod.ts";
-import { Match } from "../nats-base-client/headers.ts";
 import { Publisher } from "../nats-base-client/protocol.ts";
 import { TestDispatcher } from "./parser_test.ts";
 
@@ -300,4 +301,23 @@ Deno.test("headers - trims values", () => {
   const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
   assert(m.headers);
   assertEquals(m.headers.get("A"), "A");
+});
+
+Deno.test("headers - error headers may have other entries", () => {
+  const te = new TextEncoder();
+
+  const d = new TestDispatcher();
+  const p = new Parser(d);
+  p.parse(
+    te.encode(
+      `HMSG _INBOX.DJ2IU18AMXPOZMG5R7NJVI 2  75 75\r\nNATS/1.0 100 Idle Heartbeat\r\nNats-Last-Consumer: 1\r\nNats-Last-Stream: 1\r\n\r\n\r\n`,
+    ),
+  );
+  assertEquals(d.msgs.length, 1);
+
+  const e = d.msgs[0];
+  const m = new MsgImpl(e.msg!, e.data!, {} as Publisher);
+  assert(m.headers);
+  assertEquals(m.headers.get(JsHeaders.LastConsumerSeqHdr), "1");
+  assertEquals(m.headers.get(JsHeaders.LastStreamSeqHdr), "1");
 });

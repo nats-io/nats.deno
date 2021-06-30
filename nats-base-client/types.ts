@@ -509,9 +509,9 @@ export interface StreamConfig {
 
 export interface StreamSource {
   name: string;
-  "opt_start_seq": number;
-  "opt_start_time": string;
-  "filter_subject": string;
+  "opt_start_seq"?: number;
+  "opt_start_time"?: string;
+  "filter_subject"?: string;
 }
 
 export interface Placement {
@@ -742,4 +742,13 @@ export interface NextRequest {
   expires: number;
   batch: number;
   "no_wait": boolean;
+}
+
+export enum JsHeaders {
+  // set if message coming from a stream source format is `stream seq`
+  StreamSourceHdr = "Nats-Stream-Source",
+  // set for heartbeat messages
+  LastConsumerSeqHdr = "Nats-Last-Consumer",
+  // set for heartbeat messages
+  LastStreamSeqHdr = "Nats-Last-Stream",
 }

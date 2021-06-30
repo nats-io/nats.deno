@@ -371,11 +371,14 @@ const sub = nc.subscribe("my.messages", {
   callback: (err, msg) => {
     // if we got a message, we simply reset
     missed = 0;
-    // simply checking if has headers and code === 100, with no reply
-    // subject set. if it has a reply it would be a flow control message
-    // which will get acknowledged at the end.
+    // simply checking if has headers and code === 100 and a description === "Idle Heartbeat"
     if (isHeartbeatMsg(msg)) {
-      console.log("alive");
+      // the heartbeat has additional information:
+      const lastSeq = msg.headers.get(JsHeaders.LastStreamSeqHdr);
+      const consSeq = msg.headers.get(JsHeaders.LastConsumerSeqHdr);
+      console.log(
+        `alive - last stream seq: ${lastSeq} - last consumer seq: ${consSeq}`,
+      );
       return;
     }
     // do something with the message
