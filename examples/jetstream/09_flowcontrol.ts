@@ -1,6 +1,10 @@
-import { AckPolicy, connect, toJsMsg } from "../../src/mod.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
-import { isFlowControlMsg } from "../../nats-base-client/jsutil.ts";
+import {
+  AckPolicy,
+  connect,
+  isFlowControlMsg,
+  nuid,
+  toJsMsg,
+} from "../../src/mod.ts";
 
 const nc = await connect();
 const jsm = await nc.jetstreamManager();

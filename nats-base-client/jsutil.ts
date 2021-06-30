@@ -74,7 +74,7 @@ export function isFlowControlMsg(msg: Msg): boolean {
 }
 
 export function isHeartbeatMsg(msg: Msg): boolean {
-  return isFlowControlMsg(msg) && msg.reply === "";
+  return isFlowControlMsg(msg) && msg.headers?.description === "Idle Heartbeat";
 }
 
 export function checkJsError(msg: Msg): NatsError | null {

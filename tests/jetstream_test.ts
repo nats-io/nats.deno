@@ -32,6 +32,7 @@ import {
   Empty,
   ErrorCode,
   headers,
+  JsHeaders,
   JsMsg,
   JsMsgCallback,
   JSONCodec,
@@ -1639,7 +1640,9 @@ Deno.test("jetstream - qsub", async () => {
 
 Deno.test("jetstream - idle heartbeats", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const { stream } = await initStream(nc);
+
+  const { stream, subj } = await initStream(nc);
+  nc.publish(subj);
   const jsm = await nc.jetstreamManager();
   const inbox = createInbox();
   await jsm.consumers.add(stream, {
@@ -1649,9 +1652,12 @@ Deno.test("jetstream - idle heartbeats", async () => {
   });
 
   const sub = nc.subscribe(inbox, {
-    max: 1,
     callback: (_err, msg) => {
-      assert(isHeartbeatMsg(msg));
+      if (isHeartbeatMsg(msg)) {
+        assertEquals(msg.headers?.get(JsHeaders.LastConsumerSeqHdr), "1");
+        assertEquals(msg.headers?.get(JsHeaders.LastStreamSeqHdr), "1");
+        sub.drain();
+      }
     },
   });
 

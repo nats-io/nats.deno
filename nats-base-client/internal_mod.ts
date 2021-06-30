@@ -36,6 +36,7 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsg,
   JsMsgCallback,
+  LastForMsgRequest,
   Lister,
   LostStreamData,
   MsgDeleteRequest,
@@ -44,6 +45,7 @@ export type {
   PeerInfo,
   Placement,
   PullOptions,
+  SeqMsgRequest,
   SequencePair,
   StoredMsg,
   StreamConfig,
@@ -67,7 +69,7 @@ export {
 export { consumerOpts } from "./jsconsumeropts.ts";
 export { toJsMsg } from "./jsmsg.ts";
 
-export { DebugEvents, Empty, Events } from "./types.ts";
+export { DebugEvents, Empty, Events, JsHeaders } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
 export { SubscriptionImpl } from "./subscription.ts";
 export { Subscriptions } from "./subscriptions.ts";
@@ -116,4 +118,4 @@ export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
-export { millis, nanos } from "./jsutil.ts";
+export { isFlowControlMsg, isHeartbeatMsg, millis, nanos } from "./jsutil.ts";
