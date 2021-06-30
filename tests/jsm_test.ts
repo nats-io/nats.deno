@@ -445,6 +445,15 @@ Deno.test("jsm - purge filtered keep", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - purge seq and keep fails", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  await assertThrowsAsync(async () => {
+    await jsm.streams.purge("a", { keep: 10, seq: 5 });
+  });
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - stream delete", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);

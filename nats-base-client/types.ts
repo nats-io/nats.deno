@@ -596,22 +596,22 @@ export interface StreamSourceInfo {
 
 export type PurgeOpts = PurgeBySeq | PurgeTrimOpts | PurgeBySubject;
 
-export interface PurgeBySeq {
+export type PurgeBySeq = {
   // a subject to filter on (can include wildcards)
   filter?: string;
   // not inclusive
   seq: number;
-}
+};
 
-export interface PurgeTrimOpts {
+export type PurgeTrimOpts = {
   // a subject to filter on (can include wildcards)
   filter?: string;
   keep: number;
-}
+};
 
-export interface PurgeBySubject {
+export type PurgeBySubject = {
   filter: string;
-}
+};
 
 export interface PurgeResponse extends Success {
   purged: number;
