@@ -279,6 +279,181 @@ Deno.test("jsm - stream purge", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - purge by sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  const pi = await jsm.streams.purge(stream, { seq: 4 });
+  assertEquals(pi.purged, 3);
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 4);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge by filtered sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  const pi = await jsm.streams.purge(stream, { seq: 4, filter: `${stream}.b` });
+  assertEquals(pi.purged, 1);
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 1);
+  assertEquals(si.state.messages, 8);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  const pi = await jsm.streams.purge(stream, { filter: `${stream}.b` });
+  assertEquals(pi.purged, 3);
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 1);
+  assertEquals(si.state.messages, 6);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge by subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  const pi = await jsm.streams.purge(stream, { filter: `${stream}.b` });
+  assertEquals(pi.purged, 3);
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 1);
+  assertEquals(si.state.messages, 6);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge keep", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  const pi = await jsm.streams.purge(stream, { keep: 1 });
+  assertEquals(pi.purged, 8);
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 9);
+  assertEquals(si.state.messages, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge filtered keep", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add(
+    { name: stream, subjects: [`${stream}.*`] },
+  );
+
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+  nc.publish(`${stream}.a`);
+  nc.publish(`${stream}.b`);
+  nc.publish(`${stream}.c`);
+
+  let pi = await jsm.streams.purge(stream, { keep: 1, filter: `${stream}.a` });
+  assertEquals(pi.purged, 2);
+  pi = await jsm.streams.purge(stream, { keep: 1, filter: `${stream}.b` });
+  assertEquals(pi.purged, 2);
+  pi = await jsm.streams.purge(stream, { keep: 1, filter: `${stream}.c` });
+  assertEquals(pi.purged, 2);
+
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.first_seq, 7);
+  assertEquals(si.state.messages, 3);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - purge seq and keep fails", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  await assertThrowsAsync(async () => {
+    await jsm.streams.purge("a", { keep: 10, seq: 5 });
+  });
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - stream delete", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);

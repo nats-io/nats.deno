@@ -20,7 +20,11 @@ import {
   MsgDeleteRequest,
   MsgRequest,
   NatsConnection,
+  PurgeBySeq,
+  PurgeBySubject,
+  PurgeOpts,
   PurgeResponse,
+  PurgeTrimOpts,
   StoredMsg,
   StreamAPI,
   StreamConfig,
@@ -85,9 +89,15 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return new ListerImpl<StreamInfo>(subj, filter, this);
   }
 
-  async purge(name: string): Promise<PurgeResponse> {
+  async purge(name: string, opts?: PurgeOpts): Promise<PurgeResponse> {
+    if (opts) {
+      const { keep, seq } = opts as PurgeBySeq & PurgeTrimOpts;
+      if (typeof keep === "number" && typeof seq === "number") {
+        throw new Error("can specify one of keep or seq");
+      }
+    }
     validateStreamName(name);
-    const v = await this._request(`${this.prefix}.STREAM.PURGE.${name}`);
+    const v = await this._request(`${this.prefix}.STREAM.PURGE.${name}`, opts);
     return v as PurgeResponse;
   }
 
