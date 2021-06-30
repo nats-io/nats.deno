@@ -387,7 +387,7 @@ export interface StreamAPI {
   info(stream: string, opts?: StreamInfoRequestOptions): Promise<StreamInfo>;
   add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
   update(cfg: StreamConfig): Promise<StreamInfo>;
-  purge(stream: string): Promise<PurgeResponse>;
+  purge(stream: string, opts?: PurgeOpts): Promise<PurgeResponse>;
   delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
   deleteMessage(stream: string, seq: number, erase?: boolean): Promise<boolean>;
@@ -592,6 +592,25 @@ export interface StreamSourceInfo {
   lag: number;
   active: Nanos;
   error?: ApiError;
+}
+
+export type PurgeOpts = PurgeBySeq | PurgeTrimOpts | PurgeBySubject;
+
+export interface PurgeBySeq {
+  // a subject to filter on (can include wildcards)
+  filter?: string;
+  // not inclusive
+  seq: number;
+}
+
+export interface PurgeTrimOpts {
+  // a subject to filter on (can include wildcards)
+  filter?: string;
+  keep: number;
+}
+
+export interface PurgeBySubject {
+  filter: string;
 }
 
 export interface PurgeResponse extends Success {

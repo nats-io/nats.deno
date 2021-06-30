@@ -20,6 +20,7 @@ import {
   MsgDeleteRequest,
   MsgRequest,
   NatsConnection,
+  PurgeOpts,
   PurgeResponse,
   StoredMsg,
   StreamAPI,
@@ -85,9 +86,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return new ListerImpl<StreamInfo>(subj, filter, this);
   }
 
-  async purge(name: string): Promise<PurgeResponse> {
+  async purge(name: string, opts?: PurgeOpts): Promise<PurgeResponse> {
     validateStreamName(name);
-    const v = await this._request(`${this.prefix}.STREAM.PURGE.${name}`);
+    const v = await this._request(`${this.prefix}.STREAM.PURGE.${name}`, opts);
     return v as PurgeResponse;
   }
 

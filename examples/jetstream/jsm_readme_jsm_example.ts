@@ -12,12 +12,12 @@ streams.forEach((si) => {
 
 // add a stream
 const stream = "mystream";
-const subj = `mystream.A`;
+const subj = `mystream.*`;
 await jsm.streams.add({ name: stream, subjects: [subj] });
 
 // publish a reg nats message directly to the stream
 for (let i = 0; i < 10; i++) {
-  nc.publish(subj, Empty);
+  nc.publish(`${subj}.a`, Empty);
 }
 
 // find a stream that stores a specific subject:
@@ -41,6 +41,18 @@ await jsm.streams.deleteMessage(stream, 5);
 // purge all messages in the stream, the stream itself
 // remains.
 await jsm.streams.purge(stream);
+
+// purge all messages with a specific subject (filter can be a wildcard)
+await jsm.streams.purge(stream, { filter: "a.b" });
+
+// purge messages with a specific subject keeping some messages
+await jsm.streams.purge(stream, { filter: "a.c", keep: 5 });
+
+// purge all messages with upto (not including seq)
+await jsm.streams.purge(stream, { seq: 100 });
+
+// purge all messages with upto sequence that have a matching subject
+await jsm.streams.purge(stream, { filter: "a.d", seq: 100 });
 
 // list all consumers for a stream:
 const consumers = await jsm.consumers.list(stream).next();
