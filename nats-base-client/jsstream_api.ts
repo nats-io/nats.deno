@@ -21,7 +21,6 @@ import {
   MsgRequest,
   NatsConnection,
   PurgeBySeq,
-  PurgeBySubject,
   PurgeOpts,
   PurgeResponse,
   PurgeTrimOpts,
