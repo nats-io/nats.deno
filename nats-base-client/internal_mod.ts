@@ -22,6 +22,7 @@ export type {
   ConnectionOptions,
   Consumer,
   ConsumerConfig,
+  ConsumerInfo,
   ConsumerOpts,
   ConsumerOptsBuilder,
   DeliveryInfo,
