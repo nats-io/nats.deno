@@ -120,3 +120,12 @@ export { isIP, parseIP } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
 export { isFlowControlMsg, isHeartbeatMsg, millis, nanos } from "./jsutil.ts";
+export { Bucket, defaultBucketOpts } from "./kv.ts";
+export type {
+  BucketOpts,
+  Entry,
+  KV,
+  KvStatus,
+  PutOptions,
+  RoKV,
+} from "./kv.ts";
