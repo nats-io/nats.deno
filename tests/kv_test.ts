@@ -27,6 +27,7 @@ import {
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
 import { Bucket, Entry } from "../nats-base-client/kv.ts";
+import { EncodedBucket } from "../nats-base-client/ekv.ts";
 
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
@@ -195,6 +196,54 @@ Deno.test("kv - keys", async () => {
   assert(s.has("b"));
   assert(s.has("c"));
   assert(s.has("x"));
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("encoded kv - crud", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const sc = StringCodec();
+  const jsm = await nc.jetstreamManager();
+  let streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  const n = nuid.next();
+  const bucket = new EncodedBucket<string>(
+    await Bucket.create(nc, n) as Bucket,
+    sc,
+  );
+
+  let seq = await bucket.put("k", "hello");
+  assertEquals(seq, 1);
+
+  let r = await bucket.get("k");
+  assertEquals(r.value, "hello");
+
+  seq = await bucket.put("k", "bye");
+  assertEquals(seq, 2);
+
+  r = await bucket.get("k");
+  assertEquals(r.value, "bye");
+
+  await bucket.delete("k");
+
+  const values = await bucket.history("k");
+  for await (const _r of values) {
+    // just run through them
+  }
+  assertEquals(values.getProcessed(), 3);
+
+  const pr = await bucket.purge();
+  assertEquals(pr.purged, 3);
+  assert(pr.success);
+
+  const ok = await bucket.destroy();
+  assert(ok);
+
+  streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
 
   await cleanup(ns, nc);
 });

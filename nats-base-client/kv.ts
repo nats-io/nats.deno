@@ -95,8 +95,8 @@ export interface PutOptions {
   previousSeq: number;
 }
 
-const kvOriginClusterHdr = "KV-Origin-Cluster";
-const kvOperationHdr = "KV-Operation";
+export const kvOriginClusterHdr = "KV-Origin-Cluster";
+export const kvOperationHdr = "KV-Operation";
 const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
@@ -127,6 +127,18 @@ export class Bucket implements KV {
     this.jsm = jsm;
     this.js = js;
     this.bucket = bucket;
+  }
+
+  static async create(
+    nc: NatsConnection,
+    name: string,
+    opts: Partial<BucketOpts> = {},
+  ): Promise<KV> {
+    const to = opts.timeout || 2000;
+    const jsm = await nc.jetstreamManager({ timeout: to });
+    const bucket = new Bucket(name, jsm, nc.jetstream({ timeout: to }));
+    await bucket.init(opts);
+    return bucket;
   }
 
   async init(opts: Partial<BucketOpts> = {}): Promise<void> {
@@ -161,18 +173,6 @@ export class Bucket implements KV {
 
   subjectForKey(k: string): string {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
-  }
-
-  static async create(
-    nc: NatsConnection,
-    name: string,
-    opts: Partial<BucketOpts> = {},
-  ): Promise<KV> {
-    const to = opts.timeout || 2000;
-    const jsm = await nc.jetstreamManager({ timeout: to });
-    const bucket = new Bucket(name, jsm, nc.jetstream({ timeout: to }));
-    await bucket.init(opts);
-    return bucket;
   }
 
   close(): Promise<void> {
