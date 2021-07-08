@@ -14,8 +14,12 @@
  */
 
 import {
-  ConsumerOpts,
+  AckPolicy,
+  ConsumerConfig,
+  ConsumerInfo,
+  DeliverPolicy,
   DiscardPolicy,
+  Empty,
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
@@ -30,19 +34,31 @@ import {
   StreamConfig,
 } from "./types.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
-import { createInbox, headers, millis } from "./mod.ts";
-import { deferred, timeout } from "./util.ts";
+import {
+  createInbox,
+  headers,
+  isFlowControlMsg,
+  isHeartbeatMsg,
+  millis,
+  toJsMsg,
+} from "./mod.ts";
+import { JetStreamManagerImpl } from "./jsm.ts";
+import { checkJsError } from "./jsutil.ts";
+import { isNatsError } from "./error.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
+import { deferred } from "./util.ts";
+import { parseInfo } from "./jsmsg.ts";
 
-export type Result = {
+export interface Entry {
   bucket: string;
   key: string;
-  data: Uint8Array; // data lines up better with other nats apis in javascript
+  value: Uint8Array;
   created: Date;
-  sequence: number;
+  seq: number;
   delta?: number;
   "origin_cluster"?: string;
-  operation: "PUT" | "DEL"; // these are redundant - a delete is empty payload...
-};
+  operation: "PUT" | "DEL";
+}
 
 export interface Status {
   bucket: string;
@@ -50,8 +66,7 @@ export interface Status {
   history: number;
   ttl: Nanos;
   cluster?: string;
-  keys(): Promise<string[]>;
-  backingStore: string;
+  backingStore: StorageType;
 }
 
 export interface BucketOpts {
@@ -86,11 +101,12 @@ const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
 export interface RoKV {
-  get(k: string): Promise<Result>;
-  history(k: string): Promise<Result[]>;
-  // watch(opts: { key?: string }): Iterator<string>;
+  get(k: string): Promise<Entry>;
+  history(k: string): Promise<QueuedIterator<Entry>>;
+  watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
-  // status(): Promise<Status>;
+  status(): Promise<Status>;
+  keys(): Promise<Set<string>>;
 }
 
 export interface KV extends RoKV {
@@ -103,6 +119,7 @@ export interface KV extends RoKV {
 export class Bucket implements KV {
   jsm: JetStreamManager;
   js: JetStreamClient;
+  stream!: string;
   bucket: string;
   maxPerSubject!: number;
 
@@ -113,15 +130,17 @@ export class Bucket implements KV {
   }
 
   async init(opts: Partial<BucketOpts> = {}): Promise<void> {
+    const bo = Object.assign(defaultBucketOpts(), opts) as BucketOpts;
     const sc = {} as StreamConfig;
-    sc.name = opts.streamName ?? this.bucketName();
+    this.stream = sc.name = opts.streamName ?? this.bucketName();
     sc.subjects = [this.subjectForBucket()];
     sc.retention = RetentionPolicy.Limits;
-    this.maxPerSubject = sc.max_msgs_per_subject = opts.history ?? 5;
-    sc.max_msgs = -1;
+    this.maxPerSubject = bo.history;
+    sc.max_bytes = bo.maxBucketSize;
+    sc.max_msg_size = bo.maxValueSize;
     sc.storage = StorageType.File;
     sc.discard = DiscardPolicy.Old;
-    sc.num_replicas = opts.replicas ?? 1;
+    sc.num_replicas = bo.replicas;
 
     try {
       await this.jsm.streams.info(sc.name);
@@ -133,7 +152,7 @@ export class Bucket implements KV {
   }
 
   bucketName(): string {
-    return `${kvPrefix}${this.bucket}`;
+    return this.stream ?? `${kvPrefix}${this.bucket}`;
   }
 
   subjectForBucket(): string {
@@ -160,87 +179,36 @@ export class Bucket implements KV {
     return Promise.resolve();
   }
 
-  async delete(k: string): Promise<void> {
-    const ji = this.js as JetStreamClientImpl;
-    const cluster = ji.nc.info?.cluster ?? "";
-    const h = headers();
-    h.set(kvOriginClusterHdr, cluster);
-    h.set(kvOperationHdr, "DEL");
-    await this.js.publish(this.subjectForKey(k));
-  }
-
-  toResult(k: string, sm: StoredMsg): Result {
+  smToEntry(sm: StoredMsg): Entry {
+    const chunks = sm.subject.split(".");
     return {
       bucket: this.bucket,
-      key: k,
-      data: sm.data,
+      key: chunks[chunks.length - 1],
+      value: sm.data,
+      delta: 0,
       created: sm.time,
-      sequence: sm.seq,
+      seq: sm.seq,
       origin_cluster: sm.header.get(kvOriginClusterHdr),
       operation: sm.header.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
     };
   }
 
-  jtoResult(k: string, jm: JsMsg): Result {
-    return {
+  jmToEntry(k: string, jm: JsMsg): Entry {
+    const chunks = jm.subject.split(".");
+    const e = {
       bucket: this.bucket,
-      key: k,
-      data: jm.data,
+      key: chunks[chunks.length - 1],
+      value: jm.data,
       created: new Date(millis(jm.info.timestampNanos)),
-      sequence: jm.seq,
+      seq: jm.seq,
       origin_cluster: jm.headers?.get(kvOriginClusterHdr),
       operation: jm.headers?.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
-    };
-  }
+    } as Entry;
 
-  async get(k: string): Promise<Result> {
-    const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-      last_by_subj: this.subjectForKey(k),
-    });
-    return this.toResult(k, sm);
-  }
-
-  async history(k: string): Promise<Result[]> {
-    const ji = this.js as JetStreamClientImpl;
-    const nc = ji.nc;
-    const buf: Result[] = [];
-
-    const inbox = createInbox(nc.options.inboxPrefix);
-    const d = deferred<Result[]>();
-
-    const opts = {
-      config: { deliver_subject: inbox },
-    } as ConsumerOpts;
-    // fixme: change to create my own ephemeral, and have heartbeats to bail early
-    const sub = await this.js.subscribe(this.subjectForKey(k), opts);
-    const to = timeout(ji.timeout);
-    to.catch(() => {
-      sub.unsubscribe();
-      d.resolve(buf);
-    });
-    (async () => {
-      for await (const m of sub) {
-        to.cancel();
-        const r = this.jtoResult(k, m);
-        buf.push(r);
-        if (m.info.pending === 0) {
-          sub.unsubscribe();
-          d.resolve(buf);
-        }
-        m.ack();
-      }
-    })().catch((err) => {
-      d.reject(err);
-    });
-    return d;
-  }
-
-  purge(opts?: PurgeOpts): Promise<PurgeResponse> {
-    return this.jsm.streams.purge(this.bucketName(), opts);
-  }
-
-  destroy(): Promise<boolean> {
-    return this.jsm.streams.delete(this.bucketName());
+    if (k !== "*") {
+      e.delta = jm.info.pending;
+    }
+    return e;
   }
 
   async put(
@@ -252,23 +220,179 @@ export class Bucket implements KV {
     const cluster = ji.nc.info?.cluster ?? "";
     const h = headers();
     h.set(kvOriginClusterHdr, cluster);
+    const o = { headers: h } as JetStreamPublishOptions;
     if (opts.previousSeq) {
-      const o = {} as JetStreamPublishOptions;
       o.expect = {};
       o.expect.lastSubjectSequence = opts.previousSeq;
-      const pa = await this.js.publish(this.subjectForKey(k), data, o);
-      return pa.seq;
-    } else {
-      const pa = await this.js.publish(this.subjectForKey(k), data);
-      return pa.seq;
     }
+    const pa = await this.js.publish(this.subjectForKey(k), data, o);
+    return pa.seq;
   }
 
-  // status(): Promise<Status> {
-  //   return Promise.resolve(undefined);
-  // }
-  //
-  // watch(opts: { key?: string }): Iterator<string> {
-  //   return undefined;
-  // }
+  async get(k: string): Promise<Entry> {
+    const sm = await this.jsm.streams.getMessage(this.bucketName(), {
+      last_by_subj: this.subjectForKey(k),
+    });
+    return this.smToEntry(sm);
+  }
+
+  async delete(k: string): Promise<void> {
+    const ji = this.js as JetStreamClientImpl;
+    const cluster = ji.nc.info?.cluster ?? "";
+    const h = headers();
+    h.set(kvOriginClusterHdr, cluster);
+    h.set(kvOperationHdr, "DEL");
+    await this.js.publish(this.subjectForKey(k), Empty, { headers: h });
+  }
+
+  consumerOn(k: string, lastOnly = false): Promise<ConsumerInfo> {
+    const ji = this.js as JetStreamClientImpl;
+    const nc = ji.nc;
+    const inbox = createInbox(nc.options.inboxPrefix);
+    const opts: Partial<ConsumerConfig> = {
+      deliver_subject: inbox,
+      deliver_policy: lastOnly ? DeliverPolicy.Last : DeliverPolicy.All,
+      ack_policy: AckPolicy.Explicit,
+      filter_subject: this.subjectForKey(k),
+      flow_control: k === "*",
+    };
+
+    return this.jsm.consumers.add(this.stream, opts);
+  }
+
+  async history(k: string): Promise<QueuedIterator<Entry>> {
+    const ci = await this.consumerOn(k);
+    const max = ci.num_pending;
+    const qi = new QueuedIteratorImpl<Entry>();
+    if (max === 0) {
+      qi.stop();
+      return qi;
+    }
+    const ji = this.jsm as JetStreamManagerImpl;
+    const nc = ji.nc;
+    const subj = ci.config.deliver_subject!;
+    const sub = nc.subscribe(subj, {
+      callback: (err, msg) => {
+        if (err === null) {
+          err = checkJsError(msg);
+        }
+        if (err) {
+          if (isNatsError(err)) {
+            qi.stop(err);
+          }
+        } else {
+          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
+            msg.respond();
+            return;
+          }
+          qi.received++;
+          const jm = toJsMsg(msg);
+          qi.push(this.jmToEntry(k, jm));
+          jm.ack();
+          if (qi.received === max) {
+            sub.unsubscribe();
+          }
+        }
+      },
+    });
+    sub.closed.then(() => {
+      qi.stop();
+    }).catch((err) => {
+      qi.stop(err);
+    });
+
+    return qi;
+  }
+
+  async watch(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
+    const k = opts.key ?? "*";
+    const ci = await this.consumerOn(k, k !== "*");
+    const qi = new QueuedIteratorImpl<Entry>();
+
+    const ji = this.jsm as JetStreamManagerImpl;
+    const nc = ji.nc;
+    const subj = ci.config.deliver_subject!;
+    const sub = nc.subscribe(subj, {
+      callback: (err, msg) => {
+        if (err === null) {
+          err = checkJsError(msg);
+        }
+        if (err) {
+          if (isNatsError(err)) {
+            qi.stop(err);
+          }
+        } else {
+          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
+            msg.respond();
+            return;
+          }
+          qi.received++;
+          const jm = toJsMsg(msg);
+          qi.push(this.jmToEntry(k, jm));
+          jm.ack();
+        }
+      },
+    });
+    sub.closed.then(() => {
+      qi.stop();
+    }).catch((err) => {
+      qi.stop(err);
+    });
+
+    return qi;
+  }
+
+  async keys(): Promise<Set<string>> {
+    const d = deferred<Set<string>>();
+    const s: Set<string> = new Set();
+    const ci = await this.consumerOn("*");
+    const ji = this.jsm as JetStreamManagerImpl;
+    const nc = ji.nc;
+    const subj = ci.config.deliver_subject!;
+    const sub = nc.subscribe(subj);
+    await (async () => {
+      for await (const m of sub) {
+        const err = checkJsError(m);
+        if (err) {
+          sub.unsubscribe();
+          d.reject(err);
+        } else if (isFlowControlMsg(m)) {
+          m.respond();
+        } else {
+          const chunks = m.subject.split(".");
+          s.add(chunks[chunks.length - 1]);
+          m.respond();
+          const info = parseInfo(m.reply!);
+          if (info.pending === 0) {
+            sub.unsubscribe();
+            d.resolve(s);
+          }
+        }
+      }
+    })();
+
+    return d;
+  }
+
+  purge(opts?: PurgeOpts): Promise<PurgeResponse> {
+    return this.jsm.streams.purge(this.bucketName(), opts);
+  }
+
+  destroy(): Promise<boolean> {
+    return this.jsm.streams.delete(this.bucketName());
+  }
+
+  async status(): Promise<Status> {
+    const ji = this.js as JetStreamClientImpl;
+    const cluster = ji.nc.info?.cluster ?? "";
+    const si = await this.jsm.streams.info(this.bucketName());
+    return {
+      bucket: this.bucketName(),
+      values: si.state.messages,
+      history: si.config.max_msgs_per_subject,
+      ttl: si.config.max_age,
+      bucket_location: cluster,
+      backingStore: si.config.storage,
+    } as Status;
+  }
 }

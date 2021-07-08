@@ -27,8 +27,8 @@ import {
 } from "./types.ts";
 
 import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { StreamAPIImpl } from "./jsstream_api.ts";
-import { ConsumerAPIImpl } from "./jsconsumer_api.ts";
+import { StreamAPIImpl } from "./jsmstream_api.ts";
+import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
 
 export class JetStreamManagerImpl extends BaseApiClient
