@@ -23,14 +23,14 @@ export interface EncodedRoKV<T> {
   keys(): Promise<Set<string>>;
 }
 
-export interface EncodedKv<T> extends EncodedRoKV<T> {
+export interface EncodedKV<T> extends EncodedRoKV<T> {
   put(k: string, data?: T, opts?: Partial<PutOptions>): Promise<number>;
   delete(k: string): Promise<void>;
   purge(opts?: PurgeOpts): Promise<PurgeResponse>;
   destroy(): Promise<boolean>;
 }
 
-export class EncodedBucket<T> implements EncodedKv<T> {
+export class EncodedBucket<T> implements EncodedKV<T> {
   bucket: Bucket;
   codec: Codec<T>;
   constructor(bucket: Bucket, codec: Codec<T>) {
