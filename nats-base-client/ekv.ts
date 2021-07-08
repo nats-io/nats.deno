@@ -15,7 +15,7 @@ export interface EncodedEntry<T> {
 }
 
 export interface EncodedRoKV<T> {
-  get(k: string): Promise<EncodedEntry<T>>;
+  get(k: string): Promise<EncodedEntry<T> | null>;
   history(k: string): Promise<QueuedIterator<EncodedEntry<T>>>;
   watch(opts?: { key?: string }): Promise<QueuedIterator<EncodedEntry<T>>>;
   close(): Promise<void>;
@@ -60,8 +60,12 @@ export class EncodedBucket<T> implements EncodedKV<T> {
     return this.bucket.put(k, buf, opts);
   }
 
-  async get(k: string): Promise<EncodedEntry<T>> {
-    return this.toEncodedEntry(await this.bucket.get(k));
+  async get(k: string): Promise<EncodedEntry<T> | null> {
+    const v = await this.bucket.get(k);
+    if (v) {
+      return this.toEncodedEntry(v);
+    }
+    return null;
   }
 
   delete(k: string): Promise<void> {

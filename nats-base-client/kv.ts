@@ -101,7 +101,7 @@ const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
 export interface RoKV {
-  get(k: string): Promise<Entry>;
+  get(k: string): Promise<Entry | null>;
   history(k: string): Promise<QueuedIterator<Entry>>;
   watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
@@ -229,11 +229,18 @@ export class Bucket implements KV {
     return pa.seq;
   }
 
-  async get(k: string): Promise<Entry> {
-    const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-      last_by_subj: this.subjectForKey(k),
-    });
-    return this.smToEntry(sm);
+  async get(k: string): Promise<Entry | null> {
+    try {
+      const sm = await this.jsm.streams.getMessage(this.bucketName(), {
+        last_by_subj: this.subjectForKey(k),
+      });
+      return this.smToEntry(sm);
+    } catch (err) {
+      if (err.message === "no message found") {
+        return null;
+      }
+      throw err;
+    }
   }
 
   async delete(k: string): Promise<void> {
