@@ -60,7 +60,7 @@ export interface Entry {
   operation: "PUT" | "DEL";
 }
 
-export interface Status {
+export interface KvStatus {
   bucket: string;
   values: number;
   history: number;
@@ -105,7 +105,7 @@ export interface RoKV {
   history(k: string): Promise<QueuedIterator<Entry>>;
   watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
-  status(): Promise<Status>;
+  status(): Promise<KvStatus>;
   keys(): Promise<Set<string>>;
 }
 
@@ -382,7 +382,7 @@ export class Bucket implements KV {
     return this.jsm.streams.delete(this.bucketName());
   }
 
-  async status(): Promise<Status> {
+  async status(): Promise<KvStatus> {
     const ji = this.js as JetStreamClientImpl;
     const cluster = ji.nc.info?.cluster ?? "";
     const si = await this.jsm.streams.info(this.bucketName());
@@ -393,6 +393,6 @@ export class Bucket implements KV {
       ttl: si.config.max_age,
       bucket_location: cluster,
       backingStore: si.config.storage,
-    } as Status;
+    } as KvStatus;
   }
 }
