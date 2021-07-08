@@ -129,4 +129,5 @@ export type {
   PutOptions,
   RoKV,
 } from "./kv.ts";
+export { EncodedBucket } from "./ekv.ts";
 export type { EncodedEntry, EncodedKV, EncodedRoKV } from "./ekv.ts";
