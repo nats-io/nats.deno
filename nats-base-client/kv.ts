@@ -250,11 +250,11 @@ export class Bucket implements KV {
     const nc = ji.nc;
     const inbox = createInbox(nc.options.inboxPrefix);
     const opts: Partial<ConsumerConfig> = {
-      deliver_subject: inbox,
-      deliver_policy: lastOnly ? DeliverPolicy.Last : DeliverPolicy.All,
-      ack_policy: AckPolicy.Explicit,
-      filter_subject: this.subjectForKey(k),
-      flow_control: k === "*",
+      "deliver_subject": inbox,
+      "deliver_policy": lastOnly ? DeliverPolicy.Last : DeliverPolicy.All,
+      "ack_policy": AckPolicy.Explicit,
+      "filter_subject": this.subjectForKey(k),
+      "flow_control": k === "*",
     };
 
     return this.jsm.consumers.add(this.stream, opts);

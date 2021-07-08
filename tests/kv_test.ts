@@ -179,9 +179,7 @@ Deno.test("kv - keys", async () => {
     jetstreamServerConf({}, true),
   );
   const sc = StringCodec();
-  const m: Map<string, string> = new Map();
-  const n = nuid.next();
-  const bucket = await Bucket.create(nc, n);
+  const bucket = await Bucket.create(nc, nuid.next());
 
   await bucket.put("a", sc.encode("1"));
   await bucket.put("b", sc.encode("2"));
