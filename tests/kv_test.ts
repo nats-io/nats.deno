@@ -60,13 +60,13 @@ Deno.test("kv - crud", async () => {
   assertEquals(seq, 1);
 
   let r = await bucket.get("k");
-  assertEquals(sc.decode(r.value), "hello");
+  assertEquals(sc.decode(r!.value), "hello");
 
   seq = await bucket.put("k", sc.encode("bye"));
   assertEquals(seq, 2);
 
   r = await bucket.get("k");
-  assertEquals(sc.decode(r.value), "bye");
+  assertEquals(sc.decode(r!.value), "bye");
 
   await bucket.delete("k");
 
@@ -219,13 +219,13 @@ Deno.test("encoded kv - crud", async () => {
   assertEquals(seq, 1);
 
   let r = await bucket.get("k");
-  assertEquals(r.value, "hello");
+  assertEquals(r!.value, "hello");
 
   seq = await bucket.put("k", "bye");
   assertEquals(seq, 2);
 
   r = await bucket.get("k");
-  assertEquals(r.value, "bye");
+  assertEquals(r!.value, "bye");
 
   await bucket.delete("k");
 
@@ -244,6 +244,21 @@ Deno.test("encoded kv - crud", async () => {
 
   streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - not found", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  assertEquals(await b.get("x"), null);
+
+  const sc = StringCodec();
+  const eb = new EncodedBucket<string>(b, sc);
+  assertEquals(await eb.get("x"), null);
 
   await cleanup(ns, nc);
 });
