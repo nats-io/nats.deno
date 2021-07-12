@@ -9,6 +9,7 @@ export type {
   Server,
   ServerInfo,
   ServersChanged,
+  Stats,
   Status,
   Sub,
   SubOpts,
