@@ -43,7 +43,7 @@ import {
   toJsMsg,
 } from "./mod.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
-import { checkJsError } from "./jsutil.ts";
+import { checkJsError, validateName } from "./jsutil.ts";
 import { isNatsError } from "./error.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
@@ -121,7 +121,6 @@ export class Bucket implements KV {
   js: JetStreamClient;
   stream!: string;
   bucket: string;
-  maxPerSubject!: number;
 
   constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
     this.jsm = jsm;
@@ -147,7 +146,7 @@ export class Bucket implements KV {
     this.stream = sc.name = opts.streamName ?? this.bucketName();
     sc.subjects = [this.subjectForBucket()];
     sc.retention = RetentionPolicy.Limits;
-    this.maxPerSubject = bo.history;
+    sc.max_msgs_per_subject = bo.history;
     sc.max_bytes = bo.maxBucketSize;
     sc.max_msg_size = bo.maxValueSize;
     sc.storage = StorageType.File;
