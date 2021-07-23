@@ -55,7 +55,7 @@ Deno.test("kv - crud", async () => {
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, {history: 10});
+  const bucket = await Bucket.create(nc, n, { history: 10 });
   let seq = await bucket.put("k", sc.encode("hello"));
   assertEquals(seq, 1);
 
@@ -162,7 +162,7 @@ Deno.test("kv - bucket watch", async () => {
   const sc = StringCodec();
   const m: Map<string, string> = new Map();
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, {history: 10});
+  const bucket = await Bucket.create(nc, n, { history: 10 });
 
   await bucket.put("a", sc.encode("1"));
   await bucket.put("b", sc.encode("2"));
@@ -231,7 +231,7 @@ Deno.test("encoded kv - crud", async () => {
 
   const n = nuid.next();
   const bucket = new EncodedBucket<string>(
-    await Bucket.create(nc, n, {history: 10}) as Bucket,
+    await Bucket.create(nc, n, { history: 10 }) as Bucket,
     sc,
   );
 
