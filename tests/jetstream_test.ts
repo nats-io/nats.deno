@@ -1278,12 +1278,12 @@ Deno.test("jetstream - deliver last per subject", async () => {
 
   const sub = await js.subscribe(subj, opts);
   const ci = await sub.consumerInfo();
-  const buf : JsMsg[] = [];
+  const buf: JsMsg[] = [];
   assertEquals(ci.num_ack_pending, 2);
   const done = (async () => {
     for await (const m of sub) {
       buf.push(m);
-      if(buf.length === 2) {
+      if (buf.length === 2) {
         sub.unsubscribe();
       }
     }

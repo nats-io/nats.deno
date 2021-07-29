@@ -257,7 +257,9 @@ export class Bucket implements KV {
     const inbox = createInbox(nc.options.inboxPrefix);
     const opts: Partial<ConsumerConfig> = {
       "deliver_subject": inbox,
-      "deliver_policy": lastOnly ? DeliverPolicy.LastPerSubject : DeliverPolicy.All,
+      "deliver_policy": lastOnly
+        ? DeliverPolicy.LastPerSubject
+        : DeliverPolicy.All,
       "ack_policy": AckPolicy.Explicit,
       "filter_subject": this.subjectForKey(k),
       "flow_control": k === "*",
