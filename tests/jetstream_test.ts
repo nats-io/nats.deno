@@ -59,7 +59,7 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween } from "./helpers/mod.ts";
+import { assertBetween, compare, parseSemVer } from "./helpers/mod.ts";
 import {
   isFlowControlMsg,
   isHeartbeatMsg,
@@ -1256,6 +1256,15 @@ Deno.test("jetstream - deliver start time", async () => {
 
 Deno.test("jetstream - deliver last per subject", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const varz = await ns.varz() as unknown as Record<string, string>;
+  const sv = parseSemVer(varz.version);
+  if (compare(sv, parseSemVer("2.3.3")) < 0) {
+    console.error(
+      yellow("skipping last per subject test as server doesn't support it"),
+    );
+    await cleanup(ns, nc);
+    return;
+  }
   const jsm = await nc.jetstreamManager();
   const stream = nuid.next();
   const subj = `${stream}.*`;
