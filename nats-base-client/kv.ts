@@ -251,7 +251,7 @@ export class Bucket implements KV {
     await this.js.publish(this.subjectForKey(k), Empty, { headers: h });
   }
 
-  async consumerOn(k: string, lastOnly = false): Promise<ConsumerInfo> {
+  consumerOn(k: string, lastOnly = false): Promise<ConsumerInfo> {
     const ji = this.js as JetStreamClientImpl;
     const nc = ji.nc;
     const inbox = createInbox(nc.options.inboxPrefix);
@@ -264,24 +264,7 @@ export class Bucket implements KV {
       "filter_subject": this.subjectForKey(k),
       "flow_control": k === "*",
     };
-    try {
-      const ci = await this.jsm.consumers.add(this.stream, opts);
-      return ci;
-    } catch (err) {
-      if (
-        err.message === "invalid json" &&
-        opts.deliver_policy === DeliverPolicy.LastPerSubject
-      ) {
-        // FIXME: this here while supported server becomes available
-        console.error(
-          `\u001B[33m KV feature running on a non-supported server  \u001B[0m`,
-        );
-        opts.deliver_policy = DeliverPolicy.Last;
-        return await this.jsm.consumers.add(this.stream, opts);
-      } else {
-        throw err;
-      }
-    }
+    return this.jsm.consumers.add(this.stream, opts);
   }
 
   async history(k: string): Promise<QueuedIterator<Entry>> {

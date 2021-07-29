@@ -12,11 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   deferred,
   Empty,
+  NatsConnection,
   NatsConnectionImpl,
   nuid,
   StringCodec,
@@ -28,9 +29,14 @@ import {
 
 import { Bucket, Entry } from "../nats-base-client/kv.ts";
 import { EncodedBucket } from "../nats-base-client/ekv.ts";
+import { NatsServer } from "./helpers/launcher.ts";
+import { compare, parseSemVer } from "./helpers/mod.ts";
 
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const jsm = await nc.jetstreamManager();
   let streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
@@ -49,6 +55,9 @@ Deno.test("kv - crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const sc = StringCodec();
   const jsm = await nc.jetstreamManager();
   let streams = await jsm.streams.list().next();
@@ -93,6 +102,9 @@ Deno.test("kv - history", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const n = nuid.next();
   const bucket = await Bucket.create(nc, n, { history: 2 });
   let status = await bucket.status();
@@ -113,7 +125,9 @@ Deno.test("kv - empty iterator ends", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const n = nuid.next();
   const bucket = await Bucket.create(nc, n);
   const h = await bucket.history("k");
@@ -129,7 +143,9 @@ Deno.test("kv - key watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const n = nuid.next();
   const bucket = await Bucket.create(nc, n);
   const iter = await bucket.watch({ key: "k" });
@@ -159,6 +175,9 @@ Deno.test("kv - bucket watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const sc = StringCodec();
   const m: Map<string, string> = new Map();
   const n = nuid.next();
@@ -199,6 +218,9 @@ Deno.test("kv - keys", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const sc = StringCodec();
   const bucket = await Bucket.create(nc, nuid.next());
 
@@ -224,6 +246,9 @@ Deno.test("encoded kv - crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
   const sc = StringCodec();
   const jsm = await nc.jetstreamManager();
   let streams = await jsm.streams.list().next();
@@ -272,6 +297,9 @@ Deno.test("kv - not found", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
 
   const b = await Bucket.create(nc, nuid.next()) as Bucket;
   assertEquals(await b.get("x"), null);
@@ -282,3 +310,19 @@ Deno.test("kv - not found", async () => {
 
   await cleanup(ns, nc);
 });
+
+async function notCompatible(
+  ns: NatsServer,
+  nc: NatsConnection,
+): Promise<boolean> {
+  const varz = await ns.varz() as unknown as Record<string, string>;
+  const sv = parseSemVer(varz.version);
+  if (compare(sv, parseSemVer("2.3.3")) < 0) {
+    console.error(
+      yellow("skipping KV test as server doesn't support it"),
+    );
+    await cleanup(ns, nc);
+    return true;
+  }
+  return false;
+}
