@@ -1254,6 +1254,46 @@ Deno.test("jetstream - deliver start time", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - deliver last per subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add(
+    { name: stream, subjects: [subj] },
+  );
+
+  const js = nc.jetstream();
+  await js.publish(`${stream}.A`, Empty, { expect: { lastSequence: 0 } });
+  await js.publish(`${stream}.B`, Empty, { expect: { lastSequence: 1 } });
+  await js.publish(`${stream}.A`, Empty, { expect: { lastSequence: 2 } });
+  await js.publish(`${stream}.B`, Empty, { expect: { lastSequence: 3 } });
+  await js.publish(`${stream}.A`, Empty, { expect: { lastSequence: 4 } });
+  await js.publish(`${stream}.B`, Empty, { expect: { lastSequence: 5 } });
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.deliverLastPerSubject();
+  opts.deliverTo(createInbox());
+
+  const sub = await js.subscribe(subj, opts);
+  const ci = await sub.consumerInfo();
+  const buf : JsMsg[] = [];
+  assertEquals(ci.num_ack_pending, 2);
+  const done = (async () => {
+    for await (const m of sub) {
+      buf.push(m);
+      if(buf.length === 2) {
+        sub.unsubscribe();
+      }
+    }
+  })();
+  await done;
+  assertEquals(buf[0].info.streamSequence, 5);
+  assertEquals(buf[1].info.streamSequence, 6);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - cross account subscribe", async () => {
   const { ns, nc: admin } = await setup(
     jetstreamExportServerConf(),

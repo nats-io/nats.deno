@@ -4,7 +4,7 @@ build: test
 
 test: clean
 	deno lint --unstable
-	deno test --allow-all --unstable --reload --coverage=coverage --failfast tests/
+	deno test --allow-all --unstable --reload --coverage=coverage --fail-fast tests/
 
 cover:
 	deno coverage --unstable ./coverage --lcov > ./coverage/out.lcov

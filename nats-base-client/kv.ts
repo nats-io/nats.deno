@@ -43,7 +43,7 @@ import {
   toJsMsg,
 } from "./mod.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
-import { checkJsError, validateName } from "./jsutil.ts";
+import { checkJsError } from "./jsutil.ts";
 import { isNatsError } from "./error.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
@@ -257,7 +257,7 @@ export class Bucket implements KV {
     const inbox = createInbox(nc.options.inboxPrefix);
     const opts: Partial<ConsumerConfig> = {
       "deliver_subject": inbox,
-      "deliver_policy": lastOnly ? DeliverPolicy.Last : DeliverPolicy.All,
+      "deliver_policy": lastOnly ? DeliverPolicy.LastPerSubject : DeliverPolicy.All,
       "ack_policy": AckPolicy.Explicit,
       "filter_subject": this.subjectForKey(k),
       "flow_control": k === "*",
@@ -351,7 +351,7 @@ export class Bucket implements KV {
   async keys(): Promise<Set<string>> {
     const d = deferred<Set<string>>();
     const s: Set<string> = new Set();
-    const ci = await this.consumerOn("*");
+    const ci = await this.consumerOn("*", true);
     const ji = this.jsm as JetStreamManagerImpl;
     const nc = ji.nc;
     const subj = ci.config.deliver_subject!;

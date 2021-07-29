@@ -84,6 +84,10 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.Last;
   }
 
+  deliverLastPerSubject() {
+    this.config.deliver_policy = DeliverPolicy.LastPerSubject;
+  }
+
   deliverNew() {
     this.config.deliver_policy = DeliverPolicy.New;
   }

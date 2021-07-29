@@ -338,6 +338,8 @@ export interface ConsumerOptsBuilder {
   deliverAll(): void;
   // consumer will start at the last message
   deliverLast(): void;
+  // consumer will deliver all the last per messages per subject
+  deliverLastPerSubject(): void;
   // consumer will start with new messages (not yet in the stream)
   deliverNew(): void;
   // consumer will start at the message with the specified sequence
@@ -541,6 +543,7 @@ export enum DeliverPolicy {
   New = "new",
   StartSequence = "by_start_sequence",
   StartTime = "by_start_time",
+  LastPerSubject = "last_per_subject",
 }
 
 export enum AckPolicy {
