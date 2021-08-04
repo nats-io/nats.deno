@@ -12,25 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   deferred,
   Empty,
-  NatsConnection,
   NatsConnectionImpl,
   nuid,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
   assert,
+  assertArrayIncludes,
   assertEquals,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
 import { Bucket, Entry } from "../nats-base-client/kv.ts";
 import { EncodedBucket } from "../nats-base-client/ekv.ts";
-import { NatsServer } from "./helpers/launcher.ts";
-import { compare, parseSemVer } from "./helpers/mod.ts";
+import { notCompatible } from "./helpers/mod.ts";
 
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
@@ -233,11 +231,8 @@ Deno.test("kv - keys", async () => {
   await bucket.put("x", Empty);
 
   const s = await bucket.keys();
-  assertEquals(s.size, 4);
-  assert(s.has("a"));
-  assert(s.has("b"));
-  assert(s.has("c"));
-  assert(s.has("x"));
+  assertEquals(s.length, 4);
+  assertArrayIncludes(s, ["a", "b", "c", "x"]);
 
   await cleanup(ns, nc);
 });
@@ -310,19 +305,3 @@ Deno.test("kv - not found", async () => {
 
   await cleanup(ns, nc);
 });
-
-async function notCompatible(
-  ns: NatsServer,
-  nc: NatsConnection,
-): Promise<boolean> {
-  const varz = await ns.varz() as unknown as Record<string, string>;
-  const sv = parseSemVer(varz.version);
-  if (compare(sv, parseSemVer("2.3.3")) < 0) {
-    console.error(
-      yellow("skipping KV test as server doesn't support it"),
-    );
-    await cleanup(ns, nc);
-    return true;
-  }
-  return false;
-}
