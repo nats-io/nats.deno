@@ -106,7 +106,7 @@ export interface RoKV {
   watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
-  keys(): Promise<Set<string>>;
+  keys(): Promise<string[]>;
 }
 
 export interface KV extends RoKV {
@@ -349,9 +349,9 @@ export class Bucket implements KV {
     return qi;
   }
 
-  async keys(): Promise<Set<string>> {
-    const d = deferred<Set<string>>();
-    const s: Set<string> = new Set();
+  async keys(): Promise<string[]> {
+    const d = deferred<string[]>();
+    const s: string[] = [];
     const ci = await this.consumerOn("*", true);
     const ji = this.jsm as JetStreamManagerImpl;
     const nc = ji.nc;
@@ -367,7 +367,7 @@ export class Bucket implements KV {
           m.respond();
         } else {
           const chunks = m.subject.split(".");
-          s.add(chunks[chunks.length - 1]);
+          s.push(chunks[chunks.length - 1]);
           m.respond();
           const info = parseInfo(m.reply!);
           if (info.pending === 0) {

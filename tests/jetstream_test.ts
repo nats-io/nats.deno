@@ -59,7 +59,7 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween, compare, parseSemVer } from "./helpers/mod.ts";
+import { assertBetween, notCompatible } from "./helpers/mod.ts";
 import {
   isFlowControlMsg,
   isHeartbeatMsg,
@@ -632,7 +632,7 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
       msg.ack();
     }
   })().then();
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
 
   const subin = sub as unknown as JetStreamSubscriptionInfoable;
   assert(subin.info);
@@ -647,7 +647,7 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
 
   await js.publish(subj, jc.encode(1), { msgID: "1" });
   await js.publish(subj, jc.encode(2), { msgID: "2" });
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
   await delay(500);
   assertEquals(sum, 3);
 
@@ -658,7 +658,7 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
 
   await js.publish(subj, jc.encode(3), { msgID: "3" });
   await js.publish(subj, jc.encode(5), { msgID: "4" });
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
   await delay(1000);
   assertEquals(sum, 11);
 
@@ -710,7 +710,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
 
   const js = nc.jetstream();
   const sub = await js.pullSubscribe(subj, opts);
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
   const subin = sub as unknown as JetStreamSubscriptionInfoable;
   assert(subin.info);
   assertEquals(subin.info.attached, true);
@@ -724,7 +724,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
 
   await js.publish(subj, jc.encode(1), { msgID: "1" });
   await js.publish(subj, jc.encode(2), { msgID: "2" });
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
   await delay(500);
   assertEquals(sum, 3);
 
@@ -735,7 +735,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
 
   await js.publish(subj, jc.encode(3), { msgID: "3" });
   await js.publish(subj, jc.encode(5), { msgID: "4" });
-  sub.pull({ expires: nanos(500), batch: 5 });
+  sub.pull({ expires: 500, batch: 5 });
   await delay(1000);
   assertEquals(sum, 11);
 
@@ -1256,13 +1256,7 @@ Deno.test("jetstream - deliver start time", async () => {
 
 Deno.test("jetstream - deliver last per subject", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const varz = await ns.varz() as unknown as Record<string, string>;
-  const sv = parseSemVer(varz.version);
-  if (compare(sv, parseSemVer("2.3.3")) < 0) {
-    console.error(
-      yellow("skipping last per subject test as server doesn't support it"),
-    );
-    await cleanup(ns, nc);
+  if (await notCompatible(ns, nc)) {
     return;
   }
   const jsm = await nc.jetstreamManager();

@@ -20,7 +20,7 @@ export interface EncodedRoKV<T> {
   watch(opts?: { key?: string }): Promise<QueuedIterator<EncodedEntry<T>>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
-  keys(): Promise<Set<string>>;
+  keys(): Promise<string[]>;
 }
 
 export interface EncodedKV<T> extends EncodedRoKV<T> {
@@ -95,7 +95,7 @@ export class EncodedBucket<T> implements EncodedKV<T> {
     return this.toEncodedIter(await this.bucket.watch(opts));
   }
 
-  keys(): Promise<Set<string>> {
+  keys(): Promise<string[]> {
     return this.bucket.keys();
   }
 

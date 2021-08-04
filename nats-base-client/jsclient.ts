@@ -448,9 +448,8 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
-    // FIXME: this is nanos
     if (opts.expires && opts.expires > 0) {
-      args.expires = opts.expires;
+      args.expires = nanos(opts.expires);
     }
 
     if (this.info) {

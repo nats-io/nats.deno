@@ -1,5 +1,10 @@
+import { NatsServer } from "./launcher.ts";
+import { NatsConnection } from "../../nats-base-client/types.ts";
+import { cleanup } from "../jstest_util.ts";
+
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
+import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 export { Connection, TestServer } from "./test_server.ts";
 export {
   assertBetween,
@@ -31,4 +36,20 @@ export function compare(a: SemVer, b: SemVer): number {
   if (a.micro < b.micro) return -1;
   if (a.micro > b.micro) return 1;
   return 0;
+}
+
+export async function notCompatible(
+  ns: NatsServer,
+  nc: NatsConnection,
+): Promise<boolean> {
+  const varz = await ns.varz() as unknown as Record<string, string>;
+  const sv = parseSemVer(varz.version);
+  if (compare(sv, parseSemVer("2.3.3")) < 0) {
+    console.error(
+      yellow("skipping KV test as server doesn't support it"),
+    );
+    await cleanup(ns, nc);
+    return true;
+  }
+  return false;
 }

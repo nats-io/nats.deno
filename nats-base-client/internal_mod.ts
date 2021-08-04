@@ -1,9 +1,10 @@
 export { NatsConnectionImpl } from "./nats.ts";
 export { Nuid, nuid } from "./nuid.ts";
-export { ErrorCode, NatsError } from "./error.ts";
+export { ErrorCode, isNatsError, NatsError } from "./error.ts";
 export type {
   Msg,
   NatsConnection,
+  PubAck,
   PublishOptions,
   RequestOptions,
   Server,
@@ -110,7 +111,7 @@ export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
 export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
-export type { QueuedIterator } from "./queued_iterator.ts";
+export type { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
@@ -120,7 +121,13 @@ export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
-export { isFlowControlMsg, isHeartbeatMsg, millis, nanos } from "./jsutil.ts";
+export {
+  checkJsError,
+  isFlowControlMsg,
+  isHeartbeatMsg,
+  millis,
+  nanos,
+} from "./jsutil.ts";
 export { Bucket, defaultBucketOpts } from "./kv.ts";
 export type {
   BucketOpts,
