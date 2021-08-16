@@ -638,6 +638,7 @@ export interface StreamMsgResponse extends ApiResponse {
 export interface SequencePair {
   "consumer_seq": number;
   "stream_seq": number;
+  "last_active": Nanos;
 }
 
 export interface ConsumerInfo {
@@ -652,6 +653,7 @@ export interface ConsumerInfo {
   "num_waiting": number;
   "num_pending": number;
   cluster?: ClusterInfo;
+  "push_bound"?: boolean;
 }
 
 export interface ConsumerListResponse extends ApiResponse, ApiPaged {
@@ -712,6 +714,7 @@ export interface ConsumerConfig {
   name: string;
   "durable_name"?: string;
   "deliver_subject"?: string;
+  "deliver_group"?: string;
   "deliver_policy": DeliverPolicy;
   "opt_start_seq"?: number;
   "opt_start_time"?: string;
