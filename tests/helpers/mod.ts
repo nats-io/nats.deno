@@ -41,12 +41,16 @@ export function compare(a: SemVer, b: SemVer): number {
 export async function notCompatible(
   ns: NatsServer,
   nc: NatsConnection,
+  version?: string,
 ): Promise<boolean> {
+  version = version ?? "2.3.3";
   const varz = await ns.varz() as unknown as Record<string, string>;
   const sv = parseSemVer(varz.version);
-  if (compare(sv, parseSemVer("2.3.3")) < 0) {
+  if (compare(sv, parseSemVer(version)) < 0) {
     console.error(
-      yellow("skipping KV test as server doesn't support it"),
+      yellow(
+        `skipping test as server (${varz.version}) doesn't implement required feature from ${version}`,
+      ),
     );
     await cleanup(ns, nc);
     return true;
