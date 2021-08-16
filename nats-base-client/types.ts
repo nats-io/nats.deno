@@ -729,6 +729,7 @@ export interface ConsumerConfig {
   "max_ack_pending"?: number;
   "idle_heartbeat"?: Nanos; // send empty message when idle longer than this
   "flow_control"?: boolean; // send message with status of 100 and reply subject
+  description?: string;
 }
 
 export interface Consumer {
