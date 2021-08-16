@@ -244,6 +244,7 @@ export interface PullOptions {
 
 export interface PubAck {
   stream: string;
+  domain?: string;
   seq: number;
   duplicate: boolean;
 
