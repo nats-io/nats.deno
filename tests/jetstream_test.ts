@@ -49,7 +49,6 @@ import {
   assertThrowsAsync,
   fail,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
 import {
@@ -59,7 +58,7 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween, notCompatible } from "./helpers/mod.ts";
+import { assertBetween, disabled, notCompatible } from "./helpers/mod.ts";
 import {
   isFlowControlMsg,
   isHeartbeatMsg,
@@ -1349,7 +1348,7 @@ Deno.test("jetstream - cross account subscribe", async () => {
 });
 
 Deno.test("jetstream - cross account pull subscribe", () => {
-  console.error(yellow("cross account pull subscribe is failing - ignoring"));
+  disabled("cross account pull subscribe test needs updating");
   // const { ns, nc: admin } = await setup(
   //   jetstreamExportServerConf(),
   //   {
@@ -1649,36 +1648,37 @@ Deno.test("jetstream - JSON", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - qsub", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const { subj } = await initStream(nc);
-  const js = nc.jetstream();
-
-  const opts = consumerOpts();
-  opts.queue("q");
-  opts.durable("n");
-  opts.deliverTo("here");
-  opts.callback((_err, m) => {
-    if (m) {
-      m.ack();
-    }
-  });
-
-  const sub = await js.subscribe(subj, opts);
-  const sub2 = await js.subscribe(subj, opts);
-
-  for (let i = 0; i < 100; i++) {
-    await js.publish(subj, Empty);
-  }
-  await nc.flush();
-  await sub.drain();
-  await sub2.drain();
-
-  assert(sub.getProcessed() > 0);
-  assert(sub2.getProcessed() > 0);
-  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
-
-  await cleanup(ns, nc);
+Deno.test("jetstream - qsub", () => {
+  disabled("FIXME - requires queue group configuration on consumer");
+  // const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  // const { subj } = await initStream(nc);
+  // const js = nc.jetstream();
+  //
+  // const opts = consumerOpts();
+  // opts.queue("q");
+  // opts.durable("n");
+  // opts.deliverTo("here");
+  // opts.callback((_err, m) => {
+  //   if (m) {
+  //     m.ack();
+  //   }
+  // });
+  //
+  // const sub = await js.subscribe(subj, opts);
+  // const sub2 = await js.subscribe(subj, opts);
+  //
+  // for (let i = 0; i < 100; i++) {
+  //   await js.publish(subj, Empty);
+  // }
+  // await nc.flush();
+  // await sub.drain();
+  // await sub2.drain();
+  //
+  // assert(sub.getProcessed() > 0);
+  // assert(sub2.getProcessed() > 0);
+  // assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
+  //
+  // await cleanup(ns, nc);
 });
 
 Deno.test("jetstream - idle heartbeats", async () => {
@@ -1784,5 +1784,75 @@ Deno.test("jetstream - account domain", async () => {
   assert(ai.domain, "A");
   //@ts-ignore: internal use
   assertEquals(jsm.prefix, `$JS.A.API`);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - durable resumes", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf({}, true), {
+    maxReconnectAttempts: -1,
+    reconnectTimeWait: 100,
+  });
+
+  const { stream, subj } = await initStream(nc);
+  const jc = JSONCodec();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  let values = ["a", "b", "c"];
+  for (const v of values) {
+    await js.publish(subj, jc.encode(v));
+  }
+
+  const dsubj = createInbox();
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.deliverAll();
+  opts.deliverTo(dsubj);
+  opts.durable("me");
+  const sub = await js.subscribe(subj, opts);
+  const done = (async () => {
+    for await (const m of sub) {
+      m.ack();
+      if (m.seq === 6) {
+        sub.unsubscribe();
+      }
+    }
+  })();
+  await nc.flush();
+  await ns.stop();
+  ns = await ns.restart();
+  await delay(300);
+  values = ["d", "e", "f"];
+  for (const v of values) {
+    await js.publish(subj, jc.encode(v));
+  }
+  await nc.flush();
+  await done;
+
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 6);
+  const ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.delivered.stream_seq, 6);
+  assertEquals(ci.num_pending, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - puback domain", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        domain: "A",
+      },
+    }, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
+
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+  const pa = await js.publish(subj);
+  assertEquals(pa.domain, "A");
   await cleanup(ns, nc);
 });

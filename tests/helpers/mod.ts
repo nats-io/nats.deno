@@ -4,7 +4,7 @@ import { cleanup } from "../jstest_util.ts";
 
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
-import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
+import { red, yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 export { Connection, TestServer } from "./test_server.ts";
 export {
   assertBetween,
@@ -38,15 +38,25 @@ export function compare(a: SemVer, b: SemVer): number {
   return 0;
 }
 
+export function disabled(reason: string): void {
+  console.error(red(
+    `skipping: ${reason}`,
+  ));
+}
+
 export async function notCompatible(
   ns: NatsServer,
   nc: NatsConnection,
+  version?: string,
 ): Promise<boolean> {
+  version = version ?? "2.3.3";
   const varz = await ns.varz() as unknown as Record<string, string>;
   const sv = parseSemVer(varz.version);
-  if (compare(sv, parseSemVer("2.3.3")) < 0) {
+  if (compare(sv, parseSemVer(version)) < 0) {
     console.error(
-      yellow("skipping KV test as server doesn't support it"),
+      yellow(
+        `skipping test as server (${varz.version}) doesn't implement required feature from ${version}`,
+      ),
     );
     await cleanup(ns, nc);
     return true;
