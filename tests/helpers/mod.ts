@@ -4,7 +4,7 @@ import { cleanup } from "../jstest_util.ts";
 
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
-import { yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
+import { red, yellow } from "https://deno.land/std@0.95.0/fmt/colors.ts";
 export { Connection, TestServer } from "./test_server.ts";
 export {
   assertBetween,
@@ -36,6 +36,12 @@ export function compare(a: SemVer, b: SemVer): number {
   if (a.micro < b.micro) return -1;
   if (a.micro > b.micro) return 1;
   return 0;
+}
+
+export function disabled(reason: string): void {
+  console.error(red(
+    `skipping: ${reason}`,
+  ));
 }
 
 export async function notCompatible(
