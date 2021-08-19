@@ -39,18 +39,33 @@ export function toJsMsg(m: Msg): JsMsg {
 
 export function parseInfo(s: string): DeliveryInfo {
   const tokens = s.split(".");
-  if (tokens.length !== 9 && tokens[0] !== "$JS" && tokens[1] !== "ACK") {
+  if (tokens.length === 9) {
+    tokens.splice(2, 0, "_", "");
+    tokens.push("");
+  }
+
+  if (
+    (tokens.length < 12) || tokens[0] !== "$JS" || tokens[1] !== "ACK"
+  ) {
     throw new Error(`not js message`);
   }
+
+  // old
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
+  // new
+  // $JS.ACK.<domain>.<accounthash>.<stream>.<consumer>.<redeliveryCount>.<streamSeq>.<deliverySequence>.<timestamp>.<pending>.<random>
   const di = {} as DeliveryInfo;
-  di.stream = tokens[2];
-  di.consumer = tokens[3];
-  di.redeliveryCount = parseInt(tokens[4], 10);
-  di.streamSequence = parseInt(tokens[5], 10);
-  di.deliverySequence = parseInt(tokens[6], 10);
-  di.timestampNanos = parseInt(tokens[7], 10);
-  di.pending = parseInt(tokens[8], 10);
+  // if domain is "_", replace with blank
+  di.domain = tokens[2] === "_" ? "" : tokens[2];
+  di.account_hash = tokens[3];
+  di.stream = tokens[4];
+  di.consumer = tokens[5];
+  di.redeliveryCount = parseInt(tokens[6], 10);
+  di.streamSequence = parseInt(tokens[7], 10);
+  di.deliverySequence = parseInt(tokens[8], 10);
+  di.timestampNanos = parseInt(tokens[9], 10);
+  di.pending = parseInt(tokens[10], 10);
+  di.rand = tokens[11];
   return di;
 }
 

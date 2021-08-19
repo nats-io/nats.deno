@@ -15,7 +15,9 @@
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   deferred,
+  delay,
   Empty,
+  nanos,
   NatsConnectionImpl,
   nuid,
   StringCodec,
@@ -24,11 +26,97 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
+  assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
-import { Bucket, Entry } from "../nats-base-client/kv.ts";
+import {
+  Base64KeyCodec,
+  Bucket,
+  Entry,
+  NoopKvCodecs,
+  validateBucket,
+  validateKey,
+} from "../nats-base-client/kv.ts";
 import { EncodedBucket } from "../nats-base-client/ekv.ts";
 import { notCompatible } from "./helpers/mod.ts";
+
+Deno.test("kv - key validation", () => {
+  const bad = [
+    " x y",
+    "x ",
+    "x!",
+    "xx$",
+    "*",
+    ">",
+    "x.>",
+    "x.*",
+    ".",
+    ".x",
+    ".x.",
+    "x.",
+  ];
+  for (const v of bad) {
+    assertThrows(
+      () => {
+        validateKey(v);
+      },
+      Error,
+      "invalid key",
+      `expected '${v}' to be invalid key`,
+    );
+  }
+
+  const good = [
+    "foo",
+    "_foo",
+    "-foo",
+    "_kv_foo",
+    "foo123",
+    "123",
+    "a/b/c",
+    "a.b.c",
+  ];
+  for (const v of good) {
+    try {
+      validateKey(v);
+    } catch (err) {
+      throw new Error(
+        `expected '${v}' to be a valid key, but was rejected: ${err.message}`,
+      );
+    }
+  }
+});
+
+Deno.test("kv - bucket name validation", () => {
+  const bad = [" B", "!", "x/y", "x>", "x.x", "x.*", "x.>", "x*", "*", ">"];
+  for (const v of bad) {
+    assertThrows(
+      () => {
+        validateBucket(v);
+      },
+      Error,
+      "invalid bucket name",
+      `expected '${v}' to be invalid bucket name`,
+    );
+  }
+
+  const good = [
+    "B",
+    "b",
+    "123",
+    "1_2_3",
+    "1-2-3",
+  ];
+  for (const v of good) {
+    try {
+      validateBucket(v);
+    } catch (err) {
+      throw new Error(
+        `expected '${v}' to be a valid bucket name, but was rejected: ${err.message}`,
+      );
+    }
+  }
+});
 
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
@@ -63,6 +151,59 @@ Deno.test("kv - crud", async () => {
 
   const n = nuid.next();
   const bucket = await Bucket.create(nc, n, { history: 10 });
+  let seq = await bucket.put("k", sc.encode("hello"));
+  assertEquals(seq, 1);
+
+  let r = await bucket.get("k");
+  assertEquals(sc.decode(r!.value), "hello");
+
+  seq = await bucket.put("k", sc.encode("bye"));
+  assertEquals(seq, 2);
+
+  r = await bucket.get("k");
+  assertEquals(sc.decode(r!.value), "bye");
+
+  await bucket.delete("k");
+
+  const values = await bucket.history("k");
+  for await (const _r of values) {
+    // just run through them
+  }
+  assertEquals(values.getProcessed(), 3);
+
+  const pr = await bucket.purge();
+  assertEquals(pr.purged, 3);
+  assert(pr.success);
+
+  const ok = await bucket.destroy();
+  assert(ok);
+
+  streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - codec crud", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+  const sc = StringCodec();
+  const jsm = await nc.jetstreamManager();
+  let streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  const n = nuid.next();
+  const bucket = await Bucket.create(nc, n, {
+    history: 10,
+    codec: {
+      key: Base64KeyCodec(),
+      value: NoopKvCodecs().value,
+    },
+  });
   let seq = await bucket.put("k", sc.encode("hello"));
   assertEquals(seq, 1);
 
@@ -301,6 +442,32 @@ Deno.test("kv - not found", async () => {
 
   const sc = StringCodec();
   const eb = new EncodedBucket<string>(b, sc);
+  assertEquals(await eb.get("x"), null);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - ttl", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+
+  const sc = StringCodec();
+  const b = await Bucket.create(nc, nuid.next(), { ttl: 1000 }) as Bucket;
+  const eb = new EncodedBucket<string>(b, sc);
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(b.stream);
+  assertEquals(si.config.max_age, nanos(1000));
+
+  assertEquals(await b.get("x"), null);
+  await eb.put("x", "hello");
+  assertEquals((await eb.get("x"))?.value, "hello");
+
+  await delay(1500);
   assertEquals(await eb.get("x"), null);
 
   await cleanup(ns, nc);

@@ -244,6 +244,7 @@ export interface PullOptions {
 
 export interface PubAck {
   stream: string;
+  domain?: string;
   seq: number;
   duplicate: boolean;
 
@@ -415,6 +416,8 @@ export interface JsMsg {
 }
 
 export interface DeliveryInfo {
+  domain: string;
+  account_hash?: string;
   stream: string;
   consumer: string;
   redeliveryCount: number;
@@ -423,6 +426,7 @@ export interface DeliveryInfo {
   timestampNanos: number;
   pending: number;
   redelivered: boolean;
+  rand?: string;
 }
 
 export interface StoredMsg {
