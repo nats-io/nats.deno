@@ -24,41 +24,34 @@ import {
   Msg,
   StringCodec,
 } from "../src/mod.ts";
-import { deferred } from "../nats-base-client/util.ts";
 import { nanos } from "../nats-base-client/jsutil.ts";
 import { parseInfo, toJsMsg } from "../nats-base-client/jsmsg.ts";
 
 Deno.test("jsmsg - parse", async () => {
-  const nc = await connect({ servers: "demo.nats.io" });
-  const subj = createInbox();
-  const m = deferred<Msg>();
-  const sub = nc.subscribe(subj, {
-    max: 1,
-    callback: (_err, msg) => {
-      m.resolve(msg);
-    },
-  });
-
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
-  const rs = `MY.TEST.streamname.consumername.2.3.4.${nanos(Date.now())}.100`;
-  const h = headers();
-  h.set("hello", "world");
-  nc.publish(subj, Empty, { reply: rs, headers: h });
-  const msg = await m;
-  const jm = toJsMsg(msg);
+  const rs = `$JS.ACK.streamname.consumername.2.3.4.${nanos(Date.now())}.100`;
+  const info = parseInfo(rs);
+  assertEquals(info.stream, "streamname");
+  assertEquals(info.consumer, "consumername");
+  assertEquals(info.redeliveryCount, 2);
+  assertEquals(info.streamSequence, 3);
+  assertEquals(info.pending, 100);
+});
 
-  assertEquals(jm.info.stream, "streamname");
-  assertEquals(jm.info.consumer, "consumername");
-  assertEquals(jm.info.redeliveryCount, 2);
-  assertEquals(jm.redelivered, true);
-  assertEquals(jm.seq, 3);
-  assertEquals(jm.info.pending, 100);
-  assertEquals(jm.sid, sub.getID());
-
-  const h2 = jm.headers;
-  assertEquals(h2!.get("hello"), "world");
-
-  await nc.close();
+Deno.test("jsmsg - parse long", async () => {
+  // $JS.ACK.<domain>.<accounthash>.<stream>.<consumer>.<redeliveryCount>.<streamSeq>.<deliverySequence>.<timestamp>.<pending>.<random>
+  const rs = `$JS.ACK.domain.account.streamname.consumername.2.3.4.${
+    nanos(Date.now())
+  }.100.rand`;
+  const info = parseInfo(rs);
+  assertEquals(info.domain, "domain");
+  assertEquals(info.account_hash, "account");
+  assertEquals(info.stream, "streamname");
+  assertEquals(info.consumer, "consumername");
+  assertEquals(info.redeliveryCount, 2);
+  assertEquals(info.streamSequence, 3);
+  assertEquals(info.pending, 100);
+  assertEquals(info.rand, "rand");
 });
 
 Deno.test("jsmsg - parse rejects subject is not 9 tokens", () => {
@@ -75,9 +68,9 @@ Deno.test("jsmsg - parse rejects subject is not 9 tokens", () => {
     }
   };
 
-  const chunks = `$JS.ACK.stream.consumer.1.2.3.4.5`.split(".");
+  const chunks = `$JS.ACK.stream.consumer.1.2.3.4.5.6.7.8.9.10`.split(".");
   for (let i = 1; i <= chunks.length; i++) {
-    fn(chunks.slice(0, i).join("."), i === 9);
+    fn(chunks.slice(0, i).join("."), i === 9 || i >= 12);
   }
 });
 
