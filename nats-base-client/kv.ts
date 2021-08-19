@@ -40,6 +40,7 @@ import {
   isFlowControlMsg,
   isHeartbeatMsg,
   millis,
+  nanos,
   toJsMsg,
 } from "./mod.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
@@ -119,7 +120,7 @@ export interface BucketOpts {
   maxValueSize: number;
   placementCluster: string;
   mirrorBucket: string;
-  ttl: number;
+  ttl: number; // millis
   streamName: string;
   codec: KvCodecs;
 }
@@ -217,6 +218,9 @@ export class Bucket implements KV {
     sc.storage = StorageType.File;
     sc.discard = DiscardPolicy.Old;
     sc.num_replicas = bo.replicas;
+    if (bo.ttl) {
+      sc.max_age = nanos(bo.ttl);
+    }
 
     try {
       await this.jsm.streams.info(sc.name);

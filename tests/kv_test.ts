@@ -15,7 +15,9 @@
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   deferred,
+  delay,
   Empty,
+  nanos,
   NatsConnectionImpl,
   nuid,
   StringCodec,
@@ -440,6 +442,32 @@ Deno.test("kv - not found", async () => {
 
   const sc = StringCodec();
   const eb = new EncodedBucket<string>(b, sc);
+  assertEquals(await eb.get("x"), null);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - ttl", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+
+  const sc = StringCodec();
+  const b = await Bucket.create(nc, nuid.next(), { ttl: 1000 }) as Bucket;
+  const eb = new EncodedBucket<string>(b, sc);
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(b.stream);
+  assertEquals(si.config.max_age, nanos(1000));
+
+  assertEquals(await b.get("x"), null);
+  await eb.put("x", "hello");
+  assertEquals((await eb.get("x"))?.value, "hello");
+
+  await delay(1500);
   assertEquals(await eb.get("x"), null);
 
   await cleanup(ns, nc);
