@@ -416,6 +416,8 @@ export interface JsMsg {
 }
 
 export interface DeliveryInfo {
+  domain: string;
+  account_hash?: string;
   stream: string;
   consumer: string;
   redeliveryCount: number;
@@ -424,6 +426,7 @@ export interface DeliveryInfo {
   timestampNanos: number;
   pending: number;
   redelivered: boolean;
+  rand?: string;
 }
 
 export interface StoredMsg {
