@@ -38,6 +38,17 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   ): Promise<ConsumerInfo> {
     validateStreamName(stream);
 
+    if (cfg.deliver_group && cfg.flow_control) {
+      throw new Error(
+        "jetstream flow control is not supported with queue groups",
+      );
+    }
+    if (cfg.deliver_group && cfg.idle_heartbeat) {
+      throw new Error(
+        "jetstream idle heartbeat is not supported with queue groups",
+      );
+    }
+
     const cr = {} as CreateConsumerRequest;
     cr.config = cfg;
     cr.stream_name = stream;
