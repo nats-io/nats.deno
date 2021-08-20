@@ -379,6 +379,81 @@ Deno.test("jetstream - durable", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - queue error checks", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  await assertThrowsAsync(
+    async () => {
+      const opts = consumerOpts();
+      opts.durable("me");
+      opts.deliverTo("x");
+      opts.queue("x");
+      opts.idleHeartbeat(1000);
+
+      await js.subscribe(subj, opts);
+    },
+    Error,
+    "jetstream idle heartbeat is not supported with queue groups",
+  );
+
+  await assertThrowsAsync(
+    async () => {
+      const opts = consumerOpts();
+      opts.durable("me");
+      opts.deliverTo("x");
+      opts.queue("x");
+      opts.flowControl();
+
+      await js.subscribe(subj, opts);
+    },
+    Error,
+    "jetstream flow control is not supported with queue groups",
+  );
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_group: "x",
+    ack_policy: AckPolicy.Explicit,
+    deliver_subject: "x",
+  });
+
+  await assertThrowsAsync(
+    async () => {
+      await js.subscribe(subj, {
+        stream: stream,
+        config: { durable_name: "me", deliver_group: "y" },
+      });
+    },
+    Error,
+    "durable requires queue group 'x'",
+  );
+
+  await jsm.consumers.add(stream, {
+    durable_name: "memo",
+    ack_policy: AckPolicy.Explicit,
+    deliver_subject: "z",
+  });
+
+  await assertThrowsAsync(
+    async () => {
+      await js.subscribe(subj, {
+        stream: stream,
+        config: { durable_name: "memo", deliver_group: "y" },
+      });
+    },
+    Error,
+    "durable requires no queue group",
+  );
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - pull no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
@@ -1648,37 +1723,39 @@ Deno.test("jetstream - JSON", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - qsub", () => {
-  disabled("FIXME - requires queue group configuration on consumer");
-  // const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  // const { subj } = await initStream(nc);
-  // const js = nc.jetstream();
-  //
-  // const opts = consumerOpts();
-  // opts.queue("q");
-  // opts.durable("n");
-  // opts.deliverTo("here");
-  // opts.callback((_err, m) => {
-  //   if (m) {
-  //     m.ack();
-  //   }
-  // });
-  //
-  // const sub = await js.subscribe(subj, opts);
-  // const sub2 = await js.subscribe(subj, opts);
-  //
-  // for (let i = 0; i < 100; i++) {
-  //   await js.publish(subj, Empty);
-  // }
-  // await nc.flush();
-  // await sub.drain();
-  // await sub2.drain();
-  //
-  // assert(sub.getProcessed() > 0);
-  // assert(sub2.getProcessed() > 0);
-  // assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
-  //
-  // await cleanup(ns, nc);
+Deno.test("jetstream - qsub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  const opts = consumerOpts();
+  opts.queue("q");
+  opts.durable("n");
+  opts.deliverTo("here");
+  opts.callback((_err, m) => {
+    if (m) {
+      m.ack();
+    }
+  });
+
+  const sub = await js.subscribe(subj, opts);
+  const sub2 = await js.subscribe(subj, opts);
+
+  for (let i = 0; i < 100; i++) {
+    await js.publish(subj, Empty);
+  }
+  await nc.flush();
+  await sub.drain();
+  await sub2.drain();
+
+  assert(sub.getProcessed() > 0);
+  assert(sub2.getProcessed() > 0);
+  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
+
+  await cleanup(ns, nc);
 });
 
 Deno.test("jetstream - idle heartbeats", async () => {

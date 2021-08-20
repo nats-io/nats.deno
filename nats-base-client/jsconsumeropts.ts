@@ -138,6 +138,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   queue(n: string) {
     this.qname = n;
+    this.config.deliver_group = n;
   }
 
   idleHeartbeat(millis: number) {

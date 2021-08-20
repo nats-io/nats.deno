@@ -341,6 +341,20 @@ export class JetStreamClientImpl extends BaseApiClient
           ) {
             throw new Error("subject does not match consumer");
           }
+          const qn = jsi.config.deliver_group ?? "";
+          const rqn = info.config.deliver_group ?? "";
+          if (qn !== rqn) {
+            if (rqn === "") {
+              throw new Error(
+                `durable requires no queue group`,
+              );
+            } else {
+              throw new Error(
+                `durable requires queue group '${rqn}'`,
+              );
+            }
+          }
+
           jsi.config = info.config;
           jsi.attached = true;
         }
