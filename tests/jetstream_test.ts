@@ -381,6 +381,9 @@ Deno.test("jetstream - durable", async () => {
 
 Deno.test("jetstream - queue error checks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
 
@@ -1722,6 +1725,9 @@ Deno.test("jetstream - JSON", async () => {
 
 Deno.test("jetstream - qsub", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
   const { subj } = await initStream(nc);
   const js = nc.jetstream();
 
