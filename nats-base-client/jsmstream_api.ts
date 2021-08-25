@@ -119,13 +119,6 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   }
 
   async getMessage(stream: string, query: MsgRequest): Promise<StoredMsg> {
-    // FIXME: remove this shim
-    if (typeof query === "number") {
-      console.log(
-        `\u001B[33m [WARN] jsm.getMessage(number) is deprecated and will be removed on release - use \`{seq: number}\` as an argument \u001B[0m`,
-      );
-      query = { seq: query };
-    }
     validateStreamName(stream);
     const r = await this._request(
       `${this.prefix}.STREAM.MSG.GET.${stream}`,

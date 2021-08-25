@@ -72,7 +72,7 @@ export type {
   PullOptions,
   RequestOptions,
   SeqMsgRequest,
-  SequencePair,
+  SequenceInfo,
   ServerInfo,
   ServersChanged,
   Stats,
