@@ -41,11 +41,10 @@ export function parseInfo(s: string): DeliveryInfo {
   const tokens = s.split(".");
   if (tokens.length === 9) {
     tokens.splice(2, 0, "_", "");
-    tokens.push("");
   }
 
   if (
-    (tokens.length < 12) || tokens[0] !== "$JS" || tokens[1] !== "ACK"
+    (tokens.length < 11) || tokens[0] !== "$JS" || tokens[1] !== "ACK"
   ) {
     throw new Error(`not js message`);
   }
@@ -65,7 +64,6 @@ export function parseInfo(s: string): DeliveryInfo {
   di.deliverySequence = parseInt(tokens[8], 10);
   di.timestampNanos = parseInt(tokens[9], 10);
   di.pending = parseInt(tokens[10], 10);
-  di.rand = tokens[11];
   return di;
 }
 

@@ -426,7 +426,6 @@ export interface DeliveryInfo {
   timestampNanos: number;
   pending: number;
   redelivered: boolean;
-  rand?: string;
 }
 
 export interface StoredMsg {
@@ -657,7 +656,6 @@ export interface ConsumerInfo {
   "num_waiting": number;
   "num_pending": number;
   cluster?: ClusterInfo;
-  "push_bound"?: boolean;
 }
 
 export interface ConsumerListResponse extends ApiResponse, ApiPaged {
