@@ -51,7 +51,6 @@ Deno.test("jsmsg - parse long", async () => {
   assertEquals(info.redeliveryCount, 2);
   assertEquals(info.streamSequence, 3);
   assertEquals(info.pending, 100);
-  assertEquals(info.rand, "rand");
 });
 
 Deno.test("jsmsg - parse rejects subject is not 9 tokens", () => {
