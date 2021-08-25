@@ -49,7 +49,7 @@ export type {
   Placement,
   PullOptions,
   SeqMsgRequest,
-  SequencePair,
+  SequenceInfo,
   StoredMsg,
   StreamConfig,
   StreamInfo,

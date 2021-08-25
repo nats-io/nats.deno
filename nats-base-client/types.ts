@@ -638,7 +638,7 @@ export interface StreamMsgResponse extends ApiResponse {
   };
 }
 
-export interface SequencePair {
+export interface SequenceInfo {
   "consumer_seq": number;
   "stream_seq": number;
   "last_active": Nanos;
@@ -649,8 +649,8 @@ export interface ConsumerInfo {
   name: string;
   created: number;
   config: ConsumerConfig;
-  delivered: SequencePair;
-  "ack_floor": SequencePair;
+  delivered: SequenceInfo;
+  "ack_floor": SequenceInfo;
   "num_ack_pending": number;
   "num_redelivered": number;
   "num_waiting": number;
