@@ -41,129 +41,30 @@ import {
 import { EncodedBucket } from "../nats-base-client/ekv.ts";
 import { notCompatible } from "./helpers/mod.ts";
 
-Deno.test("kv - key validation", () => {
-  const bad = [
-    " x y",
-    "x ",
-    "x!",
-    "xx$",
-    "*",
-    ">",
-    "x.>",
-    "x.*",
-    ".",
-    ".x",
-    ".x.",
-    "x.",
-  ];
-  for (const v of bad) {
-    assertThrows(
-      () => {
-        validateKey(v);
-      },
-      Error,
-      "invalid key",
-      `expected '${v}' to be invalid key`,
-    );
-  }
-
-  const good = [
-    "foo",
-    "_foo",
-    "-foo",
-    "_kv_foo",
-    "foo123",
-    "123",
-    "a/b/c",
-    "a.b.c",
-  ];
-  for (const v of good) {
-    try {
-      validateKey(v);
-    } catch (err) {
-      throw new Error(
-        `expected '${v}' to be a valid key, but was rejected: ${err.message}`,
-      );
-    }
-  }
-});
-
-Deno.test("kv - bucket name validation", () => {
-  const bad = [" B", "!", "x/y", "x>", "x.x", "x.*", "x.>", "x*", "*", ">"];
-  for (const v of bad) {
-    assertThrows(
-      () => {
-        validateBucket(v);
-      },
-      Error,
-      "invalid bucket name",
-      `expected '${v}' to be invalid bucket name`,
-    );
-  }
-
-  const good = [
-    "B",
-    "b",
-    "123",
-    "1_2_3",
-    "1-2-3",
-  ];
-  for (const v of good) {
-    try {
-      validateBucket(v);
-    } catch (err) {
-      throw new Error(
-        `expected '${v}' to be a valid bucket name, but was rejected: ${err.message}`,
-      );
-    }
-  }
-});
-
-Deno.test("kv - init creates stream", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc)) {
-    return;
-  }
-  const jsm = await nc.jetstreamManager();
-  let streams = await jsm.streams.list().next();
-  assertEquals(streams.length, 0);
-
-  const n = nuid.next();
-  await Bucket.create(nc, n);
-
-  streams = await jsm.streams.list().next();
-  assertEquals(streams.length, 1);
-  assertEquals(streams[0].config.name, `KV_${n}`);
-
-  await cleanup(ns, nc);
-});
-
-async function crud(bucket: Bucket): Promise<void> {
-  const sc = StringCodec();
-
-  const status = await bucket.status();
+async function crud(eb: EncodedBucket<string>): Promise<void> {
+  const status = await eb.status();
   assertEquals(status.values, 0);
   assertEquals(status.history, 10);
-  assertEquals(status.bucket, bucket.bucketName());
+  assertEquals(status.bucket, eb.bucket.bucketName());
   assertEquals(status.ttl, 0);
 
-  await bucket.put("k", sc.encode("hello"));
-  let r = await bucket.get("k");
-  assertEquals(sc.decode(r!.value), "hello");
+  await eb.put("k", "hello");
+  let r = await eb.get("k");
+  assertEquals(r!.value, "hello");
 
-  await bucket.put("k", sc.encode("bye"));
-  r = await bucket.get("k");
-  assertEquals(sc.decode(r!.value), "bye");
+  await eb.put("k", "bye");
+  r = await eb.get("k");
+  assertEquals(r!.value, "bye");
 
-  await bucket.delete("k");
-  r = await bucket.get("k");
+  await eb.delete("k");
+  r = await eb.get("k");
   assert(r);
   assertEquals(r.operation, "DEL");
 
   const buf: string[] = [];
-  const values = await bucket.history();
+  const values = await eb.history();
   for await (const r of values) {
-    buf.push(sc.decode(r.value));
+    buf.push(r.value ?? "");
   }
   assertEquals(values.getProcessed(), 3);
   assertEquals(buf.length, 3);
@@ -171,18 +72,18 @@ async function crud(bucket: Bucket): Promise<void> {
   assertEquals(buf[1], "bye");
   assertEquals(buf[2], "");
 
-  const pr = await bucket.purge();
+  const pr = await eb.purge();
   assertEquals(pr.purged, 3);
   assert(pr.success);
 
-  const ok = await bucket.destroy();
+  const ok = await eb.destroy();
   assert(ok);
 
-  const streams = await bucket.jsm.streams.list().next();
+  const streams = await eb.bucket.jsm.streams.list().next();
   assertEquals(streams.length, 0);
 }
 
-Deno.test("kv - crud", async () => {
+Deno.test("ekv - crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -190,11 +91,12 @@ Deno.test("kv - crud", async () => {
     return;
   }
   const n = nuid.next();
-  await crud(await Bucket.create(nc, n, { history: 10 }) as Bucket);
+  const b = await Bucket.create(nc, n, { history: 10 }) as Bucket;
+  await crud(new EncodedBucket<string>(b, StringCodec()));
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - codec crud", async () => {
+Deno.test("ekv - codec crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -206,18 +108,18 @@ Deno.test("kv - codec crud", async () => {
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, {
+  const b = await Bucket.create(nc, n, {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
       value: NoopKvCodecs().value,
     },
   }) as Bucket;
-  await crud(bucket);
+  await crud(new EncodedBucket<string>(b, StringCodec()));
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - history", async () => {
+Deno.test("ekv - history", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -225,22 +127,23 @@ Deno.test("kv - history", async () => {
     return;
   }
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, { history: 2 });
+  const b = await Bucket.create(nc, n, { history: 2 });
+  const bucket = new EncodedBucket<string>(b as Bucket, StringCodec());
   let status = await bucket.status();
   assertEquals(status.values, 0);
   assertEquals(status.history, 2);
 
-  await bucket.put("A", Empty);
-  await bucket.put("A", Empty);
-  await bucket.put("A", Empty);
-  await bucket.put("A", Empty);
+  await bucket.put("A", "");
+  await bucket.put("A", "");
+  await bucket.put("A", "");
+  await bucket.put("A", "");
 
   status = await bucket.status();
   assertEquals(status.values, 2);
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - cleanups/empty", async () => {
+Deno.test("ekv - cleanups", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -248,8 +151,8 @@ Deno.test("kv - cleanups/empty", async () => {
     return;
   }
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n);
-  assertEquals(await bucket.get("x"), null);
+  const b = await Bucket.create(nc, n) as Bucket;
+  const bucket = new EncodedBucket<string>(b as Bucket, StringCodec());
 
   const h = await bucket.history();
   assertEquals(h.getReceived(), 0);
@@ -265,24 +168,25 @@ Deno.test("kv - cleanups/empty", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - bucket watch", async () => {
+Deno.test("ekv - bucket watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
   if (await notCompatible(ns, nc)) {
     return;
   }
-  const sc = StringCodec();
   const n = nuid.next();
   const b = await Bucket.create(nc, n, { history: 10 });
+  const eb = new EncodedBucket<string>(b as Bucket, StringCodec());
+
   const m: Map<string, string> = new Map();
-  const iter = await b.watch();
+  const iter = await eb.watch();
   const done = (async () => {
     for await (const r of iter) {
       if (r.operation === "DEL") {
         m.delete(r.key);
       } else {
-        m.set(r.key, sc.decode(r.value));
+        m.set(r.key, r.value ?? "");
       }
       if (r.key === "x") {
         iter.stop();
@@ -290,13 +194,13 @@ Deno.test("kv - bucket watch", async () => {
     }
   })();
 
-  await b.put("a", sc.encode("1"));
-  await b.put("b", sc.encode("2"));
-  await b.put("c", sc.encode("3"));
-  await b.put("a", sc.encode("2"));
-  await b.put("b", sc.encode("3"));
-  await b.delete("c");
-  await b.put("x", Empty);
+  await eb.put("a", "1");
+  await eb.put("b", "2");
+  await eb.put("c", "3");
+  await eb.put("a", "2");
+  await eb.put("b", "3");
+  await eb.delete("c");
+  await eb.put("x", "");
 
   await done;
 
@@ -309,8 +213,8 @@ Deno.test("kv - bucket watch", async () => {
   await cleanup(ns, nc);
 });
 
-async function keyWatch(bucket: Bucket): Promise<void> {
-  const sc = StringCodec();
+async function keyWatch(b: Bucket): Promise<void> {
+  const bucket = new EncodedBucket<string>(b, StringCodec());
   const m: Map<string, string> = new Map();
 
   const iter = await bucket.watch({ key: "a.>" });
@@ -319,7 +223,7 @@ async function keyWatch(bucket: Bucket): Promise<void> {
       if (r.operation === "DEL") {
         m.delete(r.key);
       } else {
-        m.set(r.key, sc.decode(r.value));
+        m.set(r.key, r.value ?? "");
       }
       if (r.key === "a.x") {
         iter.stop();
@@ -327,13 +231,13 @@ async function keyWatch(bucket: Bucket): Promise<void> {
     }
   })();
 
-  await bucket.put("a.b", sc.encode("1"));
-  await bucket.put("b.b", sc.encode("2"));
-  await bucket.put("c.b", sc.encode("3"));
-  await bucket.put("a.b", sc.encode("2"));
-  await bucket.put("b.b", sc.encode("3"));
+  await bucket.put("a.b", "1");
+  await bucket.put("b.b", "2");
+  await bucket.put("c.b", "3");
+  await bucket.put("a.b", "2");
+  await bucket.put("b.b", "3");
   await bucket.delete("c.b");
-  await bucket.put("a.x", Empty);
+  await bucket.put("a.x", "");
   await done;
 
   assertEquals(iter.getProcessed(), 3);
@@ -341,7 +245,7 @@ async function keyWatch(bucket: Bucket): Promise<void> {
   assertEquals(m.get("a.x"), "");
 }
 
-Deno.test("kv - key watch", async () => {
+Deno.test("ekv - key watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -354,7 +258,7 @@ Deno.test("kv - key watch", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - codec key watch", async () => {
+Deno.test("ekv - codec key watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -372,35 +276,34 @@ Deno.test("kv - codec key watch", async () => {
   await cleanup(ns, nc);
 });
 
-async function keys(b: Bucket): Promise<void> {
-  const sc = StringCodec();
+async function keys(bucket: Bucket): Promise<void> {
+  const b = new EncodedBucket(bucket, StringCodec());
 
-  await b.put("a", sc.encode("1"));
-  await b.put("b", sc.encode("2"));
-  await b.put("c.c.c", sc.encode("3"));
-  await b.put("a", sc.encode("2"));
-  await b.put("b", sc.encode("3"));
+  await b.put("a", "1");
+  await b.put("b", "2");
+  await b.put("c.c.c", "3");
+  await b.put("a", "2");
+  await b.put("b", "3");
   await b.delete("c.c.c");
-  await b.put("x", Empty);
+  await b.put("x", "");
 
-  let keys = await b.keys();
+  const keys = await b.keys();
   assertEquals(keys.length, 4);
   assertArrayIncludes(keys, ["a", "b", "c.c.c", "x"]);
 }
 
-Deno.test("kv - keys", async () => {
+Deno.test("ekv - keys", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
   if (await notCompatible(ns, nc)) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next());
-  await keys(b as Bucket);
+  await keys(await Bucket.create(nc, nuid.next()) as Bucket);
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - codec keys", async () => {
+Deno.test("ekv - codec keys", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
@@ -414,40 +317,17 @@ Deno.test("kv - codec keys", async () => {
       value: NoopKvCodecs().value,
     },
   });
-  await keys(b as Bucket);
+  await keys(await Bucket.create(nc, nuid.next()) as Bucket);
   await cleanup(ns, nc);
 });
 
-Deno.test("kv - ttl", async () => {
+Deno.test("ekv - complex key", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
-    return;
-  }
 
-  const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next(), { ttl: 1000 }) as Bucket;
-  const eb = new EncodedBucket<string>(b, sc);
+  console.log("server running on port", nc.info!.port);
 
-  const jsm = await nc.jetstreamManager();
-  const si = await jsm.streams.info(b.stream);
-  assertEquals(si.config.max_age, nanos(1000));
-
-  assertEquals(await b.get("x"), null);
-  await eb.put("x", "hello");
-  assertEquals((await eb.get("x"))?.value, "hello");
-
-  await delay(1500);
-  assertEquals(await eb.get("x"), null);
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("kv - no ttl", async () => {
-  const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
-  );
   if (await notCompatible(ns, nc)) {
     return;
   }
@@ -455,31 +335,12 @@ Deno.test("kv - no ttl", async () => {
   const b = await Bucket.create(nc, nuid.next()) as Bucket;
   const eb = new EncodedBucket<string>(b, sc);
 
-  await eb.put("x", "hello");
-  assertEquals((await eb.get("x"))?.value, "hello");
+  await eb.put("x.y.z", "hello");
+  const e = await eb.get("x.y.z");
+  assertEquals((e?.value), "hello");
 
-  await delay(1500);
-  assertEquals((await eb.get("x"))?.value, "hello");
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("kv - complex key", async () => {
-  const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
-  );
-  if (await notCompatible(ns, nc)) {
-    return;
-  }
-  const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
-
-  await b.put("x.y.z", sc.encode("hello"));
-  const e = await b.get("x.y.z");
-  assertEquals(e?.value, sc.encode("hello"));
-
-  const d = deferred<Entry>();
-  let iter = await b.watch({ key: "x.y.>" });
+  const d = deferred<EncodedEntry<string>>();
+  let iter = await eb.watch({ key: "x.y.>" });
   await (async () => {
     for await (const r of iter) {
       d.resolve(r);
@@ -488,10 +349,10 @@ Deno.test("kv - complex key", async () => {
   })();
 
   const vv = await d;
-  assertEquals(vv.value, sc.encode("hello"));
+  assertEquals(vv.value, "hello");
 
-  const dd = deferred<Entry>();
-  iter = await b.history({ key: "x.y.>" });
+  const dd = deferred<EncodedEntry<string>>();
+  iter = await eb.history({ key: "x.y.>" });
   await (async () => {
     for await (const r of iter) {
       dd.resolve(r);
@@ -500,7 +361,7 @@ Deno.test("kv - complex key", async () => {
   })();
 
   const vvv = await dd;
-  assertEquals(vvv.value, sc.encode("hello"));
+  assertEquals(vvv.value, "hello");
 
   await cleanup(ns, nc);
 });
