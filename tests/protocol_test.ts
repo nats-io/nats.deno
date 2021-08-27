@@ -59,7 +59,10 @@ Deno.test("protocol - bad dispatch is noop", () => {
 
 Deno.test("protocol - subs all", () => {
   const subs = new Subscriptions();
-  const s = new SubscriptionImpl({} as ProtocolHandler, "hello");
+
+  const s = new SubscriptionImpl({
+    unsubscribe(_s: SubscriptionImpl, _max?: number) {},
+  } as ProtocolHandler, "hello");
   subs.add(s);
   assertEquals(subs.size(), 1);
   assertEquals(s.sid, 1);
@@ -73,7 +76,9 @@ Deno.test("protocol - subs all", () => {
 
 Deno.test("protocol - cancel unknown sub", () => {
   const subs = new Subscriptions();
-  const s = new SubscriptionImpl({} as ProtocolHandler, "hello");
+  const s = new SubscriptionImpl({
+    unsubscribe(_s: SubscriptionImpl, _max?: number) {},
+  } as ProtocolHandler, "hello");
   assertEquals(subs.size(), 0);
   subs.add(s);
   assertEquals(subs.size(), 1);

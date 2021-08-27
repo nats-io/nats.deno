@@ -125,6 +125,12 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
       this.sub.cleanupFn = opts.cleanupFn;
     }
 
+    if (!this.noIterator) {
+      this.iterClosed.then(() => {
+        this.unsubscribe();
+      });
+    }
+
     this.subIterDone = deferred<void>();
     Promise.all([this.sub.closed, this.iterClosed])
       .then(() => {

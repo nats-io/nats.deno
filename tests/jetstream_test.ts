@@ -1933,3 +1933,34 @@ Deno.test("jetstream - puback domain", async () => {
   assertEquals(pa.domain, "A");
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - cleanup", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  for (let i = 0; i < 100; i++) {
+    await js.publish(subj, Empty);
+  }
+
+  const opts = consumerOpts();
+  opts.deliverTo(createInbox());
+  const sub = await js.subscribe(subj, opts);
+  let counter = 0;
+  const done = (async () => {
+    for await (const m of sub) {
+      counter++;
+      m.ack();
+      break;
+    }
+  })();
+
+  await done;
+  assertEquals(counter, 1);
+  assertEquals(sub.isClosed(), true);
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
+  await cleanup(ns, nc);
+});

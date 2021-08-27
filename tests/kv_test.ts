@@ -17,7 +17,6 @@ import {
   deferred,
   delay,
   Empty,
-  EncodedEntry,
   nanos,
   NatsConnectionImpl,
   nuid,
@@ -202,7 +201,7 @@ Deno.test("kv - codec crud", async () => {
     return;
   }
   const jsm = await nc.jetstreamManager();
-  let streams = await jsm.streams.list().next();
+  const streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
@@ -259,8 +258,37 @@ Deno.test("kv - cleanups/empty", async () => {
 
   const nci = nc as NatsConnectionImpl;
   // mux should be created
-  nci.protocol.subscriptions.getMux();
-  assertEquals(nci.protocol.subscriptions.subs.size, 1);
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - history cleanup", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+  const n = nuid.next();
+  const bucket = await Bucket.create(nc, n);
+  await bucket.put("a", Empty);
+  await bucket.put("b", Empty);
+  await bucket.put("c", Empty);
+
+  const h = await bucket.history();
+  const done = (async () => {
+    for await (const e of h) {
+      break;
+    }
+  })();
+
+  await done;
+  const nci = nc as NatsConnectionImpl;
+  // mux should be created
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
 
   await cleanup(ns, nc);
 });
@@ -285,7 +313,7 @@ Deno.test("kv - bucket watch", async () => {
         m.set(r.key, sc.decode(r.value));
       }
       if (r.key === "x") {
-        iter.stop();
+        break;
       }
     }
   })();
@@ -306,6 +334,11 @@ Deno.test("kv - bucket watch", async () => {
   assert(!m.has("c"));
   assertEquals(m.get("x"), "");
 
+  const nci = nc as NatsConnectionImpl;
+  // mux should be created
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
   await cleanup(ns, nc);
 });
 
@@ -322,7 +355,7 @@ async function keyWatch(bucket: Bucket): Promise<void> {
         m.set(r.key, sc.decode(r.value));
       }
       if (r.key === "a.x") {
-        iter.stop();
+        break;
       }
     }
   })();
@@ -351,6 +384,10 @@ Deno.test("kv - key watch", async () => {
   const bucket = await Bucket.create(nc, nuid.next()) as Bucket;
   await keyWatch(bucket);
 
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
   await cleanup(ns, nc);
 });
 
@@ -369,6 +406,11 @@ Deno.test("kv - codec key watch", async () => {
     },
   }) as Bucket;
   await keyWatch(bucket);
+
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
   await cleanup(ns, nc);
 });
 
@@ -383,7 +425,7 @@ async function keys(b: Bucket): Promise<void> {
   await b.delete("c.c.c");
   await b.put("x", Empty);
 
-  let keys = await b.keys();
+  const keys = await b.keys();
   assertEquals(keys.length, 4);
   assertArrayIncludes(keys, ["a", "b", "c.c.c", "x"]);
 }
@@ -397,6 +439,11 @@ Deno.test("kv - keys", async () => {
   }
   const b = await Bucket.create(nc, nuid.next());
   await keys(b as Bucket);
+
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
   await cleanup(ns, nc);
 });
 
@@ -415,6 +462,11 @@ Deno.test("kv - codec keys", async () => {
     },
   });
   await keys(b as Bucket);
+
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
+
   await cleanup(ns, nc);
 });
 
@@ -483,7 +535,7 @@ Deno.test("kv - complex key", async () => {
   await (async () => {
     for await (const r of iter) {
       d.resolve(r);
-      await iter.stop();
+      break;
     }
   })();
 
@@ -495,12 +547,16 @@ Deno.test("kv - complex key", async () => {
   await (async () => {
     for await (const r of iter) {
       dd.resolve(r);
-      iter.stop();
+      break;
     }
   })();
 
   const vvv = await dd;
   assertEquals(vvv.value, sc.encode("hello"));
+
+  const nci = nc as NatsConnectionImpl;
+  const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
+  assertEquals(nci.protocol.subscriptions.subs.size, min);
 
   await cleanup(ns, nc);
 });

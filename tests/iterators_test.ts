@@ -17,6 +17,7 @@ import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 const u = "demo.nats.io:4222";
 
@@ -203,4 +204,22 @@ Deno.test("iterators - push on done is noop", async () => {
   qi.push("d");
   assertEquals(buf.length, 3);
   assertEquals("a,b,c", buf.join(","));
+});
+
+Deno.test("iterators - break cleans up", async () => {
+  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const subj = createInbox();
+  const sub = nc.subscribe(subj);
+  const done = (async () => {
+    for await (const m of sub) {
+      break;
+    }
+  })();
+  nc.publish(subj);
+  await done;
+
+  assertEquals(sub.isClosed(), true);
+  assertEquals(nc.protocol.subscriptions.subs.size, 0);
+
+  await nc.close();
 });

@@ -23,7 +23,6 @@ import {
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
-  JetStreamSubscription,
   JsMsg,
   Nanos,
   NatsConnection,
@@ -467,6 +466,9 @@ export class Bucket implements KV {
         }
       },
     });
+    qi.iterClosed.then(() => {
+      sub.unsubscribe();
+    });
     sub.closed.then(() => {
       qi.stop();
     }).catch((err) => {
@@ -506,7 +508,9 @@ export class Bucket implements KV {
         }
       },
     });
-    //@ts-ignore
+    qi.iterClosed.then(() => {
+      sub.unsubscribe();
+    });
     sub.closed.then(() => {
       qi.stop();
     }).catch((err) => {

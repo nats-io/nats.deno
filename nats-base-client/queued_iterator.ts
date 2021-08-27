@@ -34,7 +34,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   processed: number;
   received: number; // this is updated by the protocol
   protected noIterator: boolean;
-  protected iterClosed: Deferred<void>;
+  iterClosed: Deferred<void>;
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
@@ -68,34 +68,39 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     if (this.noIterator) {
       throw new NatsError("unsupported iterator", ErrorCode.ApiError);
     }
-    while (true) {
-      if (this.yields.length === 0) {
-        await this.signal;
-      }
-      if (this.err) {
-        throw this.err;
-      }
-      const yields = this.yields;
-      this.inflight = yields.length;
-      this.yields = [];
-      for (let i = 0; i < yields.length; i++) {
-        this.processed++;
-        yield yields[i];
-        if (this.dispatchedFn && yields[i]) {
-          this.dispatchedFn(yields[i]);
+    try {
+      while (true) {
+        if (this.yields.length === 0) {
+          await this.signal;
         }
-        this.inflight--;
+        if (this.err) {
+          throw this.err;
+        }
+        const yields = this.yields;
+        this.inflight = yields.length;
+        this.yields = [];
+        for (let i = 0; i < yields.length; i++) {
+          this.processed++;
+          yield yields[i];
+          if (this.dispatchedFn && yields[i]) {
+            this.dispatchedFn(yields[i]);
+          }
+          this.inflight--;
+        }
+        // yielding could have paused and microtask
+        // could have added messages. Prevent allocations
+        // if possible
+        if (this.done) {
+          break;
+        } else if (this.yields.length === 0) {
+          yields.length = 0;
+          this.yields = yields;
+          this.signal = deferred();
+        }
       }
-      // yielding could have paused and microtask
-      // could have added messages. Prevent allocations
-      // if possible
-      if (this.done) {
-        break;
-      } else if (this.yields.length === 0) {
-        yields.length = 0;
-        this.yields = yields;
-        this.signal = deferred();
-      }
+    } finally {
+      // the iterator used break/return
+      this.stop();
     }
   }
 

@@ -417,7 +417,7 @@ export interface JsMsg {
 
 export interface DeliveryInfo {
   domain: string;
-  account_hash?: string;
+  "account_hash"?: string;
   stream: string;
   consumer: string;
   redeliveryCount: number;
