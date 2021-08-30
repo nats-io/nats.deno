@@ -77,12 +77,7 @@ export function Base64KeyCodec(): KvCodec<string> {
       return btoa(key);
     },
     decode(bkey: string): string {
-      try {
-        return atob(bkey);
-      } catch (err) {
-        console.error("died decoding", bkey);
-        throw err;
-      }
+      return atob(bkey);
     },
   };
 }
