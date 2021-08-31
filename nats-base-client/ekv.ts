@@ -2,6 +2,10 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Empty, PurgeOpts, PurgeResponse } from "./types.ts";
 import { Codec } from "./codec.ts";
 import { Bucket, Entry, KvStatus, PutOptions } from "./kv.ts";
+import { JetStreamManagerImpl } from "./jsm.ts";
+import { checkJsError, isFlowControlMsg, isHeartbeatMsg } from "./jsutil.ts";
+import { isNatsError } from "./error.ts";
+import { toJsMsg } from "./jsmsg.ts";
 
 export interface EncodedEntry<T> {
   bucket: string;
@@ -16,7 +20,7 @@ export interface EncodedEntry<T> {
 
 export interface EncodedRoKV<T> {
   get(k: string): Promise<EncodedEntry<T> | null>;
-  history(k: string): Promise<QueuedIterator<EncodedEntry<T>>>;
+  history(opts?: { key?: string }): Promise<QueuedIterator<EncodedEntry<T>>>;
   watch(opts?: { key?: string }): Promise<QueuedIterator<EncodedEntry<T>>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
@@ -72,27 +76,42 @@ export class EncodedBucket<T> implements EncodedKV<T> {
     return this.bucket.delete(k);
   }
 
-  async toEncodedIter(
-    src: QueuedIterator<Entry>,
+  async history(
+    opts: { key?: string } = {},
   ): Promise<QueuedIterator<EncodedEntry<T>>> {
-    const iter = new QueuedIteratorImpl<EncodedEntry<T>>();
-    await (async () => {
-      for await (const e of src) {
-        iter.push(this.toEncodedEntry(e));
+    const qi = new QueuedIteratorImpl<EncodedEntry<T>>();
+    const iter = await this.bucket.history(opts);
+    (async () => {
+      for await (const e of iter) {
+        qi.received++;
+        qi.push(this.toEncodedEntry(e));
       }
-    })();
-    iter.stop();
-    return iter;
-  }
-
-  async history(k: string): Promise<QueuedIterator<EncodedEntry<T>>> {
-    return this.toEncodedIter(await this.bucket.history(k));
+    })().then(() => {
+      qi.stop();
+    }).catch((err) => {
+      qi.stop(err);
+    });
+    return qi;
   }
 
   async watch(
     opts: { key?: string } = {},
   ): Promise<QueuedIterator<EncodedEntry<T>>> {
-    return this.toEncodedIter(await this.bucket.watch(opts));
+    const qi = new QueuedIteratorImpl<EncodedEntry<T>>();
+    const iter = await this.bucket.watch(opts);
+    (async () => {
+      for await (const e of iter) {
+        qi.received++;
+        qi.push(this.toEncodedEntry(e));
+      }
+    })().then(() => {
+      qi.stop();
+      iter.stop();
+    }).catch((err) => {
+      qi.stop(err);
+      iter.stop();
+    });
+    return qi;
   }
 
   keys(): Promise<string[]> {

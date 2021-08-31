@@ -23,6 +23,7 @@ import {
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
+  JetStreamSubscription,
   JsMsg,
   Nanos,
   NatsConnection,
@@ -77,7 +78,12 @@ export function Base64KeyCodec(): KvCodec<string> {
       return btoa(key);
     },
     decode(bkey: string): string {
-      return atob(bkey);
+      try {
+        return atob(bkey);
+      } catch (err) {
+        console.error("died decoding", bkey);
+        throw err;
+      }
     },
   };
 }
@@ -146,11 +152,12 @@ const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
 const validKeyRe = /^[-/=.\w]+$/;
+const validSearchKey = /^[-/=.>*\w]+$/;
 const validBucketRe = /^[-\w]+$/;
 
 export interface RoKV {
   get(k: string): Promise<Entry | null>;
-  history(k: string): Promise<QueuedIterator<Entry>>;
+  history(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
@@ -171,6 +178,37 @@ export function validateKey(k: string) {
   }
 }
 
+export function validateSearchKey(k: string) {
+  if (k.startsWith(".") || k.endsWith(".") || !validSearchKey.test(k)) {
+    throw new Error(`invalid key: ${k}`);
+  }
+}
+
+export function hasWildcards(k: string) {
+  if (k.startsWith(".") || k.endsWith(".")) {
+    throw new Error(`invalid key: ${k}`);
+  }
+  const chunks = k.split(".");
+
+  let hasWildcards = false;
+  for (let i = 0; i < chunks.length; i++) {
+    switch (chunks[i]) {
+      case "*":
+        hasWildcards = true;
+        break;
+      case ">":
+        if (i !== chunks.length - 1) {
+          throw new Error(`invalid key: ${k}`);
+        }
+        hasWildcards = true;
+        break;
+      default:
+        // continue
+    }
+  }
+  return hasWildcards;
+}
+
 // this exported for tests
 export function validateBucket(name: string) {
   if (!validBucketRe.test(name)) {
@@ -184,12 +222,14 @@ export class Bucket implements KV {
   stream!: string;
   bucket: string;
   codec!: KvCodecs;
+  _prefixLen: number;
 
   constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
     validateBucket(bucket);
     this.jsm = jsm;
     this.js = js;
     this.bucket = bucket;
+    this._prefixLen = 0;
   }
 
   static async create(
@@ -236,11 +276,18 @@ export class Bucket implements KV {
   }
 
   subjectForBucket(): string {
-    return `${kvSubjectPrefix}.${this.bucket}.*`;
+    return `${kvSubjectPrefix}.${this.bucket}.>`;
   }
 
   subjectForKey(k: string): string {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
+  }
+
+  get prefixLen(): number {
+    if (this._prefixLen === 0) {
+      this._prefixLen = `${kvSubjectPrefix}.${this.bucket}.`.length;
+    }
+    return this._prefixLen;
   }
 
   encodeKey(key: string): string {
@@ -259,7 +306,27 @@ export class Bucket implements KV {
     return chunks.join(".");
   }
 
+  decodeKey(ekey: string): string {
+    const chunks: string[] = [];
+    for (const t of ekey.split(".")) {
+      switch (t) {
+        case ">":
+        case "*":
+          chunks.push(t);
+          break;
+        default:
+          chunks.push(this.codec.key.decode(t));
+          break;
+      }
+    }
+    return chunks.join(".");
+  }
+
   validateKey = validateKey;
+
+  validateSearchKey = validateSearchKey;
+
+  hasWildcards = hasWildcards;
 
   close(): Promise<void> {
     return Promise.resolve();
@@ -279,8 +346,7 @@ export class Bucket implements KV {
   }
 
   jmToEntry(k: string, jm: JsMsg): Entry {
-    const chunks = jm.subject.split(".");
-    const key = this.codec.key.decode(chunks[chunks.length - 1]);
+    const key = this.decodeKey(jm.subject.substring(this.prefixLen));
     const e = {
       bucket: this.bucket,
       key: key,
@@ -291,7 +357,7 @@ export class Bucket implements KV {
       operation: jm.headers?.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
     } as Entry;
 
-    if (k !== "*") {
+    if (k !== ">") {
       e.delta = jm.info.pending;
     }
     return e;
@@ -345,28 +411,28 @@ export class Bucket implements KV {
     await this.js.publish(this.subjectForKey(ek), Empty, { headers: h });
   }
 
-  consumerOn(k: string, lastOnly = false): Promise<ConsumerInfo> {
+  consumerOn(k: string, history = false): Promise<ConsumerInfo> {
     const ek = this.encodeKey(k);
-    if (k !== "*") {
-      this.validateKey(ek);
-    }
+    this.validateSearchKey(k);
+
     const ji = this.js as JetStreamClientImpl;
     const nc = ji.nc;
     const inbox = createInbox(nc.options.inboxPrefix);
     const opts: Partial<ConsumerConfig> = {
       "deliver_subject": inbox,
-      "deliver_policy": lastOnly
-        ? DeliverPolicy.LastPerSubject
-        : DeliverPolicy.All,
+      "deliver_policy": history
+        ? DeliverPolicy.All
+        : DeliverPolicy.LastPerSubject,
       "ack_policy": AckPolicy.Explicit,
       "filter_subject": this.subjectForKey(ek),
-      "flow_control": k === "*",
+      "flow_control": true,
     };
     return this.jsm.consumers.add(this.stream, opts);
   }
 
-  async history(k: string): Promise<QueuedIterator<Entry>> {
-    const ci = await this.consumerOn(k);
+  async history(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
+    const k = opts.key ?? ">";
+    const ci = await this.consumerOn(k, true);
     const max = ci.num_pending;
     const qi = new QueuedIteratorImpl<Entry>();
     if (max === 0) {
@@ -392,7 +458,8 @@ export class Bucket implements KV {
           }
           qi.received++;
           const jm = toJsMsg(msg);
-          qi.push(this.jmToEntry(k, jm));
+          const e = this.jmToEntry(k, jm);
+          qi.push(e);
           jm.ack();
           if (qi.received === max) {
             sub.unsubscribe();
@@ -410,13 +477,14 @@ export class Bucket implements KV {
   }
 
   async watch(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
-    const k = opts.key ?? "*";
-    const ci = await this.consumerOn(k, k !== "*");
+    const k = opts.key ?? ">";
+    const ci = await this.consumerOn(k, false);
     const qi = new QueuedIteratorImpl<Entry>();
 
     const ji = this.jsm as JetStreamManagerImpl;
     const nc = ji.nc;
     const subj = ci.config.deliver_subject!;
+
     const sub = nc.subscribe(subj, {
       callback: (err, msg) => {
         if (err === null) {
@@ -438,6 +506,7 @@ export class Bucket implements KV {
         }
       },
     });
+    //@ts-ignore
     sub.closed.then(() => {
       qi.stop();
     }).catch((err) => {
@@ -449,8 +518,11 @@ export class Bucket implements KV {
 
   async keys(): Promise<string[]> {
     const d = deferred<string[]>();
-    const s: string[] = [];
-    const ci = await this.consumerOn("*", true);
+    const keys: string[] = [];
+    const ci = await this.consumerOn(">", false);
+    if (ci.num_pending === 0) {
+      return Promise.resolve(keys);
+    }
     const ji = this.jsm as JetStreamManagerImpl;
     const nc = ji.nc;
     const subj = ci.config.deliver_subject!;
@@ -461,21 +533,21 @@ export class Bucket implements KV {
         if (err) {
           sub.unsubscribe();
           d.reject(err);
-        } else if (isFlowControlMsg(m)) {
+        } else if (isFlowControlMsg(m) || isHeartbeatMsg(m)) {
           m.respond();
         } else {
-          const chunks = m.subject.split(".");
-          s.push(this.codec.key.decode(chunks[chunks.length - 1]));
+          const jm = toJsMsg(m);
+          const key = this.decodeKey(jm.subject.substring(this.prefixLen));
+          keys.push(key);
           m.respond();
           const info = parseInfo(m.reply!);
           if (info.pending === 0) {
             sub.unsubscribe();
-            d.resolve(s);
+            d.resolve(keys);
           }
         }
       }
     })();
-
     return d;
   }
 

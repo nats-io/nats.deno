@@ -100,6 +100,9 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   }
 
   stop(err?: Error): void {
+    if (this.done) {
+      return;
+    }
     this.err = err;
     this.done = true;
     this.signal.resolve();
