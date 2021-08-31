@@ -15,10 +15,7 @@
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   deferred,
-  delay,
-  Empty,
   EncodedEntry,
-  nanos,
   NatsConnectionImpl,
   nuid,
   StringCodec,
@@ -27,16 +24,12 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
-  assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
 import {
   Base64KeyCodec,
   Bucket,
-  Entry,
   NoopKvCodecs,
-  validateBucket,
-  validateKey,
 } from "../nats-base-client/kv.ts";
 import { EncodedBucket } from "../nats-base-client/ekv.ts";
 import { notCompatible } from "./helpers/mod.ts";
@@ -104,7 +97,7 @@ Deno.test("ekv - codec crud", async () => {
     return;
   }
   const jsm = await nc.jetstreamManager();
-  let streams = await jsm.streams.list().next();
+  const streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
@@ -317,7 +310,7 @@ Deno.test("ekv - codec keys", async () => {
       value: NoopKvCodecs().value,
     },
   });
-  await keys(await Bucket.create(nc, nuid.next()) as Bucket);
+  await keys(b as Bucket);
   await cleanup(ns, nc);
 });
 

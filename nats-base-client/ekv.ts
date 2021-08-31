@@ -2,10 +2,6 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Empty, PurgeOpts, PurgeResponse } from "./types.ts";
 import { Codec } from "./codec.ts";
 import { Bucket, Entry, KvStatus, PutOptions } from "./kv.ts";
-import { JetStreamManagerImpl } from "./jsm.ts";
-import { checkJsError, isFlowControlMsg, isHeartbeatMsg } from "./jsutil.ts";
-import { isNatsError } from "./error.ts";
-import { toJsMsg } from "./jsmsg.ts";
 
 export interface EncodedEntry<T> {
   bucket: string;

@@ -23,7 +23,6 @@ import {
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
-  JetStreamSubscription,
   JsMsg,
   Nanos,
   NatsConnection,
@@ -78,12 +77,7 @@ export function Base64KeyCodec(): KvCodec<string> {
       return btoa(key);
     },
     decode(bkey: string): string {
-      try {
-        return atob(bkey);
-      } catch (err) {
-        console.error("died decoding", bkey);
-        throw err;
-      }
+      return atob(bkey);
     },
   };
 }
@@ -467,6 +461,9 @@ export class Bucket implements KV {
         }
       },
     });
+    qi.iterClosed.then(() => {
+      sub.unsubscribe();
+    });
     sub.closed.then(() => {
       qi.stop();
     }).catch((err) => {
@@ -506,7 +503,9 @@ export class Bucket implements KV {
         }
       },
     });
-    //@ts-ignore
+    qi.iterClosed.then(() => {
+      sub.unsubscribe();
+    });
     sub.closed.then(() => {
       qi.stop();
     }).catch((err) => {

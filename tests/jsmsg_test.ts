@@ -16,18 +16,11 @@ import {
   assertEquals,
   fail,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import {
-  connect,
-  createInbox,
-  Empty,
-  headers,
-  Msg,
-  StringCodec,
-} from "../src/mod.ts";
+import { connect, createInbox, Empty, Msg, StringCodec } from "../src/mod.ts";
 import { nanos } from "../nats-base-client/jsutil.ts";
 import { parseInfo, toJsMsg } from "../nats-base-client/jsmsg.ts";
 
-Deno.test("jsmsg - parse", async () => {
+Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
   const rs = `$JS.ACK.streamname.consumername.2.3.4.${nanos(Date.now())}.100`;
   const info = parseInfo(rs);
@@ -38,7 +31,7 @@ Deno.test("jsmsg - parse", async () => {
   assertEquals(info.pending, 100);
 });
 
-Deno.test("jsmsg - parse long", async () => {
+Deno.test("jsmsg - parse long", () => {
   // $JS.ACK.<domain>.<accounthash>.<stream>.<consumer>.<redeliveryCount>.<streamSeq>.<deliverySequence>.<timestamp>.<pending>.<random>
   const rs = `$JS.ACK.domain.account.streamname.consumername.2.3.4.${
     nanos(Date.now())

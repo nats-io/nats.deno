@@ -60,6 +60,13 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
           }
         });
     }
+    if (!this.noIterator) {
+      // cleanup - they used break or return from the iterator
+      // make sure we clean up, if they didn't call unsub
+      this.iterClosed.then(() => {
+        this.unsubscribe();
+      });
+    }
   }
 
   setDispatchedFn(cb: DispatchedFn<Msg>) {
