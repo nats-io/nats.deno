@@ -41,6 +41,7 @@ import {
   NatsError,
   nuid,
   QueuedIterator,
+  RetentionPolicy,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
@@ -1961,6 +1962,50 @@ Deno.test("jetstream - cleanup", async () => {
   const nci = nc as NatsConnectionImpl;
   const min = nci.protocol.subscriptions.getMux() ? 1 : 0;
   assertEquals(nci.protocol.subscriptions.subs.size, min);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - reuse consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const id = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    subjects: [`${id}.*`],
+    name: id,
+    retention: RetentionPolicy.Workqueue,
+  });
+
+  await jsm.consumers.add(id, {
+    "durable_name": "X",
+    "deliver_subject": "out",
+    "deliver_policy": DeliverPolicy.All,
+    "ack_policy": AckPolicy.Explicit,
+    "deliver_group": "queuea",
+  });
+
+  // second create should be OK, since it is idempotent
+  await jsm.consumers.add(id, {
+    "durable_name": "X",
+    "deliver_subject": "out",
+    "deliver_policy": DeliverPolicy.All,
+    "ack_policy": AckPolicy.Explicit,
+    "deliver_group": "queuea",
+  });
+
+  const js = nc.jetstream();
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.durable("X");
+  opts.deliverAll();
+  opts.deliverTo("out2");
+  opts.queue("queuea");
+
+  const sub = await js.subscribe(`${id}.*`, opts);
+  const ci = await sub.consumerInfo();
+  // the deliver subject we specified should be ignored
+  // the one specified by the consumer is used
+  assertEquals(ci.config.deliver_subject, "out");
 
   await cleanup(ns, nc);
 });

@@ -368,8 +368,6 @@ export class JetStreamClientImpl extends BaseApiClient
 
     if (!jsi.attached) {
       jsi.config.filter_subject = subject;
-      // jsi.config.deliver_subject = jsi.config.deliver_subject ??
-      //   createInbox(this.nc.options.inboxPrefix);
     }
 
     jsi.deliver = jsi.config.deliver_subject ||
