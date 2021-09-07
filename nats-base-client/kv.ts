@@ -149,6 +149,10 @@ const validKeyRe = /^[-/=.\w]+$/;
 const validSearchKey = /^[-/=.>*\w]+$/;
 const validBucketRe = /^[-\w]+$/;
 
+export interface RemoveKV {
+  remove(k: string): Promise<void>;
+}
+
 export interface RoKV {
   get(k: string): Promise<Entry | null>;
   history(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
@@ -210,7 +214,7 @@ export function validateBucket(name: string) {
   }
 }
 
-export class Bucket implements KV {
+export class Bucket implements KV, RemoveKV {
   jsm: JetStreamManager;
   js: JetStreamClient;
   stream!: string;
@@ -422,6 +426,43 @@ export class Bucket implements KV {
       "flow_control": true,
     };
     return this.jsm.consumers.add(this.stream, opts);
+  }
+
+  async remove(k: string): Promise<void> {
+    const ci = await this.consumerOn(k, true);
+    if (ci.num_pending === 0) {
+      await this.jsm.consumers.delete(this.stream, ci.name);
+      return;
+    } else {
+      const ji = this.js as JetStreamClientImpl;
+      const nc = ji.nc;
+      const buf: Promise<boolean>[] = [];
+      const sub = nc.subscribe(ci.config.deliver_subject!, {
+        callback: (err, msg) => {
+          if (err === null) {
+            err = checkJsError(msg);
+          }
+          if (err) {
+            sub.unsubscribe();
+            return;
+          }
+          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
+            msg.respond();
+            return;
+          }
+          const jm = toJsMsg(msg);
+          buf.push(this.jsm.streams.deleteMessage(this.stream, jm.seq));
+          if (jm.info.pending === 0) {
+            sub.unsubscribe();
+          }
+          jm.ack();
+        },
+      });
+      if (buf.length) {
+        await Promise.all(buf);
+      }
+      await sub.closed;
+    }
   }
 
   async history(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
