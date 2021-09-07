@@ -510,6 +510,7 @@ export interface StreamConfig {
   mirror?: StreamSource; // same as a source
   sources?: StreamSource[];
   "max_msgs_per_subject"?: number;
+  description?: string;
 }
 
 export interface StreamSource {
