@@ -27,6 +27,7 @@ import {
   ConsumerOpts,
   consumerOpts,
   createInbox,
+  deferred,
   delay,
   DeliverPolicy,
   Empty,
@@ -2006,6 +2007,77 @@ Deno.test("jetstream - reuse consumer", async () => {
   // the deliver subject we specified should be ignored
   // the one specified by the consumer is used
   assertEquals(ci.config.deliver_subject, "out");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull sub - multiple consumers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  const buf: Promise<PubAck>[] = [];
+  for (let i = 0; i < 100; i++) {
+    buf.push(js.publish(subj, Empty));
+  }
+  await Promise.all(buf);
+
+  let ci = await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(ci.num_pending, 100);
+
+  let countA = 0;
+  let countB = 0;
+  const m = new Map<number, number>();
+
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.ackExplicit();
+  opts.deliverAll();
+  const subA = await js.pullSubscribe(subj, opts);
+  (async () => {
+    for await (const msg of subA) {
+      const v = m.get(msg.seq) ?? 0;
+      m.set(msg.seq, v + 1);
+      countA++;
+      msg.ack();
+    }
+  })().then();
+
+  const subB = await js.pullSubscribe(subj, opts);
+  (async () => {
+    for await (const msg of subB) {
+      const v = m.get(msg.seq) ?? 0;
+      m.set(msg.seq, v + 1);
+      countB++;
+      msg.ack();
+    }
+  })().then();
+
+  const done = deferred<void>();
+  const interval = setInterval(() => {
+    if (countA + countB < 100) {
+      subA.pull({ expires: 500, batch: 25 });
+      subB.pull({ expires: 500, batch: 25 });
+    } else {
+      clearInterval(interval);
+      done.resolve();
+    }
+  }, 25);
+
+  await done;
+
+  ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 0);
+  assert(countA > 0);
+  assert(countB > 0);
+  assertEquals(countA + countB, 100);
+
+  for (let i = 1; i <= 100; i++) {
+    assertEquals(m.get(i), 1);
+  }
 
   await cleanup(ns, nc);
 });

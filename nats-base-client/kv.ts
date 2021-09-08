@@ -159,7 +159,7 @@ export interface RoKV {
   watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
-  keys(): Promise<string[]>;
+  keys(k?: string): Promise<string[]>;
 }
 
 export interface KV extends RoKV {
@@ -398,7 +398,7 @@ export class Bucket implements KV, RemoveKV {
     }
   }
 
-  async delete(k: string): Promise<void> {
+  async _delete(k: string): Promise<void> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
     const ji = this.js as JetStreamClientImpl;
@@ -407,6 +407,30 @@ export class Bucket implements KV, RemoveKV {
     h.set(kvOriginClusterHdr, cluster);
     h.set(kvOperationHdr, "DEL");
     await this.js.publish(this.subjectForKey(ek), Empty, { headers: h });
+  }
+
+  async delete(k: string): Promise<void> {
+    if (!this.hasWildcards(k)) {
+      return this._delete(k);
+    }
+    const keys = await this.keys(k);
+    if (keys.length === 0) {
+      return;
+    }
+    const d = deferred<void>();
+    const buf: Promise<void>[] = [];
+    for (const k of keys) {
+      buf.push(this._delete(k));
+    }
+    Promise.all(buf)
+      .then(() => {
+        d.resolve();
+      })
+      .catch((err) => {
+        d.reject(err);
+      });
+
+    return d;
   }
 
   consumerOn(k: string, history = false): Promise<ConsumerInfo> {
@@ -556,10 +580,10 @@ export class Bucket implements KV, RemoveKV {
     return qi;
   }
 
-  async keys(): Promise<string[]> {
+  async keys(k = ">"): Promise<string[]> {
     const d = deferred<string[]>();
     const keys: string[] = [];
-    const ci = await this.consumerOn(">", false);
+    const ci = await this.consumerOn(k, false);
     if (ci.num_pending === 0) {
       return Promise.resolve(keys);
     }
@@ -577,8 +601,10 @@ export class Bucket implements KV, RemoveKV {
           m.respond();
         } else {
           const jm = toJsMsg(m);
-          const key = this.decodeKey(jm.subject.substring(this.prefixLen));
-          keys.push(key);
+          if (jm.headers?.get(kvOperationHdr) !== "DEL") {
+            const key = this.decodeKey(jm.subject.substring(this.prefixLen));
+            keys.push(key);
+          }
           m.respond();
           const info = parseInfo(m.reply!);
           if (info.pending === 0) {

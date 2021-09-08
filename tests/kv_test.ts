@@ -426,8 +426,8 @@ async function keys(b: Bucket): Promise<void> {
   await b.put("x", Empty);
 
   const keys = await b.keys();
-  assertEquals(keys.length, 4);
-  assertArrayIncludes(keys, ["a", "b", "c.c.c", "x"]);
+  assertEquals(keys.length, 3);
+  assertArrayIncludes(keys, ["a", "b", "x"]);
 }
 
 Deno.test("kv - keys", async () => {
@@ -582,6 +582,30 @@ Deno.test("kv - remove key", async () => {
 
   const status = await b.status();
   assertEquals(status.values, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - remove subkey", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  await b.put("a", Empty);
+  await b.put("a.b", Empty);
+  await b.put("a.c", Empty);
+
+  let keys = await b.keys();
+  assertEquals(keys.length, 3);
+  assertArrayIncludes(keys, ["a", "a.b", "a.c"]);
+
+  await b.delete("a.*");
+  keys = await b.keys();
+  assertEquals(keys.length, 1);
+  assertArrayIncludes(keys, ["a"]);
 
   await cleanup(ns, nc);
 });
