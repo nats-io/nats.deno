@@ -560,3 +560,28 @@ Deno.test("kv - complex key", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - remove key", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc)) {
+    return;
+  }
+  const sc = StringCodec();
+  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+
+  await b.put("a.b", sc.encode("ab"));
+  let v = await b.get("a.b");
+  assert(v);
+  assertEquals(sc.decode(v.value), "ab");
+
+  await b.remove("a.b");
+  v = await b.get("a.b");
+  assertEquals(v, null);
+
+  const status = await b.status();
+  assertEquals(status.values, 0);
+
+  await cleanup(ns, nc);
+});
