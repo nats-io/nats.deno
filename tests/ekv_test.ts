@@ -281,8 +281,8 @@ async function keys(bucket: Bucket): Promise<void> {
   await b.put("x", "");
 
   const keys = await b.keys();
-  assertEquals(keys.length, 4);
-  assertArrayIncludes(keys, ["a", "b", "c.c.c", "x"]);
+  assertEquals(keys.length, 3);
+  assertArrayIncludes(keys, ["a", "b", "x"]);
 }
 
 Deno.test("ekv - keys", async () => {
@@ -318,8 +318,6 @@ Deno.test("ekv - complex key", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-
-  console.log("server running on port", nc.info!.port);
 
   if (await notCompatible(ns, nc)) {
     return;
