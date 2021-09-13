@@ -254,6 +254,28 @@ setInterval(() => {
 Note the above example is contrived, as the pull interval is fixed based on some
 interval.
 
+#### JetStream Queue Consumers
+
+Queue Consumers allow scaling the processing of messages stored in a stream. To
+create a Queue Consumer, you have to set its `deliver_group` property to the
+name of the queue group (or use the `ConsumerOptsBuilder#queue()`). Then reuse
+the consumer from the various subscriptions:
+
+```typescript
+const opts = consumerOpts();
+opts.queue("q");
+opts.durable("n");
+opts.deliverTo("here");
+opts.callback((_err, m) => {
+  if (m) {
+    m.ack();
+  }
+});
+
+const sub = await js.subscribe(subj, opts);
+const sub2 = await js.subscribe(subj, opts);
+```
+
 ### JsMsg
 
 A `JsMsg` is a wrapped `Msg` - it has all the standard fields in a `Msg`, a

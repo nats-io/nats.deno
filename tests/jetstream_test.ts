@@ -1760,6 +1760,43 @@ Deno.test("jetstream - qsub", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - qsub ackall", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  const opts = consumerOpts();
+  opts.queue("q");
+  opts.durable("n");
+  opts.deliverTo("here");
+  opts.ackAll();
+  opts.callback((_err, _m) => {});
+
+  const sub = await js.subscribe(subj, opts);
+  const sub2 = await js.subscribe(subj, opts);
+
+  for (let i = 0; i < 100; i++) {
+    await js.publish(subj, Empty);
+  }
+  await nc.flush();
+  await sub.drain();
+  await sub2.drain();
+
+  assert(sub.getProcessed() > 0);
+  assert(sub2.getProcessed() > 0);
+  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100);
+
+  const jsm = await nc.jetstreamManager();
+  const ci = await jsm.consumers.info(stream, "n");
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.num_ack_pending, 0);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - idle heartbeats", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
 
