@@ -257,9 +257,9 @@ interval.
 #### JetStream Queue Consumers
 
 Queue Consumers allow scaling the processing of messages stored in a stream. To
-create create a Queue Consumer, you have to set its `deliver_group` property to
-the name of the queue group (or use the `ConsumerOptsBuilder#queue()`. Then
-reuse the consumer from the various subscriptions:
+create a Queue Consumer, you have to set its `deliver_group` property to the
+name of the queue group (or use the `ConsumerOptsBuilder#queue()`). Then reuse
+the consumer from the various subscriptions:
 
 ```typescript
 const opts = consumerOpts();
