@@ -82,6 +82,8 @@ export interface Timeout<T> extends Promise<T> {
 }
 
 export function timeout<T>(ms: number): Timeout<T> {
+  // by generating the stack here to help identify what timed out
+  const err = NatsError.errorForCode(ErrorCode.Timeout);
   let methods;
   let timer: number;
   const p = new Promise((_resolve, reject) => {
@@ -93,7 +95,7 @@ export function timeout<T>(ms: number): Timeout<T> {
     methods = { cancel };
     // @ts-ignore: node is not a number
     timer = setTimeout(() => {
-      reject(NatsError.errorForCode(ErrorCode.Timeout));
+      reject(err);
     }, ms);
   });
   // noinspection JSUnusedAssignment
