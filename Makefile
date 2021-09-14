@@ -1,4 +1,4 @@
-.PHONY: build test
+.PHONY: build test bundle
 
 build: test
 
@@ -13,3 +13,6 @@ cover:
 
 clean:
 	rm -rf ./coverage
+
+bundle:
+	deno bundle --log-level info --unstable src/mod.ts ./nats.js

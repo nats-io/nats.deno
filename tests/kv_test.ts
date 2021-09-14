@@ -29,15 +29,15 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
+import { Entry } from "../nats-base-client/types.ts";
+
 import {
   Base64KeyCodec,
   Bucket,
-  Entry,
   NoopKvCodecs,
   validateBucket,
   validateKey,
 } from "../nats-base-client/kv.ts";
-import { EncodedBucket } from "../nats-base-client/ekv.ts";
 import { notCompatible } from "./helpers/mod.ts";
 
 Deno.test("kv - key validation", () => {
@@ -480,18 +480,19 @@ Deno.test("kv - ttl", async () => {
 
   const sc = StringCodec();
   const b = await Bucket.create(nc, nuid.next(), { ttl: 1000 }) as Bucket;
-  const eb = new EncodedBucket<string>(b, sc);
 
   const jsm = await nc.jetstreamManager();
   const si = await jsm.streams.info(b.stream);
   assertEquals(si.config.max_age, nanos(1000));
 
   assertEquals(await b.get("x"), null);
-  await eb.put("x", "hello");
-  assertEquals((await eb.get("x"))?.value, "hello");
+  await b.put("x", sc.encode("hello"));
+  const e = await b.get("x");
+  assert(e);
+  assertEquals(sc.decode(e.value), "hello");
 
   await delay(1500);
-  assertEquals(await eb.get("x"), null);
+  assertEquals(await b.get("x"), null);
 
   await cleanup(ns, nc);
 });
@@ -505,13 +506,16 @@ Deno.test("kv - no ttl", async () => {
   }
   const sc = StringCodec();
   const b = await Bucket.create(nc, nuid.next()) as Bucket;
-  const eb = new EncodedBucket<string>(b, sc);
 
-  await eb.put("x", "hello");
-  assertEquals((await eb.get("x"))?.value, "hello");
+  await b.put("x", sc.encode("hello"));
+  let e = await b.get("x");
+  assert(e);
+  assertEquals(sc.decode(e.value), "hello");
 
   await delay(1500);
-  assertEquals((await eb.get("x"))?.value, "hello");
+  e = await b.get("x");
+  assert(e);
+  assertEquals(sc.decode(e.value), "hello");
 
   await cleanup(ns, nc);
 });

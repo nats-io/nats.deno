@@ -28,6 +28,7 @@ export type {
   ConsumerOpts,
   ConsumerOptsBuilder,
   DeliveryInfo,
+  Entry,
   JetStreamAccountStats,
   JetStreamApiStats,
   JetStreamClient,
@@ -39,6 +40,8 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsg,
   JsMsgCallback,
+  KvCodec,
+  KvCodecs,
   LastForMsgRequest,
   Lister,
   LostStreamData,
@@ -129,13 +132,3 @@ export {
   nanos,
 } from "./jsutil.ts";
 export { Bucket, defaultBucketOpts } from "./kv.ts";
-export type {
-  BucketOpts,
-  Entry,
-  KV,
-  KvStatus,
-  PutOptions,
-  RoKV,
-} from "./kv.ts";
-export { EncodedBucket } from "./ekv.ts";
-export type { EncodedEntry, EncodedKV, EncodedRoKV } from "./ekv.ts";

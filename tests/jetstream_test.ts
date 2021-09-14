@@ -2094,6 +2094,7 @@ Deno.test("jetstream - pull sub - multiple consumers", async () => {
   })().then();
 
   const done = deferred<void>();
+  // deno-lint-ignore no-unused-vars
   const interval = setInterval(() => {
     if (countA + countB < 100) {
       subA.pull({ expires: 500, batch: 25 });

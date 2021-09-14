@@ -15,61 +15,46 @@
 
 import {
   AckPolicy,
+  BucketOpts,
   ConsumerConfig,
   ConsumerInfo,
   DeliverPolicy,
   DiscardPolicy,
   Empty,
+  Entry,
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
   JsMsg,
-  Nanos,
+  KV,
+  KvCodec,
+  KvCodecs,
+  KvStatus,
   NatsConnection,
   PurgeOpts,
   PurgeResponse,
+  PutOptions,
+  RemoveKV,
   RetentionPolicy,
   StorageType,
   StoredMsg,
   StreamConfig,
 } from "./types.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
+import { JetStreamManagerImpl } from "./jsm.ts";
 import {
-  createInbox,
-  headers,
+  checkJsError,
   isFlowControlMsg,
   isHeartbeatMsg,
   millis,
   nanos,
-  toJsMsg,
-} from "./mod.ts";
-import { JetStreamManagerImpl } from "./jsm.ts";
-import { checkJsError } from "./jsutil.ts";
+} from "./jsutil.ts";
 import { isNatsError } from "./error.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
-import { parseInfo } from "./jsmsg.ts";
-
-export interface Entry {
-  bucket: string;
-  key: string;
-  value: Uint8Array;
-  created: Date;
-  seq: number;
-  delta?: number;
-  "origin_cluster"?: string;
-  operation: "PUT" | "DEL";
-}
-
-export interface KvCodec<T> {
-  encode(k: T): T;
-  decode(k: T): T;
-}
-
-export interface KvCodecs {
-  key: KvCodec<string>;
-  value: KvCodec<Uint8Array>;
-}
+import { parseInfo, toJsMsg } from "./jsmsg.ts";
+import { headers } from "./headers.ts";
+import { createInbox } from "./protocol.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -103,28 +88,6 @@ export function NoopKvCodecs(): KvCodecs {
   };
 }
 
-export interface KvStatus {
-  bucket: string;
-  values: number;
-  history: number;
-  ttl: Nanos;
-  cluster?: string;
-  backingStore: StorageType;
-}
-
-export interface BucketOpts {
-  replicas: number;
-  history: number;
-  timeout: number;
-  maxBucketSize: number;
-  maxValueSize: number;
-  placementCluster: string;
-  mirrorBucket: string;
-  ttl: number; // millis
-  streamName: string;
-  codec: KvCodecs;
-}
-
 export function defaultBucketOpts(): Partial<BucketOpts> {
   return {
     replicas: 1,
@@ -136,10 +99,6 @@ export function defaultBucketOpts(): Partial<BucketOpts> {
   };
 }
 
-export interface PutOptions {
-  previousSeq: number;
-}
-
 export const kvOriginClusterHdr = "KV-Origin-Cluster";
 export const kvOperationHdr = "KV-Operation";
 const kvPrefix = "KV_";
@@ -148,26 +107,6 @@ const kvSubjectPrefix = "$KV";
 const validKeyRe = /^[-/=.\w]+$/;
 const validSearchKey = /^[-/=.>*\w]+$/;
 const validBucketRe = /^[-\w]+$/;
-
-export interface RemoveKV {
-  remove(k: string): Promise<void>;
-}
-
-export interface RoKV {
-  get(k: string): Promise<Entry | null>;
-  history(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
-  watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
-  close(): Promise<void>;
-  status(): Promise<KvStatus>;
-  keys(k?: string): Promise<string[]>;
-}
-
-export interface KV extends RoKV {
-  put(k: string, data: Uint8Array, opts?: Partial<PutOptions>): Promise<number>;
-  delete(k: string): Promise<void>;
-  purge(opts?: PurgeOpts): Promise<PurgeResponse>;
-  destroy(): Promise<boolean>;
-}
 
 // this exported for tests
 export function validateKey(k: string) {
