@@ -15,13 +15,11 @@
 
 import {
   AckPolicy,
-  BucketOpts,
   ConsumerConfig,
   ConsumerInfo,
   DeliverPolicy,
   DiscardPolicy,
   Empty,
-  Entry,
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
@@ -29,12 +27,14 @@ import {
   KV,
   KvCodec,
   KvCodecs,
+  KvEntry,
+  KvOptions,
+  KvPutOptions,
+  KvRemove,
   KvStatus,
   NatsConnection,
   PurgeOpts,
   PurgeResponse,
-  PutOptions,
-  RemoveKV,
   RetentionPolicy,
   StorageType,
   StoredMsg,
@@ -88,7 +88,7 @@ export function NoopKvCodecs(): KvCodecs {
   };
 }
 
-export function defaultBucketOpts(): Partial<BucketOpts> {
+export function defaultBucketOpts(): Partial<KvOptions> {
   return {
     replicas: 1,
     history: 1,
@@ -153,7 +153,7 @@ export function validateBucket(name: string) {
   }
 }
 
-export class Bucket implements KV, RemoveKV {
+export class Bucket implements KV, KvRemove {
   jsm: JetStreamManager;
   js: JetStreamClient;
   stream!: string;
@@ -172,7 +172,7 @@ export class Bucket implements KV, RemoveKV {
   static async create(
     nc: NatsConnection,
     name: string,
-    opts: Partial<BucketOpts> = {},
+    opts: Partial<KvOptions> = {},
   ): Promise<KV> {
     validateBucket(name);
     const to = opts.timeout || 2000;
@@ -182,8 +182,8 @@ export class Bucket implements KV, RemoveKV {
     return bucket;
   }
 
-  async init(opts: Partial<BucketOpts> = {}): Promise<void> {
-    const bo = Object.assign(defaultBucketOpts(), opts) as BucketOpts;
+  async init(opts: Partial<KvOptions> = {}): Promise<void> {
+    const bo = Object.assign(defaultBucketOpts(), opts) as KvOptions;
     this.codec = bo.codec;
     const sc = {} as StreamConfig;
     this.stream = sc.name = opts.streamName ?? this.bucketName();
@@ -269,7 +269,7 @@ export class Bucket implements KV, RemoveKV {
     return Promise.resolve();
   }
 
-  smToEntry(key: string, sm: StoredMsg): Entry {
+  smToEntry(key: string, sm: StoredMsg): KvEntry {
     return {
       bucket: this.bucket,
       key: key,
@@ -282,7 +282,7 @@ export class Bucket implements KV, RemoveKV {
     };
   }
 
-  jmToEntry(k: string, jm: JsMsg): Entry {
+  jmToEntry(k: string, jm: JsMsg): KvEntry {
     const key = this.decodeKey(jm.subject.substring(this.prefixLen));
     const e = {
       bucket: this.bucket,
@@ -292,7 +292,7 @@ export class Bucket implements KV, RemoveKV {
       seq: jm.seq,
       origin_cluster: jm.headers?.get(kvOriginClusterHdr),
       operation: jm.headers?.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
-    } as Entry;
+    } as KvEntry;
 
     if (k !== ">") {
       e.delta = jm.info.pending;
@@ -303,7 +303,7 @@ export class Bucket implements KV, RemoveKV {
   async put(
     k: string,
     data: Uint8Array,
-    opts: Partial<PutOptions> = {},
+    opts: Partial<KvPutOptions> = {},
   ): Promise<number> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
@@ -321,7 +321,7 @@ export class Bucket implements KV, RemoveKV {
     return pa.seq;
   }
 
-  async get(k: string): Promise<Entry | null> {
+  async get(k: string): Promise<KvEntry | null> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
     try {
@@ -387,6 +387,7 @@ export class Bucket implements KV, RemoveKV {
       "ack_policy": AckPolicy.Explicit,
       "filter_subject": this.subjectForKey(ek),
       "flow_control": true,
+      "idle_heartbeat": nanos(60 * 1000),
     };
     return this.jsm.consumers.add(this.stream, opts);
   }
@@ -428,11 +429,11 @@ export class Bucket implements KV, RemoveKV {
     }
   }
 
-  async history(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
+  async history(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const ci = await this.consumerOn(k, true);
     const max = ci.num_pending;
-    const qi = new QueuedIteratorImpl<Entry>();
+    const qi = new QueuedIteratorImpl<KvEntry>();
     if (max === 0) {
       qi.stop();
       return qi;
@@ -477,10 +478,10 @@ export class Bucket implements KV, RemoveKV {
     return qi;
   }
 
-  async watch(opts: { key?: string } = {}): Promise<QueuedIterator<Entry>> {
+  async watch(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const ci = await this.consumerOn(k, false);
-    const qi = new QueuedIteratorImpl<Entry>();
+    const qi = new QueuedIteratorImpl<KvEntry>();
 
     const ji = this.jsm as JetStreamManagerImpl;
     const nc = ji.nc;

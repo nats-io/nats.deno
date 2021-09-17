@@ -763,7 +763,7 @@ export enum JsHeaders {
   LastStreamSeqHdr = "Nats-Last-Stream",
 }
 
-export interface Entry {
+export interface KvEntry {
   bucket: string;
   key: string;
   value: Uint8Array;
@@ -793,7 +793,7 @@ export interface KvStatus {
   backingStore: StorageType;
 }
 
-export interface BucketOpts {
+export interface KvOptions {
   replicas: number;
   history: number;
   timeout: number;
@@ -806,26 +806,30 @@ export interface BucketOpts {
   codec: KvCodecs;
 }
 
-export interface RemoveKV {
+export interface KvRemove {
   remove(k: string): Promise<void>;
 }
 
 export interface RoKV {
-  get(k: string): Promise<Entry | null>;
-  history(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
-  watch(opts?: { key?: string }): Promise<QueuedIterator<Entry>>;
+  get(k: string): Promise<KvEntry | null>;
+  history(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+  watch(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
   keys(k?: string): Promise<string[]>;
 }
 
 export interface KV extends RoKV {
-  put(k: string, data: Uint8Array, opts?: Partial<PutOptions>): Promise<number>;
+  put(
+    k: string,
+    data: Uint8Array,
+    opts?: Partial<KvPutOptions>,
+  ): Promise<number>;
   delete(k: string): Promise<void>;
   purge(opts?: PurgeOpts): Promise<PurgeResponse>;
   destroy(): Promise<boolean>;
 }
 
-export interface PutOptions {
+export interface KvPutOptions {
   previousSeq: number;
 }

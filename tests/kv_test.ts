@@ -29,7 +29,7 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
-import { Entry } from "../nats-base-client/types.ts";
+import { KvEntry } from "../nats-base-client/types.ts";
 
 import {
   Base64KeyCodec,
@@ -534,7 +534,7 @@ Deno.test("kv - complex key", async () => {
   const e = await b.get("x.y.z");
   assertEquals(e?.value, sc.encode("hello"));
 
-  const d = deferred<Entry>();
+  const d = deferred<KvEntry>();
   let iter = await b.watch({ key: "x.y.>" });
   await (async () => {
     for await (const r of iter) {
@@ -546,7 +546,7 @@ Deno.test("kv - complex key", async () => {
   const vv = await d;
   assertEquals(vv.value, sc.encode("hello"));
 
-  const dd = deferred<Entry>();
+  const dd = deferred<KvEntry>();
   iter = await b.history({ key: "x.y.>" });
   await (async () => {
     for await (const r of iter) {
