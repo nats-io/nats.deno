@@ -14,8 +14,8 @@
  */
 import { nkeys } from "./nkeys.ts";
 import type { ConnectionOptions } from "./types.ts";
-import { ErrorCode, NatsError } from "./mod.ts";
 import { TD, TE } from "./encoders.ts";
+import { ErrorCode, NatsError } from "./error.ts";
 
 export type NoAuth = void;
 

@@ -762,3 +762,74 @@ export enum JsHeaders {
   // set for heartbeat messages
   LastStreamSeqHdr = "Nats-Last-Stream",
 }
+
+export interface KvEntry {
+  bucket: string;
+  key: string;
+  value: Uint8Array;
+  created: Date;
+  seq: number;
+  delta?: number;
+  "origin_cluster"?: string;
+  operation: "PUT" | "DEL";
+}
+
+export interface KvCodec<T> {
+  encode(k: T): T;
+  decode(k: T): T;
+}
+
+export interface KvCodecs {
+  key: KvCodec<string>;
+  value: KvCodec<Uint8Array>;
+}
+
+export interface KvStatus {
+  bucket: string;
+  values: number;
+  history: number;
+  ttl: Nanos;
+  cluster?: string;
+  backingStore: StorageType;
+}
+
+export interface KvOptions {
+  replicas: number;
+  history: number;
+  timeout: number;
+  maxBucketSize: number;
+  maxValueSize: number;
+  placementCluster: string;
+  mirrorBucket: string;
+  ttl: number; // millis
+  streamName: string;
+  codec: KvCodecs;
+}
+
+export interface KvRemove {
+  remove(k: string): Promise<void>;
+}
+
+export interface RoKV {
+  get(k: string): Promise<KvEntry | null>;
+  history(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+  watch(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+  close(): Promise<void>;
+  status(): Promise<KvStatus>;
+  keys(k?: string): Promise<string[]>;
+}
+
+export interface KV extends RoKV {
+  put(
+    k: string,
+    data: Uint8Array,
+    opts?: Partial<KvPutOptions>,
+  ): Promise<number>;
+  delete(k: string): Promise<void>;
+  purge(opts?: PurgeOpts): Promise<PurgeResponse>;
+  destroy(): Promise<boolean>;
+}
+
+export interface KvPutOptions {
+  previousSeq: number;
+}

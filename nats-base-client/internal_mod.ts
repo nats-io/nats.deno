@@ -1,22 +1,6 @@
 export { NatsConnectionImpl } from "./nats.ts";
 export { Nuid, nuid } from "./nuid.ts";
 export { ErrorCode, isNatsError, NatsError } from "./error.ts";
-export type {
-  Msg,
-  NatsConnection,
-  PubAck,
-  PublishOptions,
-  RequestOptions,
-  Server,
-  ServerInfo,
-  ServersChanged,
-  Stats,
-  Status,
-  Sub,
-  SubOpts,
-  Subscription,
-  SubscriptionOptions,
-} from "./types.ts";
 
 export type {
   AccountLimits,
@@ -39,17 +23,37 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsg,
   JsMsgCallback,
+  KV,
+  KvCodec,
+  KvCodecs,
+  KvEntry,
+  KvOptions,
+  KvPutOptions,
+  KvRemove,
+  KvStatus,
   LastForMsgRequest,
   Lister,
   LostStreamData,
+  Msg,
   MsgDeleteRequest,
   MsgRequest,
   Nanos,
+  NatsConnection,
   PeerInfo,
   Placement,
+  PubAck,
+  PublishOptions,
   PullOptions,
+  PurgeOpts,
+  PurgeResponse,
+  RequestOptions,
   SeqMsgRequest,
   SequenceInfo,
+  Server,
+  ServerInfo,
+  ServersChanged,
+  Stats,
+  Status,
   StoredMsg,
   StreamConfig,
   StreamInfo,
@@ -57,6 +61,10 @@ export type {
   StreamSource,
   StreamSourceInfo,
   StreamState,
+  Sub,
+  SubOpts,
+  Subscription,
+  SubscriptionOptions,
 } from "./types.ts";
 
 export {
@@ -111,7 +119,8 @@ export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
 export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
-export type { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
+export { QueuedIteratorImpl } from "./queued_iterator.ts";
+export type { QueuedIterator } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
@@ -128,14 +137,9 @@ export {
   millis,
   nanos,
 } from "./jsutil.ts";
-export { Bucket, defaultBucketOpts } from "./kv.ts";
-export type {
-  BucketOpts,
-  Entry,
-  KV,
-  KvStatus,
-  PutOptions,
-  RoKV,
+export {
+  Base64KeyCodec,
+  Bucket,
+  defaultBucketOpts,
+  NoopKvCodecs,
 } from "./kv.ts";
-export { EncodedBucket } from "./ekv.ts";
-export type { EncodedEntry, EncodedKV, EncodedRoKV } from "./ekv.ts";
