@@ -23,6 +23,7 @@ export class Request {
   received: number;
   deferred: Deferred<Msg>;
   timer: Timeout<Msg>;
+  ctx: Error;
   private mux: MuxSubscription;
 
   constructor(
@@ -35,6 +36,7 @@ export class Request {
     this.token = nuid.next();
     extend(this, opts);
     this.timer = timeout<Msg>(opts.timeout);
+    this.ctx = new Error();
   }
 
   resolver(err: Error | null, msg: Msg): void {
@@ -42,6 +44,7 @@ export class Request {
       this.timer.cancel();
     }
     if (err) {
+      err.stack += `\n\n${this.ctx.stack}`;
       this.deferred.reject(err);
     } else {
       this.deferred.resolve(msg);
