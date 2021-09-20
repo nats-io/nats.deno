@@ -61,11 +61,11 @@ jobs:
       - name: Generate lcov
         run: deno coverage --unstable --lcov ./cov > cov.lcov
 
-      - name: Upload coverage
-        uses: coverallsapp/github-action@v1.1.2
-        with:
-          github-token: ${{ secrets.github_token }}
-          path-to-lcov: ./cov.lcov
+#      - name: Upload coverage
+#        uses: coverallsapp/github-action@v1.1.2
+#        with:
+#          github-token: ${{ secrets.github_token }}
+#          path-to-lcov: ./cov.lcov
 
       - name: Release
         uses: softprops/action-gh-release@v1
