@@ -154,6 +154,7 @@ export class NatsConnectionImpl implements NatsConnection {
         ? opts.reply
         : createInbox(this.options.inboxPrefix);
       const d = deferred<Msg>();
+      const errCtx = new Error();
       this.subscribe(
         inbox,
         {
@@ -161,10 +162,16 @@ export class NatsConnectionImpl implements NatsConnection {
           timeout: opts.timeout,
           callback: (err, msg) => {
             if (err) {
+              // timeouts from `timeout()` will have the proper stack
+              if (err.code !== ErrorCode.Timeout) {
+                err.stack += `\n\n${errCtx.stack}`;
+              }
               d.reject(err);
             } else {
               err = isRequestError(msg);
               if (err) {
+                // if we failed here, help the developer by showing what failed
+                err.stack += `\n\n${errCtx.stack}`;
                 d.reject(err);
               } else {
                 d.resolve(msg);

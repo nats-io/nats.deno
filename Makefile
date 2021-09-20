@@ -16,3 +16,6 @@ clean:
 
 bundle:
 	deno bundle --log-level info --unstable src/mod.ts ./nats.js
+
+fmt:
+	deno fmt src/ doc/ bin/ nats-base-client/ examples/ tests/
