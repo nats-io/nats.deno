@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.5.0" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.6.1" >> $GITHUB_ENV
 
       - name: Get nats-server
         run: |
@@ -61,11 +61,11 @@ jobs:
       - name: Generate lcov
         run: deno coverage --unstable --lcov ./cov > cov.lcov
 
-#      - name: Upload coverage
-#        uses: coverallsapp/github-action@v1.1.2
-#        with:
-#          github-token: ${{ secrets.github_token }}
-#          path-to-lcov: ./cov.lcov
+      - name: Upload coverage
+        uses: coverallsapp/github-action@v1.1.2
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: ./cov.lcov
 
       - name: Release
         uses: softprops/action-gh-release@v1

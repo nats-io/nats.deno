@@ -60,6 +60,7 @@ export function parseInfo(s: string): DeliveryInfo {
   di.stream = tokens[4];
   di.consumer = tokens[5];
   di.redeliveryCount = parseInt(tokens[6], 10);
+  di.redelivered = di.redeliveryCount > 1;
   di.streamSequence = parseInt(tokens[7], 10);
   di.deliverySequence = parseInt(tokens[8], 10);
   di.timestampNanos = parseInt(tokens[9], 10);
