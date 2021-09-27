@@ -113,7 +113,7 @@ export class DenoTransport implements Transport {
         inbound.fill(frame);
         const raw = inbound.peek();
         pm = extractProtocolMessage(raw);
-        if (pm) {
+        if (pm !== "") {
           break;
         }
       }

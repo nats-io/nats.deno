@@ -87,6 +87,6 @@ Deno.test("protocol - cancel unknown sub", () => {
 });
 
 Deno.test("protocol - protolen -1 on empty", () => {
-  assertEquals(protoLen(Empty), -1);
+  assertEquals(protoLen(Empty), 0);
   assertEquals(extractProtocolMessage(Empty), "");
 });
