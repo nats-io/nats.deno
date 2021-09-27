@@ -43,6 +43,7 @@ import {
   nuid,
   QueuedIterator,
   RetentionPolicy,
+  StorageType,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
@@ -2116,6 +2117,105 @@ Deno.test("jetstream - pull sub - multiple consumers", async () => {
   for (let i = 1; i <= 100; i++) {
     assertEquals(m.get(i), 1);
   }
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - source", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add(
+    { name: stream, subjects: [subj] },
+  );
+
+  const js = nc.jetstream();
+
+  for (let i = 0; i < 10; i++) {
+    await js.publish(`${stream}.A`);
+    await js.publish(`${stream}.B`);
+  }
+
+  await jsm.streams.add({
+    name: "work",
+    storage: StorageType.File,
+    retention: RetentionPolicy.Workqueue,
+    sources: [
+      { name: stream, filter_subject: ">" },
+    ],
+  });
+
+  const ci = await jsm.consumers.add("work", {
+    ack_policy: AckPolicy.Explicit,
+    durable_name: "worker",
+    filter_subject: `${stream}.B`,
+    deliver_subject: createInbox(),
+  });
+
+  const sub = await js.subscribe(`${stream}.B`, { config: ci.config });
+  for await (const m of sub) {
+    console.log(m.seq, m.subject);
+    m.ack();
+    if (m.info.pending === 0) {
+      break;
+    }
+  }
+
+  const si = await jsm.streams.info("work");
+  // stream still has all the 'A' messages
+  assertEquals(si.state.messages, 10);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - redelivery property works", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.3.5")) {
+    return;
+  }
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  let r = 0;
+
+  const opts = consumerOpts();
+  opts.ackAll();
+  opts.queue("q");
+  opts.durable("n");
+  opts.deliverTo(createInbox());
+  opts.callback((_err, m) => {
+    if (m) {
+      if (m.info.redelivered) {
+        r++;
+      }
+      if (m.seq === 100) {
+        m.ack();
+      }
+      if (m.seq % 3 === 0) {
+        m.nak();
+      }
+    }
+  });
+
+  const sub = await js.subscribe(subj, opts);
+  const sub2 = await js.subscribe(subj, opts);
+
+  for (let i = 0; i < 100; i++) {
+    await js.publish(subj, Empty);
+  }
+  await nc.flush();
+  await sub.drain();
+  await sub2.drain();
+
+  assert(sub.getProcessed() > 0);
+  assert(sub2.getProcessed() > 0);
+  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100 + r);
+
+  const jsm = await nc.jetstreamManager();
+  const ci = await jsm.consumers.info(stream, "n");
+  assertEquals(ci.delivered.consumer_seq, 100 + r);
 
   await cleanup(ns, nc);
 });
