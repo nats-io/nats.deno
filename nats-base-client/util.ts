@@ -34,13 +34,13 @@ export function protoLen(ba: Uint8Array): number {
       return n + 1;
     }
   }
-  return -1;
+  return 0;
 }
 
 export function extractProtocolMessage(a: Uint8Array): string {
   // protocol messages are ascii, so Uint8Array
   const len = protoLen(a);
-  if (len) {
+  if (len > 0) {
     const ba = new Uint8Array(a);
     const out = ba.slice(0, len);
     return TD.decode(out);
