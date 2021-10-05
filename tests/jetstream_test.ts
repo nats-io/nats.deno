@@ -2156,7 +2156,6 @@ Deno.test("jetstream - source", async () => {
 
   const sub = await js.subscribe(`${stream}.B`, { config: ci.config });
   for await (const m of sub) {
-    console.log(m.seq, m.subject);
     m.ack();
     if (m.info.pending === 0) {
       break;

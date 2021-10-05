@@ -15,6 +15,7 @@
 import {
   ConnectionOptions,
   DEFAULT_PORT,
+  DnsResolveFn,
   Server,
   URLParseFn,
 } from "./types.ts";
@@ -44,10 +45,17 @@ export function newTransport(): Transport {
   return transportConfig.factory();
 }
 
+export function getResolveFn(): DnsResolveFn | undefined {
+  return transportConfig !== undefined && transportConfig.dnsResolveFn
+    ? transportConfig.dnsResolveFn
+    : undefined;
+}
+
 export interface TransportFactory {
   factory?: () => Transport;
   defaultPort?: number;
   urlParseFn?: URLParseFn;
+  dnsResolveFn?: DnsResolveFn;
 }
 
 export interface Transport extends AsyncIterable<Uint8Array> {

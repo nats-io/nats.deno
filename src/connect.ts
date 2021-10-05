@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { DenoTransport } from "./deno_transport.ts";
+import { denoResolveHost, DenoTransport } from "./deno_transport.ts";
 import {
   ConnectionOptions,
   NatsConnection,
@@ -27,6 +27,7 @@ export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     factory: (): Transport => {
       return new DenoTransport();
     },
+    dnsResolveFn: denoResolveHost,
   } as TransportFactory);
 
   return NatsConnectionImpl.connect(opts);

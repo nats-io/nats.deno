@@ -105,6 +105,7 @@ export interface ConnectionOptions {
   waitOnFirstConnect?: boolean;
   ignoreClusterUpdates?: boolean;
   inboxPrefix?: string;
+  resolve?: boolean;
 }
 
 // these may not be supported on all environments
@@ -175,6 +176,10 @@ export interface Server {
   listen: string;
   src: string;
   tlsName: string;
+
+  resolve(
+    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
+  ): Promise<Server[]>;
 }
 
 export interface ServersChanged {
@@ -220,6 +225,10 @@ export interface Stats {
 
 export interface URLParseFn {
   (u: string): string;
+}
+
+export interface DnsResolveFn {
+  (h: string): Promise<string[]>;
 }
 
 // JetStream

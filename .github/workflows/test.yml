@@ -13,7 +13,7 @@ jobs:
   test:
     name: ${{ matrix.config.kind }} ${{ matrix.config.os }}
     runs-on: ubuntu-latest
-
+    environment: CI
     strategy:
       matrix:
         deno-version: [1.8.3, 1.9.2]
@@ -53,6 +53,7 @@ jobs:
         env:
           TMPDIR: ${{ runner.temp }}
           CI: true
+          NGS_CI_USER: ${{ secrets.NGS_CI_USER }}
         run: deno test --allow-all --unstable --failfast --coverage=./cov
 
       - name: Build nats.js

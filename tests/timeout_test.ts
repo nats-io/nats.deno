@@ -40,7 +40,6 @@ Deno.test("timeout - request stack is useful", async () => {
     fail("request should have failed!");
   } catch (err) {
     assertStringIncludes(err.stack, "timeout_test");
-    console.log(err.stack);
   }
   await nc.close();
 });

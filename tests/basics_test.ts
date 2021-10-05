@@ -25,6 +25,7 @@ import {
   Empty,
   ErrorCode,
   JSONCodec,
+  jwtAuthenticator,
   Msg,
   NatsError,
   StringCodec,
@@ -806,4 +807,25 @@ Deno.test("basics - subscription cb with timeout cancels on message", async () =
   await done;
   assertEquals(sub.timer, undefined);
   await nc.close();
+});
+
+Deno.test("basics - resolve", async () => {
+  const token = Deno.env.get("NGS_CI_USER");
+  if (token === undefined) {
+    console.log(
+      `skipping: NGS_CI_USER is not available in the environment`,
+    );
+    return;
+  }
+
+  const nci = await connect({
+    servers: "connect.ngs.global",
+    authenticator: jwtAuthenticator(token),
+    resolve: true,
+  }) as NatsConnectionImpl;
+
+  await nci.flush();
+  const srv = nci.protocol.servers.getCurrentServer();
+  assert(srv.resolves && srv.resolves.length > 1);
+  await nci.close();
 });
