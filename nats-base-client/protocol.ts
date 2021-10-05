@@ -309,7 +309,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const alts = await srv.resolve({
       fn: getResolveFn(),
       randomize: !this.options.noRandomize,
-      resolve: this.options.resolve,
+      resolve: !this.options.noResolve,
     });
 
     let lastErr: Error | null = null;

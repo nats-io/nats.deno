@@ -105,7 +105,7 @@ export interface ConnectionOptions {
   waitOnFirstConnect?: boolean;
   ignoreClusterUpdates?: boolean;
   inboxPrefix?: string;
-  resolve?: boolean;
+  noResolve?: boolean;
 }
 
 // these may not be supported on all environments

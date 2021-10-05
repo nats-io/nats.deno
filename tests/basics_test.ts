@@ -821,7 +821,6 @@ Deno.test("basics - resolve", async () => {
   const nci = await connect({
     servers: "connect.ngs.global",
     authenticator: jwtAuthenticator(token),
-    resolve: true,
   }) as NatsConnectionImpl;
 
   await nci.flush();

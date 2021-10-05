@@ -278,6 +278,5 @@ export async function denoResolveHost(s: string): Promise<string[]> {
   if (ips.length === 0 && w[1].status === "rejected") {
     throw w[1].reason;
   }
-
   return ips;
 }
