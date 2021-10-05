@@ -82,12 +82,14 @@ export class ServerImpl implements Server {
     opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
   ): Promise<Server[]> {
     if (!opts.fn || !opts.resolve) {
+      // don't add - to resolves or we get a circ reference
       return [this];
     }
 
     const buf: Server[] = [];
     if (isIP(this.hostname)) {
-      buf.push(this);
+      // don't add - to resolves or we get a circ reference
+      return [this];
     } else {
       const ips = await opts.fn(this.hostname);
       for (const ip of ips) {
