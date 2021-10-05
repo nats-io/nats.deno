@@ -81,7 +81,8 @@ export class ServerImpl implements Server {
   async resolve(
     opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
   ): Promise<Server[]> {
-    if (!opts.fn || !opts.resolve) {
+    if (!opts.fn) {
+      // we cannot resolve - transport doesn't support it
       // don't add - to resolves or we get a circ reference
       return [this];
     }

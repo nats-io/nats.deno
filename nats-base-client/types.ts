@@ -105,7 +105,6 @@ export interface ConnectionOptions {
   waitOnFirstConnect?: boolean;
   ignoreClusterUpdates?: boolean;
   inboxPrefix?: string;
-  noResolve?: boolean;
 }
 
 // these may not be supported on all environments
@@ -178,7 +177,7 @@ export interface Server {
   tlsName: string;
 
   resolve(
-    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
+    opts: Partial<{ fn: DnsResolveFn; randomize: boolean }>,
   ): Promise<Server[]>;
 }
 
