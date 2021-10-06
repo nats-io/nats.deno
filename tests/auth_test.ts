@@ -95,7 +95,7 @@ Deno.test("auth - sub permissions", async () => {
 
   let notifications = 0;
   (async () => {
-    for await (const s of status) {
+    for await (const _s of status) {
       notifications++;
     }
   })().then();
@@ -104,7 +104,7 @@ Deno.test("auth - sub permissions", async () => {
 
   const sub = nc.subscribe("foo");
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // ignoring
     }
   })().catch((err) => {
@@ -142,7 +142,7 @@ Deno.test("auth - pub perm", async () => {
 
   const sub = nc.subscribe("bar");
   const iter = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       fail("should not have been called");
     }
   })();

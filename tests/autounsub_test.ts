@@ -70,7 +70,7 @@ Deno.test("autounsub - can break to unsub", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 20 });
   const iter = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       break;
     }
   })();

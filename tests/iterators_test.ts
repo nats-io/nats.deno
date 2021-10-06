@@ -26,7 +26,7 @@ Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       if (sub.getReceived() > 1) {
         sub.unsubscribe();
       }
@@ -45,7 +45,7 @@ Deno.test("iterators - autounsub breaks and closes", async () => {
   const sub = nc.subscribe(subj, { max: 2 });
   const lock = Lock(2);
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       lock.unlock();
     }
   })();
@@ -79,7 +79,7 @@ Deno.test("iterators - permission error breaks and closes", async () => {
 
   const lock = Lock();
   await (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // ignored
     }
   })().catch(() => {
@@ -102,7 +102,7 @@ Deno.test("iterators - unsubscribing closes", async () => {
   const sub = nc.subscribe(subj);
   const lock = Lock();
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       lock.unlock();
     }
   })();
@@ -121,7 +121,7 @@ Deno.test("iterators - connection close closes", async () => {
   const sub = nc.subscribe(subj);
   const lock = Lock();
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       lock.unlock();
     }
   })();
@@ -147,7 +147,7 @@ Deno.test("iterators - cb subs fail iterator", async () => {
   });
 
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       lock.unlock();
     }
   })().catch((err) => {
@@ -211,7 +211,7 @@ Deno.test("iterators - break cleans up", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       break;
     }
   })();

@@ -127,7 +127,7 @@ Deno.test("extensions - dispatched called on iterator", async () => {
     }
   });
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // nothing
     }
   })();

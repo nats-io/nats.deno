@@ -109,7 +109,7 @@ Deno.test("basics - pubsub", async () => {
   const nc = await connect({ servers: u });
   const sub = nc.subscribe(subj);
   const iter = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       break;
     }
   })();
@@ -160,7 +160,7 @@ Deno.test("basics - subscriptions iterate", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       lock.unlock();
     }
   })().then();
@@ -475,7 +475,7 @@ Deno.test("basics - subscription with timeout", async () => {
   const nc = await connect({ servers: u });
   const sub = nc.subscribe(createInbox(), { max: 1, timeout: 250 });
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // ignored
     }
   })().catch((err) => {
@@ -491,7 +491,7 @@ Deno.test("basics - subscription expecting 2 doesn't fire timeout", async () => 
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 2, timeout: 500 });
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // ignored
     }
   })().catch((err) => {
@@ -512,7 +512,7 @@ Deno.test("basics - subscription timeout auto cancels", async () => {
   let c = 0;
   const sub = nc.subscribe(subj, { max: 2, timeout: 300 });
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       c++;
     }
   })().catch((err) => {
@@ -698,7 +698,7 @@ Deno.test("basics - subs pending count", async () => {
   const sub = nc.subscribe(subj, { max: 10 });
   const done = (async () => {
     let count = 0;
-    for await (const m of sub) {
+    for await (const _m of sub) {
       count++;
       assertEquals(count, sub.getProcessed());
       assertEquals(sub.getProcessed() + sub.getPending(), 11);
@@ -782,7 +782,7 @@ Deno.test("basics - subscription with timeout cancels on message", async () => {
   const sub = nc.subscribe(subj, { max: 1, timeout: 500 }) as SubscriptionImpl;
   assert(sub.timer !== undefined);
   const done = (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       assertEquals(sub.timer, undefined);
     }
   })();

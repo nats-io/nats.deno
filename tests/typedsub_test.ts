@@ -135,7 +135,7 @@ Deno.test("typedsub - dispatched", async () => {
 
   const sub = new TypedSubscription<Msg>(nc, subj, tso);
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // nothing
     }
   })().catch();
@@ -219,7 +219,7 @@ Deno.test("typedsub - unsubscribe", async () => {
 
   const sa = new TypedSubscription<string>(nc, subj, tso);
   const done = (async () => {
-    for await (const s of sa) {
+    for await (const _s of sa) {
       // nothing
     }
   })();
@@ -247,7 +247,7 @@ Deno.test("typedsub - drain", async () => {
 
   const sa = new TypedSubscription<string>(nc, subj, tso);
   (async () => {
-    for await (const s of sa) {
+    for await (const _s of sa) {
       // nothing
     }
   })().then();
@@ -277,7 +277,7 @@ Deno.test("typedsub - timeout", async () => {
   assert(sa.sub.timer !== undefined);
   await assertThrowsAsync(
     async () => {
-      for await (const s of sa) {
+      for await (const _s of sa) {
         // nothing
       }
     },
@@ -338,7 +338,7 @@ Deno.test("typedsub - timeout cleared on message", async () => {
   const sa = new TypedSubscription<string>(nc, subj, tso);
   assert(sa.sub.timer !== undefined);
   const done = (async () => {
-    for await (const s of sa) {
+    for await (const _s of sa) {
       // nothing
     }
   })();

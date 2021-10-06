@@ -512,7 +512,7 @@ Deno.test("jetstream - fetch expires waits", async () => {
   const start = Date.now();
   const iter = js.fetch(stream, "me", { expires: 1000 });
   await (async () => {
-    for await (const m of iter) {
+    for await (const _m of iter) {
       // nothing
     }
   })();
@@ -535,7 +535,7 @@ Deno.test("jetstream - fetch expires waits after initial", async () => {
   const start = Date.now();
   const iter = js.fetch(stream, "me", { expires: 1000, batch: 5 });
   await (async () => {
-    for await (const m of iter) {
+    for await (const _m of iter) {
       // nothing
     }
   })();
