@@ -21,11 +21,12 @@ import {
   Empty,
   Events,
   PublishOptions,
+  Server,
   ServerInfo,
   Status,
   Subscription,
 } from "./types.ts";
-import { newTransport, Transport } from "./transport.ts";
+import { getResolveFn, newTransport, Transport } from "./transport.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import {
   CR_LF,
@@ -166,11 +167,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.pongs = [];
     //@ts-ignore: options.pendingLimit is hidden
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
-    this.servers = new Servers(
-      !options.noRandomize,
-      //@ts-ignore: servers should be a list
-      options.servers,
-    );
+
+    const servers = typeof options.servers === "string"
+      ? [options.servers]
+      : options.servers;
+
+    this.servers = new Servers(servers, {
+      randomize: !options.noRandomize,
+    });
     this.closed = deferred<Error | void>();
     this.parser = new Parser(this);
 
@@ -259,7 +263,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  async dial(srv: ServerImpl): Promise<void> {
+  async dial(srv: Server): Promise<void> {
     const pong = this.prepare();
     let timer;
     try {
@@ -301,6 +305,31 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
+  async _doDial(srv: Server): Promise<void> {
+    const alts = await srv.resolve({
+      fn: getResolveFn(),
+      randomize: !this.options.noRandomize,
+    });
+
+    let lastErr: Error | null = null;
+    for (const a of alts) {
+      try {
+        lastErr = null;
+        this.dispatchStatus(
+          { type: DebugEvents.Reconnecting, data: a.toString() },
+        );
+        await this.dial(a);
+        // if here we connected
+        return;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    // if we are here, we failed, and we have no additional
+    // alternatives for this server
+    throw lastErr;
+  }
+
   async dialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
@@ -316,10 +345,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {
         srv.lastConnect = Date.now();
         try {
-          this.dispatchStatus(
-            { type: DebugEvents.Reconnecting, data: srv.toString() },
-          );
-          await this.dial(srv);
+          await this._doDial(srv);
           break;
         } catch (err) {
           lastError = err;

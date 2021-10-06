@@ -27,7 +27,7 @@ import {
   ServerInfo,
 } from "./types.ts";
 import { buildAuthenticator } from "./authenticator.ts";
-import { defaultPort } from "./transport.ts";
+import { defaultPort, getResolveFn } from "./transport.ts";
 import { createInbox } from "./mod.ts";
 
 export function defaultOptions(): ConnectionOptions {
@@ -103,6 +103,15 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
       createInbox(options.inboxPrefix);
     } catch (err) {
       throw new NatsError(err.message, ErrorCode.ApiError);
+    }
+  }
+
+  if (options.resolve) {
+    if (typeof getResolveFn() !== "function") {
+      throw new NatsError(
+        `'resolve' is not supported on this client`,
+        ErrorCode.InvalidOption,
+      );
     }
   }
 

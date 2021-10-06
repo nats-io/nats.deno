@@ -16,14 +16,35 @@
 import {
   DEFAULT_HOST,
   DEFAULT_PORT,
+  DnsResolveFn,
   Server,
   ServerInfo,
   ServersChanged,
-  URLParseFn,
 } from "./types.ts";
 import { defaultPort, getUrlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
+
+function hostPort(
+  u: string,
+): { listen: string; hostname: string; port: number } {
+  // remove any protocol that may have been provided
+  if (u.match(/^(.*:\/\/)(.*)/m)) {
+    u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
+  }
+  // in web environments, URL may not be a living standard
+  // that means that protocols other than HTTP/S are not
+  // parsable correctly.
+  const url = new URL(`http://${u}`);
+  if (!url.port) {
+    url.port = `${DEFAULT_PORT}`;
+  }
+  const listen = url.host;
+  const hostname = url.hostname;
+  const port = parseInt(url.port, 10);
+
+  return { listen, hostname, port };
+}
 
 /**
  * @hidden
@@ -38,25 +59,15 @@ export class ServerImpl implements Server {
   lastConnect: number;
   gossiped: boolean;
   tlsName: string;
+  resolves?: Server[];
 
   constructor(u: string, gossiped = false) {
     this.src = u;
     this.tlsName = "";
-    // remove any protocol that may have been provided
-    if (u.match(/^(.*:\/\/)(.*)/m)) {
-      u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
-    }
-    // in web environments, URL may not be a living standard
-    // that means that protocols other than HTTP/S are not
-    // parsable correctly.
-    const url = new URL(`http://${u}`);
-    if (!url.port) {
-      url.port = `${DEFAULT_PORT}`;
-    }
-    this.listen = url.host;
-    this.hostname = url.hostname;
-    this.port = parseInt(url.port, 10);
-
+    const v = hostPort(u);
+    this.listen = v.listen;
+    this.hostname = v.hostname;
+    this.port = v.port;
     this.didConnect = false;
     this.reconnects = 0;
     this.lastConnect = 0;
@@ -66,10 +77,40 @@ export class ServerImpl implements Server {
   toString(): string {
     return this.listen;
   }
-}
 
-export interface ServersOptions {
-  urlParseFn?: URLParseFn;
+  async resolve(
+    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
+  ): Promise<Server[]> {
+    if (!opts.fn) {
+      // we cannot resolve - transport doesn't support it
+      // don't add - to resolves or we get a circ reference
+      return [this];
+    }
+
+    const buf: Server[] = [];
+    if (isIP(this.hostname)) {
+      // don't add - to resolves or we get a circ reference
+      return [this];
+    } else {
+      const ips = await opts.fn(this.hostname);
+      for (const ip of ips) {
+        // letting URL handle the details of representing IPV6 ip with a port, etc
+        const url = new URL(`http://${this.listen}`);
+        if (!url.port) {
+          url.port = `${DEFAULT_PORT}`;
+        }
+        url.hostname = ip;
+        const ss = new ServerImpl(url.host, false);
+        ss.tlsName = this.hostname;
+        buf.push(ss);
+      }
+    }
+    if (opts.randomize) {
+      shuffle(buf);
+    }
+    this.resolves = buf;
+    return buf;
+  }
 }
 
 /**
@@ -80,14 +121,16 @@ export class Servers {
   private readonly servers: ServerImpl[];
   private currentServer: ServerImpl;
   private tlsName: string;
+  private randomize: boolean;
 
   constructor(
-    randomize: boolean,
     listens: string[] = [],
+    opts: Partial<{ randomize: boolean }> = {},
   ) {
     this.firstSelect = true;
     this.servers = [] as ServerImpl[];
     this.tlsName = "";
+    this.randomize = opts.randomize || false;
 
     const urlParseFn = getUrlParseFn();
     if (listens) {
@@ -95,7 +138,7 @@ export class Servers {
         hp = urlParseFn ? urlParseFn(hp) : hp;
         this.servers.push(new ServerImpl(hp));
       });
-      if (randomize) {
+      if (this.randomize) {
         this.servers = shuffle(this.servers);
       }
     }

@@ -39,9 +39,8 @@ export function compare(a: SemVer, b: SemVer): number {
 }
 
 export function disabled(reason: string): void {
-  console.error(red(
-    `skipping: ${reason}`,
-  ));
+  const m = new TextEncoder().encode(red(`skipping: ${reason} `));
+  Deno.stdout.writeSync(m);
 }
 
 export async function notCompatible(
@@ -53,11 +52,10 @@ export async function notCompatible(
   const varz = await ns.varz() as unknown as Record<string, string>;
   const sv = parseSemVer(varz.version);
   if (compare(sv, parseSemVer(version)) < 0) {
-    console.error(
-      yellow(
-        `skipping test as server (${varz.version}) doesn't implement required feature from ${version}`,
-      ),
-    );
+    const m = new TextEncoder().encode(yellow(
+      `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
+    ));
+    await Deno.stdout.write(m);
     await cleanup(ns, nc);
     return true;
   }

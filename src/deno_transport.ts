@@ -259,3 +259,24 @@ export class DenoTransport implements Transport {
     return this.closedNotification;
   }
 }
+
+export async function denoResolveHost(s: string): Promise<string[]> {
+  const a = Deno.resolveDns(s, "A");
+  const aaaa = Deno.resolveDns(s, "AAAA");
+  const ips: string[] = [];
+  const w = await Promise.allSettled([a, aaaa]);
+  if (w[0].status === "fulfilled") {
+    ips.push(...w[0].value);
+  }
+  if (w[1].status === "fulfilled") {
+    ips.push(...w[1].value);
+  }
+
+  if (ips.length === 0 && w[0].status === "rejected") {
+    throw w[0].reason;
+  }
+  if (ips.length === 0 && w[1].status === "rejected") {
+    throw w[1].reason;
+  }
+  return ips;
+}
