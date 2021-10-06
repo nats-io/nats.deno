@@ -23,7 +23,7 @@ const nc = await connect({ servers: "demo.nats.io:4222" });
 // within the timeout, the subscription throws a timeout error
 const sub = nc.subscribe("hello", { timeout: 1000 });
 (async () => {
-  for await (const m of sub) {
+  for await (const _m of sub) {
     // handle the messages
   }
 })().catch((err) => {

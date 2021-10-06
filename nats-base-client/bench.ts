@@ -310,7 +310,7 @@ export class Bench {
       let first = false;
       const sub = this.nc.subscribe(this.subject, { max: this.msgs });
       const job = (async () => {
-        for await (const m of sub) {
+        for await (const _m of sub) {
           if (!first) {
             this.perf.mark("subStart");
             first = true;

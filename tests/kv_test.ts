@@ -279,7 +279,7 @@ Deno.test("kv - history cleanup", async () => {
 
   const h = await bucket.history();
   const done = (async () => {
-    for await (const e of h) {
+    for await (const _e of h) {
       break;
     }
   })();
