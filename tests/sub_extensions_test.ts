@@ -16,16 +16,15 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { connect, createInbox, Msg } from "../src/mod.ts";
+import { createInbox, Msg } from "../src/mod.ts";
 import {
   deferred,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {}, max: 1 });
   const d = deferred<string>();
@@ -38,11 +37,11 @@ Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   nc.publish(subj);
   assertEquals(await d, "hello");
   assert(sub.isClosed());
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - cleanup fn called at unsubscribe", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
@@ -54,11 +53,11 @@ Deno.test("extensions - cleanup fn called at unsubscribe", async () => {
   sub.unsubscribe();
   assertEquals(await d, "hello");
   assert(sub.isClosed());
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - cleanup fn called at sub drain", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
@@ -70,11 +69,11 @@ Deno.test("extensions - cleanup fn called at sub drain", async () => {
   await sub.drain();
   assertEquals(await d, "hello");
   assert(sub.isClosed());
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - cleanup fn called at conn drain", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} });
   const d = deferred<string>();
@@ -86,22 +85,22 @@ Deno.test("extensions - cleanup fn called at conn drain", async () => {
   await nc.drain();
   assertEquals(await d, "hello");
   assert(sub.isClosed());
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - closed resolves on unsub", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} });
   const closed = (sub as SubscriptionImpl).closed;
   sub.unsubscribe();
   await closed;
   assert(sub.isClosed());
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - dispatched called on callback", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} }) as SubscriptionImpl;
   let count = 0;
@@ -113,11 +112,11 @@ Deno.test("extensions - dispatched called on callback", async () => {
   nc.publish(subj);
   await nc.flush();
   assertEquals(count, 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("extensions - dispatched called on iterator", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 }) as SubscriptionImpl;
   let count = 0;
@@ -135,5 +134,5 @@ Deno.test("extensions - dispatched called on iterator", async () => {
   nc.publish(subj);
   await done;
   assertEquals(count, 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });

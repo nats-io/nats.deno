@@ -16,13 +16,11 @@ import { Lock, NatsServer, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
+import { setup } from "./jstest_util.ts";
 
 Deno.test("events - close on close", async () => {
-  const ns = await NatsServer.start();
-  const nc = await connect(
-    { port: ns.port },
-  );
-  nc.close().then().catch();
+  const { ns, nc } = await setup();
+  nc.close().then();
   const status = await nc.closed();
   await ns.stop();
   assertEquals(status, undefined);
@@ -30,10 +28,7 @@ Deno.test("events - close on close", async () => {
 
 Deno.test("events - disconnect and close", async () => {
   const lock = Lock(2);
-  const ns = await NatsServer.start();
-  const nc = await connect(
-    { port: ns.port, reconnect: false },
-  );
+  const { ns, nc } = await setup({}, { reconnect: false });
   (async () => {
     for await (const s of nc.status()) {
       switch (s.type) {
@@ -50,7 +45,6 @@ Deno.test("events - disconnect and close", async () => {
   await lock;
 
   const v = await nc.closed();
-
   assertEquals(v, undefined);
 });
 

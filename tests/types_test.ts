@@ -26,8 +26,7 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-
-const u = "demo.nats.io:4222";
+import { NatsServer } from "./helpers/launcher.ts";
 
 function mh(nc: NatsConnection, subj: string): Promise<Msg> {
   const dm = deferred<Msg>();
@@ -41,8 +40,9 @@ function mh(nc: NatsConnection, subj: string): Promise<Msg> {
 }
 
 Deno.test("types - json types", async () => {
+  const ns = await NatsServer.start();
   const jc = JSONCodec();
-  const nc = await connect({ servers: u });
+  const nc = await connect({ port: ns.port });
   const subj = createInbox();
   const dm = mh(nc, subj);
   nc.publish(subj, jc.encode(6691));
@@ -50,21 +50,25 @@ Deno.test("types - json types", async () => {
   assertEquals(typeof jc.decode(msg.data), "number");
   assertEquals(jc.decode(msg.data), 6691);
   await nc.close();
+  await ns.stop();
 });
 
 Deno.test("types - string types", async () => {
+  const ns = await NatsServer.start();
   const sc = StringCodec();
-  const nc = await connect({ servers: u });
+  const nc = await connect({ port: ns.port });
   const subj = createInbox();
   const dm = mh(nc, subj);
   nc.publish(subj, sc.encode("hello world"));
   const msg = await dm;
   assertEquals(sc.decode(msg.data), "hello world");
   await nc.close();
+  await ns.stop();
 });
 
 Deno.test("types - binary types", async () => {
-  const nc = await connect({ servers: u });
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port });
   const subj = createInbox();
   const dm = mh(nc, subj);
   const payload = DataBuffer.fromAscii("hello world");
@@ -73,4 +77,5 @@ Deno.test("types - binary types", async () => {
   assert(msg.data instanceof Uint8Array);
   assertEquals(msg.data, payload);
   await nc.close();
+  await ns.stop();
 });

@@ -14,21 +14,14 @@
  */
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
-import {
-  connect,
-  createInbox,
-  Empty,
-  ErrorCode,
-  Subscription,
-} from "../src/mod.ts";
+import { createInbox, Empty, ErrorCode, Subscription } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
 import type { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("autounsub - max option", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 10 });
   for (let i = 0; i < 20; i++) {
@@ -36,11 +29,11 @@ Deno.test("autounsub - max option", async () => {
   }
   await nc.flush();
   assertEquals(sub.getReceived(), 10);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - unsubscribe", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 10 });
   sub.unsubscribe(11);
@@ -49,11 +42,11 @@ Deno.test("autounsub - unsubscribe", async () => {
   }
   await nc.flush();
   assertEquals(sub.getReceived(), 11);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - can unsub from auto-unsubscribed", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 });
   for (let i = 0; i < 20; i++) {
@@ -62,11 +55,11 @@ Deno.test("autounsub - can unsub from auto-unsubscribed", async () => {
   await nc.flush();
   assertEquals(sub.getReceived(), 1);
   sub.unsubscribe();
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - can break to unsub", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 20 });
   const iter = (async () => {
@@ -80,11 +73,11 @@ Deno.test("autounsub - can break to unsub", async () => {
   await nc.flush();
   await iter;
   assertEquals(sub.getProcessed(), 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - can change auto-unsub to a higher value", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 });
   sub.unsubscribe(10);
@@ -93,11 +86,11 @@ Deno.test("autounsub - can change auto-unsub to a higher value", async () => {
   }
   await nc.flush();
   assertEquals(sub.getReceived(), 10);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - request receives expected count with multiple helpers", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
 
   const fn = (async (sub: Subscription) => {
@@ -119,10 +112,12 @@ Deno.test("autounsub - request receives expected count with multiple helpers", a
   });
   const count = counts.reduce((a, v) => a + v);
   assertEquals(count, 5);
+
+  await ns.stop();
 });
 
 Deno.test("autounsub - manual request receives expected count with multiple helpers", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const lock = Lock(5);
 
@@ -142,23 +137,26 @@ Deno.test("autounsub - manual request receives expected count with multiple help
   await lock;
   await nc.drain();
   assertEquals(sub.getReceived(), 5);
+  await ns.stop();
 });
 
 Deno.test("autounsub - check subscription leaks", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { ns, nc } = await setup();
+  const nci = nc as NatsConnectionImpl;
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   sub.unsubscribe();
-  assertEquals(nc.protocol.subscriptions.size(), 0);
-  await nc.close();
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - check request leaks", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { ns, nc } = await setup();
+  const nci = nc as NatsConnectionImpl;
   const subj = createInbox();
 
   // should have no subscriptions
-  assertEquals(nc.protocol.subscriptions.size(), 0);
+  assertEquals(nci.protocol.subscriptions.size(), 0);
 
   const sub = nc.subscribe(subj);
   (async () => {
@@ -168,37 +166,38 @@ Deno.test("autounsub - check request leaks", async () => {
   })().then();
 
   // should have one subscription
-  assertEquals(nc.protocol.subscriptions.size(), 1);
+  assertEquals(nci.protocol.subscriptions.size(), 1);
 
   const msgs = [];
   msgs.push(nc.request(subj));
   msgs.push(nc.request(subj));
 
   // should have 2 mux subscriptions, and 2 subscriptions
-  assertEquals(nc.protocol.subscriptions.size(), 2);
-  assertEquals(nc.protocol.muxSubscriptions.size(), 2);
+  assertEquals(nci.protocol.subscriptions.size(), 2);
+  assertEquals(nci.protocol.muxSubscriptions.size(), 2);
 
   await Promise.all(msgs);
 
   // mux subs should have pruned
-  assertEquals(nc.protocol.muxSubscriptions.size(), 0);
+  assertEquals(nci.protocol.muxSubscriptions.size(), 0);
 
   sub.unsubscribe();
-  assertEquals(nc.protocol.subscriptions.size(), 1);
-  await nc.close();
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
 });
 
 Deno.test("autounsub - check cancelled request leaks", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { ns, nc } = await setup();
+  const nci = nc as NatsConnectionImpl;
   const subj = createInbox();
 
   // should have no subscriptions
-  assertEquals(nc.protocol.subscriptions.size(), 0);
+  assertEquals(nci.protocol.subscriptions.size(), 0);
 
   const rp = nc.request(subj, Empty, { timeout: 100 });
 
-  assertEquals(nc.protocol.subscriptions.size(), 1);
-  assertEquals(nc.protocol.muxSubscriptions.size(), 1);
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+  assertEquals(nci.protocol.muxSubscriptions.size(), 1);
 
   // the rejection should be timeout
   const lock = Lock();
@@ -211,6 +210,6 @@ Deno.test("autounsub - check cancelled request leaks", async () => {
 
   await lock;
   // mux subs should have pruned
-  assertEquals(nc.protocol.muxSubscriptions.size(), 0);
-  await nc.close();
+  assertEquals(nci.protocol.muxSubscriptions.size(), 0);
+  await cleanup(ns, nc);
 });
