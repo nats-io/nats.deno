@@ -13,13 +13,12 @@
  * limitations under the License.
  */
 
-import { connect, createInbox, Subscription } from "../src/mod.ts";
+import { createInbox, Subscription } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("queues - deliver to single queue", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const subs = [];
   for (let i = 0; i < 5; i++) {
@@ -31,11 +30,11 @@ Deno.test("queues - deliver to single queue", async () => {
   const received = subs.map((s) => s.getReceived());
   const sum = received.reduce((p, c) => p + c);
   assertEquals(sum, 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("queues - deliver to multiple queues", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
 
   const fn = (queue: string) => {
@@ -60,11 +59,11 @@ Deno.test("queues - deliver to multiple queues", async () => {
 
   assertEquals(mc(subsa), 1);
   assertEquals(mc(subsb), 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("queues - queues and subs independent", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const subs = [];
   let queueCount = 0;
@@ -90,5 +89,5 @@ Deno.test("queues - queues and subs independent", async () => {
   await nc.flush();
   assertEquals(queueCount, 1);
   assertEquals(count, 1);
-  await nc.close();
+  await cleanup(ns, nc);
 });

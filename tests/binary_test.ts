@@ -14,15 +14,14 @@
  */
 
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { connect, createInbox, Msg } from "../src/mod.ts";
+import { createInbox, Msg } from "../src/mod.ts";
 import { deferred } from "../nats-base-client/internal_mod.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 function macro(input: Uint8Array) {
   return async () => {
+    const { ns, nc } = await setup();
     const subj = createInbox();
-    const nc = await connect({ servers: u });
     const dm = deferred<Msg>();
     const sub = nc.subscribe(subj, { max: 1 });
     (async () => {
@@ -34,7 +33,7 @@ function macro(input: Uint8Array) {
     nc.publish(subj, input);
     const msg = await dm;
     assertEquals(msg.data, input);
-    await nc.close();
+    await cleanup(ns, nc);
   };
 }
 

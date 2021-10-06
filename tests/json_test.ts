@@ -15,7 +15,6 @@
 
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import {
-  connect,
   createInbox,
   ErrorCode,
   JSONCodec,
@@ -25,8 +24,7 @@ import {
 
 import { Lock } from "./helpers/mod.ts";
 import { assertThrowsErrorCode } from "./helpers/asserts.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};
@@ -41,8 +39,8 @@ Deno.test("json - bad json error in callback", () => {
 
 function macro(input: unknown) {
   return async () => {
+    const { ns, nc } = await setup();
     const jc = JSONCodec();
-    const nc = await connect({ servers: u });
     const lock = Lock();
     const subj = createInbox();
     nc.subscribe(subj, {
@@ -61,7 +59,7 @@ function macro(input: unknown) {
     nc.publish(subj, jc.encode(input));
     await nc.flush();
     await lock;
-    await nc.close();
+    await cleanup(ns, nc);
   };
 }
 

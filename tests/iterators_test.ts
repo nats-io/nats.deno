@@ -18,11 +18,10 @@ import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
@@ -36,11 +35,11 @@ Deno.test("iterators - unsubscribe breaks and closes", async () => {
   nc.publish(subj);
   await done;
   assertEquals(sub.getReceived(), 2);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("iterators - autounsub breaks and closes", async () => {
-  const nc = await connect({ servers: u });
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 2 });
   const lock = Lock(2);
@@ -54,7 +53,7 @@ Deno.test("iterators - autounsub breaks and closes", async () => {
   await done;
   await lock;
   assertEquals(sub.getReceived(), 2);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("iterators - permission error breaks and closes", async () => {
@@ -90,14 +89,11 @@ Deno.test("iterators - permission error breaks and closes", async () => {
   await nc.closed().then((err) => {
     assertErrorCode(err as NatsError, ErrorCode.PermissionsViolation);
   });
-  await nc.close();
-  await ns.stop();
+  await cleanup(ns, nc);
 });
 
 Deno.test("iterators - unsubscribing closes", async () => {
-  const nc = await connect(
-    { servers: u },
-  );
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const lock = Lock();
@@ -110,13 +106,11 @@ Deno.test("iterators - unsubscribing closes", async () => {
   await lock;
   sub.unsubscribe();
   await done;
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("iterators - connection close closes", async () => {
-  const nc = await connect(
-    { servers: u },
-  );
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const lock = Lock();
@@ -130,12 +124,11 @@ Deno.test("iterators - connection close closes", async () => {
   await nc.close();
   await lock;
   await done;
+  await ns.stop();
 });
 
 Deno.test("iterators - cb subs fail iterator", async () => {
-  const nc = await connect(
-    { servers: u },
-  );
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const lock = Lock(2);
   const sub = nc.subscribe(subj, {
@@ -156,14 +149,12 @@ Deno.test("iterators - cb subs fail iterator", async () => {
   });
   nc.publish(subj);
   await nc.flush();
-  await nc.close();
+  await cleanup(ns, nc);
   await lock;
 });
 
 Deno.test("iterators - cb message counts", async () => {
-  const nc = await connect(
-    { servers: u },
-  );
+  const { ns, nc } = await setup();
   const subj = createInbox();
   const lock = Lock(3);
   const sub = nc.subscribe(subj, {
@@ -181,7 +172,7 @@ Deno.test("iterators - cb message counts", async () => {
   assertEquals(sub.getReceived(), 3);
   assertEquals(sub.getProcessed(), 3);
   assertEquals(sub.getPending(), 0);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("iterators - push on done is noop", async () => {
@@ -207,7 +198,8 @@ Deno.test("iterators - push on done is noop", async () => {
 });
 
 Deno.test("iterators - break cleans up", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { ns, nc } = await setup();
+  const nci = nc as NatsConnectionImpl;
   const subj = createInbox();
   const sub = nc.subscribe(subj);
   const done = (async () => {
@@ -219,7 +211,7 @@ Deno.test("iterators - break cleans up", async () => {
   await done;
 
   assertEquals(sub.isClosed(), true);
-  assertEquals(nc.protocol.subscriptions.subs.size, 0);
+  assertEquals(nci.protocol.subscriptions.subs.size, 0);
 
-  await nc.close();
+  await cleanup(ns, nc);
 });

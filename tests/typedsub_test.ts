@@ -17,13 +17,11 @@ import {
   assertEquals,
   assertThrowsAsync,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { connect } from "../src/mod.ts";
 import {
   createInbox,
   deferred,
   ErrorCode,
   Msg,
-  NatsConnectionImpl,
   NatsError,
   StringCodec,
   TypedSubscription,
@@ -31,11 +29,10 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import { checkFn } from "../nats-base-client/typedsub.ts";
-
-const u = "demo.nats.io:4222";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("typedsub - rejects no adapter", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   assertThrowsErrorCode(() => {
     new TypedSubscription<string>(
       nc,
@@ -43,11 +40,11 @@ Deno.test("typedsub - rejects no adapter", async () => {
       {} as TypedSubscriptionOptions<string>,
     );
   }, ErrorCode.ApiError);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - iterator gets data", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -82,13 +79,12 @@ Deno.test("typedsub - iterator gets data", async () => {
   assertEquals(sa.getProcessed(), out.length);
   assertEquals(sa.getPending(), 0);
   assertEquals(d, out);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - callback gets data", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
-
   const sc = StringCodec();
 
   const tso = {} as TypedSubscriptionOptions<string>;
@@ -113,11 +109,11 @@ Deno.test("typedsub - callback gets data", async () => {
   out.forEach((v) => nc.publish(subj, sc.encode(v)));
   await nc.flush();
   assertEquals(d, out);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - dispatched", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -143,11 +139,11 @@ Deno.test("typedsub - dispatched", async () => {
   const d = StringCodec().encode("hello");
   const resp = await nc.request(subj, d);
   assertEquals(resp.data, d);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - cleanup on unsub", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -165,11 +161,11 @@ Deno.test("typedsub - cleanup on unsub", async () => {
   const sub = new TypedSubscription<Msg>(nc, subj, tso);
   sub.unsubscribe();
   await d;
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - cleanup on close", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -187,7 +183,7 @@ Deno.test("typedsub - cleanup on close", async () => {
   };
 
   new TypedSubscription<Msg>(nc, subj, tso);
-  await nc.close();
+  await cleanup(ns, nc);
   await d;
 });
 
@@ -202,7 +198,7 @@ Deno.test("typedsub - checkFn", () => {
 });
 
 Deno.test("typedsub - unsubscribe", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -226,11 +222,11 @@ Deno.test("typedsub - unsubscribe", async () => {
   sa.unsubscribe();
   await done;
   assertEquals(sa.isClosed(), true);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - drain", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -253,11 +249,11 @@ Deno.test("typedsub - drain", async () => {
   })().then();
   await sa.drain();
   assertEquals(sa.isClosed(), true);
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - timeout", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -285,11 +281,11 @@ Deno.test("typedsub - timeout", async () => {
     ErrorCode.Timeout,
   );
 
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - timeout on callback", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const d = deferred<NatsError | null>();
@@ -314,11 +310,11 @@ Deno.test("typedsub - timeout on callback", async () => {
   assertErrorCode(err, ErrorCode.Timeout);
   assertEquals(sa.isClosed(), true);
 
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - timeout cleared on message", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -348,11 +344,11 @@ Deno.test("typedsub - timeout cleared on message", async () => {
   assertEquals(sa.sub.timer, undefined);
   assertEquals(sa.getProcessed(), 1);
 
-  await nc.close();
+  await cleanup(ns, nc);
 });
 
 Deno.test("typedsub - timeout callback cleared on message", async () => {
-  const nc = await connect({ servers: u }) as NatsConnectionImpl;
+  const { nc, ns } = await setup();
   const subj = createInbox();
 
   const d = deferred<string | null>();
@@ -377,5 +373,5 @@ Deno.test("typedsub - timeout callback cleared on message", async () => {
   const m = await d;
   assertEquals(m, "hello");
   assertEquals(sa.sub.timer, undefined);
-  await nc.close();
+  await cleanup(ns, nc);
 });
