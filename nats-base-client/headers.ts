@@ -28,6 +28,7 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   set(k: string, v: string, match?: Match): void;
   append(k: string, v: string, match?: Match): void;
   has(k: string, match?: Match): boolean;
+  keys(): string[];
   values(k: string, match?: Match): string[];
   delete(k: string, match?: Match): void;
 }
