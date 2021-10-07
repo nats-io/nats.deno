@@ -1,10 +1,15 @@
-.PHONY: build test bundle
+.PHONY: build test bundle lint
 
 build: test
 
-test: clean
+lint:
 	deno lint --unstable
-	deno test --allow-all --unstable --reload --coverage=coverage --fail-fast tests/
+
+test: clean
+	deno test --allow-all --unstable --reload --jobs --coverage=coverage --fail-fast tests/
+
+testw: clean
+	deno test --allow-all --unstable --reload --jobs --watch --fail-fast tests/
 
 cover:
 	deno coverage --unstable ./coverage --lcov > ./coverage/out.lcov
