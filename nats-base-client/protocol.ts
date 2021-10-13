@@ -551,13 +551,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     data: Uint8Array,
     options?: PublishOptions,
   ) {
-    if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
-    }
-    if (this.noMorePublishing) {
-      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
-    }
-
     let len = data.length;
     options = options || {};
     options.reply = options.reply || "";
@@ -606,11 +599,20 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   subscribe(s: SubscriptionImpl): Subscription {
     this.subscriptions.add(s);
+    this._subunsub(s);
+    return s;
+  }
+
+  _sub(s: SubscriptionImpl): void {
     if (s.queue) {
       this.sendCommand(`SUB ${s.subject} ${s.queue} ${s.sid}\r\n`);
     } else {
       this.sendCommand(`SUB ${s.subject} ${s.sid}\r\n`);
     }
+  }
+
+  _subunsub(s: SubscriptionImpl) {
+    this._sub(s);
     if (s.max) {
       this.unsubscribe(s, s.max);
     }
@@ -634,6 +636,17 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       this.sendCommand(`UNSUB ${s.sid}${CR_LF}`);
     }
     s.max = max;
+  }
+
+  resub(s: SubscriptionImpl, subject: string) {
+    if (!s || this.isClosed()) {
+      return;
+    }
+    s.subject = subject;
+    this.subscriptions.resub(s);
+    // we don't auto-unsub here because we don't
+    // really know "processed"
+    this._sub(s);
   }
 
   flush(p?: Deferred<void>): Promise<void> {

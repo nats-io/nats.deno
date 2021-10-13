@@ -15,7 +15,7 @@
 import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import type { Msg, RequestOptions } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import type { MuxSubscription } from "./muxsubscription.ts";
+import { MuxSubscription } from "./muxsubscription.ts";
 import { nuid } from "./nuid.ts";
 
 export class Request {

@@ -50,6 +50,14 @@ export class Subscriptions {
     return this.subs.get(sid);
   }
 
+  resub(s: SubscriptionImpl): SubscriptionImpl {
+    this.sidCounter++;
+    this.subs.delete(s.sid);
+    s.sid = this.sidCounter;
+    this.subs.set(s.sid, s);
+    return s;
+  }
+
   all(): (SubscriptionImpl)[] {
     const buf = [];
     for (const s of this.subs.values()) {
