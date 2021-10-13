@@ -47,7 +47,7 @@ import {
   validateStreamName,
 } from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { toJsMsg } from "./jsmsg.ts";
+import { JsMsgImpl, toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
   TypedSubscription,
@@ -179,6 +179,8 @@ export class JetStreamClientImpl extends BaseApiClient
     const qi = new QueuedIteratorImpl<JsMsg>();
     const wants = args.batch;
     let received = 0;
+    // FIXME: this looks weird, we want to stop the iterator
+    //   but doing it from a dispatchedFn...
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
         received++;
@@ -384,6 +386,15 @@ export class JetStreamClientImpl extends BaseApiClient
     if (jsi.callbackFn) {
       so.callback = jsi.callbackFn;
     }
+    so.filterFn = (jm): boolean => {
+      const jsmi = jm as JsMsgImpl;
+      if (isFlowControlMsg(jsmi.msg)) {
+        // FIXME: ordered consumer needs to work on this
+        jsmi.msg.respond();
+        return false;
+      }
+      return true;
+    };
     if (!jsi.mack) {
       so.dispatchedFn = autoAckJsMsg;
     }
@@ -503,18 +514,8 @@ function cbMsgAdapter(
   if (err) {
     return [err, null];
   }
-  if (isFlowControlMsg(msg)) {
-    msg.respond();
-    return [null, null];
-  }
-  const jm = toJsMsg(msg);
-  try {
-    // this will throw if not a JsMsg
-    jm.info;
-    return [null, jm];
-  } catch (err) {
-    return [err, null];
-  }
+  // assuming that the filterFn is set!
+  return [null, toJsMsg(msg)];
 }
 
 function iterMsgAdapter(
@@ -538,18 +539,8 @@ function iterMsgAdapter(
         return [ne, null];
     }
   }
-  if (isFlowControlMsg(msg)) {
-    msg.respond();
-    return [null, null];
-  }
-  const jm = toJsMsg(msg);
-  try {
-    // this will throw if not a JsMsg
-    jm.info;
-    return [null, jm];
-  } catch (err) {
-    return [err, null];
-  }
+  // assuming that the filterFn is set
+  return [null, toJsMsg(msg)];
 }
 
 function autoAckJsMsg(data: JsMsg | null) {

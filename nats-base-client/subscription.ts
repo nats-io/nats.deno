@@ -12,7 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { DispatchedFn, QueuedIteratorImpl } from "./queued_iterator.ts";
+import {
+  DispatchedFn,
+  FilterFn,
+  QueuedIteratorImpl,
+} from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
 import { Deferred, deferred, extend, Timeout, timeout } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
@@ -69,16 +73,24 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
     }
   }
 
-  setDispatchedFn(cb: DispatchedFn<Msg>) {
-    // user specified callback
+  setPrePostHandlers(
+    opts: { filterFn?: FilterFn<Msg>; dispatchedFn?: DispatchedFn<Msg> },
+  ) {
     if (this.noIterator) {
       const uc = this.callback;
+      const filter = opts.filterFn ? opts.filterFn : () => {
+        return true;
+      };
+      const dispatched = opts.dispatchedFn ? opts.dispatchedFn : () => {};
       this.callback = (err: NatsError | null, msg: Msg) => {
-        uc(err, msg);
-        cb(msg);
+        if (filter(msg)) {
+          uc(err, msg);
+        }
+        dispatched(msg);
       };
     } else {
-      this.dispatchedFn = cb;
+      this.filterFn = opts.filterFn;
+      this.dispatchedFn = opts.dispatchedFn;
     }
   }
 

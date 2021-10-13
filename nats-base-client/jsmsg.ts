@@ -68,7 +68,7 @@ export function parseInfo(s: string): DeliveryInfo {
   return di;
 }
 
-class JsMsgImpl implements JsMsg {
+export class JsMsgImpl implements JsMsg {
   msg: Msg;
   di?: DeliveryInfo;
   didAck: boolean;

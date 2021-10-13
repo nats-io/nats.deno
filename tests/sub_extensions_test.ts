@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import { createInbox, Msg } from "../src/mod.ts";
+import { createInbox, Msg, StringCodec } from "../src/mod.ts";
 import {
   deferred,
   SubscriptionImpl,
@@ -104,10 +104,13 @@ Deno.test("extensions - dispatched called on callback", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj, { callback: () => {} }) as SubscriptionImpl;
   let count = 0;
-  sub.setDispatchedFn((msg: Msg | null) => {
-    if (msg) {
-      count++;
-    }
+
+  sub.setPrePostHandlers({
+    dispatchedFn: (msg: Msg | null) => {
+      if (msg) {
+        count++;
+      }
+    },
   });
   nc.publish(subj);
   await nc.flush();
@@ -120,10 +123,12 @@ Deno.test("extensions - dispatched called on iterator", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj, { max: 1 }) as SubscriptionImpl;
   let count = 0;
-  sub.setDispatchedFn((msg: Msg | null) => {
-    if (msg) {
-      count++;
-    }
+  sub.setPrePostHandlers({
+    dispatchedFn: (msg: Msg | null) => {
+      if (msg) {
+        count++;
+      }
+    },
   });
   const done = (async () => {
     for await (const _m of sub) {
@@ -134,5 +139,75 @@ Deno.test("extensions - dispatched called on iterator", async () => {
   nc.publish(subj);
   await done;
   assertEquals(count, 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("extensions - filter called on callback", async () => {
+  const { ns, nc } = await setup();
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, {
+    max: 3,
+    callback: (err, m) => {
+      filtered.push(sc.decode(m.data));
+    },
+  }) as SubscriptionImpl;
+  const sc = StringCodec();
+  const all: string[] = [];
+  const filtered: string[] = [];
+  sub.setPrePostHandlers({
+    filterFn: (msg: Msg | null): boolean => {
+      if (msg) {
+        return sc.decode(msg.data).startsWith("A");
+      }
+      return false;
+    },
+    dispatchedFn: (msg: Msg | null): void => {
+      all.push(msg ? sc.decode(msg.data) : "");
+    },
+  });
+
+  nc.publish(subj, sc.encode("A"));
+  nc.publish(subj, sc.encode("B"));
+  nc.publish(subj, sc.encode("C"));
+  await sub.closed;
+
+  assertEquals(filtered, ["A"]);
+  assertEquals(all, ["A", "B", "C"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("extensions - filter called on iterator", async () => {
+  const { ns, nc } = await setup();
+  const subj = createInbox();
+  const sub = nc.subscribe(subj, { max: 3 }) as SubscriptionImpl;
+  const sc = StringCodec();
+  const all: string[] = [];
+  const filtered: string[] = [];
+  sub.setPrePostHandlers({
+    filterFn: (msg: Msg | null): boolean => {
+      if (msg) {
+        return sc.decode(msg.data).startsWith("A");
+      }
+      return false;
+    },
+    dispatchedFn: (msg: Msg | null): void => {
+      all.push(msg ? sc.decode(msg.data) : "");
+    },
+  });
+  const done = (async () => {
+    for await (const m of sub) {
+      filtered.push(sc.decode(m.data));
+    }
+  })();
+
+  nc.publish(subj, sc.encode("A"));
+  nc.publish(subj, sc.encode("B"));
+  nc.publish(subj, sc.encode("C"));
+  await done;
+
+  assertEquals(filtered, ["A"]);
+  assertEquals(all, ["A", "B", "C"]);
+
   await cleanup(ns, nc);
 });
