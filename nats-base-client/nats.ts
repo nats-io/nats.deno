@@ -81,15 +81,28 @@ export class NatsConnectionImpl implements NatsConnection {
     await this.protocol.close();
   }
 
+  _check(subject: string, sub: boolean, pub: boolean) {
+    if (this.isClosed()) {
+      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
+    }
+    if (sub && this.isDraining()) {
+      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
+    }
+    if (pub && this.protocol.noMorePublishing) {
+      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
+    }
+    subject = subject || "";
+    if (subject.length === 0) {
+      throw NatsError.errorForCode(ErrorCode.BadSubject);
+    }
+  }
+
   publish(
     subject: string,
     data: Uint8Array = Empty,
     options?: PublishOptions,
   ): void {
-    subject = subject || "";
-    if (subject.length === 0) {
-      throw NatsError.errorForCode(ErrorCode.BadSubject);
-    }
+    this._check(subject, false, true);
     // if argument is not undefined/null and not a Uint8Array, toss
     if (data && !isUint8Array(data)) {
       throw NatsError.errorForCode(ErrorCode.BadPayload);
@@ -101,20 +114,30 @@ export class NatsConnectionImpl implements NatsConnection {
     subject: string,
     opts: SubscriptionOptions = {},
   ): Subscription {
-    if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
-    }
-    if (this.isDraining()) {
-      throw NatsError.errorForCode(ErrorCode.ConnectionDraining);
-    }
-    subject = subject || "";
-    if (subject.length === 0) {
-      throw NatsError.errorForCode(ErrorCode.BadSubject);
-    }
-
+    this._check(subject, true, false);
     const sub = new SubscriptionImpl(this.protocol, subject, opts);
     this.protocol.subscribe(sub);
     return sub;
+  }
+
+  _resub(s: Subscription, subject: string, max?: number) {
+    this._check(subject, true, false);
+    const si = s as SubscriptionImpl;
+    // FIXME: need way of understanding a callbacks processed
+    //   count without it, we cannot really do much - ie
+    //   for rejected messages, the count would be lower, etc.
+    //   To handle cases were for example KV is building a map
+    //   the consumer would say how many messages we need to do
+    //   a proper build before we can handle updates.
+    si.max = max; // this might clear it
+    if (max) {
+      // we cannot auto-unsub, because we don't know the
+      // number of messages we processed vs received
+      // allow the auto-unsub on processMsg to work if they
+      // we were called with a new max
+      si.max = max + si.received;
+    }
+    this.protocol.resub(si, subject);
   }
 
   request(
@@ -122,20 +145,7 @@ export class NatsConnectionImpl implements NatsConnection {
     data: Uint8Array = Empty,
     opts: RequestOptions = { timeout: 1000, noMux: false },
   ): Promise<Msg> {
-    if (this.isClosed()) {
-      return Promise.reject(
-        NatsError.errorForCode(ErrorCode.ConnectionClosed),
-      );
-    }
-    if (this.isDraining()) {
-      return Promise.reject(
-        NatsError.errorForCode(ErrorCode.ConnectionDraining),
-      );
-    }
-    subject = subject || "";
-    if (subject.length === 0) {
-      return Promise.reject(NatsError.errorForCode(ErrorCode.BadSubject));
-    }
+    this._check(subject, true, true);
     opts.timeout = opts.timeout || 1000;
     if (opts.timeout < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
@@ -180,7 +190,7 @@ export class NatsConnectionImpl implements NatsConnection {
           },
         },
       );
-      this.publish(subject, data, { reply: inbox });
+      this.protocol.publish(subject, data, { reply: inbox });
       return d;
     } else {
       const r = new Request(this.protocol.muxSubscriptions, opts);
@@ -212,6 +222,11 @@ export class NatsConnectionImpl implements NatsConnection {
      * @returns {Promise<void>}
      */
   flush(): Promise<void> {
+    if (this.isClosed()) {
+      return Promise.reject(
+        NatsError.errorForCode(ErrorCode.ConnectionClosed),
+      );
+    }
     return this.protocol.flush();
   }
 
