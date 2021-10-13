@@ -96,7 +96,7 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
     this.noIterator = typeof opts.callback === "function";
 
     if (opts.filterFn) {
-      checkFn(opts.dispatchedFn, "dispatchedFn");
+      checkFn(opts.filterFn, "filterFn");
       this.filterFn = opts.filterFn;
     }
     if (opts.dispatchedFn) {
