@@ -19,6 +19,7 @@ export interface Dispatcher<T> {
   push(v: T): void;
 }
 
+export type ProtocolFilterFn<T> = (data: T | null) => boolean;
 export type DispatchedFn<T> = (data: T | null) => void;
 
 export interface QueuedIterator<T> extends Dispatcher<T> {
@@ -32,12 +33,14 @@ export interface QueuedIterator<T> extends Dispatcher<T> {
 export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   inflight: number;
   processed: number;
-  received: number; // this is updated by the protocol
+  // FIXME: this is updated by the protocol
+  received: number;
   protected noIterator: boolean;
   iterClosed: Deferred<void>;
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
+  protocolFilterFn?: ProtocolFilterFn<T>;
   dispatchedFn?: DispatchedFn<T>;
   private err?: Error;
 
@@ -80,10 +83,16 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
         this.inflight = yields.length;
         this.yields = [];
         for (let i = 0; i < yields.length; i++) {
-          this.processed++;
-          yield yields[i];
-          if (this.dispatchedFn && yields[i]) {
-            this.dispatchedFn(yields[i]);
+          // only pass messages that pass the filter
+          const ok = this.protocolFilterFn
+            ? this.protocolFilterFn(yields[i])
+            : true;
+          if (ok) {
+            this.processed++;
+            yield yields[i];
+            if (this.dispatchedFn && yields[i]) {
+              this.dispatchedFn(yields[i]);
+            }
           }
           this.inflight--;
         }
