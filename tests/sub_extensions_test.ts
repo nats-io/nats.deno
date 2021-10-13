@@ -148,21 +148,24 @@ Deno.test("extensions - filter called on callback", async () => {
   const sub = nc.subscribe(subj, {
     max: 3,
     callback: (err, m) => {
-      filtered.push(sc.decode(m.data));
+      processed.push(sc.decode(m.data));
     },
   }) as SubscriptionImpl;
   const sc = StringCodec();
   const all: string[] = [];
-  const filtered: string[] = [];
+  const processed: string[] = [];
+  const dispatched: string[] = [];
   sub.setPrePostHandlers({
-    filterFn: (msg: Msg | null): boolean => {
+    protocolFilterFn: (msg: Msg | null): boolean => {
       if (msg) {
-        return sc.decode(msg.data).startsWith("A");
+        const d = sc.decode(msg.data);
+        all.push(d);
+        return d.startsWith("A");
       }
       return false;
     },
     dispatchedFn: (msg: Msg | null): void => {
-      all.push(msg ? sc.decode(msg.data) : "");
+      dispatched.push(msg ? sc.decode(msg.data) : "");
     },
   });
 
@@ -171,7 +174,8 @@ Deno.test("extensions - filter called on callback", async () => {
   nc.publish(subj, sc.encode("C"));
   await sub.closed;
 
-  assertEquals(filtered, ["A"]);
+  assertEquals(processed, ["A"]);
+  assertEquals(dispatched, ["A"]);
   assertEquals(all, ["A", "B", "C"]);
 
   await cleanup(ns, nc);
@@ -183,21 +187,24 @@ Deno.test("extensions - filter called on iterator", async () => {
   const sub = nc.subscribe(subj, { max: 3 }) as SubscriptionImpl;
   const sc = StringCodec();
   const all: string[] = [];
-  const filtered: string[] = [];
+  const processed: string[] = [];
+  const dispatched: string[] = [];
   sub.setPrePostHandlers({
-    filterFn: (msg: Msg | null): boolean => {
+    protocolFilterFn: (msg: Msg | null): boolean => {
       if (msg) {
-        return sc.decode(msg.data).startsWith("A");
+        const d = sc.decode(msg.data);
+        all.push(d);
+        return d.startsWith("A");
       }
       return false;
     },
     dispatchedFn: (msg: Msg | null): void => {
-      all.push(msg ? sc.decode(msg.data) : "");
+      dispatched.push(msg ? sc.decode(msg.data) : "");
     },
   });
   const done = (async () => {
     for await (const m of sub) {
-      filtered.push(sc.decode(m.data));
+      processed.push(sc.decode(m.data));
     }
   })();
 
@@ -206,7 +213,8 @@ Deno.test("extensions - filter called on iterator", async () => {
   nc.publish(subj, sc.encode("C"));
   await done;
 
-  assertEquals(filtered, ["A"]);
+  assertEquals(processed, ["A"]);
+  assertEquals(dispatched, ["A"]);
   assertEquals(all, ["A", "B", "C"]);
 
   await cleanup(ns, nc);

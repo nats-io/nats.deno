@@ -14,7 +14,7 @@
  */
 import {
   DispatchedFn,
-  FilterFn,
+  ProtocolFilterFn,
   QueuedIteratorImpl,
 } from "./queued_iterator.ts";
 import type { Base, Msg, Subscription, SubscriptionOptions } from "./types.ts";
@@ -74,22 +74,25 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
   }
 
   setPrePostHandlers(
-    opts: { filterFn?: FilterFn<Msg>; dispatchedFn?: DispatchedFn<Msg> },
+    opts: {
+      protocolFilterFn?: ProtocolFilterFn<Msg>;
+      dispatchedFn?: DispatchedFn<Msg>;
+    },
   ) {
     if (this.noIterator) {
       const uc = this.callback;
-      const filter = opts.filterFn ? opts.filterFn : () => {
+      const filter = opts.protocolFilterFn ? opts.protocolFilterFn : () => {
         return true;
       };
       const dispatched = opts.dispatchedFn ? opts.dispatchedFn : () => {};
       this.callback = (err: NatsError | null, msg: Msg) => {
         if (filter(msg)) {
           uc(err, msg);
+          dispatched(msg);
         }
-        dispatched(msg);
       };
     } else {
-      this.filterFn = opts.filterFn;
+      this.protocolFilterFn = opts.protocolFilterFn;
       this.dispatchedFn = opts.dispatchedFn;
     }
   }

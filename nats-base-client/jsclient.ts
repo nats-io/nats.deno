@@ -386,7 +386,7 @@ export class JetStreamClientImpl extends BaseApiClient
     if (jsi.callbackFn) {
       so.callback = jsi.callbackFn;
     }
-    so.filterFn = (jm): boolean => {
+    so.protocolFilterFn = (jm): boolean => {
       const jsmi = jm as JsMsgImpl;
       if (isFlowControlMsg(jsmi.msg)) {
         // FIXME: ordered consumer needs to work on this
@@ -514,7 +514,7 @@ function cbMsgAdapter(
   if (err) {
     return [err, null];
   }
-  // assuming that the filterFn is set!
+  // assuming that the protocolFilterFn is set!
   return [null, toJsMsg(msg)];
 }
 
@@ -539,7 +539,7 @@ function iterMsgAdapter(
         return [ne, null];
     }
   }
-  // assuming that the filterFn is set
+  // assuming that the protocolFilterFn is set
   return [null, toJsMsg(msg)];
 }
 
