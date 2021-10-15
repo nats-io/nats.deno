@@ -19,8 +19,37 @@ export interface Dispatcher<T> {
   push(v: T): void;
 }
 
-export type ProtocolFilterFn<T> = (data: T | null) => boolean;
-export type DispatchedFn<T> = (data: T | null) => void;
+export type IngestionFilterFnResult = { ingest: boolean; protocol: boolean };
+
+/**
+ * IngestionFilterFn prevents a value from being ingested by the
+ * iterator. It is executed on `push`. If ingest is false the value
+ * shouldn't be pushed. If protcol is true, the value is a protcol
+ * value
+ *
+ * @param: data is the value
+ * @src: is the source of the data if set.
+ */
+export type IngestionFilterFn<T = unknown> = (
+  data: T | null,
+  src?: unknown,
+) => IngestionFilterFnResult;
+/**
+ * ProtocolFilterFn allows filtering of values that shouldn't be presented
+ * to the iterator. ProtocolFilterFn is executed when a value is about to be presented
+ *
+ * @param data: the value
+ * @returns boolean: true if the value should presented to the iterator
+ */
+export type ProtocolFilterFn<T = unknown> = (data: T | null) => boolean;
+/**
+ * DispatcherFn allows for values to be processed after being presented
+ * to the iterator. Note that if the ProtocolFilter rejected the value
+ * it will _not_ be presented to the DispatchedFn. Any processing should
+ * instead have been handled by the ProtocolFilterFn.
+ * @param data: the value
+ */
+export type DispatchedFn<T = unknown> = (data: T | null) => void;
 
 export interface QueuedIterator<T> extends Dispatcher<T> {
   [Symbol.asyncIterator](): AsyncIterator<T>;
@@ -40,12 +69,18 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   protected done: boolean;
   private signal: Deferred<void>;
   private yields: T[];
+  filtered: number;
+  pendingFiltered: number;
+  ingestionFilterFn?: IngestionFilterFn<T>;
   protocolFilterFn?: ProtocolFilterFn<T>;
   dispatchedFn?: DispatchedFn<T>;
+  ctx?: unknown;
   private err?: Error;
 
   constructor() {
     this.inflight = 0;
+    this.filtered = 0;
+    this.pendingFiltered = 0;
     this.processed = 0;
     this.received = 0;
     this.noIterator = false;
@@ -63,8 +98,17 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     if (this.done) {
       return;
     }
-    this.yields.push(v);
-    this.signal.resolve();
+    const { ingest, protocol } = this.ingestionFilterFn
+      ? this.ingestionFilterFn(v, this.ctx || this)
+      : { ingest: true, protocol: false };
+    if (ingest) {
+      if (protocol) {
+        this.filtered++;
+        this.pendingFiltered++;
+      }
+      this.yields.push(v);
+      this.signal.resolve();
+    }
   }
 
   async *iterate(): AsyncIterableIterator<T> {
@@ -93,6 +137,8 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
             if (this.dispatchedFn && yields[i]) {
               this.dispatchedFn(yields[i]);
             }
+          } else {
+            this.pendingFiltered--;
           }
           this.inflight--;
         }
@@ -128,10 +174,10 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   }
 
   getPending(): number {
-    return this.yields.length + this.inflight;
+    return this.yields.length + this.inflight - this.pendingFiltered;
   }
 
   getReceived(): number {
-    return this.received;
+    return this.received - this.filtered;
   }
 }

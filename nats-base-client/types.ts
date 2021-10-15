@@ -329,6 +329,7 @@ export interface ConsumerOpts {
   stream: string;
   callbackFn?: JsMsgCallback;
   name?: string;
+  ordered: boolean;
 
   // standard
   max?: number;
@@ -377,6 +378,8 @@ export interface ConsumerOptsBuilder {
   idleHeartbeat(millis: number): void;
   // flow control - server sends a status code 100 and uses the delay in response to throttle inbound messages for a client and prevent slow consumer.
   flowControl(): void;
+  // creates an ordered consumer - ordered consumers cannot be a pull consumer nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
+  orderedConsumer(): void;
 }
 
 export interface Lister<T> {
@@ -769,6 +772,8 @@ export enum JsHeaders {
   LastConsumerSeqHdr = "Nats-Last-Consumer",
   // set for heartbeat messages
   LastStreamSeqHdr = "Nats-Last-Stream",
+  // set for heartbeat messages if stalled
+  ConsumerStalledHdr = "Nats-Consumer-Stalled",
 }
 
 export interface KvEntry {

@@ -61,7 +61,7 @@ import {
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
 import { connect } from "../src/connect.ts";
 import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween, disabled, notCompatible } from "./helpers/mod.ts";
+import { assertBetween, disabled, Lock, notCompatible } from "./helpers/mod.ts";
 import {
   isFlowControlMsg,
   isHeartbeatMsg,
@@ -2215,6 +2215,81 @@ Deno.test("jetstream - redelivery property works", async () => {
   const jsm = await nc.jetstreamManager();
   const ci = await jsm.consumers.info(stream, "n");
   assertEquals(ci.delivered.consumer_seq, 100 + r);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - ordered consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    jetstream: {
+      max_file_store: 1024 * 1024 * 25,
+    },
+  }, true));
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  const S = 1024;
+  const buf = new Uint8Array(S);
+  for (let i = 0; i < S; i++) {
+    buf[i] = "a".charCodeAt(0) + (i % 26);
+  }
+
+  const N = 500;
+  for (let i = 0; i < N; i++) {
+    await Promise.all([
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+      js.publish(subj, buf),
+    ]);
+  }
+
+  const lock = Lock(N * 10, 1000 * 60);
+  const opts = consumerOpts({ idle_heartbeat: nanos(1000) });
+  opts.orderedConsumer();
+
+  const sub = await js.subscribe(subj, opts);
+  (async () => {
+    for await (const jm of sub) {
+      lock.unlock();
+    }
+  })().then();
+  await lock;
+  //@ts-ignore: test
+  assertEquals(sub.sub.info.ordered_consumer_sequence.stream_seq, N * 10);
+  //@ts-ignore: test
+  assertEquals(sub.sub.info.ordered_consumer_sequence.delivery_seq, N * 10);
+
+  await delay(3 * 1000);
+  // @ts-ignore: test
+  const hbc = sub.sub.info.flow_control.heartbeat_count;
+  assert(hbc >= 2);
+  // @ts-ignore: test
+  const fcc = sub.sub.info.flow_control.fc_count;
+  assert(fcc > 0);
+
+  // @ts-ignore: test
+  assert(sub.sub.info.flow_control.consumer_restarts >= 0);
+
+  //@ts-ignore
+
+  // @ts-ignore: test
+  assert(sub.sub.info.flow_control.heartbeat_count > 0);
+
+  const ci = await sub.consumerInfo();
+
+  assertEquals(ci.config.deliver_policy, DeliverPolicy.All);
+  assertEquals(ci.config.ack_policy, AckPolicy.None);
+  assertEquals(ci.config.max_deliver, 1);
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.consumer_seq, N * 10);
+  assertEquals(ci.delivered.stream_seq, N * 10);
 
   await cleanup(ns, nc);
 });
