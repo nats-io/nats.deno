@@ -38,6 +38,7 @@ export function consumerOpts(
 // rateLimit(bytesPerSec)
 export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   config: Partial<ConsumerConfig>;
+  ordered: boolean;
   mack: boolean;
   stream: string;
   callbackFn?: JsMsgCallback;
@@ -47,9 +48,8 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   constructor(opts?: Partial<ConsumerConfig>) {
     this.stream = "";
     this.mack = false;
+    this.ordered = false;
     this.config = defaultConsumer("", opts || {});
-    // not set
-    this.config.ack_policy = AckPolicy.All;
   }
 
   getOpts(): ConsumerOpts {
@@ -60,6 +60,8 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     o.callbackFn = this.callbackFn;
     o.max = this.max;
     o.queue = this.qname;
+    o.ordered = this.ordered;
+    o.config.ack_policy = o.ordered ? AckPolicy.None : o.config.ack_policy;
     return o;
   }
 
@@ -147,6 +149,10 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   flowControl() {
     this.config.flow_control = true;
+  }
+
+  orderedConsumer() {
+    this.ordered = true;
   }
 }
 

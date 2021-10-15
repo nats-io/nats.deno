@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+import type { ConsumerOptsBuilder } from "./types.ts";
 import {
   AckPolicy,
   ConsumerAPI,
@@ -29,6 +30,7 @@ import {
   JetStreamPullSubscription,
   JetStreamSubscription,
   JetStreamSubscriptionOptions,
+  JsHeaders,
   JsMsg,
   Msg,
   NatsConnection,
@@ -42,6 +44,7 @@ import { BaseApiClient } from "./jsbaseclient_api.ts";
 import {
   checkJsError,
   isFlowControlMsg,
+  isHeartbeatMsg,
   nanos,
   validateDurableName,
   validateStreamName,
@@ -55,11 +58,15 @@ import {
 } from "./typedsub.ts";
 import { ErrorCode, isNatsError, NatsError } from "./error.ts";
 import { SubscriptionImpl } from "./subscription.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
+import {
+  IngestionFilterFn,
+  IngestionFilterFnResult,
+  QueuedIterator,
+  QueuedIteratorImpl,
+} from "./queued_iterator.ts";
 import { Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
-import type { ConsumerOptsBuilder } from "./types.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 
 export interface JetStreamSubscriptionInfoable {
@@ -260,6 +267,9 @@ export class JetStreamClientImpl extends BaseApiClient
     opts: ConsumerOptsBuilder | Partial<ConsumerOpts> = consumerOpts(),
   ): Promise<JetStreamPullSubscription> {
     const cso = await this._processOptions(subject, opts);
+    if (cso.ordered) {
+      throw new Error("pull subscribers cannot be be ordered");
+    }
     if (!cso.attached) {
       cso.config.filter_subject = subject;
     }
@@ -280,6 +290,7 @@ export class JetStreamClientImpl extends BaseApiClient
       cso.deliver,
       so,
     );
+    sub.info = cso;
 
     try {
       await this._maybeCreateConsumer(cso);
@@ -287,7 +298,6 @@ export class JetStreamClientImpl extends BaseApiClient
       sub.unsubscribe();
       throw err;
     }
-    sub.info = cso;
     return sub as JetStreamPullSubscription;
   }
 
@@ -310,13 +320,13 @@ export class JetStreamClientImpl extends BaseApiClient
       cso.deliver,
       so,
     );
+    sub.info = cso;
     try {
       await this._maybeCreateConsumer(cso);
     } catch (err) {
       sub.unsubscribe();
       throw err;
     }
-    sub.info = cso;
     return sub;
   }
 
@@ -328,6 +338,60 @@ export class JetStreamClientImpl extends BaseApiClient
       (isConsumerOptsBuilder(opts)
         ? opts.getOpts()
         : opts) as JetStreamSubscriptionInfo;
+
+    jsi.flow_control = {
+      heartbeat_count: 0,
+      fc_count: 0,
+      consumer_restarts: 0,
+    };
+    if (jsi.ordered) {
+      jsi.ordered_consumer_sequence = { stream_seq: 0, delivery_seq: 0 };
+      if (
+        jsi.config.ack_policy !== AckPolicy.NotSet &&
+        jsi.config.ack_policy !== AckPolicy.None
+      ) {
+        throw new NatsError(
+          "ordered consumer: ack_policy can only be set to 'none'",
+          ErrorCode.ApiError,
+        );
+      }
+      if (jsi.config.durable_name && jsi.config.durable_name.length > 0) {
+        throw new NatsError(
+          "ordered consumer: durable_name cannot be set",
+          ErrorCode.ApiError,
+        );
+      }
+      if (jsi.config.deliver_subject && jsi.config.deliver_subject.length > 0) {
+        throw new NatsError(
+          "ordered consumer: deliver_subject cannot be set",
+          ErrorCode.ApiError,
+        );
+      }
+      if (
+        jsi.config.max_deliver !== undefined && jsi.config.max_deliver > 1
+      ) {
+        throw new NatsError(
+          "ordered consumer: max_deliver cannot be set",
+          ErrorCode.ApiError,
+        );
+      }
+      if (jsi.config.deliver_group && jsi.config.deliver_group.length > 0) {
+        throw new NatsError(
+          "ordered consumer: deliver_group cannot be set",
+          ErrorCode.ApiError,
+        );
+      }
+      jsi.config.deliver_subject = createInbox();
+      jsi.config.ack_policy = AckPolicy.None;
+      jsi.config.max_deliver = 1;
+      jsi.config.flow_control = true;
+      jsi.config.idle_heartbeat = jsi.config.idle_heartbeat || nanos(5000);
+      jsi.config.ack_wait = nanos(22 * 60 * 60 * 1000);
+    }
+
+    if (jsi.config.ack_policy === AckPolicy.NotSet) {
+      jsi.config.ack_policy = AckPolicy.All;
+    }
 
     jsi.api = this;
     jsi.config = jsi.config || {} as ConsumerConfig;
@@ -383,21 +447,24 @@ export class JetStreamClientImpl extends BaseApiClient
   ): TypedSubscriptionOptions<JsMsg> {
     const so = {} as TypedSubscriptionOptions<JsMsg>;
     so.adapter = msgAdapter(jsi.callbackFn === undefined);
-    if (jsi.callbackFn) {
-      so.callback = jsi.callbackFn;
-    }
-    so.protocolFilterFn = (jm): boolean => {
+    so.ingestionFilterFn = JetStreamClientImpl.ingestionFn(jsi.ordered);
+    so.protocolFilterFn = (jm, ingest = false): boolean => {
       const jsmi = jm as JsMsgImpl;
       if (isFlowControlMsg(jsmi.msg)) {
-        // FIXME: ordered consumer needs to work on this
-        jsmi.msg.respond();
+        if (!ingest) {
+          jsmi.msg.respond();
+        }
         return false;
       }
       return true;
     };
-    if (!jsi.mack) {
+    if (!jsi.mack && jsi.config.ack_policy !== AckPolicy.None) {
       so.dispatchedFn = autoAckJsMsg;
     }
+    if (jsi.callbackFn) {
+      so.callback = jsi.callbackFn;
+    }
+
     so.max = jsi.max || 0;
     so.queue = jsi.queue;
     return so;
@@ -418,16 +485,44 @@ export class JetStreamClientImpl extends BaseApiClient
     jsi.name = ci.name;
     jsi.config = ci.config;
   }
+
+  static ingestionFn(
+    ordered: boolean,
+  ): IngestionFilterFn<JsMsg> {
+    return (jm: JsMsg | null, ctx?: unknown): IngestionFilterFnResult => {
+      // ctx is expected to be the iterator (the JetstreamSubscriptionImpl)
+      const jsub = ctx as JetStreamSubscriptionImpl;
+      // this shouldn't happen
+      if (!jm) return { ingest: false, protocol: false };
+
+      const jmi = jm as JsMsgImpl;
+      if (isHeartbeatMsg(jmi.msg)) {
+        const ingest = ordered ? jsub._checkHbOrderConsumer(jmi.msg) : true;
+        if (!ordered) {
+          jsub!.info!.flow_control.heartbeat_count++;
+        }
+        return { ingest, protocol: true };
+      } else if (isFlowControlMsg(jmi.msg)) {
+        jsub!.info!.flow_control.fc_count++;
+        return { ingest: true, protocol: true };
+      }
+      const ingest = ordered ? jsub._checkOrderedConsumer(jm) : true;
+      return { ingest, protocol: false };
+    };
+  }
 }
 
 class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
+  js: BaseApiClient;
+
   constructor(
     js: BaseApiClient,
     subject: string,
     opts: JetStreamSubscriptionOptions,
   ) {
     super(js.nc, subject, opts);
+    this.js = js;
   }
 
   set info(info: JetStreamSubscriptionInfo | null) {
@@ -436,6 +531,69 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
 
   get info(): JetStreamSubscriptionInfo | null {
     return this.sub.info as JetStreamSubscriptionInfo;
+  }
+
+  _resetOrderedConsumer(sseq: number): void {
+    if (this.info === null || this.sub.isClosed()) {
+      return;
+    }
+    const newDeliver = createInbox(this.js.opts.apiPrefix);
+    const nci = this.js.nc;
+    nci._resub(this.sub, newDeliver);
+    const info = this.info;
+    info.ordered_consumer_sequence.delivery_seq = 0;
+    info.flow_control.heartbeat_count = 0;
+    info.flow_control.fc_count = 0;
+    info.flow_control.consumer_restarts++;
+    info.deliver = newDeliver;
+    info.config.deliver_subject = newDeliver;
+    info.config.deliver_policy = DeliverPolicy.StartSequence;
+    info.config.opt_start_seq = sseq;
+
+    const subj = `${info.api.prefix}.CONSUMER.CREATE.${info.stream}`;
+
+    this.js._request(subj, this.info.config)
+      .catch((err) => {
+        // to inform the subscription we inject an error this will
+        // be at after the last message if using an iterator.
+        const nerr = new NatsError(
+          `unable to recreate ordered consumer ${info.stream} at seq ${sseq}`,
+          ErrorCode.RequestError,
+          err,
+        );
+        this.sub.callback(nerr, {} as Msg);
+      });
+  }
+
+  _checkHbOrderConsumer(msg: Msg): boolean {
+    const rm = msg.headers!.get(JsHeaders.ConsumerStalledHdr);
+    if (rm !== "") {
+      const nci = this.js.nc;
+      nci.publish(rm);
+    }
+    const lastDelivered = parseInt(
+      msg.headers!.get(JsHeaders.LastConsumerSeqHdr),
+      10,
+    );
+    const ordered = this.info!.ordered_consumer_sequence;
+    this.info!.flow_control.heartbeat_count++;
+    if (lastDelivered !== ordered.delivery_seq) {
+      this._resetOrderedConsumer(ordered.stream_seq + 1);
+    }
+    return false;
+  }
+
+  _checkOrderedConsumer(jm: JsMsg): boolean {
+    const ordered = this.info!.ordered_consumer_sequence;
+    const sseq = jm.info.streamSequence;
+    const dseq = jm.info.deliverySequence;
+    if (dseq != ordered.delivery_seq + 1) {
+      this._resetOrderedConsumer(ordered.stream_seq + 1);
+      return false;
+    }
+    ordered.delivery_seq = dseq;
+    ordered.stream_seq = sseq;
+    return true;
   }
 
   async destroy(): Promise<void> {
@@ -493,6 +651,12 @@ interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
   attached: boolean;
   deliver: string;
+  "ordered_consumer_sequence": { "delivery_seq": number; "stream_seq": number };
+  "flow_control": {
+    "heartbeat_count": number;
+    "fc_count": number;
+    "consumer_restarts": number;
+  };
 }
 
 function msgAdapter(iterator: boolean): MsgAdapter<JsMsg> {

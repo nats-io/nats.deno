@@ -147,7 +147,7 @@ Deno.test("extensions - filter called on callback", async () => {
   const subj = createInbox();
   const sub = nc.subscribe(subj, {
     max: 3,
-    callback: (err, m) => {
+    callback: (_err, m) => {
       processed.push(sc.decode(m.data));
     },
   }) as SubscriptionImpl;

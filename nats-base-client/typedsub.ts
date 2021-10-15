@@ -14,7 +14,11 @@
  */
 
 import { Deferred, deferred } from "./util.ts";
-import type { DispatchedFn, ProtocolFilterFn } from "./queued_iterator.ts";
+import type {
+  DispatchedFn,
+  IngestionFilterFn,
+  ProtocolFilterFn,
+} from "./queued_iterator.ts";
 import type {
   Msg,
   NatsConnection,
@@ -48,6 +52,7 @@ export type TypedCallback<T> = (err: NatsError | null, msg: T | null) => void;
 export interface TypedSubscriptionOptions<T> extends SubOpts<T> {
   adapter: MsgAdapter<T>;
   callback?: TypedCallback<T>;
+  ingestionFilterFn?: IngestionFilterFn<T>;
   protocolFilterFn?: ProtocolFilterFn<T>;
   dispatchedFn?: DispatchedFn<T>;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
@@ -95,8 +100,12 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
     }
     this.noIterator = typeof opts.callback === "function";
 
+    if (opts.ingestionFilterFn) {
+      checkFn(opts.ingestionFilterFn, "ingestionFilterFn");
+      this.ingestionFilterFn = opts.ingestionFilterFn;
+    }
     if (opts.protocolFilterFn) {
-      checkFn(opts.protocolFilterFn, "filterFn");
+      checkFn(opts.protocolFilterFn, "protocolFilterFn");
       this.protocolFilterFn = opts.protocolFilterFn;
     }
     if (opts.dispatchedFn) {
@@ -114,11 +123,20 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
       const uh = opts.callback;
       callback = (err: NatsError | null, msg: Msg) => {
         const [jer, tm] = this.adapter(err, msg);
-        const ok = this.protocolFilterFn ? this.protocolFilterFn(tm) : true;
-        if (ok) {
-          uh(jer, tm);
-          if (this.dispatchedFn && tm) {
-            this.dispatchedFn(tm);
+        if (jer) {
+          uh(jer, null);
+          return;
+        }
+        const { ingest } = this.ingestionFilterFn
+          ? this.ingestionFilterFn(tm, this)
+          : { ingest: true };
+        if (ingest) {
+          const ok = this.protocolFilterFn ? this.protocolFilterFn(tm) : true;
+          if (ok) {
+            uh(jer, tm);
+            if (this.dispatchedFn && tm) {
+              this.dispatchedFn(tm);
+            }
           }
         }
       };
