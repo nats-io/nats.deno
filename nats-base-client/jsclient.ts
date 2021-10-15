@@ -462,9 +462,6 @@ export class JetStreamClientImpl extends BaseApiClient
       so.dispatchedFn = autoAckJsMsg;
     }
     if (jsi.callbackFn) {
-      //FIXME: need a callback here that uses the filters
-      //    previously the protocol messages were filtered out
-      //    now they are not.
       so.callback = jsi.callbackFn;
     }
 
@@ -556,19 +553,15 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
     const subj = `${info.api.prefix}.CONSUMER.CREATE.${info.stream}`;
 
     this.js._request(subj, this.info.config)
-      .catch(async (err) => {
-        this.sub.drain()
-          .then(() => {
-            const nerr = new NatsError(
-              `unable to recreate ordered consumer ${info.stream} at seq ${sseq}`,
-              ErrorCode.RequestError,
-              err,
-            );
-            this.sub.callback(nerr, {} as Msg);
-          })
-          .catch(() => {
-            // the sub should report it
-          });
+      .catch((err) => {
+        // to inform the subscription we inject an error this will
+        // be at after the last message if using an iterator.
+        const nerr = new NatsError(
+          `unable to recreate ordered consumer ${info.stream} at seq ${sseq}`,
+          ErrorCode.RequestError,
+          err,
+        );
+        this.sub.callback(nerr, {} as Msg);
       });
   }
 
@@ -658,11 +651,11 @@ interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
   attached: boolean;
   deliver: string;
-  ordered_consumer_sequence: { delivery_seq: number; stream_seq: number };
-  flow_control: {
-    heartbeat_count: number;
-    fc_count: number;
-    consumer_restarts: number;
+  "ordered_consumer_sequence": { "delivery_seq": number; "stream_seq": number };
+  "flow_control": {
+    "heartbeat_count": number;
+    "fc_count": number;
+    "consumer_restarts": number;
   };
 }
 

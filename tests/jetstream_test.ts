@@ -2219,23 +2219,32 @@ Deno.test("jetstream - redelivery property works", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - ordered consumer", async () => {
+async function ocTest(
+  N: number,
+  S: number,
+  callback: boolean,
+): Promise<void> {
+  if (N % 10 !== 0) {
+    throw new Error("N must be divisible by 10");
+  }
+
+  const storage = N * S + (1024 * 1024);
   const { ns, nc } = await setup(jetstreamServerConf({
     jetstream: {
-      max_file_store: 1024 * 1024 * 25,
+      max_file_store: storage,
     },
   }, true));
   const { subj } = await initStream(nc);
   const js = nc.jetstream();
 
-  const S = 1024;
   const buf = new Uint8Array(S);
   for (let i = 0; i < S; i++) {
     buf[i] = "a".charCodeAt(0) + (i % 26);
   }
 
-  const N = 500;
-  for (let i = 0; i < N; i++) {
+  // speed up the loading by sending 10 at time
+  const n = N / 10;
+  for (let i = 0; i < n; i++) {
     await Promise.all([
       js.publish(subj, buf),
       js.publish(subj, buf),
@@ -2250,21 +2259,36 @@ Deno.test("jetstream - ordered consumer", async () => {
     ]);
   }
 
-  const lock = Lock(N * 10, 1000 * 60);
+  const lock = Lock(N, 1000 * 60);
   const opts = consumerOpts({ idle_heartbeat: nanos(1000) });
   opts.orderedConsumer();
+  if (callback) {
+    opts.callback((err: NatsError | null, msg: JsMsg | null): void => {
+      if (err) {
+        fail(err.message);
+        return;
+      }
+      if (!msg) {
+        fail(`didn't expect to get null msg`);
+        return;
+      }
+      lock.unlock();
+    });
+  }
 
   const sub = await js.subscribe(subj, opts);
-  (async () => {
-    for await (const jm of sub) {
-      lock.unlock();
-    }
-  })().then();
+  if (!callback) {
+    (async () => {
+      for await (const _jm of sub) {
+        lock.unlock();
+      }
+    })().then();
+  }
   await lock;
   //@ts-ignore: test
-  assertEquals(sub.sub.info.ordered_consumer_sequence.stream_seq, N * 10);
+  assertEquals(sub.sub.info.ordered_consumer_sequence.stream_seq, N);
   //@ts-ignore: test
-  assertEquals(sub.sub.info.ordered_consumer_sequence.delivery_seq, N * 10);
+  assertEquals(sub.sub.info.ordered_consumer_sequence.delivery_seq, N);
 
   await delay(3 * 1000);
   // @ts-ignore: test
@@ -2277,8 +2301,6 @@ Deno.test("jetstream - ordered consumer", async () => {
   // @ts-ignore: test
   assert(sub.sub.info.flow_control.consumer_restarts >= 0);
 
-  //@ts-ignore
-
   // @ts-ignore: test
   assert(sub.sub.info.flow_control.heartbeat_count > 0);
 
@@ -2288,8 +2310,16 @@ Deno.test("jetstream - ordered consumer", async () => {
   assertEquals(ci.config.ack_policy, AckPolicy.None);
   assertEquals(ci.config.max_deliver, 1);
   assertEquals(ci.num_pending, 0);
-  assertEquals(ci.delivered.consumer_seq, N * 10);
-  assertEquals(ci.delivered.stream_seq, N * 10);
+  assertEquals(ci.delivered.consumer_seq, N);
+  assertEquals(ci.delivered.stream_seq, N);
 
   await cleanup(ns, nc);
+}
+
+Deno.test("jetstream - ordered consumer callback", async () => {
+  await ocTest(500, 1024, true);
+});
+
+Deno.test("jetstream - ordered consumer iterator", async () => {
+  await ocTest(500, 1024, false);
 });

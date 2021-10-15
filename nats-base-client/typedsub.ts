@@ -123,11 +123,20 @@ export class TypedSubscription<T> extends QueuedIteratorImpl<T>
       const uh = opts.callback;
       callback = (err: NatsError | null, msg: Msg) => {
         const [jer, tm] = this.adapter(err, msg);
-        const ok = this.protocolFilterFn ? this.protocolFilterFn(tm) : true;
-        if (ok) {
-          uh(jer, tm);
-          if (this.dispatchedFn && tm) {
-            this.dispatchedFn(tm);
+        if (jer) {
+          uh(jer, null);
+          return;
+        }
+        const { ingest } = this.ingestionFilterFn
+          ? this.ingestionFilterFn(tm, this)
+          : { ingest: true };
+        if (ingest) {
+          const ok = this.protocolFilterFn ? this.protocolFilterFn(tm) : true;
+          if (ok) {
+            uh(jer, tm);
+            if (this.dispatchedFn && tm) {
+              this.dispatchedFn(tm);
+            }
           }
         }
       };

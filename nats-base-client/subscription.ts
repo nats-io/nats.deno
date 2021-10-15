@@ -85,7 +85,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
     if (this.noIterator) {
       const uc = this.callback;
 
-      let ingestion = opts.ingestionFilterFn
+      const ingestion = opts.ingestionFilterFn
         ? opts.ingestionFilterFn
         : (): IngestionFilterFnResult => {
           return { ingest: true, protocol: false };
