@@ -725,7 +725,6 @@ export interface AccountLimits {
 }
 
 export interface ConsumerConfig {
-  name: string;
   "durable_name"?: string;
   "deliver_subject"?: string;
   "deliver_group"?: string;
