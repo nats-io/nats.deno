@@ -20,6 +20,7 @@ import {
   ConsumerOptsBuilder,
   DeliverPolicy,
   JsMsgCallback,
+  ReplayPolicy,
 } from "./types.ts";
 import { defaultConsumer, nanos, validateDurableName } from "./jsutil.ts";
 
@@ -65,33 +66,17 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return o;
   }
 
-  deliverTo(subject: string) {
-    this.config.deliver_subject = subject;
+  description(description: string) {
+    this.config.description = description;
   }
 
-  manualAck() {
-    this.mack = true;
+  deliverTo(subject: string) {
+    this.config.deliver_subject = subject;
   }
 
   durable(name: string) {
     validateDurableName(name);
     this.config.durable_name = name;
-  }
-
-  deliverAll() {
-    this.config.deliver_policy = DeliverPolicy.All;
-  }
-
-  deliverLast() {
-    this.config.deliver_policy = DeliverPolicy.Last;
-  }
-
-  deliverLastPerSubject() {
-    this.config.deliver_policy = DeliverPolicy.LastPerSubject;
-  }
-
-  deliverNew() {
-    this.config.deliver_policy = DeliverPolicy.New;
   }
 
   startSequence(seq: number) {
@@ -107,6 +92,30 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.opt_start_time = time.toISOString();
   }
 
+  deliverAll() {
+    this.config.deliver_policy = DeliverPolicy.All;
+  }
+
+  deliverLastPerSubject() {
+    this.config.deliver_policy = DeliverPolicy.LastPerSubject;
+  }
+
+  deliverLast() {
+    this.config.deliver_policy = DeliverPolicy.Last;
+  }
+
+  deliverNew() {
+    this.config.deliver_policy = DeliverPolicy.New;
+  }
+
+  startAtTimeDelta(millis: number) {
+    this.startTime(new Date(Date.now() - millis));
+  }
+
+  headersOnly() {
+    this.config.headers_only = true;
+  }
+
   ackNone() {
     this.config.ack_policy = AckPolicy.None;
   }
@@ -119,15 +128,60 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.Explicit;
   }
 
+  ackWait(millis: number) {
+    this.config.ack_wait = nanos(millis);
+  }
+
   maxDeliver(max: number) {
     this.config.max_deliver = max;
   }
-  maxAckPending(max: number) {
-    this.config.max_ack_pending = max;
+
+  filterSubject(s: string) {
+    this.config.filter_subject = s;
+  }
+
+  replayInstantly() {
+    this.config.replay_policy = ReplayPolicy.Instant;
+  }
+
+  replayOriginal() {
+    this.config.replay_policy = ReplayPolicy.Original;
+  }
+
+  sample(n: number) {
+    n = Math.trunc(n);
+    if (n < 0 || n > 100) {
+      throw new Error(`value must be between 0-100`);
+    }
+    this.config.sample_freq = `${n}%`;
+  }
+
+  limit(n: number) {
+    this.config.rate_limit_bps = n;
   }
 
   maxWaiting(max: number) {
     this.config.max_waiting = max;
+  }
+
+  maxAckPending(max: number) {
+    this.config.max_ack_pending = max;
+  }
+
+  idleHeartbeat(millis: number) {
+    this.config.idle_heartbeat = nanos(millis);
+  }
+
+  flowControl() {
+    this.config.flow_control = true;
+  }
+
+  deliverGroup(name: string) {
+    this.queue(name);
+  }
+
+  manualAck() {
+    this.mack = true;
   }
 
   maxMessages(max: number) {
@@ -141,14 +195,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   queue(n: string) {
     this.qname = n;
     this.config.deliver_group = n;
-  }
-
-  idleHeartbeat(millis: number) {
-    this.config.idle_heartbeat = nanos(millis);
-  }
-
-  flowControl() {
-    this.config.flow_control = true;
   }
 
   orderedConsumer() {

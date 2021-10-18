@@ -49,7 +49,14 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       `${this.prefix}.STREAM.CREATE.${cfg.name}`,
       cfg,
     );
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+    // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
+    //  https://github.com/nats-io/nats-server/issues/2633
+    si.config.sealed = si.config.sealed || false;
+    si.config.deny_delete = si.config.deny_delete || false;
+    si.config.deny_purge = si.config.deny_purge || false;
+    si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+    return si;
   }
 
   async delete(stream: string): Promise<boolean> {
@@ -65,7 +72,14 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       `${this.prefix}.STREAM.UPDATE.${cfg.name}`,
       cfg,
     );
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+    // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
+    //  https://github.com/nats-io/nats-server/issues/2633
+    si.config.sealed = si.config.sealed || false;
+    si.config.deny_delete = si.config.deny_delete || false;
+    si.config.deny_purge = si.config.deny_purge || false;
+    si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+    return si;
   }
 
   async info(
@@ -74,7 +88,14 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   ): Promise<StreamInfo> {
     validateStreamName(name);
     const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`, data);
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+    // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
+    //  https://github.com/nats-io/nats-server/issues/2633
+    si.config.sealed = si.config.sealed || false;
+    si.config.deny_delete = si.config.deny_delete || false;
+    si.config.deny_purge = si.config.deny_purge || false;
+    si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+    return si;
   }
 
   list(): Lister<StreamInfo> {
@@ -82,6 +103,14 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       v: unknown,
     ): StreamInfo[] => {
       const slr = v as StreamListResponse;
+      // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
+      //  https://github.com/nats-io/nats-server/issues/2633
+      slr.streams.forEach((si) => {
+        si.config.sealed = si.config.sealed || false;
+        si.config.deny_delete = si.config.deny_delete || false;
+        si.config.deny_purge = si.config.deny_purge || false;
+        si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+      });
       return slr.streams;
     };
     const subj = `${this.prefix}.STREAM.LIST`;
