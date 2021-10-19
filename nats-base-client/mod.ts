@@ -21,6 +21,7 @@ export {
   JSONCodec,
   jwtAuthenticator,
   Match,
+  Metric,
   millis,
   MsgHdrsImpl,
   nanos,
