@@ -2323,3 +2323,285 @@ Deno.test("jetstream - ordered consumer callback", async () => {
 Deno.test("jetstream - ordered consumer iterator", async () => {
   await ocTest(500, 1024, false);
 });
+
+Deno.test("jetstream - seal", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("hello"));
+  await js.publish(subj, sc.encode("second"));
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.config.sealed, false);
+  assertEquals(si.config.deny_purge, false);
+  assertEquals(si.config.deny_delete, false);
+
+  await jsm.streams.deleteMessage(stream, 1);
+
+  si.config.sealed = true;
+  const usi = await jsm.streams.update(si.config);
+  assertEquals(usi.config.sealed, true);
+
+  await assertThrowsAsync(
+    async () => {
+      await jsm.streams.deleteMessage(stream, 2);
+    },
+    Error,
+    "invalid operation on sealed stream",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deny delete", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+    deny_delete: true,
+  });
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("hello"));
+  await js.publish(subj, sc.encode("second"));
+
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.config.deny_delete, true);
+
+  await assertThrowsAsync(
+    async () => {
+      await jsm.streams.deleteMessage(stream, 1);
+    },
+    Error,
+    "message delete not permitted",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - deny purge", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+    deny_purge: true,
+  });
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("hello"));
+  await js.publish(subj, sc.encode("second"));
+
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.config.deny_purge, true);
+
+  await assertThrowsAsync(
+    async () => {
+      await jsm.streams.purge(stream);
+    },
+    Error,
+    "stream purge not permitted",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - rollup all", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+    allow_rollup_hdrs: true,
+  });
+
+  const js = nc.jetstream();
+  const jc = JSONCodec();
+  const buf = [];
+  for (let i = 1; i < 11; i++) {
+    buf.push(js.publish(`${stream}.A`, jc.encode({ value: i })));
+  }
+  await Promise.all(buf);
+
+  const h = headers();
+  h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueAll);
+  await js.publish(`${stream}.summary`, jc.encode({ value: 42 }), {
+    headers: h,
+  });
+
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 1);
+
+  const opts = consumerOpts();
+  opts.manualAck();
+  opts.deliverTo(createInbox());
+  opts.callback((err, jm) => {
+    assert(jm);
+    assertEquals(jm.subject, `${stream}.summary`);
+    const obj = jc.decode(jm.data) as Record<string, number>;
+    assertEquals(obj.value, 42);
+  });
+  opts.maxMessages(1);
+
+  const sub = await js.subscribe(subj, opts);
+  await sub;
+  assertEquals(sub.getProcessed(), 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - rollup subject", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = "S";
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+    allow_rollup_hdrs: true,
+  });
+
+  const js = nc.jetstream();
+  const jc = JSONCodec<Record<string, number>>();
+  const buf = [];
+  for (let i = 1; i < 11; i++) {
+    buf.push(js.publish(`${stream}.A`, jc.encode({ value: i })));
+    buf.push(js.publish(`${stream}.B`, jc.encode({ value: i })));
+  }
+  await Promise.all(buf);
+
+  let si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 20);
+
+  let cia = await jsm.consumers.add(stream, {
+    durable_name: "dura",
+    filter_subject: `${stream}.A`,
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(cia.num_pending, 10);
+
+  const h = headers();
+  h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
+  await js.publish(`${stream}.A`, jc.encode({ value: 42 }), {
+    headers: h,
+  });
+
+  await delay(5000);
+
+  cia = await jsm.consumers.info(stream, "dura");
+  assertEquals(cia.num_pending, 1);
+
+  si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 11);
+
+  const cib = await jsm.consumers.add(stream, {
+    durable_name: "durb",
+    filter_subject: `${stream}.B`,
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(cib.num_pending, 10);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - no rollup", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = "S";
+  const subj = `${stream}.*`;
+  const si = await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+    allow_rollup_hdrs: false,
+  });
+  assertEquals(si.config.allow_rollup_hdrs, false);
+
+  const js = nc.jetstream();
+  const jc = JSONCodec<Record<string, number>>();
+  const buf = [];
+  for (let i = 1; i < 11; i++) {
+    buf.push(js.publish(`${stream}.A`, jc.encode({ value: i })));
+  }
+  await Promise.all(buf);
+
+  const h = headers();
+  h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
+  await assertThrowsAsync(
+    async () => {
+      await js.publish(`${stream}.A`, jc.encode({ value: 42 }), {
+        headers: h,
+      });
+    },
+    Error,
+    "rollup not permitted",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - headers only", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+  });
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+  await js.publish(`${stream}.A`, sc.encode("a"));
+  await js.publish(`${stream}.B`, sc.encode("b"));
+
+  const opts = consumerOpts();
+  opts.deliverTo(createInbox());
+  opts.headersOnly();
+  opts.manualAck();
+  opts.callback((err, jm) => {
+    assert(jm);
+    assert(jm.headers);
+    const size = parseInt(jm.headers.get(JsHeaders.MessageSizeHdr), 10);
+    assertEquals(size, 1);
+    assertEquals(jm.data, Empty);
+    jm.ack();
+  });
+  opts.maxMessages(2);
+
+  const sub = await js.subscribe(subj, opts);
+  await sub.closed;
+  assertEquals(sub.getProcessed(), 2);
+
+  await cleanup(ns, nc);
+});

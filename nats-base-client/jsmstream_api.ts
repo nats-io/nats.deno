@@ -49,7 +49,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       `${this.prefix}.STREAM.CREATE.${cfg.name}`,
       cfg,
     );
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+    this._fixInfo(si);
+    return si;
   }
 
   async delete(stream: string): Promise<boolean> {
@@ -65,7 +67,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       `${this.prefix}.STREAM.UPDATE.${cfg.name}`,
       cfg,
     );
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+    this._fixInfo(si);
+    return si;
   }
 
   async info(
@@ -74,7 +78,10 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   ): Promise<StreamInfo> {
     validateStreamName(name);
     const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`, data);
-    return r as StreamInfo;
+    const si = r as StreamInfo;
+
+    this._fixInfo(si);
+    return si;
   }
 
   list(): Lister<StreamInfo> {
@@ -82,10 +89,22 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       v: unknown,
     ): StreamInfo[] => {
       const slr = v as StreamListResponse;
+      slr.streams.forEach((si) => {
+        this._fixInfo(si);
+      });
       return slr.streams;
     };
     const subj = `${this.prefix}.STREAM.LIST`;
     return new ListerImpl<StreamInfo>(subj, filter, this);
+  }
+
+  // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
+  //  https://github.com/nats-io/nats-server/issues/2633
+  _fixInfo(si: StreamInfo) {
+    si.config.sealed = si.config.sealed || false;
+    si.config.deny_delete = si.config.deny_delete || false;
+    si.config.deny_purge = si.config.deny_purge || false;
+    si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
   }
 
   async purge(name: string, opts?: PurgeOpts): Promise<PurgeResponse> {

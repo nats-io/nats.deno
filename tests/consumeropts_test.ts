@@ -14,6 +14,7 @@
  */
 
 import {
+  assert,
   assertEquals,
   assertThrows,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
@@ -28,7 +29,9 @@ import {
   ConsumerOpts,
   DeliverPolicy,
   JsMsgCallback,
+  ReplayPolicy,
 } from "../nats-base-client/types.ts";
+import { millis } from "../nats-base-client/mod.ts";
 
 Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder(consumerOpts()), true);
@@ -206,4 +209,100 @@ Deno.test("consumeropts - callback", () => {
 
   const args = opts.getOpts();
   assertEquals(args.callbackFn, cb);
+});
+
+Deno.test("consumeropts - description", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.description("this is a description");
+
+  const args = opts.getOpts();
+  assertEquals(args.config.description, "this is a description");
+});
+
+Deno.test("consumeropts - startAtTimeDelta", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  const a = Date.now();
+  const b = a - 1000;
+  opts.startAtTimeDelta(1000);
+
+  const args = opts.getOpts();
+  const when = Date.parse(args.config.opt_start_time!);
+
+  const delta = when - b;
+
+  assert(delta >= 0 && delta <= 1000);
+  assertEquals(args.config.deliver_policy, DeliverPolicy.StartTime);
+});
+
+Deno.test("consumeropts - headersOnly", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.headersOnly();
+  const args = opts.getOpts();
+  assertEquals(args.config.headers_only, true);
+});
+
+Deno.test("consumeropts - ackWait", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.ackWait(2000);
+  const args = opts.getOpts();
+  assertEquals(millis(args.config.ack_wait!), 2000);
+});
+
+Deno.test("consumeropts - filterSubject", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.filterSubject("hello.>");
+  const args = opts.getOpts();
+  assertEquals(args.config.filter_subject, "hello.>");
+});
+
+Deno.test("consumeropts - replayInstantly", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.replayInstantly();
+  const args = opts.getOpts();
+  assertEquals(args.config.replay_policy, ReplayPolicy.Instant);
+});
+
+Deno.test("consumeropts - replayOriginal", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.replayOriginal();
+  const args = opts.getOpts();
+  assertEquals(args.config.replay_policy, ReplayPolicy.Original);
+});
+
+Deno.test("consumeropts - sample", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  assertThrows(
+    () => {
+      opts.sample(-1);
+    },
+    Error,
+    `value must be between 0-100`,
+  );
+  assertThrows(
+    () => {
+      opts.sample(101);
+    },
+    Error,
+    `value must be between 0-100`,
+  );
+
+  opts.sample(50);
+  const args = opts.getOpts();
+  assertEquals(args.config.sample_freq!, "50%");
+});
+
+Deno.test("consumeropts - limit", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.limit(1000);
+
+  const args = opts.getOpts();
+  assertEquals(args.config.rate_limit_bps, 1000);
+});
+
+Deno.test("consumeropts - deliverGroup", () => {
+  const opts = consumerOpts() as ConsumerOptsBuilderImpl;
+  opts.deliverGroup("x");
+
+  const args = opts.getOpts();
+  assertEquals(args.config.deliver_group, "x");
 });

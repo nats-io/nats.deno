@@ -338,46 +338,66 @@ export interface ConsumerOpts {
 }
 
 export interface ConsumerOptsBuilder {
+  // user description of this consumer
+  description(description: string): void;
   // deliverTo sets the subject a push consumer receives messages on
   deliverTo(subject: string): void;
-  // prevents the consumer implementation from auto-acking messages
-  manualAck(): void;
-  // sets the durable name
+  // sets the durable name, when not set an ephemeral consumer is created
   durable(name: string): void;
-  // consumer will start at first available message on the stream
-  deliverAll(): void;
-  // consumer will start at the last message
-  deliverLast(): void;
-  // consumer will deliver all the last per messages per subject
-  deliverLastPerSubject(): void;
-  // consumer will start with new messages (not yet in the stream)
-  deliverNew(): void;
   // consumer will start at the message with the specified sequence
   startSequence(seq: number): void;
   // consumer will start with messages received on the specified time/date
-  startTime(time: Date | Nanos): void;
-  // the consumer will not ack messages
+  startTime(time: Date): void;
+  // consumer will start at first available message on the stream
+  deliverAll(): void;
+  // consumer will deliver all the last per messages per subject
+  deliverLastPerSubject(): void;
+  // consumer will start at the last message
+  deliverLast(): void;
+  // consumer will start with new messages (not yet in the stream)
+  deliverNew(): void;
+  // start delivering at the at a past point in time
+  startAtTimeDelta(millis: number): void;
+  // deliver headers and `Nats-Msg-Size` header, no payloads
+  headersOnly(): void;
+  // disables message acknowledgement
   ackNone(): void;
-  // acking a message, implicitly acks all messages with a lower sequence
+  // ack'ing a message implicitly acks all messages with a lower sequence
   ackAll(): void;
   // consumer will ack all messages
   ackExplicit(): void;
-  // number of re-delivery attempts for a particular message
+  // sets teh time a delivered message might remain unacknowledged before redelivery is attempted
+  ackWait(millis: number): void;
+  // max number of re-delivery attempts for a particular message
   maxDeliver(max: number): void;
-  // max number of outstanding acks before the server stops sending new messages
-  maxAckPending(max: number): void;
+  // filters the messages in a wildcard stream to those matching a specific subject
+  filterSubject(s: string): void;
+  // replay messages as fast as possible
+  replayInstantly(): void;
+  // replay at the rate received
+  replayOriginal(): void;
+  // sample a subset of messages expressed as a percentage(0-100)
+  sample(n: number): void;
+  // limit message delivery to rate in bits per second
+  limit(bps: number): void;
   // max count of outstanding messages scheduled via batch pulls (pulls are additive)
   maxWaiting(max: number): void;
+  // max number of outstanding acks before the server stops sending new messages
+  maxAckPending(max: number): void;
+  // sets the time before an idle consumer sends an empty message with status 100 indicating consumer is alive
+  idleHeartbeat(millis: number): void;
+  // push consumer flow control - server sends a status code 100 and uses the delay on the response to throttle inbound messages for a client and prevent slow consumer.
+  flowControl(): void;
+  // sets the name of the queue group - same as queue
+  deliverGroup(name: string): void;
+  // prevents the consumer implementation from auto-acking messages
+  manualAck(): void;
   // standard nats subscribe option for the maximum number of messages to receive on the subscription
   maxMessages(max: number): void;
   // standard nats queue group option
   queue(n: string): void;
   // callback to process messages (or iterator is returned)
   callback(fn: JsMsgCallback): void;
-  // idle heartbeats - server sends a status code 100 if idle longer than specified, these messages have no reply
-  idleHeartbeat(millis: number): void;
-  // flow control - server sends a status code 100 and uses the delay in response to throttle inbound messages for a client and prevent slow consumer.
-  flowControl(): void;
   // creates an ordered consumer - ordered consumers cannot be a pull consumer nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
   orderedConsumer(): void;
 }
@@ -504,15 +524,17 @@ export interface StreamInfo {
 
 export interface StreamConfig {
   name: string;
+  description?: string;
   subjects?: string[];
   retention: RetentionPolicy;
   "max_consumers": number;
+  "max_msgs_per_subject"?: number;
   "max_msgs": number;
   "max_bytes": number;
-  discard?: DiscardPolicy;
   "max_age": Nanos;
   "max_msg_size"?: number;
   storage: StorageType;
+  discard?: DiscardPolicy;
   "num_replicas": number;
   "no_ack"?: boolean;
   "template_owner"?: string;
@@ -520,8 +542,10 @@ export interface StreamConfig {
   placement?: Placement;
   mirror?: StreamSource; // same as a source
   sources?: StreamSource[];
-  "max_msgs_per_subject"?: number;
-  description?: string;
+  sealed: boolean;
+  "deny_delete": boolean;
+  "deny_purge": boolean;
+  "allow_rollup_hdrs": boolean;
 }
 
 export interface StreamSource {
@@ -725,24 +749,25 @@ export interface AccountLimits {
 }
 
 export interface ConsumerConfig {
-  "durable_name"?: string;
-  "deliver_subject"?: string;
-  "deliver_group"?: string;
-  "deliver_policy": DeliverPolicy;
-  "opt_start_seq"?: number;
-  "opt_start_time"?: string;
+  description?: string;
   "ack_policy": AckPolicy;
   "ack_wait"?: Nanos;
-  "max_deliver"?: number;
+  "deliver_policy": DeliverPolicy;
+  "deliver_subject"?: string;
+  "deliver_group"?: string;
+  "durable_name"?: string;
   "filter_subject"?: string;
-  "replay_policy": ReplayPolicy;
-  "rate_limit_bps"?: number;
-  "sample_freq"?: string;
-  "max_waiting"?: number;
-  "max_ack_pending"?: number;
-  "idle_heartbeat"?: Nanos; // send empty message when idle longer than this
   "flow_control"?: boolean; // send message with status of 100 and reply subject
-  description?: string;
+  "idle_heartbeat"?: Nanos; // send empty message when idle longer than this
+  "max_ack_pending"?: number;
+  "max_deliver"?: number;
+  "max_waiting"?: number;
+  "opt_start_seq"?: number;
+  "opt_start_time"?: string;
+  "rate_limit_bps"?: number;
+  "replay_policy": ReplayPolicy;
+  "sample_freq"?: string;
+  "headers_only"?: boolean;
 }
 
 export interface Consumer {
@@ -773,6 +798,14 @@ export enum JsHeaders {
   LastStreamSeqHdr = "Nats-Last-Stream",
   // set for heartbeat messages if stalled
   ConsumerStalledHdr = "Nats-Consumer-Stalled",
+  // set for headers_only consumers indicates number
+  MessageSizeHdr = "Nats-Msg-Size",
+  // rollup header
+  RollupHdr = "Nats-Rollup",
+  // value for rollup header when rolling up a subject
+  RollupValueSubject = "sub",
+  // value for rollup header when rolling up all subjects
+  RollupValueAll = "all",
 }
 
 export interface KvEntry {
