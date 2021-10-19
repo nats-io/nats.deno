@@ -216,7 +216,6 @@ Deno.test("jsm - add stream", async () => {
   assertEquals(si.config.name, name);
 
   const fn = (i: StreamInfo): boolean => {
-    console.log(i.config, si.config);
     assertEquals(i.config, si.config);
     assertEquals(i.state, si.state);
     assertEquals(i.created, si.created);
