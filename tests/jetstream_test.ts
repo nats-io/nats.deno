@@ -2426,7 +2426,7 @@ Deno.test("jetstream - deny purge", async () => {
 
 Deno.test("jetstream - rollup all", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc, "2.6.2")) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
@@ -2475,7 +2475,7 @@ Deno.test("jetstream - rollup all", async () => {
 
 Deno.test("jetstream - rollup subject", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc, "2.6.2")) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
@@ -2531,7 +2531,7 @@ Deno.test("jetstream - rollup subject", async () => {
 
 Deno.test("jetstream - no rollup", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc, "2.6.2")) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
