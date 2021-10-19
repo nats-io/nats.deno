@@ -27,6 +27,7 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertThrows,
+  assertThrowsAsync,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 
 import { KvEntry } from "../nats-base-client/types.ts";
@@ -120,7 +121,7 @@ Deno.test("kv - bucket name validation", () => {
 
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
@@ -170,7 +171,7 @@ async function crud(bucket: Bucket): Promise<void> {
   assertEquals(buf[1], "bye");
   assertEquals(buf[2], "");
 
-  const pr = await bucket.purge();
+  const pr = await bucket.purgeBucket();
   assertEquals(pr.purged, 3);
   assert(pr.success);
 
@@ -185,7 +186,7 @@ Deno.test("kv - crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const n = nuid.next();
@@ -197,7 +198,7 @@ Deno.test("kv - codec crud", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
@@ -220,7 +221,7 @@ Deno.test("kv - history", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const n = nuid.next();
@@ -243,7 +244,7 @@ Deno.test("kv - cleanups/empty", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const n = nuid.next();
@@ -268,7 +269,7 @@ Deno.test("kv - history cleanup", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const n = nuid.next();
@@ -297,7 +298,7 @@ Deno.test("kv - bucket watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const sc = StringCodec();
@@ -378,7 +379,7 @@ Deno.test("kv - key watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const bucket = await Bucket.create(nc, nuid.next()) as Bucket;
@@ -395,7 +396,7 @@ Deno.test("kv - codec key watch", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const bucket = await Bucket.create(nc, nuid.next(), {
@@ -434,7 +435,7 @@ Deno.test("kv - keys", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const b = await Bucket.create(nc, nuid.next());
@@ -451,7 +452,7 @@ Deno.test("kv - codec keys", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const b = await Bucket.create(nc, nuid.next(), {
@@ -474,7 +475,7 @@ Deno.test("kv - ttl", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
 
@@ -501,7 +502,7 @@ Deno.test("kv - no ttl", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const sc = StringCodec();
@@ -524,7 +525,7 @@ Deno.test("kv - complex key", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const sc = StringCodec();
@@ -569,7 +570,7 @@ Deno.test("kv - remove key", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const sc = StringCodec();
@@ -580,12 +581,14 @@ Deno.test("kv - remove key", async () => {
   assert(v);
   assertEquals(sc.decode(v.value), "ab");
 
-  await b.remove("a.b");
+  await b.purge("a.b");
   v = await b.get("a.b");
-  assertEquals(v, null);
+  assert(v);
+  assertEquals(v.operation, "PURGE");
 
   const status = await b.status();
-  assertEquals(status.values, 0);
+  // the purged value
+  assertEquals(status.values, 1);
 
   await cleanup(ns, nc);
 });
@@ -594,7 +597,7 @@ Deno.test("kv - remove subkey", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-  if (await notCompatible(ns, nc)) {
+  if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
   const b = await Bucket.create(nc, nuid.next()) as Bucket;
@@ -610,6 +613,50 @@ Deno.test("kv - remove subkey", async () => {
   keys = await b.keys();
   assertEquals(keys.length, 1);
   assertArrayIncludes(keys, ["a"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - create key", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const sc = StringCodec();
+  await b.create("a", Empty);
+  await assertThrowsAsync(
+    async () => {
+      await b.create("a", sc.encode("a"));
+    },
+    Error,
+    "wrong last sequence: 1",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - update key", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const sc = StringCodec();
+  const seq = await b.create("a", Empty);
+  await assertThrowsAsync(
+    async () => {
+      await b.update("a", sc.encode("a"), 100);
+    },
+    Error,
+    "wrong last sequence: 1",
+  );
+
+  await b.update("a", sc.encode("b"), seq);
 
   await cleanup(ns, nc);
 });

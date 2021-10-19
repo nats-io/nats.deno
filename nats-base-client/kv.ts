@@ -23,6 +23,7 @@ import {
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
+  JsHeaders,
   JsMsg,
   KV,
   KvCodec,
@@ -41,20 +42,12 @@ import {
   StreamConfig,
 } from "./types.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
-import { JetStreamManagerImpl } from "./jsm.ts";
-import {
-  checkJsError,
-  isFlowControlMsg,
-  isHeartbeatMsg,
-  millis,
-  nanos,
-} from "./jsutil.ts";
-import { isNatsError } from "./error.ts";
+import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
-import { parseInfo, toJsMsg } from "./jsmsg.ts";
 import { headers } from "./headers.ts";
 import { createInbox } from "./protocol.ts";
+import { consumerOpts } from "./mod.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -99,7 +92,8 @@ export function defaultBucketOpts(): Partial<KvOptions> {
   };
 }
 
-export const kvOriginClusterHdr = "KV-Origin-Cluster";
+type OperationType = "PUT" | "DEL" | "PURGE";
+
 export const kvOperationHdr = "KV-Operation";
 const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
@@ -198,6 +192,7 @@ export class Bucket implements KV, KvRemove {
     if (bo.ttl) {
       sc.max_age = nanos(bo.ttl);
     }
+    sc.allow_rollup_hdrs = true;
 
     try {
       await this.jsm.streams.info(sc.name);
@@ -276,9 +271,8 @@ export class Bucket implements KV, KvRemove {
       value: sm.data,
       delta: 0,
       created: sm.time,
-      seq: sm.seq,
-      origin_cluster: sm.header.get(kvOriginClusterHdr),
-      operation: sm.header.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
+      revision: sm.seq,
+      operation: sm.header.get(kvOperationHdr) as OperationType || "PUT",
     };
   }
 
@@ -289,15 +283,25 @@ export class Bucket implements KV, KvRemove {
       key: key,
       value: jm.data,
       created: new Date(millis(jm.info.timestampNanos)),
-      seq: jm.seq,
-      origin_cluster: jm.headers?.get(kvOriginClusterHdr),
-      operation: jm.headers?.get(kvOperationHdr) === "DEL" ? "DEL" : "PUT",
+      revision: jm.seq,
+      operation: jm.headers?.get(kvOperationHdr) as OperationType || "PUT",
     } as KvEntry;
 
     if (k !== ">") {
       e.delta = jm.info.pending;
     }
     return e;
+  }
+
+  async create(k: string, data: Uint8Array): Promise<number> {
+    return this.put(k, data, { previousSeq: 0 });
+  }
+
+  update(k: string, data: Uint8Array, version: number): Promise<number> {
+    if (version <= 0) {
+      throw new Error("version must be greater than 0");
+    }
+    return this.put(k, data, { previousSeq: version });
   }
 
   async put(
@@ -308,14 +312,11 @@ export class Bucket implements KV, KvRemove {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
 
-    const ji = this.js as JetStreamClientImpl;
-    const cluster = ji.nc.info?.cluster ?? "";
-    const h = headers();
-    h.set(kvOriginClusterHdr, cluster);
-    const o = { headers: h } as JetStreamPublishOptions;
-    if (opts.previousSeq) {
-      o.expect = {};
-      o.expect.lastSubjectSequence = opts.previousSeq;
+    const o = {} as JetStreamPublishOptions;
+    if (opts.previousSeq !== undefined) {
+      const h = headers();
+      o.headers = h;
+      h.set("Nats-Expected-Last-Subject-Sequence", `${opts.previousSeq}`);
     }
     const pa = await this.js.publish(this.subjectForKey(ek), data, o);
     return pa.seq;
@@ -337,20 +338,17 @@ export class Bucket implements KV, KvRemove {
     }
   }
 
-  async _delete(k: string): Promise<void> {
-    const ek = this.encodeKey(k);
-    this.validateKey(ek);
-    const ji = this.js as JetStreamClientImpl;
-    const cluster = ji.nc.info?.cluster ?? "";
-    const h = headers();
-    h.set(kvOriginClusterHdr, cluster);
-    h.set(kvOperationHdr, "DEL");
-    await this.js.publish(this.subjectForKey(ek), Empty, { headers: h });
+  purge(k: string): Promise<void> {
+    return this._deleteOrPurge(k, "PURGE");
   }
 
-  async delete(k: string): Promise<void> {
+  delete(k: string): Promise<void> {
+    return this._deleteOrPurge(k, "DEL");
+  }
+
+  async _deleteOrPurge(k: string, op: "DEL" | "PURGE") {
     if (!this.hasWildcards(k)) {
-      return this._delete(k);
+      return this._doDeleteOrPurge(k, op);
     }
     const keys = await this.keys(k);
     if (keys.length === 0) {
@@ -359,7 +357,7 @@ export class Bucket implements KV, KvRemove {
     const d = deferred<void>();
     const buf: Promise<void>[] = [];
     for (const k of keys) {
-      buf.push(this._delete(k));
+      buf.push(this._doDeleteOrPurge(k, op));
     }
     Promise.all(buf)
       .then(() => {
@@ -372,99 +370,83 @@ export class Bucket implements KV, KvRemove {
     return d;
   }
 
-  consumerOn(k: string, history = false): Promise<ConsumerInfo> {
+  async _doDeleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
+    const ek = this.encodeKey(k);
+    this.validateKey(ek);
+    const h = headers();
+    h.set(kvOperationHdr, op);
+    if (op === "PURGE") {
+      h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
+    }
+    await this.js.publish(this.subjectForKey(ek), Empty, { headers: h });
+  }
+
+  _buildCC(
+    k: string,
+    history = false,
+    opts: Partial<ConsumerConfig> = {},
+  ): Partial<ConsumerConfig> {
     const ek = this.encodeKey(k);
     this.validateSearchKey(k);
 
-    const ji = this.js as JetStreamClientImpl;
-    const nc = ji.nc;
-    const inbox = createInbox(nc.options.inboxPrefix);
-    const opts: Partial<ConsumerConfig> = {
-      "deliver_subject": inbox,
+    return Object.assign({
       "deliver_policy": history
         ? DeliverPolicy.All
         : DeliverPolicy.LastPerSubject,
-      "ack_policy": AckPolicy.Explicit,
+      "ack_policy": AckPolicy.None,
       "filter_subject": this.subjectForKey(ek),
       "flow_control": true,
-      "idle_heartbeat": nanos(60 * 1000),
-    };
-    return this.jsm.consumers.add(this.stream, opts);
+      "idle_heartbeat": nanos(5 * 1000),
+    }, opts) as Partial<ConsumerConfig>;
+  }
+
+  /**
+   * @deprecated
+   */
+  consumerOn(k: string, history = false): Promise<ConsumerInfo> {
+    return this.jsm.consumers.add(
+      this.stream,
+      this._buildCC(k, history, {
+        ack_policy: AckPolicy.Explicit,
+        deliver_subject: createInbox(),
+      }),
+    );
   }
 
   async remove(k: string): Promise<void> {
-    const ci = await this.consumerOn(k, true);
-    if (ci.num_pending === 0) {
-      await this.jsm.consumers.delete(this.stream, ci.name);
-      return;
-    } else {
-      const ji = this.js as JetStreamClientImpl;
-      const nc = ji.nc;
-      const buf: Promise<boolean>[] = [];
-      const sub = nc.subscribe(ci.config.deliver_subject!, {
-        callback: (err, msg) => {
-          if (err === null) {
-            err = checkJsError(msg);
-          }
-          if (err) {
-            sub.unsubscribe();
-            return;
-          }
-          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
-            msg.respond();
-            return;
-          }
-          const jm = toJsMsg(msg);
-          buf.push(this.jsm.streams.deleteMessage(this.stream, jm.seq));
-          if (jm.info.pending === 0) {
-            sub.unsubscribe();
-          }
-          jm.ack();
-        },
-      });
-      if (buf.length) {
-        await Promise.all(buf);
-      }
-      await sub.closed;
-    }
+    return this.purge(k);
   }
 
   async history(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
-    const ci = await this.consumerOn(k, true);
-    const max = ci.num_pending;
     const qi = new QueuedIteratorImpl<KvEntry>();
-    if (max === 0) {
-      qi.stop();
-      return qi;
-    }
-    const ji = this.jsm as JetStreamManagerImpl;
-    const nc = ji.nc;
-    const subj = ci.config.deliver_subject!;
-    const sub = nc.subscribe(subj, {
-      callback: (err, msg) => {
-        if (err === null) {
-          err = checkJsError(msg);
+    const done = deferred();
+    const cc = this._buildCC(k, true);
+    const subj = cc.filter_subject!;
+    const copts = consumerOpts(cc);
+    copts.orderedConsumer();
+    copts.callback((err, jm) => {
+      if (err) {
+        // sub done
+        qi.stop(err);
+        return;
+      }
+      if (jm) {
+        const e = this.jmToEntry(k, jm);
+        qi.push(e);
+        qi.received++;
+        if (jm.info.pending === 0) {
+          done.resolve();
         }
-        if (err) {
-          if (isNatsError(err)) {
-            qi.stop(err);
-          }
-        } else {
-          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
-            msg.respond();
-            return;
-          }
-          qi.received++;
-          const jm = toJsMsg(msg);
-          const e = this.jmToEntry(k, jm);
-          qi.push(e);
-          jm.ack();
-          if (qi.received === max) {
-            sub.unsubscribe();
-          }
-        }
-      },
+      }
+    });
+
+    const sub = await this.js.subscribe(subj, copts);
+    done.then(() => {
+      sub.unsubscribe();
+    });
+    done.catch((err) => {
+      sub.unsubscribe();
     });
     qi.iterClosed.then(() => {
       sub.unsubscribe();
@@ -475,39 +457,37 @@ export class Bucket implements KV, KvRemove {
       qi.stop(err);
     });
 
+    this.jsm.streams.getMessage(this.stream, {
+      "last_by_subj": subj,
+    }).catch(() => {
+      // we don't have a value for this
+      done.resolve();
+    });
+
     return qi;
   }
 
   async watch(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
-    const ci = await this.consumerOn(k, false);
     const qi = new QueuedIteratorImpl<KvEntry>();
-
-    const ji = this.jsm as JetStreamManagerImpl;
-    const nc = ji.nc;
-    const subj = ci.config.deliver_subject!;
-
-    const sub = nc.subscribe(subj, {
-      callback: (err, msg) => {
-        if (err === null) {
-          err = checkJsError(msg);
-        }
-        if (err) {
-          if (isNatsError(err)) {
-            qi.stop(err);
-          }
-        } else {
-          if (isFlowControlMsg(msg) || isHeartbeatMsg(msg)) {
-            msg.respond();
-            return;
-          }
-          qi.received++;
-          const jm = toJsMsg(msg);
-          qi.push(this.jmToEntry(k, jm));
-          jm.ack();
-        }
-      },
+    const cc = this._buildCC(k, false);
+    const subj = cc.filter_subject!;
+    const copts = consumerOpts(cc);
+    copts.orderedConsumer();
+    copts.callback((err, jm) => {
+      if (err) {
+        // sub done
+        qi.stop(err);
+        return;
+      }
+      if (jm) {
+        const e = this.jmToEntry(k, jm);
+        qi.push(e);
+        qi.received++;
+      }
     });
+
+    const sub = await this.js.subscribe(subj, copts);
     qi.iterClosed.then(() => {
       sub.unsubscribe();
     });
@@ -523,41 +503,42 @@ export class Bucket implements KV, KvRemove {
   async keys(k = ">"): Promise<string[]> {
     const d = deferred<string[]>();
     const keys: string[] = [];
-    const ci = await this.consumerOn(k, false);
-    if (ci.num_pending === 0) {
-      return Promise.resolve(keys);
-    }
-    const ji = this.jsm as JetStreamManagerImpl;
-    const nc = ji.nc;
-    const subj = ci.config.deliver_subject!;
-    const sub = nc.subscribe(subj);
-    await (async () => {
-      for await (const m of sub) {
-        const err = checkJsError(m);
-        if (err) {
+    const cc = this._buildCC(k, false, { headers_only: true });
+    const subj = cc.filter_subject!;
+    const copts = consumerOpts(cc);
+    copts.orderedConsumer();
+
+    const sub = await this.js.subscribe(subj, copts);
+    (async () => {
+      for await (const jm of sub) {
+        const op = jm.headers?.get(kvOperationHdr);
+        if (op !== "DEL" && op !== "PURGE") {
+          const key = this.decodeKey(jm.subject.substring(this.prefixLen));
+          keys.push(key);
+        }
+        if (jm.info.pending === 0) {
           sub.unsubscribe();
-          d.reject(err);
-        } else if (isFlowControlMsg(m) || isHeartbeatMsg(m)) {
-          m.respond();
-        } else {
-          const jm = toJsMsg(m);
-          if (jm.headers?.get(kvOperationHdr) !== "DEL") {
-            const key = this.decodeKey(jm.subject.substring(this.prefixLen));
-            keys.push(key);
-          }
-          m.respond();
-          const info = parseInfo(m.reply!);
-          if (info.pending === 0) {
-            sub.unsubscribe();
-            d.resolve(keys);
-          }
         }
       }
-    })();
+    })()
+      .then(() => {
+        d.resolve(keys);
+      })
+      .catch((err) => {
+        d.reject(err);
+      });
+
+    this.jsm.streams.getMessage(this.stream, {
+      "last_by_subj": subj,
+    }).catch(() => {
+      // we don't have a value for this
+      sub.unsubscribe();
+    });
+
     return d;
   }
 
-  purge(opts?: PurgeOpts): Promise<PurgeResponse> {
+  purgeBucket(opts?: PurgeOpts): Promise<PurgeResponse> {
     return this.jsm.streams.purge(this.bucketName(), opts);
   }
 

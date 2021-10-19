@@ -813,10 +813,9 @@ export interface KvEntry {
   key: string;
   value: Uint8Array;
   created: Date;
-  seq: number;
+  revision: number;
   delta?: number;
-  "origin_cluster"?: string;
-  operation: "PUT" | "DEL";
+  operation: "PUT" | "DEL" | "PURGE";
 }
 
 export interface KvCodec<T> {
@@ -834,7 +833,6 @@ export interface KvStatus {
   values: number;
   history: number;
   ttl: Nanos;
-  cluster?: string;
   backingStore: StorageType;
 }
 
@@ -851,6 +849,9 @@ export interface KvOptions {
   codec: KvCodecs;
 }
 
+/**
+ * @deprecated use purge(k)
+ */
 export interface KvRemove {
   remove(k: string): Promise<void>;
 }
@@ -865,13 +866,15 @@ export interface RoKV {
 }
 
 export interface KV extends RoKV {
+  create(k: string, data: Uint8Array): Promise<number>;
+  update(k: string, data: Uint8Array, version: number): Promise<number>;
   put(
     k: string,
     data: Uint8Array,
     opts?: Partial<KvPutOptions>,
   ): Promise<number>;
   delete(k: string): Promise<void>;
-  purge(opts?: PurgeOpts): Promise<PurgeResponse>;
+  purge(k: string): Promise<void>;
   destroy(): Promise<boolean>;
 }
 
