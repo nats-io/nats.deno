@@ -2458,7 +2458,7 @@ Deno.test("jetstream - rollup all", async () => {
   const opts = consumerOpts();
   opts.manualAck();
   opts.deliverTo(createInbox());
-  opts.callback((err, jm) => {
+  opts.callback((_err, jm) => {
     assert(jm);
     assertEquals(jm.subject, `${stream}.summary`);
     const obj = jc.decode(jm.data) as Record<string, number>;
@@ -2589,7 +2589,7 @@ Deno.test("jetstream - headers only", async () => {
   opts.deliverTo(createInbox());
   opts.headersOnly();
   opts.manualAck();
-  opts.callback((err, jm) => {
+  opts.callback((_err, jm) => {
     assert(jm);
     assert(jm.headers);
     const size = parseInt(jm.headers.get(JsHeaders.MessageSizeHdr), 10);
