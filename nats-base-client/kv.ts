@@ -293,7 +293,7 @@ export class Bucket implements KV, KvRemove {
     return e;
   }
 
-  async create(k: string, data: Uint8Array): Promise<number> {
+  create(k: string, data: Uint8Array): Promise<number> {
     return this.put(k, data, { previousSeq: 0 });
   }
 
@@ -413,7 +413,7 @@ export class Bucket implements KV, KvRemove {
     );
   }
 
-  async remove(k: string): Promise<void> {
+  remove(k: string): Promise<void> {
     return this.purge(k);
   }
 
@@ -445,7 +445,7 @@ export class Bucket implements KV, KvRemove {
     done.then(() => {
       sub.unsubscribe();
     });
-    done.catch((err) => {
+    done.catch((_err) => {
       sub.unsubscribe();
     });
     qi.iterClosed.then(() => {
