@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import type { ConsumerOptsBuilder } from "./types.ts";
+import type { ConsumerOptsBuilder, KV, KvOptions, Views } from "./types.ts";
 import {
   AckPolicy,
   ConsumerAPI,
@@ -68,6 +68,7 @@ import { Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
+import { Bucket } from "./kv.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -81,12 +82,26 @@ enum PubHeaders {
   ExpectedLastSubjectSequenceHdr = "Nats-Expected-Last-Subject-Sequence",
 }
 
+class ViewsImpl implements Views {
+  js: JetStreamClientImpl;
+  constructor(js: JetStreamClientImpl) {
+    this.js = js;
+  }
+  async kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    return Bucket.create(this.js.nc, name, opts);
+  }
+}
+
 export class JetStreamClientImpl extends BaseApiClient
   implements JetStreamClient {
   api: ConsumerAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
     this.api = new ConsumerAPIImpl(nc, opts);
+  }
+
+  get views(): Views {
+    return new ViewsImpl(this);
   }
 
   async publish(

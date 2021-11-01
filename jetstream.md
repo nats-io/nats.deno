@@ -425,3 +425,107 @@ await jsm.consumers.add(stream, {
 
 await sub.closed;
 ```
+
+#### JetStream Ordered Consumers
+
+An Ordered Consumers is a specialized push consumer that puts together flow
+control, heartbeats, and additional logic to handle message gaps. Ordered
+consumers cannot operate on a queue and cannot be durable.
+
+As the ordered consumer processes messages, it enforces that messages are
+presented to the client with the correct sequence. If a gap is detected, the
+consumer is recreated at the expected sequence.
+
+Most consumer options are rejected, as the ordered consumer has manages its
+configuration in a very specific way.
+
+To create an ordered consumer (assuming a stream that captures `my.messages`):
+
+```typescript
+const subj = "my.messages";
+const opts = consumerOpts();
+opts.orderedConsumer();
+const sub = await js.subscribe(subj, opts);
+```
+
+Use callbacks or iterators as desired to process the messages.
+`sub.unsubscribe()` or break out of an iterator to stop processing messages.
+
+#### JetStream Materialized Views
+
+JetStream clients can use streams to store and access data. The materialized
+views present a different _API_ to interact with the data stored in a stream.
+First materialized view for JetStream is the _KV_ view. The _KV_ view implements
+a Key-Value API on top of JetStream. Clients can store and retrieve values by
+Keys:
+
+```typescript
+const sc = StringCodec();
+const js = nc.jetstream();
+// create the named KV or bind to it if it exists:
+const kv = await js.views.kv("testing", { history: 5 });
+
+// create an entry - this is similar to a put, but will fail if the
+// key exists
+await kv.create("hello.world", sc.encode("hi"));
+
+// Values in KV are stored as KvEntries:
+// {
+//   bucket: string,
+//   key: string,
+//   value: Uint8Array,
+//   created: Date,
+//   revision: number,
+//   delta?: number,
+//   operation: "PUT"|"DEL"|"PURGE"
+// }
+// The operation property specifies whether the value was
+// updated (PUT), deleted (DEL) or purged (PURGE).
+
+// you can monitor values modification in a KV by watching.
+// You can watch specific key subset or everything.
+// Watches start with the latest value for each key in the
+// set of keys being watched - in this case all keys
+const watch = await kv.watch();
+(async () => {
+  for await (const e of watch) {
+    // do something with the change
+  }
+})().then();
+
+// update the entry
+await kv.put("hello.world", sc.encode("world"));
+// retrieve the KvEntry storing the value
+// returns null if the value is not found
+const e = await kv.get("hello.world");
+assert(e);
+// initial value of "hi" was overwritten above
+assertEquals(sc.decode(e.value), "world");
+
+const keys = await kv.keys();
+assertEquals(keys.length, 1);
+assertEquals(keys[0], "hello.world");
+
+let h = await kv.history({ key: "hello.world" });
+(async () => {
+  for await (const e of h) {
+    // do something with the historical value
+    // you can test e.operation for "PUT", "DEL", or "PURGE"
+    // to know if the entry is a marker for a value set
+    // or for a deletion or purge.
+  }
+})().then();
+
+// deletes the key - the delete is recorded
+await kv.delete("hello.world");
+
+// purge is like delete, but all history values
+// are dropped and only the purge remains.
+await kv.purge("hello.world");
+
+// stop the watch operation above
+watch.stop();
+
+// danger: destroys all values in the KV!
+await kv.destroy();
+```

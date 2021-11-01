@@ -300,6 +300,10 @@ export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
 
 export type JsMsgCallback = (err: NatsError | null, msg: JsMsg | null) => void;
 
+export interface Views {
+  kv: (name: string, opts?: Partial<KvOptions>) => Promise<KV>;
+}
+
 // FIXME: pulls must limit to maxAcksInFlight
 export interface JetStreamClient {
   publish(
@@ -321,6 +325,7 @@ export interface JetStreamClient {
     subject: string,
     opts: ConsumerOptsBuilder | Partial<ConsumerOpts>,
   ): Promise<JetStreamSubscription>;
+  views: Views;
 }
 
 export interface ConsumerOpts {

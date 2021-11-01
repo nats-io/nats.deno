@@ -2605,3 +2605,81 @@ Deno.test("jetstream - headers only", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - can access kv", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.2")) {
+    return;
+  }
+  const sc = StringCodec();
+
+  const js = nc.jetstream();
+  // create the named KV or bind to it if it exists:
+  const kv = await js.views.kv("testing", { history: 5 });
+
+  // create an entry - this is similar to a put, but will fail if the
+  // key exists
+  await kv.create("hello.world", sc.encode("hi"));
+
+  // Values in KV are stored as KvEntries:
+  // {
+  //   bucket: string,
+  //   key: string,
+  //   value: Uint8Array,
+  //   created: Date,
+  //   revision: number,
+  //   delta?: number,
+  //   operation: "PUT"|"DEL"|"PURGE"
+  // }
+  // The operation property specifies whether the value was
+  // updated (PUT), deleted (DEL) or purged (PURGE).
+
+  // you can monitor values modification in a KV by watching.
+  // You can watch specific key subset or everything.
+  // Watches start with the latest value for each key in the
+  // set of keys being watched - in this case all keys
+  const watch = await kv.watch();
+  (async () => {
+    for await (const _e of watch) {
+      // do something with the change
+    }
+  })().then();
+
+  // update the entry
+  await kv.put("hello.world", sc.encode("world"));
+  // retrieve the KvEntry storing the value
+  // returns null if the value is not found
+  const e = await kv.get("hello.world");
+  assert(e);
+  // initial value of "hi" was overwritten above
+  assertEquals(sc.decode(e.value), "world");
+
+  const keys = await kv.keys();
+  assertEquals(keys.length, 1);
+  assertEquals(keys[0], "hello.world");
+
+  const h = await kv.history({ key: "hello.world" });
+  (async () => {
+    for await (const _e of h) {
+      // do something with the historical value
+      // you can test e.operation for "PUT", "DEL", or "PURGE"
+      // to know if the entry is a marker for a value set
+      // or for a deletion or purge.
+    }
+  })().then();
+
+  // deletes the key - the delete is recorded
+  await kv.delete("hello.world");
+
+  // purge is like delete, but all history values
+  // are dropped and only the purge remains.
+  await kv.purge("hello.world");
+
+  // stop the watch operation above
+  watch.stop();
+
+  // danger: destroys all values in the KV!
+  await kv.destroy();
+
+  await cleanup(ns, nc);
+});
