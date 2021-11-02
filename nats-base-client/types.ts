@@ -340,6 +340,7 @@ export interface ConsumerOpts {
   max?: number;
   queue?: string;
   debug?: boolean;
+  isBind?: boolean;
 }
 
 export interface ConsumerOptsBuilder {
@@ -405,6 +406,8 @@ export interface ConsumerOptsBuilder {
   callback(fn: JsMsgCallback): void;
   // creates an ordered consumer - ordered consumers cannot be a pull consumer nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
   orderedConsumer(): void;
+  // binds to a consumer
+  bind(stream: string, durable: string): void;
 }
 
 export interface Lister<T> {
