@@ -2467,7 +2467,7 @@ Deno.test("jetstream - rollup all", async () => {
   opts.maxMessages(1);
 
   const sub = await js.subscribe(subj, opts);
-  await sub;
+  await sub.closed;
   assertEquals(sub.getProcessed(), 1);
 
   await cleanup(ns, nc);
