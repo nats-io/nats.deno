@@ -145,7 +145,11 @@ export class NatsConnectionImpl implements NatsConnection {
     data: Uint8Array = Empty,
     opts: RequestOptions = { timeout: 1000, noMux: false },
   ): Promise<Msg> {
-    this._check(subject, true, true);
+    try {
+      this._check(subject, true, true);
+    } catch (err) {
+      return Promise.reject(err);
+    }
     opts.timeout = opts.timeout || 1000;
     if (opts.timeout < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));

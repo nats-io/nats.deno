@@ -447,6 +447,19 @@ Deno.test("basics - request with custom subject", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("basics - request requires a subject", async () => {
+  const { ns, nc } = await setup();
+  await assertThrowsAsync(
+    async () => {
+      //@ts-ignore: subject missing on purpose
+      await nc.request();
+    },
+    NatsError,
+    "BAD_SUBJECT",
+  );
+  await cleanup(ns, nc);
+});
+
 Deno.test("basics - close promise resolves", async () => {
   const lock = Lock();
   const cs = new TestServer(false, (ca: Connection) => {
