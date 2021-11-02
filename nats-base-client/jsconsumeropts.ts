@@ -45,6 +45,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   callbackFn?: JsMsgCallback;
   max?: number;
   qname?: string;
+  isBind?: boolean;
 
   constructor(opts?: Partial<ConsumerConfig>) {
     this.stream = "";
@@ -63,6 +64,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     o.queue = this.qname;
     o.ordered = this.ordered;
     o.config.ack_policy = o.ordered ? AckPolicy.None : o.config.ack_policy;
+    o.isBind = o.isBind || false;
     return o;
   }
 
@@ -199,6 +201,12 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   orderedConsumer() {
     this.ordered = true;
+  }
+
+  bind(stream: string, durable: string) {
+    this.stream = stream;
+    this.config.durable_name = durable;
+    this.isBind = true;
   }
 }
 

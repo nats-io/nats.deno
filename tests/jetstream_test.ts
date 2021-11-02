@@ -2683,3 +2683,77 @@ Deno.test("jetstream - can access kv", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - bind", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+  });
+
+  const inbox = createInbox();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.None,
+    deliver_subject: inbox,
+  });
+
+  const opts = consumerOpts();
+  opts.bind(stream, "hello");
+  opts.deliverTo(inbox);
+
+  await assertThrowsAsync(
+    async () => {
+      await js.subscribe(subj, opts);
+    },
+    Error,
+    `unable to bind - durable consumer hello doesn't exist in ${stream}`,
+  );
+
+  const internal = nc.subscribe("$JS.API.CONSUMER.DURABLE.CREATE.>", {
+    callback: (err, msg) => {
+      // this will count
+    },
+  });
+
+  opts.bind(stream, "me");
+  const sub = await js.subscribe(subj, opts);
+  assertEquals(sub.getProcessed(), 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - bind with diff subject fails", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  const subj = `${stream}.*`;
+  await jsm.streams.add({
+    name: stream,
+    subjects: [subj],
+  });
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.None,
+    deliver_subject: createInbox(),
+    filter_subject: `${stream}.foo`,
+  });
+
+  const opts = consumerOpts();
+  opts.bind(stream, "me");
+  opts.filterSubject(`${stream}.bar`);
+  await assertThrowsAsync(
+    async () => {
+      const js = nc.jetstream();
+      await js.subscribe(subj, opts);
+    },
+    Error,
+    "subject does not match consumer",
+  );
+  await cleanup(ns, nc);
+});

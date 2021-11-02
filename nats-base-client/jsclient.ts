@@ -353,7 +353,7 @@ export class JetStreamClientImpl extends BaseApiClient
       (isConsumerOptsBuilder(opts)
         ? opts.getOpts()
         : opts) as JetStreamSubscriptionInfo;
-
+    jsi.isBind = isConsumerOptsBuilder(opts) ? opts.isBind : false;
     jsi.flow_control = {
       heartbeat_count: 0,
       fc_count: 0,
@@ -488,6 +488,11 @@ export class JetStreamClientImpl extends BaseApiClient
   async _maybeCreateConsumer(jsi: JetStreamSubscriptionInfo): Promise<void> {
     if (jsi.attached) {
       return;
+    }
+    if (jsi.isBind) {
+      throw new Error(
+        `unable to bind - durable consumer ${jsi.config.durable_name} doesn't exist in ${jsi.stream}`,
+      );
     }
     jsi.config = Object.assign({
       deliver_policy: DeliverPolicy.All,
@@ -666,6 +671,7 @@ interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
   attached: boolean;
   deliver: string;
+  bind: boolean;
   "ordered_consumer_sequence": { "delivery_seq": number; "stream_seq": number };
   "flow_control": {
     "heartbeat_count": number;
