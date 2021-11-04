@@ -24,3 +24,6 @@ bundle:
 
 fmt:
 	deno fmt src/ doc/ bin/ nats-base-client/ examples/ tests/
+	
+echo:
+       ls
