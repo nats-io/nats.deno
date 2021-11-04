@@ -79,6 +79,7 @@ export {
 
 export { consumerOpts } from "./jsconsumeropts.ts";
 export { toJsMsg } from "./jsmsg.ts";
+export type { JetStreamSubscriptionInfoable } from "./jsclient.ts";
 
 export { DebugEvents, Empty, Events, JsHeaders } from "./types.ts";
 export { MsgImpl } from "./msg.ts";
