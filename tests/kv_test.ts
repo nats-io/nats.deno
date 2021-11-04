@@ -40,6 +40,8 @@ import {
   validateKey,
 } from "../nats-base-client/kv.ts";
 import { notCompatible } from "./helpers/mod.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
+import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -657,6 +659,31 @@ Deno.test("kv - update key", async () => {
   );
 
   await b.update("a", sc.encode("b"), seq);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - internal consumer", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  async function getCount(name: string): Promise<number> {
+    const b = await Bucket.create(nc, name) as Bucket;
+    let watch = await b.watch() as QueuedIteratorImpl<unknown>;
+    const sub = watch._data as JetStreamSubscriptionInfoable;
+    return sub?.info?.last?.num_pending || 0;
+  }
+
+  const name = nuid.next();
+  const b = await Bucket.create(nc, name) as Bucket;
+  assertEquals(await getCount(name), 0);
+
+  await b.put("a", Empty);
+  assertEquals(await getCount(name), 1);
 
   await cleanup(ns, nc);
 });

@@ -488,6 +488,7 @@ export class Bucket implements KV, KvRemove {
     });
 
     const sub = await this.js.subscribe(subj, copts);
+    qi._data = sub;
     qi.iterClosed.then(() => {
       sub.unsubscribe();
     });

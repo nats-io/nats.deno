@@ -435,7 +435,7 @@ export class JetStreamClientImpl extends BaseApiClient
               );
             }
           }
-
+          jsi.last = info;
           jsi.config = info.config;
           jsi.attached = true;
         }
@@ -504,6 +504,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const ci = await this.api.add(jsi.stream, jsi.config);
     jsi.name = ci.name;
     jsi.config = ci.config;
+    jsi.last = ci;
   }
 
   static ingestionFn(
@@ -630,7 +631,9 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
     const jinfo = this.sub.info as JetStreamSubscriptionInfo;
     const name = jinfo.config.durable_name || jinfo.name;
     const subj = `${jinfo.api.prefix}.CONSUMER.INFO.${jinfo.stream}.${name}`;
-    return await jinfo.api._request(subj) as ConsumerInfo;
+    const ci = await jinfo.api._request(subj) as ConsumerInfo;
+    jinfo.last = ci;
+    return ci;
   }
 }
 
@@ -669,6 +672,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
 
 interface JetStreamSubscriptionInfo extends ConsumerOpts {
   api: BaseApiClient;
+  last: ConsumerInfo;
   attached: boolean;
   deliver: string;
   bind: boolean;
