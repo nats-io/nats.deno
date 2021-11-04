@@ -39,7 +39,7 @@ export interface JwtAuth {
   sig?: string;
 }
 
-type Auth = NoAuth | TokenAuth | UserPass | NKeyAuth | JwtAuth;
+export type Auth = NoAuth | TokenAuth | UserPass | NKeyAuth | JwtAuth;
 
 /**
  * Authenticator is an interface that returns credentials
