@@ -75,6 +75,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   protocolFilterFn?: ProtocolFilterFn<T>;
   dispatchedFn?: DispatchedFn<T>;
   ctx?: unknown;
+  _data?: unknown; //data is for use by extenders in any way they like
   private err?: Error;
 
   constructor() {
