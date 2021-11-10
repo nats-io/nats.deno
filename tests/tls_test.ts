@@ -29,8 +29,9 @@ import {
 import { join, resolve } from "https://deno.land/std@0.95.0/path/mod.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
+  const ns = await NatsServer.start();
   const lock = Lock();
-  await connect({ servers: "demo.nats.io:4222", tls: {} })
+  await connect({ port: ns.port, tls: {} })
     .then(() => {
       fail("shouldn't have connected");
     })
@@ -39,6 +40,7 @@ Deno.test("tls - fail if server doesn't support TLS", async () => {
       lock.unlock();
     });
   await lock;
+  await ns.stop();
 });
 
 Deno.test("tls - connects to tls without option", async () => {
