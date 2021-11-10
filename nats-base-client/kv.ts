@@ -281,19 +281,15 @@ export class Bucket implements KV, KvRemove {
 
   jmToEntry(k: string, jm: JsMsg): KvEntry {
     const key = this.decodeKey(jm.subject.substring(this.prefixLen));
-    const e = {
+    return {
       bucket: this.bucket,
       key: key,
       value: jm.data,
       created: new Date(millis(jm.info.timestampNanos)),
       revision: jm.seq,
       operation: jm.headers?.get(kvOperationHdr) as OperationType || "PUT",
+      delta: jm.info.pending,
     } as KvEntry;
-
-    if (k !== ">") {
-      e.delta = jm.info.pending;
-    }
-    return e;
   }
 
   create(k: string, data: Uint8Array): Promise<number> {

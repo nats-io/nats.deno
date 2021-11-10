@@ -688,3 +688,77 @@ Deno.test("kv - internal consumer", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - is wildcard delete implemented", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const name = nuid.next();
+  const b = await Bucket.create(nc, name, { history: 10 }) as Bucket;
+  await b.put("a", Empty);
+  await b.put("a.a", Empty);
+  await b.put("a.b", Empty);
+  await b.put("a.b.c", Empty);
+
+  let keys = await collect(await b.keys());
+  assertEquals(keys.length, 4);
+
+  await b.delete("a.*");
+  keys = await collect(await b.keys());
+  assertEquals(keys.length, 2);
+
+  // this was a manual delete, so we should have tombstones
+  // for all the deleted entries
+  let deleted = 0;
+  const w = await b.watch();
+  await (async () => {
+    for await (const e of w) {
+      if (e.operation === "DEL") {
+        deleted++;
+      }
+      if (e.delta === 0) {
+        break;
+      }
+    }
+  })();
+  assertEquals(deleted, 2);
+
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("kv - delta", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const name = nuid.next();
+  const b = await Bucket.create(nc, name) as Bucket;
+  await b.put("a", Empty);
+  await b.put("a.a", Empty);
+  await b.put("a.b", Empty);
+  await b.put("a.b.c", Empty);
+
+  const w = await b.history();
+  await (async () => {
+    let i = 0;
+    let delta = 4;
+    for await (const e of w) {
+      assertEquals(e.revision, ++i);
+      assertEquals(e.delta, --delta);
+      if (e.delta === 0) {
+        break;
+      }
+    }
+  })();
+
+  await nc.close();
+  await ns.stop();
+});
