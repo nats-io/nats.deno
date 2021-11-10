@@ -23,6 +23,7 @@ import {
 } from "./jstest_util.ts";
 import {
   AckPolicy,
+  collect,
   ConsumerConfig,
   ConsumerOpts,
   consumerOpts,
@@ -2654,7 +2655,7 @@ Deno.test("jetstream - can access kv", async () => {
   // initial value of "hi" was overwritten above
   assertEquals(sc.decode(e.value), "world");
 
-  const keys = await kv.keys();
+  const keys = await collect<string>(await kv.keys());
   assertEquals(keys.length, 1);
   assertEquals(keys[0], "hello.world");
 

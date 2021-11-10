@@ -41,7 +41,10 @@ import {
   StoredMsg,
   StreamConfig,
 } from "./types.ts";
-import { JetStreamClientImpl } from "./jsclient.ts";
+import {
+  JetStreamClientImpl,
+  JetStreamSubscriptionInfoable,
+} from "./jsclient.ts";
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
@@ -346,28 +349,22 @@ export class Bucket implements KV, KvRemove {
     return this._deleteOrPurge(k, "DEL");
   }
 
-  async _deleteOrPurge(k: string, op: "DEL" | "PURGE") {
+  async _deleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
     if (!this.hasWildcards(k)) {
       return this._doDeleteOrPurge(k, op);
     }
-    const keys = await this.keys(k);
-    if (keys.length === 0) {
-      return;
-    }
-    const d = deferred<void>();
+    const iter = await this.keys(k);
     const buf: Promise<void>[] = [];
-    for (const k of keys) {
+    for await (const k of iter) {
       buf.push(this._doDeleteOrPurge(k, op));
+      if (buf.length === 100) {
+        await Promise.all(buf);
+        buf.length = 0;
+      }
     }
-    Promise.all(buf)
-      .then(() => {
-        d.resolve();
-      })
-      .catch((err) => {
-        d.reject(err);
-      });
-
-    return d;
+    if (buf.length > 0) {
+      await Promise.all(buf);
+    }
   }
 
   async _doDeleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
@@ -501,9 +498,8 @@ export class Bucket implements KV, KvRemove {
     return qi;
   }
 
-  async keys(k = ">"): Promise<string[]> {
-    const d = deferred<string[]>();
-    const keys: string[] = [];
+  async keys(k = ">"): Promise<QueuedIterator<string>> {
+    const keys = new QueuedIteratorImpl<string>();
     const cc = this._buildCC(k, false, { headers_only: true });
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
@@ -523,20 +519,17 @@ export class Bucket implements KV, KvRemove {
       }
     })()
       .then(() => {
-        d.resolve(keys);
+        keys.stop();
       })
       .catch((err) => {
-        d.reject(err);
+        keys.stop(err);
       });
 
-    this.jsm.streams.getMessage(this.stream, {
-      "last_by_subj": subj,
-    }).catch(() => {
-      // we don't have a value for this
+    const si = sub as unknown as JetStreamSubscriptionInfoable;
+    if (si.info!.last.num_pending === 0) {
       sub.unsubscribe();
-    });
-
-    return d;
+    }
+    return keys;
   }
 
   purgeBucket(opts?: PurgeOpts): Promise<PurgeResponse> {

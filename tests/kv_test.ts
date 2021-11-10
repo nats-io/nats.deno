@@ -14,6 +14,7 @@
  */
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
+  collect,
   deferred,
   delay,
   Empty,
@@ -256,7 +257,7 @@ Deno.test("kv - cleanups/empty", async () => {
   const h = await bucket.history();
   assertEquals(h.getReceived(), 0);
 
-  const keys = await bucket.keys();
+  const keys = await collect(await bucket.keys());
   assertEquals(keys.length, 0);
 
   const nci = nc as NatsConnectionImpl;
@@ -428,7 +429,7 @@ async function keys(b: Bucket): Promise<void> {
   await b.delete("c.c.c");
   await b.put("x", Empty);
 
-  const keys = await b.keys();
+  const keys = await collect(await b.keys());
   assertEquals(keys.length, 3);
   assertArrayIncludes(keys, ["a", "b", "x"]);
 }
@@ -607,12 +608,12 @@ Deno.test("kv - remove subkey", async () => {
   await b.put("a.b", Empty);
   await b.put("a.c", Empty);
 
-  let keys = await b.keys();
+  let keys = await collect(await b.keys());
   assertEquals(keys.length, 3);
   assertArrayIncludes(keys, ["a", "a.b", "a.c"]);
 
   await b.delete("a.*");
-  keys = await b.keys();
+  keys = await collect(await b.keys());
   assertEquals(keys.length, 1);
   assertArrayIncludes(keys, ["a"]);
 

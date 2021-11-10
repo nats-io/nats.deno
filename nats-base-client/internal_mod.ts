@@ -90,6 +90,7 @@ export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, createInbox, INFO, ProtocolHandler } from "./protocol.ts";
 export type { Deferred, Timeout } from "./util.ts";
 export {
+  collect,
   deferred,
   delay,
   extend,
