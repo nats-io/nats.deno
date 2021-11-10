@@ -870,7 +870,7 @@ export interface RoKV {
   watch(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
-  keys(k?: string): Promise<string[]>;
+  keys(k?: string): Promise<QueuedIterator<string>>;
 }
 
 export interface KV extends RoKV {

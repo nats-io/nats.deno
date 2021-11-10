@@ -16,6 +16,7 @@
 import { DataBuffer } from "./databuffer.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 import { TD } from "./encoders.ts";
+import { QueuedIterator } from "./queued_iterator.ts";
 
 export const CR_LF = "\r\n";
 export const CR_LF_LEN = CR_LF.length;
@@ -130,6 +131,14 @@ export function shuffle<T>(a: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+export async function collect<T>(iter: QueuedIterator<T>): Promise<T[]> {
+  const buf: T[] = [];
+  for await (const v of iter) {
+    buf.push(v);
+  }
+  return buf;
 }
 
 export class Perf {
