@@ -2211,7 +2211,8 @@ Deno.test("jetstream - redelivery property works", async () => {
 
   assert(sub.getProcessed() > 0);
   assert(sub2.getProcessed() > 0);
-  assertEquals(sub.getProcessed() + sub2.getProcessed(), 100 + r);
+  assert(r > 0);
+  assert(sub.getProcessed() + sub2.getProcessed() > 100);
 
   const jsm = await nc.jetstreamManager();
   const ci = await jsm.consumers.info(stream, "n");
