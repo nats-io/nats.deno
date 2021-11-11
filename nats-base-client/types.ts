@@ -504,6 +504,7 @@ export type Nanos = number;
 export interface ApiError {
   code: number;
   description: string;
+  err_code?: number;
 }
 
 export interface ApiResponse {

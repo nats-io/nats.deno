@@ -27,6 +27,7 @@ import {
   ErrorCode,
   headers,
   JSONCodec,
+  NatsError,
   nuid,
   StreamConfig,
   StreamInfo,
@@ -40,7 +41,7 @@ import {
   setup,
 } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
-import { assertThrowsAsyncErrorCode } from "./helpers/mod.ts";
+import { assertThrowsAsyncErrorCode, NatsServer } from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
 
 const StreamNameRequired = "stream name required";
@@ -884,4 +885,30 @@ Deno.test("jsm - cross account consumers", async () => {
   );
 
   await cleanup(ns, nc, admin);
+});
+
+Deno.test("jsm - jetstream error info", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  let jsm = await nc.jetstreamManager();
+  try {
+    await jsm.streams.add({
+      name: "a",
+      num_replicas: 3,
+      subjects: ["a.>"],
+    });
+    fail("should have failed");
+  } catch (err) {
+    const ne = err as NatsError;
+    assert(ne.isJetStreamError());
+    const jerr = ne.jsError();
+    console.log(jerr);
+    assert(jerr);
+    assertEquals(jerr.code, 500);
+    assertEquals(jerr.err_code, 10074);
+    assertEquals(
+      jerr.description,
+      "replicas > 1 not supported in non-clustered mode",
+    );
+  }
+  await cleanup(ns, nc);
 });
