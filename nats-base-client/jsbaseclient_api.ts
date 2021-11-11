@@ -105,6 +105,7 @@ export class BaseApiClient {
     if (r.error) {
       const err = checkJsErrorCode(r.error.code, r.error.description);
       if (err !== null) {
+        err.api_error = r.error;
         throw err;
       }
     }
