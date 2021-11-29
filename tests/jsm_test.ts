@@ -42,7 +42,7 @@ import {
   setup,
 } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
-import { assertThrowsAsyncErrorCode, notCompatible } from './helpers/mod.ts'
+import { assertThrowsAsyncErrorCode, notCompatible } from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
 
 const StreamNameRequired = "stream name required";
