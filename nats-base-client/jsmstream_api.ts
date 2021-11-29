@@ -31,6 +31,7 @@ import {
   StreamInfoRequestOptions,
   StreamListResponse,
   StreamMsgResponse,
+  StreamUpdateConfig,
   SuccessResponse,
 } from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
@@ -61,10 +62,13 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return cr.success;
   }
 
-  async update(cfg = {} as StreamConfig): Promise<StreamInfo> {
-    validateStreamName(cfg.name);
+  async update(
+    name: string,
+    cfg = {} as StreamUpdateConfig,
+  ): Promise<StreamInfo> {
+    validateStreamName(name);
     const r = await this._request(
-      `${this.prefix}.STREAM.UPDATE.${cfg.name}`,
+      `${this.prefix}.STREAM.UPDATE.${name}`,
       cfg,
     );
     const si = r as StreamInfo;

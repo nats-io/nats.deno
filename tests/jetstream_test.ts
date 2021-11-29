@@ -2346,7 +2346,7 @@ Deno.test("jetstream - seal", async () => {
   await jsm.streams.deleteMessage(stream, 1);
 
   si.config.sealed = true;
-  const usi = await jsm.streams.update(si.config);
+  const usi = await jsm.streams.update(stream, si.config);
   assertEquals(usi.config.sealed, true);
 
   await assertThrowsAsync(

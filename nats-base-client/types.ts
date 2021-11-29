@@ -433,7 +433,7 @@ export type StreamInfoRequestOptions = {
 export interface StreamAPI {
   info(stream: string, opts?: StreamInfoRequestOptions): Promise<StreamInfo>;
   add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
-  update(cfg: StreamConfig): Promise<StreamInfo>;
+  update(name: string, cfg: StreamUpdateConfig): Promise<StreamInfo>;
   purge(stream: string, opts?: PurgeOpts): Promise<PurgeResponse>;
   delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
@@ -536,29 +536,32 @@ export interface StreamInfo {
   sources?: StreamSourceInfo[];
 }
 
-export interface StreamConfig {
+export interface StreamConfig extends StreamUpdateConfig {
   name: string;
-  description?: string;
   subjects?: string[];
   retention: RetentionPolicy;
-  "max_consumers": number;
-  "max_msgs_per_subject"?: number;
-  "max_msgs": number;
-  "max_bytes": number;
-  "max_age": Nanos;
-  "max_msg_size"?: number;
   storage: StorageType;
-  discard?: DiscardPolicy;
   "num_replicas": number;
-  "no_ack"?: boolean;
   "template_owner"?: string;
-  "duplicate_window"?: Nanos;
   placement?: Placement;
   mirror?: StreamSource; // same as a source
-  sources?: StreamSource[];
   sealed: boolean;
   "deny_delete": boolean;
   "deny_purge": boolean;
+}
+
+export interface StreamUpdateConfig {
+  description?: string;
+  "max_consumers": number;
+  "max_msgs_per_subject"?: number;
+  "max_msgs": number;
+  "max_age": Nanos;
+  "max_bytes": number;
+  "max_msg_size"?: number;
+  discard?: DiscardPolicy;
+  "no_ack"?: boolean;
+  "duplicate_window"?: Nanos;
+  sources?: StreamSource[];
   "allow_rollup_hdrs": boolean;
 }
 
