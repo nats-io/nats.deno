@@ -113,13 +113,13 @@ Deno.test("jsm - empty stream config update fails", async () => {
 
   await assertThrowsAsync(
     async () => {
-      await jsm.streams.update({} as StreamConfig);
+      await jsm.streams.update("", {} as StreamConfig);
     },
     Error,
     StreamNameRequired,
   );
   ci!.config!.subjects!.push("foo");
-  ci = await jsm.streams.update(ci.config);
+  ci = await jsm.streams.update(name, ci.config);
   assertEquals(ci!.config!.subjects!.length, 2);
   await cleanup(ns, nc);
 });
@@ -631,7 +631,7 @@ Deno.test("jsm - update stream", async () => {
   assertEquals(si.config!.subjects!.length, 1);
 
   si.config!.subjects!.push("foo");
-  si = await jsm.streams.update(si.config);
+  si = await jsm.streams.update(stream, si.config);
   assertEquals(si.config!.subjects!.length, 2);
   await cleanup(ns, nc);
 });
@@ -804,9 +804,9 @@ Deno.test("jsm - cross account streams", async () => {
   assertEquals(si.state.messages, 0);
 
   // update
-  const config = streams[0].config;
+  const config = streams[0].config as StreamConfig;
   config.subjects!.push(`${stream}.B`);
-  si = await jsm.streams.update(config);
+  si = await jsm.streams.update(config.name, config);
   assertEquals(si.config.subjects!.length, 2);
 
   // find

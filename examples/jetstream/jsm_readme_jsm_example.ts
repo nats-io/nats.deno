@@ -28,7 +28,7 @@ const si = await jsm.streams.info(name);
 
 // update a stream configuration
 si.config.subjects?.push("a.b");
-await jsm.streams.update(si.config);
+await jsm.streams.update(name, si.config);
 
 // get a particular stored message in the stream by sequence
 // this is not associated with a consumer
