@@ -27,6 +27,7 @@ import {
   ErrorCode,
   headers,
   JSONCodec,
+  nanos,
   NatsError,
   nuid,
   StreamConfig,
@@ -41,7 +42,7 @@ import {
   setup,
 } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
-import { assertThrowsAsyncErrorCode, NatsServer } from "./helpers/mod.ts";
+import { assertThrowsAsyncErrorCode, notCompatible } from './helpers/mod.ts'
 import { validateName } from "../nats-base-client/jsutil.ts";
 
 const StreamNameRequired = "stream name required";
@@ -910,5 +911,40 @@ Deno.test("jsm - jetstream error info", async () => {
       "replicas > 1 not supported in non-clustered mode",
     );
   }
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - update consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.4")) {
+    return;
+  }
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "dur",
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(2000),
+    max_ack_pending: 500,
+    headers_only: false,
+    max_deliver: 100,
+  });
+
+  // update is simply syntatic sugar for add providing a type to
+  // help the IDE show editable properties - server will still
+  // reject options it doesn't deem editable
+  const ci = await jsm.consumers.update(stream, "dur", {
+    ack_wait: nanos(3000),
+    max_ack_pending: 5,
+    headers_only: true,
+    max_deliver: 2,
+  });
+
+  assertEquals(ci.config.ack_wait, nanos(3000));
+  assertEquals(ci.config.max_ack_pending, 5);
+  assertEquals(ci.config.headers_only, true);
+  assertEquals(ci.config.max_deliver, 2);
+
   await cleanup(ns, nc);
 });

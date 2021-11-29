@@ -17,6 +17,7 @@ import {
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
+  ConsumerUpdateConfig,
   CreateConsumerRequest,
   JetStreamOptions,
   Lister,
@@ -62,6 +63,16 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       : `${this.prefix}.CONSUMER.CREATE.${stream}`;
     const r = await this._request(subj, cr);
     return r as ConsumerInfo;
+  }
+
+  async update(
+    stream: string,
+    durable: string,
+    cfg: ConsumerUpdateConfig,
+  ): Promise<ConsumerInfo> {
+    const ci = await this.info(stream, durable);
+    const changable = cfg as ConsumerConfig;
+    return this.add(stream, Object.assign(ci.config, changable));
   }
 
   async info(stream: string, name: string): Promise<ConsumerInfo> {

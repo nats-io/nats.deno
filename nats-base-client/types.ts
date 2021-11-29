@@ -417,6 +417,11 @@ export interface Lister<T> {
 export interface ConsumerAPI {
   info(stream: string, consumer: string): Promise<ConsumerInfo>;
   add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
+  update(
+    stream: string,
+    durable: string,
+    cfg: ConsumerUpdateConfig,
+  ): Promise<ConsumerInfo>;
   delete(stream: string, consumer: string): Promise<boolean>;
   list(stream: string): Lister<ConsumerInfo>;
 }
@@ -757,10 +762,8 @@ export interface AccountLimits {
   "max_consumers": number;
 }
 
-export interface ConsumerConfig {
-  description?: string;
+export interface ConsumerConfig extends ConsumerUpdateConfig {
   "ack_policy": AckPolicy;
-  "ack_wait"?: Nanos;
   "deliver_policy": DeliverPolicy;
   "deliver_subject"?: string;
   "deliver_group"?: string;
@@ -768,14 +771,19 @@ export interface ConsumerConfig {
   "filter_subject"?: string;
   "flow_control"?: boolean; // send message with status of 100 and reply subject
   "idle_heartbeat"?: Nanos; // send empty message when idle longer than this
-  "max_ack_pending"?: number;
-  "max_deliver"?: number;
-  "max_waiting"?: number;
   "opt_start_seq"?: number;
   "opt_start_time"?: string;
   "rate_limit_bps"?: number;
   "replay_policy": ReplayPolicy;
+}
+
+export interface ConsumerUpdateConfig {
+  description?: string;
+  "ack_wait"?: Nanos;
+  "max_deliver"?: number;
   "sample_freq"?: string;
+  "max_ack_pending"?: number;
+  "max_waiting"?: number;
   "headers_only"?: boolean;
 }
 
