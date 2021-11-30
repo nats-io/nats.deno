@@ -17,11 +17,7 @@ import {
   fail,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
-import {
-  assertErrorCode,
-  Lock,
-  NatsServer,
-} from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 import { join, resolve } from "https://deno.land/std@0.95.0/path/mod.ts";
 
