@@ -17,14 +17,7 @@ import {
   fail,
 } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
-import {
-  assertErrorCode,
-  compare,
-  disabled,
-  Lock,
-  NatsServer,
-  parseSemVer,
-} from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 import { join, resolve } from "https://deno.land/std@0.95.0/path/mod.ts";
 
@@ -50,13 +43,6 @@ Deno.test("tls - connects to tls without option", async () => {
 });
 
 Deno.test("tls - custom ca fails without root", async () => {
-  if (compare(parseSemVer(Deno.version.deno), parseSemVer("1.9.2")) > 0) {
-    disabled(
-      `deno version ${Deno.version.deno} doesn't reject certificates correctly`,
-    );
-    return;
-  }
-
   const cwd = Deno.cwd();
   const config = {
     host: "0.0.0.0",
@@ -76,6 +62,7 @@ Deno.test("tls - custom ca fails without root", async () => {
     .catch((err) => {
       // this is a bogus error name - but at least we know we are rejected
       assertEquals(err.name, "InvalidData");
+      assertEquals(err.message, "invalid certificate: UnknownIssuer");
       lock.unlock();
     });
 

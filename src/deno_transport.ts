@@ -21,6 +21,7 @@ import {
   checkUnsupportedOption,
   ConnectionOptions,
   DataBuffer,
+  Empty,
   ErrorCode,
   extractProtocolMessage,
   INFO,
@@ -32,7 +33,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import type { TlsOptions } from "../nats-base-client/types.ts";
 
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason
@@ -141,10 +142,20 @@ export class DenoTransport implements Transport {
     checkUnsupportedOption("tls.key", tls.key);
     checkUnsupportedOption("tls.keyFile", tls.keyFile);
 
+    const sto = { hostname } as Deno.StartTlsOptions;
+    if (tls.caFile) {
+      const ca = await Deno.readTextFile(tls.caFile);
+      sto.caCerts = [ca];
+    }
+
     this.conn = await Deno.startTls(
       this.conn,
-      { hostname, certFile: tls.caFile },
+      sto,
     );
+    // this is necessary because the startTls process doesn't
+    // reject a bad certificate, however the next write will.
+    // to identify this as the error, we force it
+    await this.conn.write(Empty);
     this.encrypted = true;
     this.writer = new BufWriter(this.conn);
   }

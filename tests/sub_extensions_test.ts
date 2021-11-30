@@ -30,10 +30,10 @@ Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = ((_sub, info) => {
+  subimpl.cleanupFn = (_sub, info) => {
     const id = info as { data?: string };
     d.resolve(id.data ? id.data : "");
-  });
+  };
   nc.publish(subj);
   assertEquals(await d, "hello");
   assert(sub.isClosed());
@@ -47,9 +47,9 @@ Deno.test("extensions - cleanup fn called at unsubscribe", async () => {
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = (() => {
+  subimpl.cleanupFn = () => {
     d.resolve("hello");
-  });
+  };
   sub.unsubscribe();
   assertEquals(await d, "hello");
   assert(sub.isClosed());
@@ -63,9 +63,9 @@ Deno.test("extensions - cleanup fn called at sub drain", async () => {
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = (() => {
+  subimpl.cleanupFn = () => {
     d.resolve("hello");
-  });
+  };
   await sub.drain();
   assertEquals(await d, "hello");
   assert(sub.isClosed());
@@ -79,9 +79,9 @@ Deno.test("extensions - cleanup fn called at conn drain", async () => {
   const d = deferred<string>();
   const subimpl = sub as SubscriptionImpl;
   subimpl.info = { data: "hello" };
-  subimpl.cleanupFn = (() => {
+  subimpl.cleanupFn = () => {
     d.resolve("hello");
-  });
+  };
   await nc.drain();
   assertEquals(await d, "hello");
   assert(sub.isClosed());

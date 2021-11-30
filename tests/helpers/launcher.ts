@@ -28,11 +28,11 @@ import { assert } from "https://deno.land/std@0.95.0/testing/asserts.ts";
 import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
-  QUIT: Deno.Signal.SIGQUIT,
-  STOP: Deno.Signal.SIGSTOP,
-  REOPEN: Deno.Signal.SIGUSR1,
-  RELOAD: Deno.Signal.SIGHUP,
-  LDM: Deno.Signal.SIGUSR2,
+  QUIT: "SIGQUIT",
+  STOP: "SIGSTOP",
+  REOPEN: "SIGUSR1",
+  RELOAD: "SIGHUP",
+  LDM: "SIGUSR2",
 });
 
 export interface PortInfo {
@@ -216,16 +216,17 @@ export class NatsServer implements PortInfo {
     if (!this.stopped) {
       this.stopped = true;
       this.process.stderr?.close();
-      this.process.kill(Deno.Signal.SIGKILL);
+      this.process.kill("SIGKILL");
       this.process.close();
     }
     await this.done;
   }
 
-  signal(signal: Deno.MacOSSignal | Deno.LinuxSignal): Promise<void> {
-    if (signal === Deno.Signal.SIGKILL) {
+  signal(signal: string): Promise<void> {
+    if (signal === "SIGKILL") {
       return this.stop();
     } else {
+      //@ts-ignore: this is correct
       this.process.kill(signal);
       return Promise.resolve();
     }

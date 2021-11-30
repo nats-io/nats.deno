@@ -102,5 +102,5 @@ Deno.test("heartbeat - recovers from missed", async () => {
   await delay(800);
   hb.cancel();
   assertEquals(hb.timer, undefined);
-  assert(status.length >= 7, `${status.length} >= 7`);
+  assert(status.length >= 6, `${status.length} >= 6`);
 });
