@@ -543,6 +543,7 @@ export interface StreamConfig extends StreamUpdateConfig {
   storage: StorageType;
   "num_replicas": number;
   "template_owner"?: string;
+  "max_consumers": number;
   placement?: Placement;
   mirror?: StreamSource; // same as a source
   sealed: boolean;
@@ -552,7 +553,6 @@ export interface StreamConfig extends StreamUpdateConfig {
 
 export interface StreamUpdateConfig {
   description?: string;
-  "max_consumers": number;
   "max_msgs_per_subject"?: number;
   "max_msgs": number;
   "max_age": Nanos;
