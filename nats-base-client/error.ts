@@ -99,13 +99,13 @@ export class NatsError extends Error {
   api_error?: ApiError;
 
   /**
-     * @param {String} message
-     * @param {String} code
-     * @param {Error} [chainedError]
-     * @constructor
-     *
-     * @api private
-     */
+   * @param {String} message
+   * @param {String} code
+   * @param {Error} [chainedError]
+   * @constructor
+   *
+   * @api private
+   */
   constructor(message: string, code: string, chainedError?: Error) {
     super(message);
     this.name = "NatsError";

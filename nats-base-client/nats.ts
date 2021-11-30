@@ -221,10 +221,10 @@ export class NatsConnectionImpl implements NatsConnection {
     }
   }
 
-  /***
-     * Flushes to the server. Promise resolves when round-trip completes.
-     * @returns {Promise<void>}
-     */
+  /** *
+   * Flushes to the server. Promise resolves when round-trip completes.
+   * @returns {Promise<void>}
+   */
   flush(): Promise<void> {
     if (this.isClosed()) {
       return Promise.reject(

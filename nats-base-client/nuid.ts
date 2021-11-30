@@ -62,11 +62,11 @@ export class Nuid {
   }
 
   /**
-     * Initializes a nuid with a crypto random prefix,
-     * and pseudo-random sequence and increment.
-     *
-     * @api private
-     */
+   * Initializes a nuid with a crypto random prefix,
+   * and pseudo-random sequence and increment.
+   *
+   * @api private
+   */
   private init() {
     this.setPre();
     this.initSeqAndInc();
@@ -74,20 +74,20 @@ export class Nuid {
   }
 
   /**
-     * Initializes the pseudo randmon sequence number and the increment range.
-     *
-     * @api private
-     */
+   * Initializes the pseudo randmon sequence number and the increment range.
+   *
+   * @api private
+   */
   private initSeqAndInc() {
     this.seq = Math.floor(Math.random() * maxSeq);
     this.inc = Math.floor(Math.random() * (maxInc - minInc) + minInc);
   }
 
   /**
-     * Sets the prefix from crypto random bytes. Converts to base36.
-     *
-     * @api private
-     */
+   * Sets the prefix from crypto random bytes. Converts to base36.
+   *
+   * @api private
+   */
   private setPre() {
     const cbuf = new Uint8Array(preLen);
     cryptoObj.getRandomValues(cbuf);
@@ -98,10 +98,10 @@ export class Nuid {
   }
 
   /**
-     * Fills the sequence part of the nuid as base36 from this.seq.
-     *
-     * @api private
-     */
+   * Fills the sequence part of the nuid as base36 from this.seq.
+   *
+   * @api private
+   */
   private fillSeq() {
     let n = this.seq;
     for (let i = totalLen - 1; i >= preLen; i--) {
@@ -111,10 +111,10 @@ export class Nuid {
   }
 
   /**
-     * Returns the next nuid.
-     *
-     * @api private
-     */
+   * Returns the next nuid.
+   *
+   * @api private
+   */
   next(): string {
     this.seq += this.inc;
     if (this.seq > maxSeq) {

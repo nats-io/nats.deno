@@ -194,7 +194,7 @@ function xtoi(s: string): { n: number; c: number; ok: boolean } {
   for (i = 0; i < s.length; i++) {
     if (ASCII0 <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCII9) {
       n *= 16;
-      n += (s.charCodeAt(i) - ASCII0);
+      n += s.charCodeAt(i) - ASCII0;
     } else if (ASCIIa <= s.charCodeAt(i) && s.charCodeAt(i) <= ASCIIf) {
       n *= 16;
       n += (s.charCodeAt(i) - ASCIIa) + 10;
