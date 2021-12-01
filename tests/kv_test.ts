@@ -21,6 +21,8 @@ import {
   nanos,
   NatsConnectionImpl,
   nuid,
+  QueuedIterator,
+  StorageType,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
@@ -761,4 +763,61 @@ Deno.test("kv - delta", async () => {
 
   await nc.close();
   await ns.stop();
+});
+
+Deno.test("kv - watch and history headers only", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const b = await Bucket.create(nc, "bucket") as Bucket;
+  const sc = StringCodec();
+  await b.put("key1", sc.encode("aaa"));
+
+  async function getEntry(
+    qip: Promise<QueuedIterator<KvEntry>>,
+  ): Promise<KvEntry> {
+    const iter = await qip;
+    let p = deferred<KvEntry>();
+    (async () => {
+      for await (const e of iter) {
+        p.resolve(e);
+        break;
+      }
+    })().then();
+
+    return p;
+  }
+
+  async function check(pe: Promise<KvEntry>): Promise<void> {
+    const e = await pe;
+    assertEquals(e.key, "key1");
+    assertEquals(e.value, Empty);
+    assertEquals(e.length, 3);
+  }
+
+  await check(getEntry(b.watch({ key: "key1", headers_only: true })));
+  await check(getEntry(b.history({ key: "key1", headers_only: true })));
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - mem and file", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const d = await Bucket.create(nc, "default") as Bucket;
+  assertEquals((await d.status()).backingStore, StorageType.File);
+
+  const f = await Bucket.create(nc, "file", {
+    storage: StorageType.File,
+  }) as Bucket;
+  assertEquals((await f.status()).backingStore, StorageType.File);
+
+  const m = await Bucket.create(nc, "mem", {
+    storage: StorageType.Memory,
+  }) as Bucket;
+  assertEquals((await m.status()).backingStore, StorageType.Memory);
+
+  await cleanup(ns, nc);
 });

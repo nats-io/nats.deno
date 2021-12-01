@@ -48,7 +48,7 @@ import {
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
-import { headers } from "./headers.ts";
+import { headers, MsgHdrs } from "./headers.ts";
 import { createInbox } from "./protocol.ts";
 import { consumerOpts } from "./mod.ts";
 
@@ -92,6 +92,7 @@ export function defaultBucketOpts(): Partial<KvOptions> {
     maxBucketSize: -1,
     maxValueSize: -1,
     codec: NoopKvCodecs(),
+    storage: StorageType.File,
   };
 }
 
@@ -189,7 +190,7 @@ export class Bucket implements KV, KvRemove {
     sc.max_msgs_per_subject = bo.history;
     sc.max_bytes = bo.maxBucketSize;
     sc.max_msg_size = bo.maxValueSize;
-    sc.storage = StorageType.File;
+    sc.storage = bo.storage;
     sc.discard = DiscardPolicy.Old;
     sc.num_replicas = bo.replicas;
     if (bo.ttl) {
@@ -267,6 +268,14 @@ export class Bucket implements KV, KvRemove {
     return Promise.resolve();
   }
 
+  dataLen(data: Uint8Array, h?: MsgHdrs): number {
+    const slen = h ? h.get(JsHeaders.MessageSizeHdr) || "" : "";
+    if (slen !== "") {
+      return parseInt(slen, 10);
+    }
+    return data.length;
+  }
+
   smToEntry(key: string, sm: StoredMsg): KvEntry {
     return {
       bucket: this.bucket,
@@ -276,6 +285,7 @@ export class Bucket implements KV, KvRemove {
       created: sm.time,
       revision: sm.seq,
       operation: sm.header.get(kvOperationHdr) as OperationType || "PUT",
+      length: this.dataLen(sm.data, sm.header),
     };
   }
 
@@ -289,6 +299,7 @@ export class Bucket implements KV, KvRemove {
       revision: jm.seq,
       operation: jm.headers?.get(kvOperationHdr) as OperationType || "PUT",
       delta: jm.info.pending,
+      length: this.dataLen(jm.data, jm.headers),
     } as KvEntry;
   }
 
@@ -410,11 +421,15 @@ export class Bucket implements KV, KvRemove {
     return this.purge(k);
   }
 
-  async history(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
+  async history(
+    opts: { key?: string; headers_only?: boolean } = {},
+  ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
     const done = deferred();
-    const cc = this._buildCC(k, true);
+    const co = {} as ConsumerConfig;
+    co.headers_only = opts.headers_only || false;
+    const cc = this._buildCC(k, true, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.orderedConsumer();
@@ -460,10 +475,15 @@ export class Bucket implements KV, KvRemove {
     return qi;
   }
 
-  async watch(opts: { key?: string } = {}): Promise<QueuedIterator<KvEntry>> {
+  async watch(
+    opts: { key?: string; headers_only?: boolean } = {},
+  ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
-    const cc = this._buildCC(k, false);
+    const co = {} as Partial<ConsumerConfig>;
+    co.headers_only = opts.headers_only || false;
+
+    const cc = this._buildCC(k, false, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.orderedConsumer();
