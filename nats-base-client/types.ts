@@ -836,6 +836,7 @@ export interface KvEntry {
   revision: number;
   delta?: number;
   operation: "PUT" | "DEL" | "PURGE";
+  length: number;
 }
 
 export interface KvCodec<T> {
@@ -867,6 +868,7 @@ export interface KvOptions {
   ttl: number; // millis
   streamName: string;
   codec: KvCodecs;
+  storage: StorageType;
 }
 
 /**
