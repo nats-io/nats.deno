@@ -255,26 +255,25 @@ interval.
 
 #### Consumer Binding
 
-JetStream's `subscribe()`, and `pullSubscribe()` can `bind` to a specific 
-durable consumer. The consumer must already exist, note that if your 
-consumer is working on a stream that is sourced from another `bind` is the
-only way you can attach to the correct consumer on the correct stream:
+JetStream's `subscribe()`, and `pullSubscribe()` can `bind` to a specific
+durable consumer. The consumer must already exist, note that if your consumer is
+working on a stream that is sourced from another `bind` is the only way you can
+attach to the correct consumer on the correct stream:
 
 ```typescript
-  const inbox = createInbox();
-  await jsm.consumers.add("A", {
-    durable_name: "me",
-    ack_policy: AckPolicy.None,
-    deliver_subject: inbox,
-  });
+const inbox = createInbox();
+await jsm.consumers.add("A", {
+  durable_name: "me",
+  ack_policy: AckPolicy.None,
+  deliver_subject: inbox,
+});
 
-  const opts = consumerOpts();
-  opts.bind("A", "me");
+const opts = consumerOpts();
+opts.bind("A", "me");
 
-  const sub = await js.subscribe(subj, opts);
-  // process messages...
+const sub = await js.subscribe(subj, opts);
+// process messages...
 ```
-
 
 #### JetStream Queue Consumers
 
