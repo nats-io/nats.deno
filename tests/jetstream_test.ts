@@ -2759,3 +2759,29 @@ Deno.test("jetstream - bind with diff subject fails", async () => {
   );
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - bind example", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+  const jsm = await nc.jetstreamManager();
+  const subj = `A.*`;
+  await jsm.streams.add({
+    name: "A",
+    subjects: [subj],
+  });
+
+  const inbox = createInbox();
+  await jsm.consumers.add("A", {
+    durable_name: "me",
+    ack_policy: AckPolicy.None,
+    deliver_subject: inbox,
+  });
+
+  const opts = consumerOpts();
+  opts.bind("A", "me");
+
+  const sub = await js.subscribe(subj, opts);
+  assertEquals(sub.getProcessed(), 0);
+
+  await cleanup(ns, nc);
+});
