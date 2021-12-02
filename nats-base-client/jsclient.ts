@@ -69,6 +69,7 @@ import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
+import { NatsConnectionImpl } from "./nats.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -86,6 +87,7 @@ class ViewsImpl implements Views {
   js: JetStreamClientImpl;
   constructor(js: JetStreamClientImpl) {
     this.js = js;
+    jetstreamPreview(this.js.nc);
   }
   async kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
     return Bucket.create(this.js.nc, name, opts);
@@ -737,3 +739,22 @@ function autoAckJsMsg(data: JsMsg | null) {
     data.ack();
   }
 }
+
+const jetstreamPreview = (() => {
+  let once = false;
+  return (nci: NatsConnectionImpl) => {
+    if (!once) {
+      once = true;
+      const { lang } = nci?.protocol?.transport;
+      if (lang) {
+        console.log(
+          `\u001B[33m >> jetstream's materialized views functionality in ${lang} is beta functionality \u001B[0m`,
+        );
+      } else {
+        console.log(
+          `\u001B[33m >> jetstream's materialized views functionality is beta functionality \u001B[0m`,
+        );
+      }
+    }
+  };
+})();

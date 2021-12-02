@@ -25,8 +25,7 @@ The new generation of Javascript clients:
 - [nats.ws](https://github.com/nats-io/nats.ws)
 - [nats.deno](https://github.com/nats-io/nats.deno)
 
-all support JetStream, however the functionality is a _preview_, and the APIs
-are subject to change. Please report any issues you find.
+all support JetStream. Please report any issues you find.
 
 ## JetStreamManager
 
@@ -254,6 +253,29 @@ setInterval(() => {
 Note the above example is contrived, as the pull interval is fixed based on some
 interval.
 
+#### Consumer Binding
+
+JetStream's `subscribe()`, and `pullSubscribe()` can `bind` to a specific 
+durable consumer. The consumer must already exist, note that if your 
+consumer is working on a stream that is sourced from another `bind` is the
+only way you can attach to the correct consumer on the correct stream:
+
+```typescript
+  const inbox = createInbox();
+  await jsm.consumers.add("A", {
+    durable_name: "me",
+    ack_policy: AckPolicy.None,
+    deliver_subject: inbox,
+  });
+
+  const opts = consumerOpts();
+  opts.bind("A", "me");
+
+  const sub = await js.subscribe(subj, opts);
+  // process messages...
+```
+
+
 #### JetStream Queue Consumers
 
 Queue Consumers allow scaling the processing of messages stored in a stream. To
@@ -436,7 +458,7 @@ As the ordered consumer processes messages, it enforces that messages are
 presented to the client with the correct sequence. If a gap is detected, the
 consumer is recreated at the expected sequence.
 
-Most consumer options are rejected, as the ordered consumer has manages its
+Most consumer options are rejected, as the ordered consumer manages its
 configuration in a very specific way.
 
 To create an ordered consumer (assuming a stream that captures `my.messages`):

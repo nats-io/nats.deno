@@ -768,7 +768,6 @@ export interface AccountLimits {
 export interface ConsumerConfig extends ConsumerUpdateConfig {
   "ack_policy": AckPolicy;
   "deliver_policy": DeliverPolicy;
-  "deliver_subject"?: string;
   "deliver_group"?: string;
   "durable_name"?: string;
   "filter_subject"?: string;
@@ -788,6 +787,7 @@ export interface ConsumerUpdateConfig {
   "max_ack_pending"?: number;
   "max_waiting"?: number;
   "headers_only"?: boolean;
+  "deliver_subject"?: string;
 }
 
 export interface Consumer {
