@@ -36,11 +36,6 @@ export function validateName(context: string, name = "") {
   }
   const bad = [".", "*", ">"];
   bad.forEach((v) => {
-    if (typeof name !== "string") {
-      throw Error(
-        `type of stream name is ${typeof name}`,
-      );
-    }
     if (name.indexOf(v) !== -1) {
       throw Error(
         `invalid ${context} name - ${context} name cannot contain '${v}'`,
