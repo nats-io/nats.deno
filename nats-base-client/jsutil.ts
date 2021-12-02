@@ -38,8 +38,8 @@ export function validateName(context: string, name = "") {
   bad.forEach((v) => {
     if (typeof name !== "string") {
       throw Error(
-        `type of stream name is ${typeof name}`
-      )
+        `type of stream name is ${typeof name}`,
+      );
     }
     if (name.indexOf(v) !== -1) {
       throw Error(

@@ -66,6 +66,14 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     name: string,
     cfg = {} as StreamUpdateConfig,
   ): Promise<StreamInfo> {
+    if (typeof name === "object") {
+      const sc = name as StreamConfig;
+      name = sc.name;
+      cfg = sc;
+      console.trace(
+        `\u001B[33m >> streams.update(config: StreamConfig) api changed to streams.update(name: string, config: StreamUpdateConfig) - this shim will be removed - update your code.  \u001B[0m`,
+      );
+    }
     validateStreamName(name);
     const r = await this._request(
       `${this.prefix}.STREAM.UPDATE.${name}`,
