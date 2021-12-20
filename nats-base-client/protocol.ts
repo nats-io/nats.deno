@@ -53,7 +53,7 @@ import type { Request } from "./request.ts";
 import { Heartbeat, PH } from "./heartbeats.ts";
 import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
-import { fastDecoder, fastEncoder } from "./encoders.ts";
+import { decode, encode } from "./encoders.ts";
 
 const FLUSH_THRESHOLD = 1024 * 32;
 
@@ -67,8 +67,8 @@ export function createInbox(prefix = ""): string {
   return `${prefix}.${nuid.next()}`;
 }
 
-const PONG_CMD = fastEncoder("PONG\r\n");
-const PING_CMD = fastEncoder("PING\r\n");
+const PONG_CMD = encode("PONG\r\n");
+const PING_CMD = encode("PING\r\n");
 
 export class Connect {
   echo?: boolean;
@@ -413,7 +413,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   async processError(m: Uint8Array) {
-    const s = fastDecoder(m);
+    const s = decode(m);
     const err = ProtocolHandler.toError(s);
     const handled = this.subscriptions.handleError(err);
     if (!handled) {
@@ -455,7 +455,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processInfo(m: Uint8Array) {
-    const info = JSON.parse(fastDecoder(m));
+    const info = JSON.parse(decode(m));
     this.info = info;
     const updates = this.options && this.options.ignoreClusterUpdates
       ? undefined
@@ -480,7 +480,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         }
         const cs = JSON.stringify(c);
         this.transport.send(
-          fastEncoder(`CONNECT ${cs}${CR_LF}`),
+          encode(`CONNECT ${cs}${CR_LF}`),
         );
         this.transport.send(PING_CMD);
       } catch (err) {
@@ -531,7 +531,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const len = this.outbound.length();
     let buf: Uint8Array;
     if (typeof cmd === "string") {
-      buf = fastEncoder(cmd);
+      buf = encode(cmd);
     } else {
       buf = cmd as Uint8Array;
     }
@@ -669,7 +669,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     });
     if (cmds.length) {
-      this.transport.send(fastEncoder(cmds.join("")));
+      this.transport.send(encode(cmds.join("")));
     }
   }
 

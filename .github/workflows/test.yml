@@ -16,7 +16,7 @@ jobs:
     environment: CI
     strategy:
       matrix:
-        deno-version: [1.16.3]
+        deno-version: [1.17.0]
 
     steps:
       - name: Git Checkout Deno Module

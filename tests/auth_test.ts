@@ -74,6 +74,23 @@ Deno.test("auth - bad", async () => {
   await ns.stop();
 });
 
+Deno.test("auth - weird chars", async () => {
+  const pass = "§12§12§12";
+  const ns = await NatsServer.start({
+    authorization: {
+      username: "admin",
+      password: pass,
+    },
+  });
+
+  const nc = await connect(
+    { port: ns.port, user: "admin", pass: pass },
+  );
+  await nc.flush;
+  await nc.close();
+  await ns.stop();
+});
+
 Deno.test("auth - un/pw", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
