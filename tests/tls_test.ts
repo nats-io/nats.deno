@@ -62,7 +62,10 @@ Deno.test("tls - custom ca fails without root", async () => {
     .catch((err) => {
       // this is a bogus error name - but at least we know we are rejected
       assertEquals(err.name, "InvalidData");
-      assertEquals(err.message, "invalid certificate: UnknownIssuer");
+      assertEquals(
+        err.message,
+        "invalid peer certificate contents: invalid peer certificate: UnknownIssuer",
+      );
       lock.unlock();
     });
 
