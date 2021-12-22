@@ -89,8 +89,8 @@ class ViewsImpl implements Views {
     this.js = js;
     jetstreamPreview(this.js.nc);
   }
-  async kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
-    return Bucket.create(this.js.nc, name, opts);
+  kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    return Bucket.create(this.js, name, opts);
   }
 }
 
