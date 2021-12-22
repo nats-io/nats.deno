@@ -594,7 +594,7 @@ export function toConf(o: any, indent?: string): string {
       } else {
         if (!Array.isArray(o)) {
           if (
-            typeof v === "string" && v.startsWith("$JS.")
+            typeof v === "string" && v.startsWith("$")
           ) {
             buf.push(`${pad}${k}: "${v}"`);
           } else if (

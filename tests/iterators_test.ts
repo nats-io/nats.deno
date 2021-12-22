@@ -59,14 +59,13 @@ Deno.test("iterators - autounsub breaks and closes", async () => {
 Deno.test("iterators - permission error breaks and closes", async () => {
   const conf = {
     authorization: {
-      PERM: {
-        subscribe: "bar",
-        publish: "foo",
-      },
       users: [{
         user: "derek",
         password: "foobar",
-        permission: "$PERM",
+        permission: {
+          subscribe: "bar",
+          publish: "foo",
+        },
       }],
     },
   };
