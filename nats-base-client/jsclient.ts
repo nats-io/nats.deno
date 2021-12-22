@@ -398,7 +398,7 @@ export class JetStreamClientImpl extends BaseApiClient
           ErrorCode.ApiError,
         );
       }
-      jsi.config.deliver_subject = createInbox();
+      jsi.config.deliver_subject = createInbox(this.nc.options.inboxPrefix);
       jsi.config.ack_policy = AckPolicy.None;
       jsi.config.max_deliver = 1;
       jsi.config.flow_control = true;
@@ -560,7 +560,7 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
     if (this.info === null || this.sub.isClosed()) {
       return;
     }
-    const newDeliver = createInbox(this.js.opts.apiPrefix);
+    const newDeliver = createInbox(this.js.nc.options.inboxPrefix);
     const nci = this.js.nc;
     nci._resub(this.sub, newDeliver);
     const info = this.info;
