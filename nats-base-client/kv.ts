@@ -22,6 +22,7 @@ import {
   Empty,
   JetStreamClient,
   JetStreamManager,
+  JetStreamOptions,
   JetStreamPublishOptions,
   JsHeaders,
   JsMsg,
@@ -33,7 +34,6 @@ import {
   KvPutOptions,
   KvRemove,
   KvStatus,
-  NatsConnection,
   PurgeOpts,
   PurgeResponse,
   RetentionPolicy,
@@ -168,14 +168,17 @@ export class Bucket implements KV, KvRemove {
   }
 
   static async create(
-    nc: NatsConnection,
+    js: JetStreamClient,
     name: string,
     opts: Partial<KvOptions> = {},
   ): Promise<KV> {
     validateBucket(name);
     const to = opts.timeout || 2000;
-    const jsm = await nc.jetstreamManager({ timeout: to });
-    const bucket = new Bucket(name, jsm, nc.jetstream({ timeout: to }));
+    const jsi = js as JetStreamClientImpl;
+    let jsopts = jsi.opts || {} as JetStreamOptions;
+    jsopts = Object.assign(jsopts, { timeout: to });
+    const jsm = await jsi.nc.jetstreamManager(jsopts);
+    const bucket = new Bucket(name, jsm, js);
     await bucket.init(opts);
     return bucket;
   }
