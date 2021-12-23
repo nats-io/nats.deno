@@ -228,7 +228,7 @@ export class Bucket implements KV, KvRemove {
     return `${this.subjPrefix}.${this.bucket}.${k}`;
   }
 
-  getSubjectForKey(k: string): string {
+  fullKeyName(k: string): string {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
   }
 
@@ -350,7 +350,7 @@ export class Bucket implements KV, KvRemove {
     this.validateKey(ek);
     try {
       const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-        last_by_subj: this.getSubjectForKey(ek),
+        last_by_subj: this.fullKeyName(ek),
       });
       return this.smToEntry(k, sm);
     } catch (err) {
@@ -411,7 +411,7 @@ export class Bucket implements KV, KvRemove {
         ? DeliverPolicy.All
         : DeliverPolicy.LastPerSubject,
       "ack_policy": AckPolicy.None,
-      "filter_subject": this.getSubjectForKey(ek),
+      "filter_subject": this.fullKeyName(ek),
       "flow_control": true,
       "idle_heartbeat": nanos(5 * 1000),
     }, opts) as Partial<ConsumerConfig>;
