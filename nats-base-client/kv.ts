@@ -16,7 +16,6 @@
 import {
   AckPolicy,
   ConsumerConfig,
-  ConsumerInfo,
   DeliverPolicy,
   DiscardPolicy,
   Empty,
@@ -49,7 +48,6 @@ import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
 import { headers, MsgHdrs } from "./headers.ts";
-import { createInbox } from "./protocol.ts";
 import { consumerOpts } from "./mod.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
@@ -158,6 +156,7 @@ export class Bucket implements KV, KvRemove {
   bucket: string;
   codec!: KvCodecs;
   _prefixLen: number;
+  subjPrefix: string;
 
   constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
     validateBucket(bucket);
@@ -165,6 +164,13 @@ export class Bucket implements KV, KvRemove {
     this.js = js;
     this.bucket = bucket;
     this._prefixLen = 0;
+    this.subjPrefix = kvSubjectPrefix;
+
+    const jsi = js as JetStreamClientImpl;
+    const prefix = jsi.prefix || "$JS.API";
+    if (prefix !== "$JS.API") {
+      this.subjPrefix = `${prefix}.${kvSubjectPrefix}`;
+    }
   }
 
   static async create(
@@ -215,10 +221,14 @@ export class Bucket implements KV, KvRemove {
   }
 
   subjectForBucket(): string {
-    return `${kvSubjectPrefix}.${this.bucket}.>`;
+    return `${this.subjPrefix}.${this.bucket}.>`;
   }
 
   subjectForKey(k: string): string {
+    return `${this.subjPrefix}.${this.bucket}.${k}`;
+  }
+
+  getSubjectForKey(k: string): string {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
   }
 
@@ -340,7 +350,7 @@ export class Bucket implements KV, KvRemove {
     this.validateKey(ek);
     try {
       const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-        last_by_subj: this.subjectForKey(ek),
+        last_by_subj: this.getSubjectForKey(ek),
       });
       return this.smToEntry(k, sm);
     } catch (err) {
@@ -401,23 +411,10 @@ export class Bucket implements KV, KvRemove {
         ? DeliverPolicy.All
         : DeliverPolicy.LastPerSubject,
       "ack_policy": AckPolicy.None,
-      "filter_subject": this.subjectForKey(ek),
+      "filter_subject": this.getSubjectForKey(ek),
       "flow_control": true,
       "idle_heartbeat": nanos(5 * 1000),
     }, opts) as Partial<ConsumerConfig>;
-  }
-
-  /**
-   * @deprecated
-   */
-  consumerOn(k: string, history = false): Promise<ConsumerInfo> {
-    return this.jsm.consumers.add(
-      this.stream,
-      this._buildCC(k, history, {
-        ack_policy: AckPolicy.Explicit,
-        deliver_subject: createInbox(),
-      }),
-    );
   }
 
   remove(k: string): Promise<void> {

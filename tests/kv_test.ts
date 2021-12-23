@@ -42,9 +42,16 @@ import {
   validateBucket,
   validateKey,
 } from "../nats-base-client/kv.ts";
-import { notCompatible } from "./helpers/mod.ts";
+import { NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
+import {
+  ConnectionOptions,
+  JetStreamOptions,
+  KV,
+  NatsConnection,
+} from "../nats-base-client/types.ts";
+import { connect } from "../src/mod.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -842,5 +849,172 @@ Deno.test("kv - mem and file", async () => {
   }) as Bucket;
   assertEquals((await m.status()).backingStore, StorageType.Memory);
 
+  await cleanup(ns, nc);
+});
+
+function setupCrossAccount(): Promise<NatsServer> {
+  const conf = {
+    accounts: {
+      A: {
+        jetstream: true,
+        users: [{ user: "a", password: "a" }],
+        exports: [
+          { service: "$JS.API.>" },
+          { service: "$KV.>" },
+          { stream: "forb.>" },
+        ],
+      },
+      B: {
+        users: [{ user: "b", password: "b" }],
+        imports: [
+          { service: { subject: "$KV.>", account: "A" }, to: "froma.$KV.>" },
+          { service: { subject: "$JS.API.>", account: "A" }, to: "froma.>" },
+          { stream: { subject: "forb.>", account: "A" } },
+        ],
+      },
+    },
+  };
+  return NatsServer.start(jetstreamServerConf(conf, true));
+}
+
+async function makeKvAndClient(
+  opts: ConnectionOptions,
+  jsopts: Partial<JetStreamOptions> = {},
+): Promise<{ nc: NatsConnection; kv: KV }> {
+  const nc = await connect(opts);
+  const js = nc.jetstream(jsopts);
+  const kv = await js.views.kv("a");
+  return { nc, kv };
+}
+
+Deno.test("kv - cross account history", async () => {
+  const ns = await setupCrossAccount();
+
+  async function checkHistory(kv: KV, trace?: string): Promise<void> {
+    const ap = deferred();
+    const bp = deferred();
+    const cp = deferred();
+    const ita = await kv.history();
+    const done = (async () => {
+      for await (const e of ita) {
+        if (trace) {
+          console.log(`${trace}: ${e.key}`, e);
+        }
+        switch (e.key) {
+          case "A":
+            ap.resolve();
+            break;
+          case "B":
+            bp.resolve();
+            break;
+          case "C":
+            cp.resolve();
+            break;
+          default:
+            // nothing
+        }
+      }
+    })();
+
+    await Promise.all([ap, bp, cp]);
+    ita.stop();
+    await done;
+  }
+  const { nc: nca, kv: kva } = await makeKvAndClient({
+    port: ns.port,
+    user: "a",
+    pass: "a",
+  });
+  const sc = StringCodec();
+  await kva.put("A", sc.encode("A"));
+  await kva.put("B", sc.encode("B"));
+  await kva.delete("B");
+
+  const { nc: ncb, kv: kvb } = await makeKvAndClient({
+    port: ns.port,
+    user: "b",
+    pass: "b",
+    inboxPrefix: "forb",
+  }, { apiPrefix: "froma" });
+  await kvb.put("C", sc.encode("C"));
+
+  await Promise.all([checkHistory(kva), checkHistory(kvb)]);
+
+  await cleanup(ns, nca, ncb);
+});
+
+Deno.test("kv - cross account watch", async () => {
+  const ns = await setupCrossAccount();
+
+  async function checkWatch(kv: KV, trace?: string): Promise<void> {
+    const ap = deferred();
+    const bp = deferred();
+    const cp = deferred();
+    const ita = await kv.watch();
+    const done = (async () => {
+      for await (const e of ita) {
+        if (trace) {
+          console.log(`${trace}: ${e.key}`, e);
+        }
+        switch (e.key) {
+          case "A":
+            ap.resolve();
+            break;
+          case "B":
+            bp.resolve();
+            break;
+          case "C":
+            cp.resolve();
+            break;
+          default:
+            // nothing
+        }
+      }
+    })();
+
+    await Promise.all([ap, bp, cp]);
+    ita.stop();
+    await done;
+  }
+
+  const { nc: nca, kv: kva } = await makeKvAndClient({
+    port: ns.port,
+    user: "a",
+    pass: "a",
+  });
+  const { nc: ncb, kv: kvb } = await makeKvAndClient({
+    port: ns.port,
+    user: "b",
+    pass: "b",
+    inboxPrefix: "forb",
+  }, { apiPrefix: "froma" });
+
+  const proms = [checkWatch(kva), checkWatch(kvb)];
+  await Promise.all([nca.flush(), ncb.flush()]);
+
+  const sc = StringCodec();
+  await kva.put("A", sc.encode("A"));
+  await kva.put("B", sc.encode("B"));
+  await kvb.put("C", sc.encode("C"));
+  await Promise.all(proms);
+
+  await cleanup(ns, nca, ncb);
+});
+
+Deno.test("kv - watch iter stops", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+  const b = await js.views.kv("a") as Bucket;
+  const watch = await b.watch();
+  const done = (async () => {
+    for await (const _e of watch) {
+      // do nothing
+    }
+  })();
+
+  watch.stop();
+  await done;
   await cleanup(ns, nc);
 });
