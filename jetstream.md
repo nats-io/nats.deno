@@ -523,19 +523,25 @@ assert(e);
 // initial value of "hi" was overwritten above
 assertEquals(sc.decode(e.value), "world");
 
+const buf: string[] = [];
 const keys = await kv.keys();
-assertEquals(keys.length, 1);
-assertEquals(keys[0], "hello.world");
+await (async () => {
+  for await (const k of keys) {
+    buf.push(k);
+  }
+})();
+assertEquals(buf.length, 1);
+assertEquals(buf[0], "hello.world");
 
 let h = await kv.history({ key: "hello.world" });
-(async () => {
+await (async () => {
   for await (const e of h) {
     // do something with the historical value
     // you can test e.operation for "PUT", "DEL", or "PURGE"
     // to know if the entry is a marker for a value set
     // or for a deletion or purge.
   }
-})().then();
+})();
 
 // deletes the key - the delete is recorded
 await kv.delete("hello.world");
