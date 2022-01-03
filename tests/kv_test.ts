@@ -852,6 +852,86 @@ Deno.test("kv - mem and file", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("kv - example", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+  const sc = StringCodec();
+
+  const kv = await js.views.kv("testing", { history: 5 });
+
+  // create an entry - this is similar to a put, but will fail if the
+  // key exists
+  await kv.create("hello.world", sc.encode("hi"));
+
+  // Values in KV are stored as KvEntries:
+  // {
+  //   bucket: string,
+  //   key: string,
+  //   value: Uint8Array,
+  //   created: Date,
+  //   revision: number,
+  //   delta?: number,
+  //   operation: "PUT"|"DEL"|"PURGE"
+  // }
+  // The operation property specifies whether the value was
+  // updated (PUT), deleted (DEL) or purged (PURGE).
+
+  // you can monitor values modification in a KV by watching.
+  // You can watch specific key subset or everything.
+  // Watches start with the latest value for each key in the
+  // set of keys being watched - in this case all keys
+  const watch = await kv.watch();
+  (async () => {
+    for await (const e of watch) {
+      // do something with the change
+    }
+  })().then();
+
+  // update the entry
+  await kv.put("hello.world", sc.encode("world"));
+  // retrieve the KvEntry storing the value
+  // returns null if the value is not found
+  const e = await kv.get("hello.world");
+  assert(e);
+  // initial value of "hi" was overwritten above
+  assertEquals(sc.decode(e.value), "world");
+
+  const buf: string[] = [];
+  const keys = await kv.keys();
+  await (async () => {
+    for await (const k of keys) {
+      buf.push(k);
+    }
+  })();
+  assertEquals(buf.length, 1);
+  assertEquals(buf[0], "hello.world");
+
+  let h = await kv.history({ key: "hello.world" });
+  await (async () => {
+    for await (const e of h) {
+      // do something with the historical value
+      // you can test e.operation for "PUT", "DEL", or "PURGE"
+      // to know if the entry is a marker for a value set
+      // or for a deletion or purge.
+    }
+  })();
+
+  // deletes the key - the delete is recorded
+  await kv.delete("hello.world");
+
+  // purge is like delete, but all history values
+  // are dropped and only the purge remains.
+  await kv.purge("hello.world");
+
+  // stop the watch operation above
+  watch.stop();
+
+  // danger: destroys all values in the KV!
+  await kv.destroy();
+
+  await cleanup(ns, nc);
+});
+
 function setupCrossAccount(): Promise<NatsServer> {
   const conf = {
     accounts: {
