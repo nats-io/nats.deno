@@ -313,8 +313,8 @@ message's reply subject. This metadata includes:
     should be resent.
   - `working()` - informs the server that you are still working on the message
     and thus prevent receiving the message again as a redelivery.
-  - `term()` - specifies that you failed to process the server and instructs the
-    server to not send it againn (to any consumer).
+  - `term()` - specifies that you failed to process the message and instructs the
+    server to not send it again (to any consumer).
 
 If you implement a standard NATS subscription to process your JetStream
 messages, you can use `toJsMsg()` to convert a message. Note that subscriptions
