@@ -42,9 +42,16 @@ import {
   validateBucket,
   validateKey,
 } from "../nats-base-client/kv.ts";
-import { notCompatible } from "./helpers/mod.ts";
+import { NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
+import {
+  ConnectionOptions,
+  JetStreamOptions,
+  KV,
+  NatsConnection,
+} from "../nats-base-client/types.ts";
+import { connect } from "../src/mod.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -134,7 +141,8 @@ Deno.test("kv - init creates stream", async () => {
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  await Bucket.create(nc, n);
+  const js = nc.jetstream();
+  await js.views.kv(n);
 
   streams = await jsm.streams.list().next();
   assertEquals(streams.length, 1);
@@ -195,7 +203,9 @@ Deno.test("kv - crud", async () => {
     return;
   }
   const n = nuid.next();
-  await crud(await Bucket.create(nc, n, { history: 10 }) as Bucket);
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n, { history: 10 }) as Bucket;
+  await crud(bucket);
   await cleanup(ns, nc);
 });
 
@@ -211,7 +221,8 @@ Deno.test("kv - codec crud", async () => {
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, {
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n, {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -230,7 +241,8 @@ Deno.test("kv - history", async () => {
     return;
   }
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n, { history: 2 });
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n, { history: 2 });
   let status = await bucket.status();
   assertEquals(status.values, 0);
   assertEquals(status.history, 2);
@@ -253,7 +265,8 @@ Deno.test("kv - cleanups/empty", async () => {
     return;
   }
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n);
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n);
   assertEquals(await bucket.get("x"), null);
 
   const h = await bucket.history();
@@ -278,7 +291,8 @@ Deno.test("kv - history cleanup", async () => {
     return;
   }
   const n = nuid.next();
-  const bucket = await Bucket.create(nc, n);
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n);
   await bucket.put("a", Empty);
   await bucket.put("b", Empty);
   await bucket.put("c", Empty);
@@ -308,7 +322,8 @@ Deno.test("kv - bucket watch", async () => {
   }
   const sc = StringCodec();
   const n = nuid.next();
-  const b = await Bucket.create(nc, n, { history: 10 });
+  const js = nc.jetstream();
+  const b = await js.views.kv(n, { history: 10 });
   const m: Map<string, string> = new Map();
   const iter = await b.watch();
   const done = (async () => {
@@ -387,7 +402,8 @@ Deno.test("kv - key watch", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const bucket = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(nuid.next()) as Bucket;
   await keyWatch(bucket);
 
   const nci = nc as NatsConnectionImpl;
@@ -404,7 +420,8 @@ Deno.test("kv - codec key watch", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const bucket = await Bucket.create(nc, nuid.next(), {
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(nuid.next(), {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -443,7 +460,8 @@ Deno.test("kv - keys", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next());
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next());
   await keys(b as Bucket);
 
   const nci = nc as NatsConnectionImpl;
@@ -460,7 +478,8 @@ Deno.test("kv - codec keys", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next(), {
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next(), {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -485,7 +504,8 @@ Deno.test("kv - ttl", async () => {
   }
 
   const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next(), { ttl: 1000 }) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next(), { ttl: 1000 }) as Bucket;
 
   const jsm = await nc.jetstreamManager();
   const si = await jsm.streams.info(b.stream);
@@ -511,7 +531,8 @@ Deno.test("kv - no ttl", async () => {
     return;
   }
   const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("x", sc.encode("hello"));
   let e = await b.get("x");
@@ -534,7 +555,8 @@ Deno.test("kv - complex key", async () => {
     return;
   }
   const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("x.y.z", sc.encode("hello"));
   const e = await b.get("x.y.z");
@@ -579,7 +601,8 @@ Deno.test("kv - remove key", async () => {
     return;
   }
   const sc = StringCodec();
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("a.b", sc.encode("ab"));
   let v = await b.get("a.b");
@@ -605,7 +628,8 @@ Deno.test("kv - remove subkey", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
   await b.put("a", Empty);
   await b.put("a.b", Empty);
   await b.put("a.c", Empty);
@@ -629,7 +653,8 @@ Deno.test("kv - create key", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   await b.create("a", Empty);
   await assertThrowsAsync(
@@ -650,7 +675,8 @@ Deno.test("kv - update key", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const b = await Bucket.create(nc, nuid.next()) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   const seq = await b.create("a", Empty);
   await assertThrowsAsync(
@@ -675,14 +701,16 @@ Deno.test("kv - internal consumer", async () => {
   }
 
   async function getCount(name: string): Promise<number> {
-    const b = await Bucket.create(nc, name) as Bucket;
+    const js = nc.jetstream();
+    const b = await js.views.kv(name) as Bucket;
     let watch = await b.watch() as QueuedIteratorImpl<unknown>;
     const sub = watch._data as JetStreamSubscriptionInfoable;
     return sub?.info?.last?.num_pending || 0;
   }
 
   const name = nuid.next();
-  const b = await Bucket.create(nc, name) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(name) as Bucket;
   assertEquals(await getCount(name), 0);
 
   await b.put("a", Empty);
@@ -700,7 +728,8 @@ Deno.test("kv - is wildcard delete implemented", async () => {
   }
 
   const name = nuid.next();
-  const b = await Bucket.create(nc, name, { history: 10 }) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(name, { history: 10 }) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
   await b.put("a.b", Empty);
@@ -742,7 +771,8 @@ Deno.test("kv - delta", async () => {
   }
 
   const name = nuid.next();
-  const b = await Bucket.create(nc, name) as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv(name) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
   await b.put("a.b", Empty);
@@ -769,8 +799,8 @@ Deno.test("kv - watch and history headers only", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-
-  const b = await Bucket.create(nc, "bucket") as Bucket;
+  const js = nc.jetstream();
+  const b = await js.views.kv("bucket") as Bucket;
   const sc = StringCodec();
   await b.put("key1", sc.encode("aaa"));
 
@@ -805,16 +835,16 @@ Deno.test("kv - mem and file", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
-
-  const d = await Bucket.create(nc, "default") as Bucket;
+  const js = nc.jetstream();
+  const d = await js.views.kv("default") as Bucket;
   assertEquals((await d.status()).backingStore, StorageType.File);
 
-  const f = await Bucket.create(nc, "file", {
+  const f = await js.views.kv("file", {
     storage: StorageType.File,
   }) as Bucket;
   assertEquals((await f.status()).backingStore, StorageType.File);
 
-  const m = await Bucket.create(nc, "mem", {
+  const m = await js.views.kv("mem", {
     storage: StorageType.Memory,
   }) as Bucket;
   assertEquals((await m.status()).backingStore, StorageType.Memory);
@@ -899,5 +929,172 @@ Deno.test("kv - example", async () => {
   // danger: destroys all values in the KV!
   await kv.destroy();
 
+  await cleanup(ns, nc);
+});
+
+function setupCrossAccount(): Promise<NatsServer> {
+  const conf = {
+    accounts: {
+      A: {
+        jetstream: true,
+        users: [{ user: "a", password: "a" }],
+        exports: [
+          { service: "$JS.API.>" },
+          { service: "$KV.>" },
+          { stream: "forb.>" },
+        ],
+      },
+      B: {
+        users: [{ user: "b", password: "b" }],
+        imports: [
+          { service: { subject: "$KV.>", account: "A" }, to: "froma.$KV.>" },
+          { service: { subject: "$JS.API.>", account: "A" }, to: "froma.>" },
+          { stream: { subject: "forb.>", account: "A" } },
+        ],
+      },
+    },
+  };
+  return NatsServer.start(jetstreamServerConf(conf, true));
+}
+
+async function makeKvAndClient(
+  opts: ConnectionOptions,
+  jsopts: Partial<JetStreamOptions> = {},
+): Promise<{ nc: NatsConnection; kv: KV }> {
+  const nc = await connect(opts);
+  const js = nc.jetstream(jsopts);
+  const kv = await js.views.kv("a");
+  return { nc, kv };
+}
+
+Deno.test("kv - cross account history", async () => {
+  const ns = await setupCrossAccount();
+
+  async function checkHistory(kv: KV, trace?: string): Promise<void> {
+    const ap = deferred();
+    const bp = deferred();
+    const cp = deferred();
+    const ita = await kv.history();
+    const done = (async () => {
+      for await (const e of ita) {
+        if (trace) {
+          console.log(`${trace}: ${e.key}`, e);
+        }
+        switch (e.key) {
+          case "A":
+            ap.resolve();
+            break;
+          case "B":
+            bp.resolve();
+            break;
+          case "C":
+            cp.resolve();
+            break;
+          default:
+            // nothing
+        }
+      }
+    })();
+
+    await Promise.all([ap, bp, cp]);
+    ita.stop();
+    await done;
+  }
+  const { nc: nca, kv: kva } = await makeKvAndClient({
+    port: ns.port,
+    user: "a",
+    pass: "a",
+  });
+  const sc = StringCodec();
+  await kva.put("A", sc.encode("A"));
+  await kva.put("B", sc.encode("B"));
+  await kva.delete("B");
+
+  const { nc: ncb, kv: kvb } = await makeKvAndClient({
+    port: ns.port,
+    user: "b",
+    pass: "b",
+    inboxPrefix: "forb",
+  }, { apiPrefix: "froma" });
+  await kvb.put("C", sc.encode("C"));
+
+  await Promise.all([checkHistory(kva), checkHistory(kvb)]);
+
+  await cleanup(ns, nca, ncb);
+});
+
+Deno.test("kv - cross account watch", async () => {
+  const ns = await setupCrossAccount();
+
+  async function checkWatch(kv: KV, trace?: string): Promise<void> {
+    const ap = deferred();
+    const bp = deferred();
+    const cp = deferred();
+    const ita = await kv.watch();
+    const done = (async () => {
+      for await (const e of ita) {
+        if (trace) {
+          console.log(`${trace}: ${e.key}`, e);
+        }
+        switch (e.key) {
+          case "A":
+            ap.resolve();
+            break;
+          case "B":
+            bp.resolve();
+            break;
+          case "C":
+            cp.resolve();
+            break;
+          default:
+            // nothing
+        }
+      }
+    })();
+
+    await Promise.all([ap, bp, cp]);
+    ita.stop();
+    await done;
+  }
+
+  const { nc: nca, kv: kva } = await makeKvAndClient({
+    port: ns.port,
+    user: "a",
+    pass: "a",
+  });
+  const { nc: ncb, kv: kvb } = await makeKvAndClient({
+    port: ns.port,
+    user: "b",
+    pass: "b",
+    inboxPrefix: "forb",
+  }, { apiPrefix: "froma" });
+
+  const proms = [checkWatch(kva), checkWatch(kvb)];
+  await Promise.all([nca.flush(), ncb.flush()]);
+
+  const sc = StringCodec();
+  await kva.put("A", sc.encode("A"));
+  await kva.put("B", sc.encode("B"));
+  await kvb.put("C", sc.encode("C"));
+  await Promise.all(proms);
+
+  await cleanup(ns, nca, ncb);
+});
+
+Deno.test("kv - watch iter stops", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+  const b = await js.views.kv("a") as Bucket;
+  const watch = await b.watch();
+  const done = (async () => {
+    for await (const _e of watch) {
+      // do nothing
+    }
+  })();
+
+  watch.stop();
+  await done;
   await cleanup(ns, nc);
 });

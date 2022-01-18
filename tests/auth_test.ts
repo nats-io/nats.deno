@@ -34,14 +34,13 @@ import { assert } from "../nats-base-client/denobuffer.ts";
 
 const conf = {
   authorization: {
-    PERM: {
-      subscribe: "bar",
-      publish: "foo",
-    },
     users: [{
       user: "derek",
       password: "foobar",
-      permission: "$PERM",
+      permission: {
+        subscribe: "bar",
+        publish: "foo",
+      },
     }],
   },
 };
