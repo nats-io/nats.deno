@@ -32,7 +32,7 @@ export function StringCodec(): Codec<string> {
   };
 }
 
-export function JSONCodec<T = unknown>(): Codec<T> {
+export function JSONCodec<T = unknown>(reviver? :(this: any, key: string, value: any) => any): Codec<T> {
   return {
     encode(d: T): Uint8Array {
       try {
@@ -48,7 +48,7 @@ export function JSONCodec<T = unknown>(): Codec<T> {
 
     decode(a: Uint8Array): T {
       try {
-        return JSON.parse(TD.decode(a));
+        return JSON.parse(TD.decode(a), reviver);
       } catch (err) {
         throw NatsError.errorForCode(ErrorCode.BadJson, err);
       }

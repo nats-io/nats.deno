@@ -27,3 +27,10 @@ Deno.test("codec - json", () => {
   const d = sc.encode(o);
   assertEquals(sc.decode(d), o);
 });
+
+Deno.test("codec - json w/ reviver", () => {
+  const sc = JSONCodec((k: string, v: any) => k === "time" ? new Date(v) : v);
+  const o = { time: new Date() };
+  const d = sc.encode(o);
+  assertEquals(sc.decode(d), o);
+});
