@@ -8,6 +8,7 @@ import {
   NatsConnection,
   nuid,
 } from "../nats-base-client/internal_mod.ts";
+import { StreamConfig } from "../nats-base-client/types.ts";
 
 export function jsopts() {
   return {
@@ -89,12 +90,12 @@ export async function cleanup(
 export async function initStream(
   nc: NatsConnection,
   stream: string = nuid.next(),
+  opts: Partial<StreamConfig> = {},
 ): Promise<{ stream: string; subj: string }> {
   const jsm = await nc.jetstreamManager();
   const subj = `${stream}.A`;
-  await jsm.streams.add(
-    { name: stream, subjects: [subj] },
-  );
+  const sc = Object.assign(opts, { name: stream, subjects: [subj] });
+  await jsm.streams.add(sc);
   return { stream, subj };
 }
 
