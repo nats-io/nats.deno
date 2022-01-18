@@ -32,7 +32,9 @@ export function StringCodec(): Codec<string> {
   };
 }
 
-export function JSONCodec<T = unknown>(reviver? :(this: any, key: string, value: any) => any): Codec<T> {
+export function JSONCodec<T = unknown>(
+  reviver?: (this: any, key: string, value: any) => any,
+): Codec<T> {
   return {
     encode(d: T): Uint8Array {
       try {
