@@ -50,11 +50,12 @@ export function defaultOptions(): ConnectionOptions {
 export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
   const dhp = `${DEFAULT_HOST}:${defaultPort()}`;
   opts = opts || { servers: [dhp] };
-  if (opts.port) {
-    opts.servers = [`${DEFAULT_HOST}:${opts.port}`];
-  }
+  opts.servers = opts.servers || [];
   if (typeof opts.servers === "string") {
     opts.servers = [opts.servers];
+  }
+  if (opts.servers.length === 0 && opts.port) {
+    opts.servers = [`${DEFAULT_HOST}:${opts.port}`];
   }
   if (opts.servers && opts.servers.length === 0) {
     opts.servers = [dhp];
