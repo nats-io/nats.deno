@@ -94,6 +94,11 @@ export function checkJsErrorCode(
   }
   description = description.toLowerCase();
   switch (code) {
+    case 408:
+      return NatsError.errorForCode(
+        ErrorCode.JetStream404NoMessages,
+        new Error(description),
+      );
     case 503:
       return NatsError.errorForCode(
         ErrorCode.JetStreamNotEnabled,

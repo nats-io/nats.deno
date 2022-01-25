@@ -160,7 +160,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const msg = await this.nc.request(
       // FIXME: specify expires
       `${this.prefix}.CONSUMER.MSG.NEXT.${stream}.${durable}`,
-      this.jc.encode({ no_wait: true, batch: 1, expires: nanos(this.timeout) }),
+      this.jc.encode({ no_wait: true, batch: 1, expires: 0 }),
       { noMux: true, timeout: this.timeout },
     );
     const err = checkJsError(msg);
@@ -192,6 +192,9 @@ export class JetStreamClientImpl extends BaseApiClient
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
+    if (args.no_wait && args.expires) {
+      args.expires = 0;
+    }
     const expires = opts.expires || 0;
     if (expires) {
       args.expires = nanos(expires);
@@ -649,8 +652,8 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     super(js, subject, opts);
   }
   pull(opts: Partial<PullOptions> = { batch: 1 }): void {
-    const { stream, config } = this.sub.info as JetStreamSubscriptionInfo;
-    const consumer = config.durable_name;
+    const { stream, config, name } = this.sub.info as JetStreamSubscriptionInfo;
+    const consumer = config.durable_name ?? name;
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
