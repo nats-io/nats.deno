@@ -96,7 +96,7 @@ export function checkJsErrorCode(
   switch (code) {
     case 408:
       return NatsError.errorForCode(
-        ErrorCode.JetStream404NoMessages,
+        ErrorCode.JetStream408RequestTimeout,
         new Error(description),
       );
     case 503:

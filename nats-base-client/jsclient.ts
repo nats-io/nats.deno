@@ -238,7 +238,9 @@ export class JetStreamClientImpl extends BaseApiClient
             timer = null;
           }
           if (
-            isNatsError(err) && err.code === ErrorCode.JetStream404NoMessages
+            isNatsError(err) &&
+            (err.code === ErrorCode.JetStream404NoMessages ||
+              err.code === ErrorCode.JetStream408RequestTimeout)
           ) {
             qi.stop();
           } else {
