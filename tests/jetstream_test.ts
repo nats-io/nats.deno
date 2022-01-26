@@ -878,6 +878,32 @@ Deno.test("jetstream - pull sub requires explicit", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - pull sub ephemeral", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj);
+
+  const d = deferred<JsMsg>();
+  const opts = consumerOpts();
+
+  opts.ackExplicit();
+  opts.callback((err, msg) => {
+    if (err) {
+      d.reject(err);
+    } else {
+      d.resolve(msg!);
+    }
+  });
+
+  const ps = await js.pullSubscribe(subj, opts);
+  ps.pull({ no_wait: true });
+  const r = await d;
+  assertEquals(r.subject, subj);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - subscribe - not attached callback", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);

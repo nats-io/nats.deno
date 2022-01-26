@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.6.5" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.7.0" >> $GITHUB_ENV
 
       # this here because dns seems to be wedged on gha
       - name: Add hosts to /etc/hosts
