@@ -2196,6 +2196,40 @@ Deno.test("jetstream - source", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jestream - nak delay", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.7.1")) {
+    return;
+  }
+
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+  await js.publish(subj);
+
+  let start = 0;
+
+  const opts = consumerOpts();
+  opts.ackAll();
+  opts.deliverTo(createInbox());
+  opts.maxMessages(2);
+  opts.callback((_, m) => {
+    assert(m);
+    if (m.redelivered) {
+      m.ack();
+    } else {
+      start = Date.now();
+      m.nak(2000);
+    }
+  });
+
+  const sub = await js.subscribe(subj, opts);
+  await sub.closed;
+
+  const delay = Date.now() - start;
+  assertBetween(delay, 1800, 2200);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - redelivery property works", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.3.5")) {

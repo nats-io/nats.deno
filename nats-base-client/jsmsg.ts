@@ -21,10 +21,11 @@ import {
 } from "./types.ts";
 import { MsgHdrs } from "./headers.ts";
 import { DataBuffer } from "./databuffer.ts";
-import { JSONCodec } from "./codec.ts";
+import { JSONCodec, StringCodec } from "./codec.ts";
 import { MsgImpl } from "./msg.ts";
 import { ProtocolHandler } from "./protocol.ts";
 import { Request } from "./request.ts";
+import { nanos } from "./jsutil.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);
@@ -162,8 +163,14 @@ export class JsMsgImpl implements JsMsg {
     this.doAck(ACK);
   }
 
-  nak() {
-    this.doAck(NAK);
+  nak(millis?: number) {
+    let payload = NAK;
+    if (millis) {
+      payload = StringCodec().encode(
+        `-NAK ${JSON.stringify({ delay: nanos(millis) })}`,
+      );
+    }
+    this.doAck(payload);
   }
 
   working() {
