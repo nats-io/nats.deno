@@ -685,6 +685,35 @@ Deno.test("jetstream - max ack pending", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - ephemeral options", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  const v = await jsm.consumers.add(stream, {
+    inactive_threshold: nanos(1000),
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(v.config.inactive_threshold, nanos(1000));
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer options", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  const v = await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    max_batch: 10,
+    max_expires: nanos(20000),
+  });
+
+  assertEquals(v.config.max_batch, 10);
+  assertEquals(v.config.max_expires, nanos(20000));
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - pull sub - attached iterator", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
