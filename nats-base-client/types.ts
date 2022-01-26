@@ -408,6 +408,12 @@ export interface ConsumerOptsBuilder {
   orderedConsumer(): void;
   // binds to a consumer
   bind(stream: string, durable: string): void;
+  // max number of messages to be delivered to a pull consumer (pull consumer only)
+  maxPullBatch(n: number): void;
+  // max amount of time before a pull request expires
+  maxPullRequestExpires(millis: number): void;
+  // max amount of time before an inactive ephemeral consumer is discarded
+  inactiveEphemeralThreshold(millis: number): void;
 }
 
 export interface Lister<T> {
@@ -788,6 +794,9 @@ export interface ConsumerUpdateConfig {
   "max_waiting"?: number;
   "headers_only"?: boolean;
   "deliver_subject"?: string;
+  "max_batch"?: number;
+  "max_expires"?: Nanos;
+  "inactive_threshold"?: Nanos;
 }
 
 export interface Consumer {

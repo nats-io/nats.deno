@@ -208,6 +208,18 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.durable_name = durable;
     this.isBind = true;
   }
+
+  inactiveEphemeralThreshold(millis: number): void {
+    this.config.inactive_threshold = nanos(millis);
+  }
+
+  maxPullBatch(n: number): void {
+    this.config.max_batch = n;
+  }
+
+  maxPullRequestExpires(millis: number): void {
+    this.config.max_expires = nanos(millis);
+  }
 }
 
 export function isConsumerOptsBuilder(
