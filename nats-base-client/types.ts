@@ -458,7 +458,7 @@ export interface JsMsg {
   sid: number;
 
   ack(): void;
-  nak(): void;
+  nak(millis?: number): void;
   working(): void;
   // next(subj?: string): void;
   term(): void;

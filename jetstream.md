@@ -309,8 +309,10 @@ message's reply subject. This metadata includes:
   are pending among other things.
 - Multiple ways to acknowledge a message:
   - `ack()`
-  - `nak()` - like ack, but tells the server you failed to process it, and it
-    should be resent.
+  - `nak(millis?)` - like ack, but tells the server you failed to process it,
+    and it should be resent. If a number is specified, the message will be
+    resent after the specified value. The additional argument only supported on
+    server versions 2.7.1 or greater
   - `working()` - informs the server that you are still working on the message
     and thus prevent receiving the message again as a redelivery.
   - `term()` - specifies that you failed to process the message and instructs
