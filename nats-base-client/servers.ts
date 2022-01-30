@@ -28,6 +28,7 @@ import { isIP } from "./ipparser.ts";
 function hostPort(
   u: string,
 ): { listen: string; hostname: string; port: number } {
+  u = u.trim();
   // remove any protocol that may have been provided
   if (u.match(/^(.*:\/\/)(.*)/m)) {
     u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
@@ -36,12 +37,20 @@ function hostPort(
   // that means that protocols other than HTTP/S are not
   // parsable correctly.
   const url = new URL(`http://${u}`);
+
+  let sport = "";
   if (!url.port) {
-    url.port = `${DEFAULT_PORT}`;
+    if (u.endsWith(":80")) {
+      sport = "80";
+    } else if (u.endsWith(":443")) {
+      sport = "443";
+    } else {
+      url.port = `${DEFAULT_PORT}`;
+    }
   }
   const listen = url.host;
   const hostname = url.hostname;
-  const port = parseInt(url.port, 10);
+  const port = sport !== "" ? parseInt(sport, 10) : parseInt(url.port, 10);
 
   return { listen, hostname, port };
 }
