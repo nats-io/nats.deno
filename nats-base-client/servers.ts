@@ -25,23 +25,65 @@ import { defaultPort, getUrlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
 
-function hostPort(
+export function isIPV4OrHostname(hp: string): boolean {
+  if (hp.indexOf(".") !== -1) {
+    return true;
+  }
+  if (hp.indexOf("[") !== -1 || hp.indexOf("::") !== -1) {
+    return false;
+  }
+  // if we have a plain hostname or host:port
+  if (hp.split(":").length <= 2) {
+    return true;
+  }
+  return false;
+}
+
+function isIPV6(hp: string) {
+  return !isIPV4OrHostname(hp);
+}
+
+export function hostPort(
   u: string,
 ): { listen: string; hostname: string; port: number } {
+  u = u.trim();
   // remove any protocol that may have been provided
   if (u.match(/^(.*:\/\/)(.*)/m)) {
     u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
   }
+
   // in web environments, URL may not be a living standard
   // that means that protocols other than HTTP/S are not
   // parsable correctly.
-  const url = new URL(`http://${u}`);
-  if (!url.port) {
-    url.port = `${DEFAULT_PORT}`;
+
+  // the third complication is that we may have been given
+  // an IPv6
+
+  // we only wrap cases where they gave us a plain ipv6
+  // and we are not already bracketed
+  if (isIPV6(u) && u.indexOf("[") === -1) {
+    u = `[${u}]`;
+  }
+  // if we have ipv6, we expect port after ']:' otherwise after ':'
+  const op = isIPV6(u) ? u.match(/(]:)(\d+)/) : u.match(/(:)(\d+)/);
+  const port = op && op.length === 3 && op[1] && op[2]
+    ? parseInt(op[2])
+    : DEFAULT_PORT;
+
+  // the next complication is that new URL() may
+  // eat ports which match the protocol - so for example
+  // port 80 may be eliminated - so we flip the protocol
+  // so that it always yields a value
+  const protocol = port === 80 ? "https" : "http";
+  const url = new URL(`${protocol}://${u}`);
+  url.port = `${port}`;
+
+  let hostname = url.hostname;
+  // if we are bracketed, we need to rip it out
+  if (hostname.charAt(0) === "[") {
+    hostname = hostname.substring(1, hostname.length - 1);
   }
   const listen = url.host;
-  const hostname = url.hostname;
-  const port = parseInt(url.port, 10);
 
   return { listen, hostname, port };
 }
@@ -92,14 +134,17 @@ export class ServerImpl implements Server {
       // don't add - to resolves or we get a circ reference
       return [this];
     } else {
+      // resolve the hostname to ips
       const ips = await opts.fn(this.hostname);
-      for (const ip of ips) {
+
+      for (let ip of ips) {
         // letting URL handle the details of representing IPV6 ip with a port, etc
-        const url = new URL(`http://${this.listen}`);
-        if (!url.port) {
-          url.port = `${DEFAULT_PORT}`;
-        }
-        url.hostname = ip;
+        // careful to make sure the protocol doesn't line with standard ports or they
+        // get swallowed
+        const proto = this.port === 80 ? "https" : "http";
+        // ipv6 won't be bracketed here, because it came from resolve
+        const url = new URL(`${proto}://${isIPV6(ip) ? "[" + ip + "]" : ip}`);
+        url.port = `${this.port}`;
         const ss = new ServerImpl(url.host, false);
         ss.tlsName = this.hostname;
         buf.push(ss);

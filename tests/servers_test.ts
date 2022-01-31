@@ -13,9 +13,9 @@
  * limitations under the License.
  *
  */
-import { Servers } from "../nats-base-client/servers.ts";
+import { isIPV4OrHostname, Servers } from "../nats-base-client/servers.ts";
 import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
-import type { ServerInfo } from "../nats-base-client/internal_mod.ts";
+import type { ServerInfo } from "../nats-base-client/types.ts";
 import { setTransportFactory } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("servers - single", () => {
@@ -109,4 +109,25 @@ Deno.test("servers - save tls name", () => {
   gossiped.forEach((sn) => {
     assertEquals(sn.tlsName, "h");
   });
+});
+
+Deno.test("servers - port 80", () => {
+  function t(hp: string, port: number) {
+    let servers = new Servers([hp]);
+    const s = servers.getCurrentServer();
+    assertEquals(s.port, port);
+  }
+  t("localhost:80", 80);
+  t("localhost:443", 443);
+  t("localhost:201", 201);
+  t("localhost", 4222);
+  t("localhost/foo", 4222);
+  t("localhost:2342/foo", 2342);
+  t("[2001:db8:4006:812::200e]:8080", 8080);
+  t("::1", 4222);
+});
+
+Deno.test("servers - hostname only", () => {
+  assertEquals(isIPV4OrHostname("hostname"), true);
+  assertEquals(isIPV4OrHostname("hostname:40"), true);
 });

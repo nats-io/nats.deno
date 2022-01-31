@@ -44,6 +44,7 @@ import {
 import { connect } from "../src/mod.ts";
 import { assertThrowsAsyncErrorCode, notCompatible } from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
+import { JsMsgImpl } from "../nats-base-client/jsmsg.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
