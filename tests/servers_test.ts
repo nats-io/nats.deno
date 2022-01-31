@@ -114,10 +114,15 @@ Deno.test("servers - save tls name", () => {
 Deno.test("servers - port 80", () => {
   function t(hp: string, port: number) {
     let servers = new Servers([hp]);
-    assertEquals(servers.getCurrentServer().port, port);
+    const s = servers.getCurrentServer();
+    assertEquals(s.port, port);
   }
   t("localhost:80", 80);
   t("localhost:443", 443);
   t("localhost:201", 201);
   t("localhost", 4222);
+  t("localhost/foo", 4222);
+  t("localhost:2342/foo", 2342);
+  t("[2001:db8:4006:812::200e]:8080", 8080);
+  t("::1", 4222);
 });
