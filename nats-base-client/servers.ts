@@ -25,13 +25,14 @@ import { defaultPort, getUrlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
 
-function isIPV4OrHostname(hp: string): boolean {
+export function isIPV4OrHostname(hp: string): boolean {
   if (hp.indexOf(".") !== -1) {
     return true;
   }
   if (hp.indexOf("[") !== -1 || hp.indexOf("::") !== -1) {
     return false;
   }
+  // if we have a plain hostname or host:port
   if (hp.split(":").length <= 2) {
     return true;
   }
