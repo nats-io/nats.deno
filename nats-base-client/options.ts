@@ -54,6 +54,14 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
   if (typeof opts.servers === "string") {
     opts.servers = [opts.servers];
   }
+
+  if (opts.servers.length > 0 && opts.port) {
+    throw new NatsError(
+      "port and servers options are mutually exclusive",
+      ErrorCode.InvalidOption,
+    );
+  }
+
   if (opts.servers.length === 0 && opts.port) {
     opts.servers = [`${DEFAULT_HOST}:${opts.port}`];
   }
