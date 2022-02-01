@@ -865,3 +865,13 @@ Deno.test("basics - resolve", async () => {
   assert(srv.resolves && srv.resolves.length > 1);
   await nci.close();
 });
+
+Deno.test("basics - port and server are mutually exclusive", async () => {
+  await assertThrowsAsync(
+    async () => {
+      await connect({ servers: "localhost", port: 4222 });
+    },
+    NatsError,
+    "port and servers options are mutually exclusive",
+  );
+});

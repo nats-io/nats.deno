@@ -127,18 +127,6 @@ Deno.test("properties - port is only honored if no servers provided", () => {
   buf.push({ expected: "127.0.0.1:4222" });
   buf.push({ opts: {}, expected: "127.0.0.1:4222" });
   buf.push({ opts: { port: 9999 }, expected: "127.0.0.1:9999" });
-  buf.push({
-    opts: { port: 9999, servers: "myhost" },
-    expected: "myhost:4222",
-  });
-  buf.push({
-    opts: { port: 9999, servers: "myhost:4333" },
-    expected: "myhost:4333",
-  });
-  buf.push({
-    opts: { port: 9999, servers: ["myhost:4444"] },
-    expected: "myhost:4444",
-  });
 
   buf.forEach((t) => {
     const opts = parseOptions(t.opts);
