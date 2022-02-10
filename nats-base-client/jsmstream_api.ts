@@ -64,7 +64,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 
   async update(
     name: string,
-    cfg = {} as StreamUpdateConfig,
+    cfg = {} as Partial<StreamUpdateConfig>,
   ): Promise<StreamInfo> {
     if (typeof name === "object") {
       const sc = name as StreamConfig;
@@ -75,9 +75,11 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       );
     }
     validateStreamName(name);
+    const ncfg = cfg as Partial<StreamUpdateConfig> & { name: string };
+    ncfg.name = name;
     const r = await this._request(
       `${this.prefix}.STREAM.UPDATE.${name}`,
-      cfg,
+      ncfg,
     );
     const si = r as StreamInfo;
     this._fixInfo(si);
@@ -86,7 +88,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 
   async info(
     name: string,
-    data?: StreamInfoRequestOptions,
+    data?: Partial<StreamInfoRequestOptions>,
   ): Promise<StreamInfo> {
     validateStreamName(name);
     const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`, data);

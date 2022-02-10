@@ -125,6 +125,21 @@ Deno.test("jsm - empty stream config update fails", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - update stream name is internally added", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  let ci = await jsm.streams.add({
+    name: name,
+    subjects: [`${name}.>`],
+  });
+  assertEquals(ci!.config!.subjects!.length, 1);
+
+  const si = await jsm.streams.update(name, { subjects: [`${name}.>`, "foo"] });
+  assertEquals(si!.config!.subjects!.length, 2);
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - delete empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();

@@ -437,9 +437,12 @@ export type StreamInfoRequestOptions = {
 };
 
 export interface StreamAPI {
-  info(stream: string, opts?: StreamInfoRequestOptions): Promise<StreamInfo>;
+  info(
+    stream: string,
+    opts?: Partial<StreamInfoRequestOptions>,
+  ): Promise<StreamInfo>;
   add(cfg: Partial<StreamConfig>): Promise<StreamInfo>;
-  update(name: string, cfg: StreamUpdateConfig): Promise<StreamInfo>;
+  update(name: string, cfg: Partial<StreamUpdateConfig>): Promise<StreamInfo>;
   purge(stream: string, opts?: PurgeOpts): Promise<PurgeResponse>;
   delete(stream: string): Promise<boolean>;
   list(): Lister<StreamInfo>;
@@ -544,7 +547,6 @@ export interface StreamInfo {
 
 export interface StreamConfig extends StreamUpdateConfig {
   name: string;
-  subjects?: string[];
   retention: RetentionPolicy;
   storage: StorageType;
   "num_replicas": number;
@@ -558,15 +560,16 @@ export interface StreamConfig extends StreamUpdateConfig {
 }
 
 export interface StreamUpdateConfig {
+  subjects: string[];
   description?: string;
-  "max_msgs_per_subject"?: number;
+  "max_msgs_per_subject": number;
   "max_msgs": number;
   "max_age": Nanos;
   "max_bytes": number;
-  "max_msg_size"?: number;
-  discard?: DiscardPolicy;
+  "max_msg_size": number;
+  discard: DiscardPolicy;
   "no_ack"?: boolean;
-  "duplicate_window"?: Nanos;
+  "duplicate_window": Nanos;
   sources?: StreamSource[];
   "allow_rollup_hdrs": boolean;
 }
