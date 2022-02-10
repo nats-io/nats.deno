@@ -179,7 +179,7 @@ the expiration time triggers.
 ```typescript
 // To get multiple messages in one request you can:
 let msgs = await js.fetch(stream, durable, { batch: 10, expires: 5000 });
-// the request returns an iterator that will get at most 10 seconds or wait
+// the request returns an iterator that will get at most 10 messages or wait
 // for 5000ms for messages to arrive.
 
 const done = (async () => {
