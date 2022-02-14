@@ -101,12 +101,6 @@ export class Parser {
   }
 
   parse(buf: Uint8Array): void {
-    // @ts-ignore: on node.js module is a global
-    if (typeof module !== "undefined" && module.exports) {
-      // Uint8Array.slice() copies in node it doesn't and it is faster
-      buf.subarray = buf.slice;
-    }
-
     let i: number;
     for (i = 0; i < buf.length; i++) {
       const b = buf[i];
