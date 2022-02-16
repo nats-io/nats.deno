@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 The NATS Authors
+ * Copyright 2018-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,6 +25,7 @@ import {
   JetStreamOptions,
   Msg,
   NatsConnection,
+  parseSemVer,
   PublishOptions,
   RequestOptions,
   ServerInfo,
@@ -33,6 +34,9 @@ import {
   Subscription,
   SubscriptionOptions,
 } from "./types.ts";
+
+import type { SemVer } from "./types.ts";
+
 import { parseOptions } from "./options.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { Request } from "./request.ts";
@@ -301,5 +305,10 @@ export class NatsConnectionImpl implements NatsConnection {
     opts: JetStreamOptions = {},
   ): JetStreamClient {
     return new JetStreamClientImpl(this, opts);
+  }
+
+  getServerVersion(): SemVer | undefined {
+    const info = this.info;
+    return info ? parseSemVer(info.version) : undefined;
   }
 }

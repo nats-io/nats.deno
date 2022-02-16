@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -914,4 +914,28 @@ export interface KV extends RoKV {
 
 export interface KvPutOptions {
   previousSeq: number;
+}
+
+export type SemVer = { major: number; minor: number; micro: number };
+export function parseSemVer(
+  s: string,
+): SemVer {
+  const m = s.match(/(\d+).(\d+).(\d+)/);
+  if (m) {
+    return {
+      major: parseInt(m[1]),
+      minor: parseInt(m[2]),
+      micro: parseInt(m[3]),
+    };
+  }
+  throw new Error(`${s} is not a semver value`);
+}
+export function compare(a: SemVer, b: SemVer): number {
+  if (a.major < b.major) return -1;
+  if (a.major > b.major) return 1;
+  if (a.minor < b.minor) return -1;
+  if (a.minor > b.minor) return 1;
+  if (a.micro < b.micro) return -1;
+  if (a.micro > b.micro) return 1;
+  return 0;
 }
