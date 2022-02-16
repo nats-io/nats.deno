@@ -25,7 +25,6 @@ import {
   JetStreamOptions,
   Msg,
   NatsConnection,
-  parseSemVer,
   PublishOptions,
   RequestOptions,
   ServerInfo,
@@ -35,7 +34,8 @@ import {
   SubscriptionOptions,
 } from "./types.ts";
 
-import type { SemVer } from "./types.ts";
+import type { SemVer } from "./semver.ts";
+import { parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
