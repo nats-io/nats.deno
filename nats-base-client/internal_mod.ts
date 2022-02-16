@@ -145,3 +145,7 @@ export {
   defaultBucketOpts,
   NoopKvCodecs,
 } from "./kv.ts";
+
+export type { SemVer } from "./semver.ts";
+
+export { compare, parseSemVer } from "./semver.ts";
