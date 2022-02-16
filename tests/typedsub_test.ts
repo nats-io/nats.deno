@@ -15,8 +15,9 @@
 import {
   assert,
   assertEquals,
-  assertThrowsAsync,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+  assertRejects,
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import {
   createInbox,
   deferred,
@@ -27,7 +28,6 @@ import {
   TypedSubscription,
   TypedSubscriptionOptions,
 } from "../nats-base-client/internal_mod.ts";
-import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import { checkFn } from "../nats-base-client/typedsub.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 
@@ -271,7 +271,7 @@ Deno.test("typedsub - timeout", async () => {
 
   const sa = new TypedSubscription<string>(nc, subj, tso);
   assert(sa.sub.timer !== undefined);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       for await (const _s of sa) {
         // nothing
@@ -279,6 +279,7 @@ Deno.test("typedsub - timeout", async () => {
     },
     NatsError,
     ErrorCode.Timeout,
+    undefined,
   );
 
   await cleanup(ns, nc);

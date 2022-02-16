@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
 import { createInbox, Empty, ErrorCode, Subscription } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";

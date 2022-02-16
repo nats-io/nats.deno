@@ -15,10 +15,11 @@
 import {
   assert,
   assertEquals,
+  assertRejects,
   assertThrows,
-  assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+
 import {
   AckPolicy,
   AdvisoryKind,
@@ -44,7 +45,6 @@ import {
 import { connect } from "../src/mod.ts";
 import { assertThrowsAsyncErrorCode, notCompatible } from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
-import { JsMsgImpl } from "../nats-base-client/jsmsg.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -95,12 +95,13 @@ Deno.test("jsm - account not enabled", async () => {
 Deno.test("jsm - empty stream config fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.add({} as StreamConfig);
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -112,12 +113,13 @@ Deno.test("jsm - empty stream config update fails", async () => {
   let ci = await jsm.streams.add({ name: name, subjects: [`${name}.>`] });
   assertEquals(ci!.config!.subjects!.length, 1);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.update("", {} as StreamConfig);
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   ci!.config!.subjects!.push("foo");
   ci = await jsm.streams.update(name, ci.config);
@@ -143,12 +145,13 @@ Deno.test("jsm - update stream name is internally added", async () => {
 Deno.test("jsm - delete empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.delete("");
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -156,12 +159,13 @@ Deno.test("jsm - delete empty stream name fails", async () => {
 Deno.test("jsm - info empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.info("");
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -170,12 +174,13 @@ Deno.test("jsm - info msg not found stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.info(name);
     },
     Error,
     "stream not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -183,12 +188,13 @@ Deno.test("jsm - info msg not found stream name fails", async () => {
 Deno.test("jsm - delete msg empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.deleteMessage("", 1);
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -197,12 +203,13 @@ Deno.test("jsm - delete msg not found stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.deleteMessage(name, 1);
     },
     Error,
     "stream not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -257,12 +264,13 @@ Deno.test("jsm - purge not found stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.purge(name);
     },
     Error,
     "stream not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -270,12 +278,13 @@ Deno.test("jsm - purge not found stream name fails", async () => {
 Deno.test("jsm - purge empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.purge("");
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -466,9 +475,14 @@ Deno.test("jsm - purge filtered keep", async () => {
 Deno.test("jsm - purge seq and keep fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(async () => {
-    await jsm.streams.purge("a", { keep: 10, seq: 5 });
-  });
+  await assertRejects(
+    async () => {
+      await jsm.streams.purge("a", { keep: 10, seq: 5 });
+    },
+    undefined,
+    "",
+    undefined,
+  );
   await cleanup(ns, nc);
 });
 
@@ -479,12 +493,13 @@ Deno.test("jsm - stream delete", async () => {
 
   nc.publish(subj, Empty);
   await jsm.streams.delete(stream);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.info(stream);
     },
     Error,
     "stream not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -532,12 +547,13 @@ Deno.test("jsm - stream delete info", async () => {
 Deno.test("jsm - consumer info on empty stream name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info("", "");
     },
     Error,
     StreamNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -545,12 +561,13 @@ Deno.test("jsm - consumer info on empty stream name fails", async () => {
 Deno.test("jsm - consumer info on empty consumer name fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info("foo", "");
     },
     Error,
     ConsumerNameRequired,
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -558,12 +575,13 @@ Deno.test("jsm - consumer info on empty consumer name fails", async () => {
 Deno.test("jsm - consumer info on not found stream fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info("foo", "dur");
     },
     Error,
     "stream not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -572,12 +590,13 @@ Deno.test("jsm - consumer info on not found consumer", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info(stream, "dur");
     },
     Error,
     "consumer not found",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -673,17 +692,18 @@ Deno.test("jsm - get message", async () => {
   assertEquals(sm.seq, 2);
   assertEquals(jc.decode(sm.data), 2);
 
-  const err = await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.getMessage(stream, { seq: 3 });
     },
-    Error,
+    (err: Error) => {
+      if (
+        err.message !== "stream store eof" && err.message !== "no message found"
+      ) {
+        fail(`unexpected error message ${err.message}`);
+      }
+    },
   );
-  if (
-    err.message !== "stream store eof" && err.message !== "no message found"
-  ) {
-    fail(`unexpected error message ${err.message}`);
-  }
 
   await cleanup(ns, nc);
 });
@@ -893,12 +913,13 @@ Deno.test("jsm - cross account consumers", async () => {
   const ok = await jsm.consumers.delete(stream, "me");
   assertEquals(ok, true);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info(stream, "me");
     },
     Error,
     "consumer not found",
+    undefined,
   );
 
   await cleanup(ns, nc, admin);
