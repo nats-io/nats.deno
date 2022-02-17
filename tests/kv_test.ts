@@ -1209,7 +1209,6 @@ Deno.test("kv - initialized watch with modifications", async () => {
   await cleanup(ns, nc);
 });
 
-
 Deno.test("kv - watch init callback exceptions terminate the iterator", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
