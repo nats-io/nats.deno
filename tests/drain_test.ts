@@ -19,9 +19,7 @@ import {
   assertThrows,
   fail,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
-import {
-  assertThrowsAsyncErrorCode,
-} from "./helpers/asserts.ts";
+import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,
   createInbox,
