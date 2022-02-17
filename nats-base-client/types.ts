@@ -893,7 +893,9 @@ export interface KvRemove {
 export interface RoKV {
   get(k: string): Promise<KvEntry | null>;
   history(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
-  watch(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+  watch(
+    opts?: { key?: string; headers_only?: boolean; initializedFn?: callbackFn },
+  ): Promise<QueuedIterator<KvEntry>>;
   close(): Promise<void>;
   status(): Promise<KvStatus>;
   keys(k?: string): Promise<QueuedIterator<string>>;
@@ -915,3 +917,5 @@ export interface KV extends RoKV {
 export interface KvPutOptions {
   previousSeq: number;
 }
+
+export type callbackFn = () => void;

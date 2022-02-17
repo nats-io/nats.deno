@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,6 +14,7 @@
  */
 import { Deferred, deferred } from "./util.ts";
 import { ErrorCode, NatsError } from "./error.ts";
+import { callbackFn } from "./types.ts";
 
 export interface Dispatcher<T> {
   push(v: T): void;
@@ -99,6 +100,11 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     if (this.done) {
       return;
     }
+    if (typeof v === "function") {
+      this.yields.push(v);
+      this.signal.resolve();
+      return;
+    }
     const { ingest, protocol } = this.ingestionFilterFn
       ? this.ingestionFilterFn(v, this.ctx || this)
       : { ingest: true, protocol: false };
@@ -128,6 +134,18 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
         this.inflight = yields.length;
         this.yields = [];
         for (let i = 0; i < yields.length; i++) {
+          // some iterators could inject a callback
+          if (typeof yields[i] === "function") {
+            const fn = yields[i] as unknown as callbackFn;
+            try {
+              fn();
+            } catch (err) {
+              // failed on the invocation - fail the iterator
+              // so they know to fix the callback
+              throw err;
+            }
+            continue;
+          }
           // only pass messages that pass the filter
           const ok = this.protocolFilterFn
             ? this.protocolFilterFn(yields[i])
