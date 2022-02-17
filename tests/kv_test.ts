@@ -1208,3 +1208,34 @@ Deno.test("kv - initialized watch with modifications", async () => {
 
   await cleanup(ns, nc);
 });
+
+
+Deno.test("kv - watch init callback exceptions terminate the iterator", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a") as Bucket;
+  for (let i = 0; i < 10; i++) {
+    await b.put(i.toString(), Empty);
+  }
+  const iter = await b.watch({
+    initializedFn: () => {
+      throw new Error("crash");
+    },
+  });
+
+  const d = deferred<Error>();
+  try {
+    await (async () => {
+      for await (const e of iter) {
+      }
+    })();
+  } catch (err) {
+    d.resolve(err);
+  }
+  const err = await d;
+  assertEquals(err.message, "crash");
+  await cleanup(ns, nc);
+});
