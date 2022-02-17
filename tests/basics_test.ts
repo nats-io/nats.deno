@@ -15,10 +15,13 @@
 import {
   assert,
   assertEquals,
+  assertRejects,
   assertThrows,
-  assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+
+import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
+
 import {
   connect,
   createInbox,
@@ -363,10 +366,9 @@ Deno.test("basics - request", async () => {
 Deno.test("basics - request no responders", async () => {
   const { ns, nc } = await setup();
   const s = createInbox();
-  const err = await assertThrowsAsync(async () => {
+  await assertThrowsAsyncErrorCode(async () => {
     await nc.request(s, Empty, { timeout: 100 });
-  });
-  assertErrorCode(err, ErrorCode.NoResponders);
+  }, ErrorCode.NoResponders);
   await cleanup(ns, nc);
 });
 
@@ -374,10 +376,9 @@ Deno.test("basics - request timeout", async () => {
   const { ns, nc } = await setup();
   const s = createInbox();
   nc.subscribe(s, { callback: () => {} });
-  const err = await assertThrowsAsync(async () => {
+  await assertThrowsAsyncErrorCode(async () => {
     await nc.request(s, Empty, { timeout: 100 });
-  });
-  assertErrorCode(err, ErrorCode.Timeout);
+  }, ErrorCode.Timeout);
   await cleanup(ns, nc);
 });
 
@@ -449,13 +450,14 @@ Deno.test("basics - request with custom subject", async () => {
 
 Deno.test("basics - request requires a subject", async () => {
   const { ns, nc } = await setup();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       //@ts-ignore: subject missing on purpose
       await nc.request();
     },
     NatsError,
     "BAD_SUBJECT",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -867,11 +869,12 @@ Deno.test("basics - resolve", async () => {
 });
 
 Deno.test("basics - port and server are mutually exclusive", async () => {
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await connect({ servers: "localhost", port: 4222 });
     },
     NatsError,
     "port and servers options are mutually exclusive",
+    undefined,
   );
 });

@@ -14,7 +14,7 @@
  *
  */
 import { isIPV4OrHostname, Servers } from "../nats-base-client/servers.ts";
-import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import type { ServerInfo } from "../nats-base-client/types.ts";
 import { setTransportFactory } from "../nats-base-client/internal_mod.ts";
 

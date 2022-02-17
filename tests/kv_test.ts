@@ -29,11 +29,17 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
+  assertRejects,
   assertThrows,
-  assertThrowsAsync,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
-import { KvEntry } from "../nats-base-client/types.ts";
+import {
+  ConnectionOptions,
+  JetStreamOptions,
+  KV,
+  KvEntry,
+  NatsConnection,
+} from "../nats-base-client/types.ts";
 
 import {
   Base64KeyCodec,
@@ -45,12 +51,6 @@ import {
 import { NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
-import {
-  ConnectionOptions,
-  JetStreamOptions,
-  KV,
-  NatsConnection,
-} from "../nats-base-client/types.ts";
 import { connect } from "../src/mod.ts";
 
 Deno.test("kv - key validation", () => {
@@ -657,12 +657,13 @@ Deno.test("kv - create key", async () => {
   const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   await b.create("a", Empty);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await b.create("a", sc.encode("a"));
     },
     Error,
     "wrong last sequence: 1",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -679,12 +680,13 @@ Deno.test("kv - update key", async () => {
   const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   const seq = await b.create("a", Empty);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await b.update("a", sc.encode("a"), 100);
     },
     Error,
     "wrong last sequence: 1",
+    undefined,
   );
 
   await b.update("a", sc.encode("b"), seq);

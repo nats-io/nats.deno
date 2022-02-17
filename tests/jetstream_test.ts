@@ -49,10 +49,11 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
+  assertRejects,
   assertThrows,
-  assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
 import {
@@ -136,12 +137,13 @@ Deno.test("jetstream - options removes trailing dot", async () => {
 Deno.test("jetstream - find stream throws when not found", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const js = nc.jetstream() as JetStreamClientImpl;
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.findStream("hello");
     },
     Error,
     "no stream matches subject",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -204,12 +206,13 @@ Deno.test("jetstream - publish require stream", async () => {
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.publish(subj, Empty, { expect: { streamName: "xxx" } });
     },
     Error,
     "expected stream does not match",
+    undefined,
   );
 
   const pa = await js.publish(subj, Empty, { expect: { streamName: stream } });
@@ -230,12 +233,13 @@ Deno.test("jetstream - publish require last message id", async () => {
   assertEquals(pa.duplicate, false);
   assertEquals(pa.seq, 1);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
     },
     Error,
     "wrong last msg id: a",
+    undefined,
   );
 
   pa = await js.publish(subj, Empty, {
@@ -278,7 +282,7 @@ Deno.test("jetstream - publish require last sequence", async () => {
   const js = nc.jetstream();
   await js.publish(subj, Empty);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.publish(subj, Empty, {
         msgID: "b",
@@ -287,6 +291,7 @@ Deno.test("jetstream - publish require last sequence", async () => {
     },
     Error,
     "wrong last sequence: 1",
+    undefined,
   );
 
   const pa = await js.publish(subj, Empty, {
@@ -372,12 +377,13 @@ Deno.test("jetstream - durable", async () => {
   // delete the consumer
   sub = await js.subscribe(subj, opts);
   await sub.destroy();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.consumers.info(stream, "me");
     },
     Error,
     "consumer not found",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -391,7 +397,7 @@ Deno.test("jetstream - queue error checks", async () => {
   const { stream, subj } = await initStream(nc);
   const js = nc.jetstream();
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       const opts = consumerOpts();
       opts.durable("me");
@@ -403,9 +409,10 @@ Deno.test("jetstream - queue error checks", async () => {
     },
     Error,
     "jetstream idle heartbeat is not supported with queue groups",
+    undefined,
   );
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       const opts = consumerOpts();
       opts.durable("me");
@@ -417,6 +424,7 @@ Deno.test("jetstream - queue error checks", async () => {
     },
     Error,
     "jetstream flow control is not supported with queue groups",
+    undefined,
   );
 
   const jsm = await nc.jetstreamManager();
@@ -427,7 +435,7 @@ Deno.test("jetstream - queue error checks", async () => {
     deliver_subject: "x",
   });
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.subscribe(subj, {
         stream: stream,
@@ -436,6 +444,7 @@ Deno.test("jetstream - queue error checks", async () => {
     },
     Error,
     "durable requires queue group 'x'",
+    undefined,
   );
 
   await jsm.consumers.add(stream, {
@@ -444,7 +453,7 @@ Deno.test("jetstream - queue error checks", async () => {
     deliver_subject: "z",
   });
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.subscribe(subj, {
         stream: stream,
@@ -453,6 +462,7 @@ Deno.test("jetstream - queue error checks", async () => {
     },
     Error,
     "durable requires no queue group",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -467,12 +477,13 @@ Deno.test("jetstream - pull no messages", async () => {
     ack_policy: AckPolicy.Explicit,
   });
   const js = nc.jetstream();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.pull(stream, "me");
     },
     Error,
     "no messages",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -894,7 +905,7 @@ Deno.test("jetstream - pull sub requires explicit", async () => {
 
   const js = nc.jetstream();
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       const opts = consumerOpts();
       opts.durable("me");
@@ -903,6 +914,7 @@ Deno.test("jetstream - pull sub requires explicit", async () => {
     },
     Error,
     "ack policy for pull",
+    undefined,
   );
   await cleanup(ns, nc);
 });
@@ -1164,12 +1176,13 @@ Deno.test("jetstream - pull consumer info without pull", async () => {
 
   const sopts = consumerOpts();
   sopts.durable("me");
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.subscribe(subj, sopts);
     },
     Error,
     "consumer info specifies a pull consumer",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -1233,12 +1246,13 @@ Deno.test("jetstream - subscribe - info", async () => {
   assertEquals(ci.ack_floor.stream_seq, 5);
   await sub.destroy();
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await sub.consumerInfo();
     },
     Error,
     "consumer not found",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -1470,12 +1484,13 @@ Deno.test("jetstream - cross account subscribe", async () => {
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 2);
   await sub.destroy();
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await sub.consumerInfo();
     },
     Error,
     "consumer not found",
+    undefined,
   );
 
   await cleanup(ns, admin, nc);
@@ -1578,12 +1593,13 @@ Deno.test("jetstream - cross account pull", async () => {
   assertEquals(msg.seq, 1);
   msg = await js.pull(stream, "me");
   assertEquals(msg.seq, 2);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.pull(stream, "me");
     },
     Error,
     "no messages",
+    undefined,
   );
 
   await cleanup(ns, admin, nc);
@@ -1611,12 +1627,13 @@ Deno.test("jetstream - publish headers", async () => {
 Deno.test("jetstream - pull stream doesn't exist", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const js = nc.jetstream({ timeout: 1000 });
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.pull("helloworld", "me");
     },
     Error,
     ErrorCode.Timeout,
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -1626,12 +1643,13 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream } = await initStream(nc);
   const js = nc.jetstream({ timeout: 1000 });
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.pull(stream, "me");
     },
     Error,
     ErrorCode.Timeout,
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -1691,12 +1709,13 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream } = await initStream(nc);
   const js = nc.jetstream({ timeout: 1000 });
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.pull(stream, "me");
     },
     Error,
     ErrorCode.Timeout,
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -2438,12 +2457,13 @@ Deno.test("jetstream - seal", async () => {
   const usi = await jsm.streams.update(stream, si.config);
   assertEquals(usi.config.sealed, true);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.deleteMessage(stream, 2);
     },
     Error,
     "invalid operation on sealed stream",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -2471,12 +2491,13 @@ Deno.test("jetstream - deny delete", async () => {
   const si = await jsm.streams.info(stream);
   assertEquals(si.config.deny_delete, true);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.deleteMessage(stream, 1);
     },
     Error,
     "message delete not permitted",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -2504,12 +2525,13 @@ Deno.test("jetstream - deny purge", async () => {
   const si = await jsm.streams.info(stream);
   assertEquals(si.config.deny_purge, true);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await jsm.streams.purge(stream);
     },
     Error,
     "stream purge not permitted",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -2645,7 +2667,7 @@ Deno.test("jetstream - no rollup", async () => {
 
   const h = headers();
   h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.publish(`${stream}.A`, jc.encode({ value: 42 }), {
         headers: h,
@@ -2653,6 +2675,7 @@ Deno.test("jetstream - no rollup", async () => {
     },
     Error,
     "rollup not permitted",
+    undefined,
   );
 
   await cleanup(ns, nc);
@@ -2797,12 +2820,13 @@ Deno.test("jetstream - bind", async () => {
   opts.bind(stream, "hello");
   opts.deliverTo(inbox);
 
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       await js.subscribe(subj, opts);
     },
     Error,
     `unable to bind - durable consumer hello doesn't exist in ${stream}`,
+    undefined,
   );
 
   const internal = nc.subscribe("$JS.API.CONSUMER.DURABLE.CREATE.>", {
@@ -2838,13 +2862,14 @@ Deno.test("jetstream - bind with diff subject fails", async () => {
   const opts = consumerOpts();
   opts.bind(stream, "me");
   opts.filterSubject(`${stream}.bar`);
-  await assertThrowsAsync(
+  await assertRejects(
     async () => {
       const js = nc.jetstream();
       await js.subscribe(subj, opts);
     },
     Error,
     "subject does not match consumer",
+    undefined,
   );
   await cleanup(ns, nc);
 });

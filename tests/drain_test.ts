@@ -17,9 +17,9 @@ import {
   assert,
   assertEquals,
   assertThrows,
-  assertThrowsAsync,
   fail,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,
   createInbox,
@@ -126,14 +126,15 @@ Deno.test("drain - publish after drain fails", async () => {
   nc.subscribe(subj);
   await nc.drain();
 
-  const err = assertThrows(() => {
+  assertThrows(() => {
     nc.publish(subj);
+  }, (err: Error) => {
+    assertErrorCode(
+      err,
+      ErrorCode.ConnectionClosed,
+      ErrorCode.ConnectionDraining,
+    );
   });
-  assertErrorCode(
-    err,
-    ErrorCode.ConnectionClosed,
-    ErrorCode.ConnectionDraining,
-  );
   await ns.stop();
 });
 
@@ -187,21 +188,19 @@ Deno.test("drain - reject reqrep during connection drain", async () => {
 Deno.test("drain - reject drain on closed", async () => {
   const { ns, nc } = await setup();
   await nc.close();
-  const err = await assertThrowsAsync(async () => {
+  await assertThrowsAsyncErrorCode(async () => {
     await nc.drain();
-  });
-  assertErrorCode(err, ErrorCode.ConnectionClosed);
+  }, ErrorCode.ConnectionClosed);
   await ns.stop();
 });
 
 Deno.test("drain - reject drain on draining", async () => {
   const { ns, nc } = await setup();
   const done = nc.drain();
-  const err = await assertThrowsAsync(() => {
+  await assertThrowsAsyncErrorCode(() => {
     return nc.drain();
-  });
+  }, ErrorCode.ConnectionDraining);
   await done;
-  assertErrorCode(err, ErrorCode.ConnectionDraining);
   await ns.stop();
 });
 
@@ -219,11 +218,10 @@ Deno.test("drain - reject subscription drain on closed sub", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("foo");
   sub.unsubscribe();
-  const err = await assertThrowsAsync(() => {
+  await assertThrowsAsyncErrorCode(() => {
     return sub.drain();
-  });
+  }, ErrorCode.SubClosed);
   await nc.close();
-  assertErrorCode(err, ErrorCode.SubClosed);
   await ns.stop();
 });
 
@@ -239,10 +237,9 @@ Deno.test("drain - reject subscription drain on closed", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("foo");
   await nc.close();
-  const err = await assertThrowsAsync(() => {
+  await assertThrowsAsyncErrorCode(() => {
     return sub.drain();
-  });
-  assertErrorCode(err, ErrorCode.ConnectionClosed);
+  }, ErrorCode.ConnectionClosed);
   await ns.stop();
 });
 

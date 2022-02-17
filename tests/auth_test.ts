@@ -16,7 +16,7 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.95.0/testing/asserts.ts";
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import {
   connect,
   credsAuthenticator,

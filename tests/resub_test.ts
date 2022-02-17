@@ -2,7 +2,7 @@ import { cleanup, setup } from "./jstest_util.ts";
 import { createInbox } from "../nats-base-client/protocol.ts";
 import { Msg } from "../nats-base-client/types.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { assertEquals } from "https://deno.land/std@0.95.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
 Deno.test("resub - iter", async () => {
   const { ns, nc } = await setup();
