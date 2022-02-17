@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,7 +15,9 @@
 
 import {
   AckPolicy,
+  callbackFn,
   ConsumerConfig,
+  ConsumerInfo,
   DeliverPolicy,
   DiscardPolicy,
   Empty,
@@ -49,6 +51,7 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { deferred } from "./util.ts";
 import { headers, MsgHdrs } from "./headers.ts";
 import { consumerOpts } from "./mod.ts";
+import { compare, parseSemVer } from "./semver.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -200,7 +203,12 @@ export class Bucket implements KV, KvRemove {
     sc.max_bytes = bo.maxBucketSize;
     sc.max_msg_size = bo.maxValueSize;
     sc.storage = bo.storage;
-    sc.discard = DiscardPolicy.Old;
+
+    const nci = (this.js as JetStreamClientImpl).nc;
+    const have = nci.getServerVersion();
+    const discardNew = have ? compare(parseSemVer("2.7.2"), have) >= 0 : false;
+    sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
+
     sc.num_replicas = bo.replicas;
     if (bo.ttl) {
       sc.max_age = nanos(bo.ttl);
@@ -476,13 +484,21 @@ export class Bucket implements KV, KvRemove {
   }
 
   async watch(
-    opts: { key?: string; headers_only?: boolean } = {},
+    opts: {
+      key?: string;
+      headers_only?: boolean;
+      initializedFn?: callbackFn;
+    } = {},
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
     const co = {} as Partial<ConsumerConfig>;
     co.headers_only = opts.headers_only || false;
 
+    let fn = opts.initializedFn;
+
+    let count = 0;
+    let initialized = false;
     const cc = this._buildCC(k, false, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
@@ -497,10 +513,45 @@ export class Bucket implements KV, KvRemove {
         const e = this.jmToEntry(k, jm);
         qi.push(e);
         qi.received++;
+
+        // count could have changed or has already been received
+        if (
+          fn && (count > 0 && qi.received >= count || jm.info.pending === 0)
+        ) {
+          initialized = true;
+          //@ts-ignore: we are injecting an unexpected type
+          qi.push(fn);
+          fn = undefined;
+        }
       }
     });
 
     const sub = await this.js.subscribe(subj, copts);
+    // by the time we are here, likely the subscription got messages
+    if (fn) {
+      const { info: { last } } = sub as unknown as {
+        info: { last: ConsumerInfo };
+      };
+      // this doesn't sound correct - we should be looking for a seq number instead
+      // then if we see a greater one, we are done.
+      const expect = last.num_pending + last.delivered.consumer_seq;
+      // if the iterator already queued - the only issue is other modifications
+      // did happen like stream was pruned, and the ordered consumer reset, etc
+      // we won't get what we are expecting - so the notification will never fire
+      // the sentinel ought to be coming from the server
+      if (expect === 0 || qi.received >= expect) {
+        try {
+          fn();
+        } catch (err) {
+          // fail it - there's something wrong in the user callback
+          qi.stop(err);
+        } finally {
+          fn = undefined;
+        }
+      } else {
+        count = expect;
+      }
+    }
     qi._data = sub;
     qi.iterClosed.then(() => {
       sub.unsubscribe();

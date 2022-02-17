@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,12 +15,15 @@
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   collect,
+  compare,
   deferred,
   delay,
+  DiscardPolicy,
   Empty,
   nanos,
   NatsConnectionImpl,
   nuid,
+  parseSemVer,
   QueuedIterator,
   StorageType,
   StringCodec,
@@ -48,7 +51,7 @@ import {
   validateBucket,
   validateKey,
 } from "../nats-base-client/kv.ts";
-import { NatsServer, notCompatible } from "./helpers/mod.ts";
+import { Lock, NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
 import { connect } from "../src/mod.ts";
@@ -1098,5 +1101,110 @@ Deno.test("kv - watch iter stops", async () => {
 
   watch.stop();
   await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+  const b = await js.views.kv("a") as Bucket;
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(b.stream);
+
+  const v272 = parseSemVer("2.7.2");
+  const serv = (nc as NatsConnectionImpl).getServerVersion();
+  assert(serv !== undefined, "should have a server version");
+  const v = compare(v272, serv);
+  const discard = v >= 0 ? DiscardPolicy.New : DiscardPolicy.Old;
+  assertEquals(si.config.discard, discard);
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - initialized watch empty", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a") as Bucket;
+  const d = deferred();
+  await b.watch({
+    initializedFn: () => {
+      d.resolve();
+    },
+  });
+
+  await d;
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - initialized watch with messages", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a") as Bucket;
+  await b.put("A", Empty);
+  await b.put("B", Empty);
+  await b.put("C", Empty);
+  const d = deferred<number>();
+  const iter = await b.watch({
+    initializedFn: () => {
+      d.resolve();
+    },
+  });
+
+  (async () => {
+    for await (const e of iter) {
+    }
+  })().then();
+  await d;
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - initialized watch with modifications", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a") as Bucket;
+
+  await b.put("A", Empty);
+  await b.put("B", Empty);
+  await b.put("C", Empty);
+  const d = deferred<number>();
+  setTimeout(async () => {
+    for (let i = 0; i < 100; i++) {
+      await b.put(i.toString(), Empty);
+    }
+  });
+  const iter = await b.watch({
+    initializedFn: () => {
+      d.resolve(iter.getProcessed());
+    },
+  });
+
+  // we are expecting 103
+  const lock = Lock(103);
+  (async () => {
+    for await (const e of iter) {
+      lock.unlock();
+    }
+  })().then();
+  const when = await d;
+  // we don't really know when this happened
+  assert(103 > when);
+  await lock;
+
+  //@ts-ignore
+  const sub = iter._data as JetStreamSubscriptionImpl;
+  const ci = await sub.consumerInfo();
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.consumer_seq, 103);
+
   await cleanup(ns, nc);
 });
