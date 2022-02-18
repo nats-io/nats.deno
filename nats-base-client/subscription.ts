@@ -70,6 +70,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
       // cleanup - they used break or return from the iterator
       // make sure we clean up, if they didn't call unsub
       this.iterClosed.then(() => {
+        this.closed.resolve();
         this.unsubscribe();
       });
     }

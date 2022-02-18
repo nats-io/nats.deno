@@ -415,10 +415,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
-    const handled = this.subscriptions.handleError(err);
-    if (!handled) {
-      this.dispatchStatus({ type: Events.Error, data: err.code });
-    }
+    this.subscriptions.handleError(err);
+    this.dispatchStatus({ type: Events.Error, data: err.code });
     await this.handleError(err);
   }
 
@@ -426,7 +424,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     if (err.isAuthError()) {
       this.handleAuthError(err);
     }
-    if (err.isPermissionError() || err.isProtocolError()) {
+    if (err.isProtocolError()) {
       await this._close(err);
     }
     this.lastError = err;

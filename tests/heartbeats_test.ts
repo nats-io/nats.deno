@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -103,4 +103,6 @@ Deno.test("heartbeat - recovers from missed", async () => {
   hb.cancel();
   assertEquals(hb.timer, undefined);
   assert(status.length >= 6, `${status.length} >= 6`);
+  // some resources in the test runner are not always cleaned unless we wait a bit
+  await delay(500);
 });
