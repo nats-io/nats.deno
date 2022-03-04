@@ -1112,11 +1112,10 @@ Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
   const b = await js.views.kv("a") as Bucket;
   const jsm = await nc.jetstreamManager();
   const si = await jsm.streams.info(b.stream);
-
   const v272 = parseSemVer("2.7.2");
   const serv = (nc as NatsConnectionImpl).getServerVersion();
   assert(serv !== undefined, "should have a server version");
-  const v = compare(v272, serv);
+  const v = compare(serv, v272);
   const discard = v >= 0 ? DiscardPolicy.New : DiscardPolicy.Old;
   assertEquals(si.config.discard, discard);
   await cleanup(ns, nc);

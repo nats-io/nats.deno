@@ -206,7 +206,7 @@ export class Bucket implements KV, KvRemove {
 
     const nci = (this.js as JetStreamClientImpl).nc;
     const have = nci.getServerVersion();
-    const discardNew = have ? compare(parseSemVer("2.7.2"), have) >= 0 : false;
+    const discardNew = have ? compare(have, parseSemVer("2.7.2")) >= 0 : false;
     sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
 
     sc.num_replicas = bo.replicas;
