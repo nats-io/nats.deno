@@ -939,7 +939,6 @@ Deno.test("jsm - jetstream error info", async () => {
     const ne = err as NatsError;
     assert(ne.isJetStreamError());
     const jerr = ne.jsError();
-    console.log(jerr);
     assert(jerr);
     assertEquals(jerr.code, 500);
     assertEquals(jerr.err_code, 10074);

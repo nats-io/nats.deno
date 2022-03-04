@@ -1181,7 +1181,7 @@ Deno.test("jetstream - pull consumer info without pull", async () => {
       await js.subscribe(subj, sopts);
     },
     Error,
-    "consumer info specifies a pull consumer",
+    "push consumer requires deliver_subject",
     undefined,
   );
 
@@ -2896,6 +2896,60 @@ Deno.test("jetstream - bind example", async () => {
 
   const sub = await js.subscribe(subj, opts);
   assertEquals(sub.getProcessed(), 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - test events stream", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "events",
+    subjects: ["events.>"],
+  });
+
+  const sub = await js.subscribe("events.>", {
+    stream: "events",
+    config: {
+      ack_policy: AckPolicy.Explicit,
+      deliver_policy: DeliverPolicy.All,
+      deliver_subject: "foo",
+      durable_name: "me",
+      filter_subject: "events.>",
+    },
+    callbackFn: (err: NatsError | null, msg: JsMsg | null) => {
+      msg?.ack();
+    },
+  });
+
+  await js.publish("events.a");
+  await js.publish("events.b");
+  await delay(2000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - bind without consumer should fail", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "events",
+    subjects: ["events.>"],
+  });
+
+  const opts = consumerOpts();
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.bind("events", "hello");
+
+  await assertRejects(
+    async () => {
+      await js.subscribe("events.>", opts);
+    },
+    Error,
+    "unable to bind - durable consumer hello doesn't exist in events",
+  );
 
   await cleanup(ns, nc);
 });

@@ -330,9 +330,9 @@ export class JetStreamClientImpl extends BaseApiClient
     const cso = await this._processOptions(subject, opts);
     // this effectively requires deliver subject to be specified
     // as an option otherwise we have a pull consumer
-    if (!cso.config.deliver_subject) {
+    if (!cso.isBind && !cso.config.deliver_subject) {
       throw new Error(
-        "consumer info specifies a pull consumer - deliver_subject is required",
+        "push consumer requires deliver_subject",
       );
     }
 
