@@ -332,7 +332,7 @@ export class JetStreamClientImpl extends BaseApiClient
     // as an option otherwise we have a pull consumer
     if (!cso.isBind && !cso.config.deliver_subject) {
       throw new Error(
-        "consumer info specifies a pull consumer - deliver_subject is required",
+        "push consumer requires deliver_subject",
       );
     }
 
