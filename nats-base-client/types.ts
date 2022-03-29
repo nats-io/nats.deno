@@ -881,6 +881,7 @@ export interface KvOptions {
   streamName: string;
   codec: KvCodecs;
   storage: StorageType;
+  bindOnly: boolean;
 }
 
 /**

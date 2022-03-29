@@ -22,6 +22,7 @@ import {
   Empty,
   nanos,
   NatsConnectionImpl,
+  NatsError,
   nuid,
   parseSemVer,
   QueuedIterator,
@@ -151,6 +152,37 @@ Deno.test("kv - init creates stream", async () => {
   assertEquals(streams.length, 1);
   assertEquals(streams[0].config.name, `KV_${n}`);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - bind to existing KV", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  let streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 0);
+
+  const n = nuid.next();
+  const js = nc.jetstream();
+  await js.views.kv(n, { history: 10 }) as Bucket;
+
+  streams = await jsm.streams.list().next();
+  assertEquals(streams.length, 1);
+  assertEquals(streams[0].config.name, `KV_${n}`);
+
+  const kv = await js.views.kv(n, { bindOnly: true }) as Bucket;
+  const status = await kv.status();
+  assertEquals(status.bucket, `KV_${n}`);
+  await crud(kv);
+  await assertRejects(
+    async () => {
+      await js.views.kv("does_not_exist", { bindOnly: true });
+    },
+    NatsError,
+    "stream not found",
+  );
   await cleanup(ns, nc);
 });
 
