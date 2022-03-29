@@ -32,6 +32,7 @@ import {
   JetStreamSubscriptionOptions,
   JsHeaders,
   JsMsg,
+  KvCodecs,
   Msg,
   NatsConnection,
   PubAck,
@@ -90,6 +91,9 @@ class ViewsImpl implements Views {
     jetstreamPreview(this.js.nc);
   }
   kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    if (opts.bindOnly) {
+      return Bucket.bind(this.js, name);
+    }
     return Bucket.create(this.js, name, opts);
   }
 }

@@ -192,6 +192,21 @@ export class Bucket implements KV, KvRemove {
     return bucket;
   }
 
+  static async bind(
+    js: JetStreamClient,
+    name: string,
+    opts: Partial<{ codec: KvCodecs }> = {},
+  ): Promise<KV> {
+    const jsi = js as JetStreamClientImpl;
+    const jsm = await jsi.nc.jetstreamManager();
+    const info = await jsm.streams.info(`${kvPrefix}${name}`);
+    validateBucket(info.config.name);
+    const bucket = new Bucket(name, jsm, js);
+    Object.assign(bucket, info);
+    bucket.codec = opts.codec || NoopKvCodecs();
+    return bucket;
+  }
+
   async init(opts: Partial<KvOptions> = {}): Promise<void> {
     const bo = Object.assign(defaultBucketOpts(), opts) as KvOptions;
     this.codec = bo.codec;
