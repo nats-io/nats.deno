@@ -449,9 +449,15 @@ export class Bucket implements KV, KvRemove {
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
-    const done = deferred();
     const co = {} as ConsumerConfig;
     co.headers_only = opts.headers_only || false;
+
+    let fn: callbackFn | undefined;
+    fn = () => {
+      qi.stop();
+    };
+    let count = 0;
+
     const cc = this._buildCC(k, true, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
@@ -466,19 +472,42 @@ export class Bucket implements KV, KvRemove {
         const e = this.jmToEntry(k, jm);
         qi.push(e);
         qi.received++;
-        if (jm.info.pending === 0) {
-          done.resolve();
+        //@ts-ignore - function will be removed
+        if (fn && count > 0 && qi.received >= count || jm.info.pending === 0) {
+          //@ts-ignore: we are injecting an unexpected type
+          qi.push(fn);
+          fn = undefined;
         }
       }
     });
 
     const sub = await this.js.subscribe(subj, copts);
-    done.then(() => {
-      sub.unsubscribe();
-    });
-    done.catch((_err) => {
-      sub.unsubscribe();
-    });
+    // by the time we are here, likely the subscription got messages
+    if (fn) {
+      const { info: { last } } = sub as unknown as {
+        info: { last: ConsumerInfo };
+      };
+      // this doesn't sound correct - we should be looking for a seq number instead
+      // then if we see a greater one, we are done.
+      const expect = last.num_pending + last.delivered.consumer_seq;
+      // if the iterator already queued - the only issue is other modifications
+      // did happen like stream was pruned, and the ordered consumer reset, etc
+      // we won't get what we are expecting - so the notification will never fire
+      // the sentinel ought to be coming from the server
+      if (expect === 0 || qi.received >= expect) {
+        try {
+          fn();
+        } catch (err) {
+          // fail it - there's something wrong in the user callback
+          qi.stop(err);
+        } finally {
+          fn = undefined;
+        }
+      } else {
+        count = expect;
+      }
+    }
+    qi._data = sub;
     qi.iterClosed.then(() => {
       sub.unsubscribe();
     });
@@ -486,13 +515,6 @@ export class Bucket implements KV, KvRemove {
       qi.stop();
     }).catch((err) => {
       qi.stop(err);
-    });
-
-    this.jsm.streams.getMessage(this.stream, {
-      "last_by_subj": subj,
-    }).catch(() => {
-      // we don't have a value for this
-      done.resolve();
     });
 
     return qi;
@@ -511,9 +533,8 @@ export class Bucket implements KV, KvRemove {
     co.headers_only = opts.headers_only || false;
 
     let fn = opts.initializedFn;
-
     let count = 0;
-    let initialized = false;
+
     const cc = this._buildCC(k, false, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
@@ -533,7 +554,6 @@ export class Bucket implements KV, KvRemove {
         if (
           fn && (count > 0 && qi.received >= count || jm.info.pending === 0)
         ) {
-          initialized = true;
           //@ts-ignore: we are injecting an unexpected type
           qi.push(fn);
           fn = undefined;
