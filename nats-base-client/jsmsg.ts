@@ -17,6 +17,7 @@ import {
   JsMsg,
   Msg,
   NextRequest,
+  PullOptions,
   RequestOptions,
 } from "./types.ts";
 import { MsgHdrs } from "./headers.ts";
@@ -177,17 +178,17 @@ export class JsMsgImpl implements JsMsg {
     this.doAck(WPI);
   }
 
-  next(subj: string, ro?: Partial<NextRequest>) {
-    let payload = NXT;
-    if (ro) {
-      if (ro.expires && ro.expires > 0) {
-        ro.expires = nanos(ro.expires);
-      }
-      const data = JSONCodec().encode(ro);
-      payload = DataBuffer.concat(NXT, SPACE, data);
+  next(subj: string, opts: Partial<NextRequest> = { batch: 1 }) {
+    const args: Partial<PullOptions> = {};
+    args.batch = opts.batch || 1;
+    args.no_wait = opts.no_wait || false;
+    if (opts.expires && opts.expires > 0) {
+      args.expires = nanos(opts.expires);
     }
-    const opts = subj ? { reply: subj } as RequestOptions : undefined;
-    this.msg.respond(payload, opts);
+    const data = JSONCodec().encode(args);
+    const payload = DataBuffer.concat(NXT, SPACE, data);
+    const reqOpts = subj ? { reply: subj } as RequestOptions : undefined;
+    this.msg.respond(payload, reqOpts);
   }
 
   term() {
