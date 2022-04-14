@@ -2953,3 +2953,52 @@ Deno.test("jetstream - bind without consumer should fail", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - pull next", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj);
+  await js.publish(subj);
+
+  const jsm = await nc.jetstreamManager();
+  let si = await jsm.streams.info(stream);
+  assertEquals(si.state.messages, 2);
+
+  let inbox = "";
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.ackExplicit();
+  opts.manualAck();
+  opts.callback((err, msg) => {
+    if (err) {
+      if (err.code === ErrorCode.JetStream408RequestTimeout) {
+        sub.unsubscribe();
+        return;
+      } else {
+        fail(err.message);
+      }
+    }
+    if (msg) {
+      msg.next(inbox, { batch: 1, expires: 250 });
+    }
+  });
+  const sub = await js.pullSubscribe(subj, opts);
+  inbox = sub.getSubject();
+  sub.pull({ batch: 1, expires: 1000 });
+
+  await sub.closed;
+
+  const subin = sub as unknown as JetStreamSubscriptionInfoable;
+  assert(subin.info);
+  assertEquals(subin.info.attached, false);
+  await sub.closed;
+
+  const ci = await jsm.consumers.info(stream, "me");
+  assertEquals(ci.num_pending, 0);
+  assertEquals(ci.delivered.stream_seq, 2);
+  assertEquals(ci.ack_floor.stream_seq, 2);
+
+  await cleanup(ns, nc);
+});
