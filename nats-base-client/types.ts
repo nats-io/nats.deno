@@ -345,75 +345,75 @@ export interface ConsumerOpts {
 
 export interface ConsumerOptsBuilder {
   // user description of this consumer
-  description(description: string): void;
+  description(description: string): this;
   // deliverTo sets the subject a push consumer receives messages on
-  deliverTo(subject: string): void;
+  deliverTo(subject: string): this;
   // sets the durable name, when not set an ephemeral consumer is created
-  durable(name: string): void;
+  durable(name: string): this;
   // consumer will start at the message with the specified sequence
-  startSequence(seq: number): void;
+  startSequence(seq: number): this;
   // consumer will start with messages received on the specified time/date
-  startTime(time: Date): void;
+  startTime(time: Date): this;
   // consumer will start at first available message on the stream
-  deliverAll(): void;
+  deliverAll(): this;
   // consumer will deliver all the last per messages per subject
-  deliverLastPerSubject(): void;
+  deliverLastPerSubject(): this;
   // consumer will start at the last message
-  deliverLast(): void;
+  deliverLast(): this;
   // consumer will start with new messages (not yet in the stream)
-  deliverNew(): void;
+  deliverNew(): this;
   // start delivering at the at a past point in time
-  startAtTimeDelta(millis: number): void;
+  startAtTimeDelta(millis: number): this;
   // deliver headers and `Nats-Msg-Size` header, no payloads
-  headersOnly(): void;
+  headersOnly(): this;
   // disables message acknowledgement
-  ackNone(): void;
+  ackNone(): this;
   // ack'ing a message implicitly acks all messages with a lower sequence
-  ackAll(): void;
+  ackAll(): this;
   // consumer will ack all messages
-  ackExplicit(): void;
+  ackExplicit(): this;
   // sets teh time a delivered message might remain unacknowledged before redelivery is attempted
-  ackWait(millis: number): void;
+  ackWait(millis: number): this;
   // max number of re-delivery attempts for a particular message
-  maxDeliver(max: number): void;
+  maxDeliver(max: number): this;
   // filters the messages in a wildcard stream to those matching a specific subject
-  filterSubject(s: string): void;
+  filterSubject(s: string): this;
   // replay messages as fast as possible
-  replayInstantly(): void;
+  replayInstantly(): this;
   // replay at the rate received
-  replayOriginal(): void;
+  replayOriginal(): this;
   // sample a subset of messages expressed as a percentage(0-100)
-  sample(n: number): void;
+  sample(n: number): this;
   // limit message delivery to rate in bits per second
-  limit(bps: number): void;
+  limit(bps: number): this;
   // max count of outstanding messages scheduled via batch pulls (pulls are additive)
-  maxWaiting(max: number): void;
+  maxWaiting(max: number): this;
   // max number of outstanding acks before the server stops sending new messages
-  maxAckPending(max: number): void;
+  maxAckPending(max: number): this;
   // sets the time before an idle consumer sends an empty message with status 100 indicating consumer is alive
-  idleHeartbeat(millis: number): void;
+  idleHeartbeat(millis: number): this;
   // push consumer flow control - server sends a status code 100 and uses the delay on the response to throttle inbound messages for a client and prevent slow consumer.
-  flowControl(): void;
+  flowControl(): this;
   // sets the name of the queue group - same as queue
-  deliverGroup(name: string): void;
+  deliverGroup(name: string): this;
   // prevents the consumer implementation from auto-acking messages
-  manualAck(): void;
+  manualAck(): this;
   // standard nats subscribe option for the maximum number of messages to receive on the subscription
-  maxMessages(max: number): void;
+  maxMessages(max: number): this;
   // standard nats queue group option
-  queue(n: string): void;
+  queue(n: string): this;
   // callback to process messages (or iterator is returned)
-  callback(fn: JsMsgCallback): void;
+  callback(fn: JsMsgCallback): this;
   // creates an ordered consumer - ordered consumers cannot be a pull consumer nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
-  orderedConsumer(): void;
+  orderedConsumer(): this;
   // binds to a consumer
-  bind(stream: string, durable: string): void;
+  bind(stream: string, durable: string): this;
   // max number of messages to be delivered to a pull consumer (pull consumer only)
-  maxPullBatch(n: number): void;
+  maxPullBatch(n: number): this;
   // max amount of time before a pull request expires
-  maxPullRequestExpires(millis: number): void;
+  maxPullRequestExpires(millis: number): this;
   // max amount of time before an inactive ephemeral consumer is discarded
-  inactiveEphemeralThreshold(millis: number): void;
+  inactiveEphemeralThreshold(millis: number): this;
 }
 
 export interface Lister<T> {

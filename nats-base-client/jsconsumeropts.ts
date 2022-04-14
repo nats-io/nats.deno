@@ -70,15 +70,18 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   description(description: string) {
     this.config.description = description;
+    return this;
   }
 
   deliverTo(subject: string) {
     this.config.deliver_subject = subject;
+    return this;
   }
 
   durable(name: string) {
     validateDurableName(name);
     this.config.durable_name = name;
+    return this;
   }
 
   startSequence(seq: number) {
@@ -87,67 +90,83 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     }
     this.config.deliver_policy = DeliverPolicy.StartSequence;
     this.config.opt_start_seq = seq;
+    return this;
   }
 
   startTime(time: Date) {
     this.config.deliver_policy = DeliverPolicy.StartTime;
     this.config.opt_start_time = time.toISOString();
+    return this;
   }
 
   deliverAll() {
     this.config.deliver_policy = DeliverPolicy.All;
+    return this;
   }
 
   deliverLastPerSubject() {
     this.config.deliver_policy = DeliverPolicy.LastPerSubject;
+    return this;
   }
 
   deliverLast() {
     this.config.deliver_policy = DeliverPolicy.Last;
+    return this;
   }
 
   deliverNew() {
     this.config.deliver_policy = DeliverPolicy.New;
+    return this;
   }
 
   startAtTimeDelta(millis: number) {
     this.startTime(new Date(Date.now() - millis));
+    return this;
   }
 
   headersOnly() {
     this.config.headers_only = true;
+    return this;
   }
 
   ackNone() {
     this.config.ack_policy = AckPolicy.None;
+    return this;
   }
 
   ackAll() {
     this.config.ack_policy = AckPolicy.All;
+    return this;
   }
 
   ackExplicit() {
     this.config.ack_policy = AckPolicy.Explicit;
+    return this;
   }
 
   ackWait(millis: number) {
     this.config.ack_wait = nanos(millis);
+    return this;
   }
 
   maxDeliver(max: number) {
     this.config.max_deliver = max;
+    return this;
   }
 
   filterSubject(s: string) {
     this.config.filter_subject = s;
+    return this;
   }
 
   replayInstantly() {
     this.config.replay_policy = ReplayPolicy.Instant;
+    return this;
   }
 
   replayOriginal() {
     this.config.replay_policy = ReplayPolicy.Original;
+    return this;
   }
 
   sample(n: number) {
@@ -156,69 +175,85 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
       throw new Error(`value must be between 0-100`);
     }
     this.config.sample_freq = `${n}%`;
+    return this;
   }
 
   limit(n: number) {
     this.config.rate_limit_bps = n;
+    return this;
   }
 
   maxWaiting(max: number) {
     this.config.max_waiting = max;
+    return this;
   }
 
   maxAckPending(max: number) {
     this.config.max_ack_pending = max;
+    return this;
   }
 
   idleHeartbeat(millis: number) {
     this.config.idle_heartbeat = nanos(millis);
+    return this;
   }
 
   flowControl() {
     this.config.flow_control = true;
+    return this;
   }
 
   deliverGroup(name: string) {
     this.queue(name);
+    return this;
   }
 
   manualAck() {
     this.mack = true;
+    return this;
   }
 
   maxMessages(max: number) {
     this.max = max;
+    return this;
   }
 
   callback(fn: JsMsgCallback) {
     this.callbackFn = fn;
+    return this;
   }
 
   queue(n: string) {
     this.qname = n;
     this.config.deliver_group = n;
+    return this;
   }
 
   orderedConsumer() {
     this.ordered = true;
+    return this;
   }
 
   bind(stream: string, durable: string) {
     this.stream = stream;
     this.config.durable_name = durable;
     this.isBind = true;
+    return this;
   }
 
-  inactiveEphemeralThreshold(millis: number): void {
+  inactiveEphemeralThreshold(millis: number) {
     this.config.inactive_threshold = nanos(millis);
+    return this;
   }
 
-  maxPullBatch(n: number): void {
+  maxPullBatch(n: number) {
     this.config.max_batch = n;
+    return this;
   }
 
-  maxPullRequestExpires(millis: number): void {
+  maxPullRequestExpires(millis: number) {
     this.config.max_expires = nanos(millis);
+    return this;
   }
 }
 
