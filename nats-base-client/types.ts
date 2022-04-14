@@ -463,7 +463,17 @@ export interface JsMsg {
   ack(): void;
   nak(millis?: number): void;
   working(): void;
-  // next(subj?: string): void;
+  /**
+   * next() combines ack() and pull(), requires the subject for a
+   * subscription processing to process a message is provided
+   * (can be the same) however, because the ability to specify
+   * how long to keep the request open can be specified, this
+   * functionality doesn't work well with iterators, as an error
+   * (408s) are expected and needed to re-trigger a pull in case
+   * there was a timeout. In an iterator, the error will close
+   * the iterator, requiring a subscription to be reset.
+   */
+  next(subj: string, ro?: Partial<NextRequest>): void;
   term(): void;
   ackAck(): Promise<boolean>;
 }

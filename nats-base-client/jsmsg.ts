@@ -177,9 +177,12 @@ export class JsMsgImpl implements JsMsg {
     this.doAck(WPI);
   }
 
-  next(subj?: string, ro?: Partial<NextRequest>) {
+  next(subj: string, ro?: Partial<NextRequest>) {
     let payload = NXT;
     if (ro) {
+      if (ro.expires && ro.expires > 0) {
+        ro.expires = nanos(ro.expires);
+      }
       const data = JSONCodec().encode(ro);
       payload = DataBuffer.concat(NXT, SPACE, data);
     }
