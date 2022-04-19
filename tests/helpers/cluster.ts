@@ -60,7 +60,8 @@ try {
     const pid = `[${s.process.pid}]`;
     const cpid = rgb24(pid, s.rgb);
     console.log(
-      `${cpid} ${s.configFile} at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring} - store: ${s.config.jetstream.store_dir}`,
+      `${cpid} ${s.configFile} at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring} - store: ${s
+        .config?.jetstream?.store_dir}`,
     );
   });
 
@@ -71,8 +72,7 @@ try {
 
 async function waitForStop(): Promise<void> {
   console.log("control+c to terminate");
-  const sig = Deno.signal(Deno.Signal.SIGTERM);
-  for await (const _ of sig) {
-    sig.dispose();
-  }
+  Deno.addSignalListener("SIGTERM", () => {
+    Deno.exit();
+  });
 }
