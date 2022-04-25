@@ -15,7 +15,7 @@
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 import { createInbox, Msg, StringCodec } from "../src/mod.ts";
 import {
   deferred,

@@ -34,6 +34,7 @@ import {
   Empty,
   ErrorCode,
   headers,
+  JetStreamPullSubscription,
   JsHeaders,
   JsMsg,
   JsMsgCallback,
@@ -45,6 +46,7 @@ import {
   QueuedIterator,
   RetentionPolicy,
   StorageType,
+  StreamConfig,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
@@ -52,7 +54,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
@@ -68,6 +70,7 @@ import {
   isFlowControlMsg,
   isHeartbeatMsg,
 } from "../nats-base-client/jsutil.ts";
+import * as log from "https://deno.land/std@0.136.0/log/mod.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -3002,3 +3005,76 @@ Deno.test("jetstream - pull next", async () => {
 
   await cleanup(ns, nc);
 });
+
+// Deno.test("what happens", async () => {
+//   const nc = await connect({ port: 6543 });
+//   const jsm = await nc.jetstreamManager();
+//   const stream = "stream";
+//   const durable = "dur";
+//
+//   await jsm.streams.info(stream)
+//     .catch(async (err) => {
+//       await jsm.streams.add({
+//         name: stream,
+//         retention: RetentionPolicy.Limits,
+//         storage: StorageType.File,
+//         num_replicas: 3,
+//         subjects: ["foo"],
+//       } as StreamConfig);
+//
+//       console.log(`created stream`);
+//     });
+//
+//   await jsm.consumers.info(stream, durable)
+//     .catch(async (err) => {
+//       await jsm.consumers.add(stream, {
+//         ack_policy: AckPolicy.Explicit,
+//         deliver_policy: DeliverPolicy.All,
+//         durable_name: durable,
+//       });
+//       console.log(`created consumer`);
+//     });
+//
+//   const js = nc.jetstream();
+//
+//   let sub: JetStreamPullSubscription;
+//   let inbox = "";
+//
+//   const pullOpts = { batch: 1, expires: 5 * 1000 };
+//   const opts = consumerOpts();
+//   opts.bind(stream, durable);
+//   opts.manualAck();
+//   opts.callback((err, msg) => {
+//     if (err) {
+//       switch (err.code) {
+//         case ErrorCode.JetStream404NoMessages:
+//         case ErrorCode.JetStream408RequestTimeout:
+//         case ErrorCode.JetStream409MaxAckPendingExceeded:
+//           console.log(`js error [${err.code}] - re-pulling`);
+//           sub.pull(pullOpts);
+//           break;
+//         default:
+//           // this is a real error
+//           log.error(`error from ${durable}: ${err.message}\n${err.stack}`);
+//           // this will make the service stop
+//           sub.unsubscribe();
+//       }
+//       return;
+//     }
+//     console.log(msg ? msg.subject : "null msg");
+//     if (msg) {
+//       msg.next(inbox, pullOpts);
+//     }
+//   });
+//
+//   sub = await js.pullSubscribe("foo", opts);
+//   inbox = sub.getSubject();
+//
+//   sub.pull(pullOpts);
+//
+//   sub.closed.then((err) => {
+//     console.log("sub closed");
+//   });
+//
+//   await nc.closed();
+// });
