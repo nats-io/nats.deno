@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.125.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.136.0/flags/mod.ts";
 import { connect, Nuid } from "../src/mod.ts";
 import { Bench, Metric } from "../nats-base-client/bench.ts";
 const defaults = {

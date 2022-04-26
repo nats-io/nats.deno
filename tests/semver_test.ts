@@ -1,5 +1,5 @@
 import { compare, parseSemVer } from "../nats-base-client/semver.ts";
-import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 Deno.test("semver", () => {
   const pt: { a: string; b: string; r: number }[] = [

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,8 +14,8 @@
  */
 
 import { NatsServer } from "./mod.ts";
-import { parse } from "https://deno.land/std@0.125.0/flags/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.125.0/fmt/colors.ts";
+import { parse } from "https://deno.land/std@0.136.0/flags/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.136.0/fmt/colors.ts";
 
 const defaults = {
   c: 2,
@@ -65,12 +65,12 @@ try {
     );
   });
 
-  await waitForStop();
+  waitForStop();
 } catch (err) {
   console.error(err);
 }
 
-async function waitForStop(): Promise<void> {
+function waitForStop(): void {
   console.log("control+c to terminate");
   Deno.addSignalListener("SIGTERM", () => {
     Deno.exit();

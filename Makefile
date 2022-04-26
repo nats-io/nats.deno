@@ -6,7 +6,7 @@ lint:
 	deno lint --unstable
 
 test: clean
-	deno test --allow-all --unstable --reload --jobs --coverage=coverage --fail-fast tests/
+	deno test --allow-all --unstable --reload --quiet --jobs --coverage=coverage --fail-fast tests/
 
 testw: clean
 	deno test --allow-all --unstable --reload --jobs --watch --fail-fast tests/

@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   assertRejects,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import {
   createInbox,

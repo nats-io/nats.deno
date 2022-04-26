@@ -292,7 +292,7 @@ export class NatsConnectionImpl implements NatsConnection {
     try {
       await adm.getAccountInfo();
     } catch (err) {
-      let ne = err as NatsError;
+      const ne = err as NatsError;
       if (ne.code === ErrorCode.NoResponders) {
         ne.code = ErrorCode.JetStreamNotEnabled;
       }

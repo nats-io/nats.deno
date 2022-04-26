@@ -16,7 +16,7 @@ jobs:
     environment: CI
     strategy:
       matrix:
-        deno-version: [1.17.0]
+        deno-version: [1.21.0]
 
     steps:
       - name: Git Checkout Deno Module
@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.7.2" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.8.1" >> $GITHUB_ENV
 
       # this here because dns seems to be wedged on gha
       - name: Add hosts to /etc/hosts

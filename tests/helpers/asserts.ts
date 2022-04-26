@@ -18,7 +18,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 import { isNatsError, NatsError } from "../../nats-base-client/error.ts";
 
 export function assertErrorCode(err?: Error, ...codes: string[]) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 import {
   AckPolicy,
@@ -131,7 +131,7 @@ Deno.test("jsm - update stream name is internally added", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   const name = nuid.next();
-  let ci = await jsm.streams.add({
+  const ci = await jsm.streams.add({
     name: name,
     subjects: [`${name}.>`],
   });
@@ -927,7 +927,7 @@ Deno.test("jsm - cross account consumers", async () => {
 
 Deno.test("jsm - jetstream error info", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  let jsm = await nc.jetstreamManager();
+  const jsm = await nc.jetstreamManager();
   try {
     await jsm.streams.add({
       name: "a",

@@ -35,7 +35,7 @@ import {
   assertEquals,
   assertRejects,
   assertThrows,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 import {
   ConnectionOptions,
@@ -740,7 +740,7 @@ Deno.test("kv - internal consumer", async () => {
   async function getCount(name: string): Promise<number> {
     const js = nc.jetstream();
     const b = await js.views.kv(name) as Bucket;
-    let watch = await b.watch() as QueuedIteratorImpl<unknown>;
+    const watch = await b.watch() as QueuedIteratorImpl<unknown>;
     const sub = watch._data as JetStreamSubscriptionInfoable;
     return sub?.info?.last?.num_pending || 0;
   }
@@ -845,7 +845,7 @@ Deno.test("kv - watch and history headers only", async () => {
     qip: Promise<QueuedIterator<KvEntry>>,
   ): Promise<KvEntry> {
     const iter = await qip;
-    let p = deferred<KvEntry>();
+    const p = deferred<KvEntry>();
     (async () => {
       for await (const e of iter) {
         p.resolve(e);
@@ -919,7 +919,7 @@ Deno.test("kv - example", async () => {
   // set of keys being watched - in this case all keys
   const watch = await kv.watch();
   (async () => {
-    for await (const e of watch) {
+    for await (const _e of watch) {
       // do something with the change
     }
   })().then();
@@ -943,9 +943,9 @@ Deno.test("kv - example", async () => {
   assertEquals(buf.length, 1);
   assertEquals(buf[0], "hello.world");
 
-  let h = await kv.history({ key: "hello.world" });
+  const h = await kv.history({ key: "hello.world" });
   await (async () => {
-    for await (const e of h) {
+    for await (const _e of h) {
       // do something with the historical value
       // you can test e.operation for "PUT", "DEL", or "PURGE"
       // to know if the entry is a marker for a value set
@@ -1189,7 +1189,8 @@ Deno.test("kv - initialized watch with messages", async () => {
   });
 
   (async () => {
-    for await (const e of iter) {
+    for await (const _e of iter) {
+      // ignore
     }
   })().then();
   await d;
@@ -1222,7 +1223,7 @@ Deno.test("kv - initialized watch with modifications", async () => {
   // we are expecting 103
   const lock = Lock(103);
   (async () => {
-    for await (const e of iter) {
+    for await (const _e of iter) {
       lock.unlock();
     }
   })().then();
@@ -1231,7 +1232,7 @@ Deno.test("kv - initialized watch with modifications", async () => {
   assert(103 > when);
   await lock;
 
-  //@ts-ignore
+  //@ts-ignore: testing
   const sub = iter._data as JetStreamSubscriptionImpl;
   const ci = await sub.consumerInfo();
   assertEquals(ci.num_pending, 0);
@@ -1259,7 +1260,8 @@ Deno.test("kv - watch init callback exceptions terminate the iterator", async ()
   const d = deferred<Error>();
   try {
     await (async () => {
-      for await (const e of iter) {
+      for await (const _e of iter) {
+        // awaiting the iterator
       }
     })();
   } catch (err) {

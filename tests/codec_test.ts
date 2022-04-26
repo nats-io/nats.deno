@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
-import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 Deno.test("codec - string", () => {
   const sc = StringCodec();
@@ -29,6 +29,7 @@ Deno.test("codec - json", () => {
 });
 
 Deno.test("codec - json w/ reviver", () => {
+  // deno-lint-ignore no-explicit-any
   const sc = JSONCodec((k: string, v: any) => k === "time" ? new Date(v) : v);
   const o = { time: new Date() };
   const d = sc.encode(o);

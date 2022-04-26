@@ -48,7 +48,6 @@ import {
 } from "./jsclient.ts";
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { deferred } from "./util.ts";
 import { headers, MsgHdrs } from "./headers.ts";
 import { consumerOpts } from "./mod.ts";
 import { compare, parseSemVer } from "./semver.ts";
@@ -325,7 +324,7 @@ export class Bucket implements KV, KvRemove {
     };
   }
 
-  jmToEntry(k: string, jm: JsMsg): KvEntry {
+  jmToEntry(_k: string, jm: JsMsg): KvEntry {
     const key = this.decodeKey(jm.subject.substring(this.prefixLen));
     return {
       bucket: this.bucket,
