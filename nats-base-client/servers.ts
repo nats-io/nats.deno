@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 The NATS Authors
+ * Copyright 2018-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -137,7 +137,7 @@ export class ServerImpl implements Server {
       // resolve the hostname to ips
       const ips = await opts.fn(this.hostname);
 
-      for (let ip of ips) {
+      for (const ip of ips) {
         // letting URL handle the details of representing IPV6 ip with a port, etc
         // careful to make sure the protocol doesn't line with standard ports or they
         // get swallowed

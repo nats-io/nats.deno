@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -113,7 +113,7 @@ Deno.test("servers - save tls name", () => {
 
 Deno.test("servers - port 80", () => {
   function t(hp: string, port: number) {
-    let servers = new Servers([hp]);
+    const servers = new Servers([hp]);
     const s = servers.getCurrentServer();
     assertEquals(s.port, port);
   }

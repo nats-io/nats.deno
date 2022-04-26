@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,6 @@ export function check(
   });
 
   const task = new Promise((done) => {
-    // deno-lint-ignore no-unused-vars
     const i = setInterval(async () => {
       try {
         const v = await fn();

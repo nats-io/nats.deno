@@ -121,7 +121,7 @@ Deno.test("auth - sub no permissions keeps connection", async () => {
 
   const cbErr = deferred<Error | null>();
   const sub = nc.subscribe("bar", {
-    callback: (err, msg) => {
+    callback: (err, _msg) => {
       cbErr.resolve(err);
     },
   });
@@ -158,7 +158,8 @@ Deno.test("auth - sub iterator no permissions keeps connection", async () => {
   const iterErr = deferred<Error | null>();
   const sub = nc.subscribe("bar");
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
+      // ignored
     }
   })().catch((err) => {
     iterErr.resolve(err);
