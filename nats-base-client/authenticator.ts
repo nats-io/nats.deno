@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,32 +17,57 @@ import type { ConnectionOptions } from "./types.ts";
 import { TD, TE } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
+/**
+ * @type {}
+ */
 export type NoAuth = void;
 
+/**
+ * @type {auth_token: string} the user token
+ */
 export interface TokenAuth {
   "auth_token": string;
 }
 
+/**
+ * @type {user: string, pass?: string} the username and
+ * optional password if the server requires.
+ */
 export interface UserPass {
   user: string;
   pass?: string;
 }
 
+/**
+ * @type {nkey: string, sig: string} the public nkey for the user,
+ * and a base64 encoded string for the calculated signature of the
+ * challenge nonce.
+ */
 export interface NKeyAuth {
   nkey: string;
   sig: string;
 }
 
+/**
+ * @type {jwt: string, nkey?: string, sig?: string} the user JWT,
+ * and if not a bearer token also the public nkey for the user,
+ * and a base64 encoded string for the calculated signature of the
+ * challenge nonce.
+ */
 export interface JwtAuth {
   jwt: string;
   nkey?: string;
   sig?: string;
 }
 
+/**
+ * @type NoAuth|TokenAuth|UserPass|NKeyAuth|JwtAuth
+ */
 export type Auth = NoAuth | TokenAuth | UserPass | NKeyAuth | JwtAuth;
 
 /**
- * Authenticator is an interface that returns credentials
+ * Authenticator is an interface that returns credentials.
+ * @type function(nonce?: string) => Auth
  */
 export interface Authenticator {
   (nonce?: string): Auth;
@@ -58,10 +83,10 @@ export function buildAuthenticator(
     return opts.authenticator;
   }
   if (opts.token) {
-    return tokenFn(opts.token);
+    return tokenAuthenticator(opts.token);
   }
   if (opts.user) {
-    return passFn(opts.user, opts.pass);
+    return usernamePasswordAuthenticator(opts.user, opts.pass);
   }
   return noAuthFn();
 }
@@ -73,31 +98,35 @@ export function noAuthFn(): Authenticator {
 }
 
 /**
- * Returns a user/pass authenticator
+ * Returns a user/pass authenticator for the specified user and optional password
  * @param { string }user
  * @param {string } pass
  * @return {UserPass}
  */
-function passFn(user: string, pass?: string): Authenticator {
+export function usernamePasswordAuthenticator(
+  user: string,
+  pass?: string,
+): Authenticator {
   return (): UserPass => {
     return { user, pass };
   };
 }
 
 /**
- * Returns a token authenticator
- * @param {string } token
+ * Returns a token authenticator for the specified token
+ * @param { string } token
  * @return {TokenAuth}
  */
-function tokenFn(token: string): Authenticator {
+export function tokenAuthenticator(token: string): Authenticator {
   return (): TokenAuth => {
     return { auth_token: token };
   };
 }
 
 /**
- * Returns an nkey authenticator that returns a public key
- * @param {Uint8Array | (() => Uint8Array)} seed
+ * Returns an Authenticator that returns a NKeyAuth based that uses the
+ * specified seed or function returning a seed.
+ * @param {Uint8Array | (() => Uint8Array)} seed - the nkey seed
  * @return {NKeyAuth}
  */
 export function nkeyAuthenticator(
@@ -115,13 +144,13 @@ export function nkeyAuthenticator(
 }
 
 /**
- * Returns a jwt authenticator. If a seed is provided, the public
- * key, and signature are calculated. Note if a signature is provided
- * the returned value should be a base64 encoded string.
+ * Returns an Authenticator function that returns a JwtAuth.
+ * If a seed is provided, the public key, and signature are
+ * calculated.
  *
- * @return {JwtAuth}
- * @param ajwt
- * @param seed
+ * @param {string | ()=>string} ajwt - the jwt
+ * @param {Uint8Array | ()=> Uint8Array } seed - the optional nkey seed
+ * @return {Authenticator}
  */
 export function jwtAuthenticator(
   ajwt: string | (() => string),
@@ -138,8 +167,10 @@ export function jwtAuthenticator(
 }
 
 /**
- * Returns a jwt authenticator configured from the specified creds file contents.
- * @param creds
+ * Returns an Authenticator function that returns a JwtAuth.
+ * This is a convenience Authenticator that parses the
+ * specifid creds and delegates to the jwtAuthenticator.
+ * @param {Uint8Array} creds - the contents of a creds file
  * @returns {JwtAuth}
  */
 export function credsAuthenticator(creds: Uint8Array): Authenticator {

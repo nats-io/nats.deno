@@ -26,6 +26,8 @@ import {
   nkeyAuthenticator,
   Status,
   StringCodec,
+  tokenAuthenticator,
+  usernamePasswordAuthenticator,
 } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
@@ -95,6 +97,19 @@ Deno.test("auth - un/pw", async () => {
   const ns = await NatsServer.start(conf);
   const nc = await connect(
     { port: ns.port, user: "derek", pass: "foobar" },
+  );
+  await nc.flush();
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("auth - un/pw authenticator", async () => {
+  const ns = await NatsServer.start(conf);
+  const nc = await connect(
+    {
+      port: ns.port,
+      authenticator: usernamePasswordAuthenticator("derek", "foobar"),
+    },
   );
   await nc.flush();
   await nc.close();
@@ -254,6 +269,17 @@ Deno.test("auth - user and token is rejected", () => {
 Deno.test("auth - token", async () => {
   const ns = await NatsServer.start({ authorization: { token: "foo" } });
   const nc = await connect({ port: ns.port, token: "foo" });
+  await nc.flush();
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("auth - token authenticator", async () => {
+  const ns = await NatsServer.start({ authorization: { token: "foo" } });
+  const nc = await connect({
+    port: ns.port,
+    authenticator: tokenAuthenticator("foo"),
+  });
   await nc.flush();
   await nc.close();
   await ns.stop();
