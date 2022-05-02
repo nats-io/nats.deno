@@ -111,11 +111,21 @@ export { MuxSubscription } from "./muxsubscription.ts";
 export { DataBuffer } from "./databuffer.ts";
 export { checkOptions, checkUnsupportedOption } from "./options.ts";
 export { Request } from "./request.ts";
-export type { Authenticator } from "./authenticator.ts";
+export type {
+  Auth,
+  Authenticator,
+  JwtAuth,
+  NKeyAuth,
+  NoAuth,
+  TokenAuth,
+  UserPass,
+} from "./authenticator.ts";
 export {
   credsAuthenticator,
   jwtAuthenticator,
   nkeyAuthenticator,
+  tokenAuthenticator,
+  usernamePasswordAuthenticator,
 } from "./authenticator.ts";
 export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";

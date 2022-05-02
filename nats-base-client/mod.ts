@@ -34,10 +34,13 @@ export {
   StorageType,
   StringCodec,
   toJsMsg,
+  tokenAuthenticator,
+  usernamePasswordAuthenticator,
 } from "./internal_mod.ts";
 
 export type {
   AccountLimits,
+  Auth,
   Authenticator,
   ClusterInfo,
   Codec,
@@ -60,6 +63,7 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsg,
   JsMsgCallback,
+  JwtAuth,
   LastForMsgRequest,
   Lister,
   LostStreamData,
@@ -69,6 +73,8 @@ export type {
   MsgRequest,
   Nanos,
   NatsConnection,
+  NKeyAuth,
+  NoAuth,
   PeerInfo,
   Placement,
   PubAck,
@@ -92,4 +98,6 @@ export type {
   SubOpts,
   Subscription,
   SubscriptionOptions,
+  TokenAuth,
+  UserPass,
 } from "./internal_mod.ts";
