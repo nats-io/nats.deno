@@ -20,18 +20,13 @@ import { TD } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
 export function isRequestError(msg: Msg): (NatsError | null) {
-  if (msg && msg.headers) {
+  // to consider an error from the server we expect no payload
+  if (msg && msg.data.length === 0 && msg.headers) {
     const headers = msg.headers as MsgHdrsImpl;
     if (headers.hasError) {
+      // only 503s are expected from core NATS (404/408/409s are JetStream)
       if (headers.code === 503) {
         return NatsError.errorForCode(ErrorCode.NoResponders);
-      } else {
-        let desc = headers.description;
-        if (desc === "") {
-          desc = ErrorCode.RequestError;
-        }
-        desc = desc.toLowerCase();
-        return new NatsError(desc, headers.status);
       }
     }
   }

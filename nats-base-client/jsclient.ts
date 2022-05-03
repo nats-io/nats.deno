@@ -157,14 +157,26 @@ export class JetStreamClientImpl extends BaseApiClient
     return pa;
   }
 
-  async pull(stream: string, durable: string): Promise<JsMsg> {
+  async pull(stream: string, durable: string, expires = 0): Promise<JsMsg> {
     validateStreamName(stream);
     validateDurableName(durable);
+
+    let timeout = this.timeout;
+    if (expires > timeout) {
+      timeout = expires;
+    }
+
+    expires = expires < 0 ? 0 : nanos(expires);
+    const pullOpts: PullOptions = {
+      batch: 1,
+      no_wait: expires === 0,
+      expires,
+    };
+
     const msg = await this.nc.request(
-      // FIXME: specify expires
       `${this.prefix}.CONSUMER.MSG.NEXT.${stream}.${durable}`,
-      this.jc.encode({ no_wait: true, batch: 1, expires: 0 }),
-      { noMux: true, timeout: this.timeout },
+      this.jc.encode(pullOpts),
+      { noMux: true, timeout },
     );
     const err = checkJsError(msg);
     if (err) {
