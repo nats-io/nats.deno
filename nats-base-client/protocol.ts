@@ -442,7 +442,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   processPing() {
-    this.transport.send(PONG_CMD);
+    this.transport.send(PONG_CMD).catch(() => {/*ignoring socket error*/});
   }
 
   processPong() {
@@ -667,7 +667,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     });
     if (cmds.length) {
-      this.transport.send(encode(cmds.join("")));
+      this.transport.send(encode(cmds.join(""))).catch(
+        () => {/*ignoring socket error*/},
+      );
     }
   }
 
@@ -722,7 +724,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
     if (this.outbound.size()) {
       const d = this.outbound.drain();
-      this.transport.send(d);
+      this.transport.send(d).catch(() => {/*ignoring socket error*/});
     }
   }
 
