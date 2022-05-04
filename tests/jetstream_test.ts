@@ -3080,7 +3080,6 @@ Deno.test("jetstream - pull error: max_waiting", async () => {
       3000,
       ErrorCode.JetStream408RequestTimeout,
     ),
-    // this a server bug, it should be a 408
     expectError(3000, ErrorCode.JetStream409MaxWaitingExceeded),
   ]);
 
