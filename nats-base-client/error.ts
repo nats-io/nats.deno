@@ -48,7 +48,9 @@ export enum ErrorCode {
   JetStreamInvalidAck = "JESTREAM_INVALID_ACK",
   JetStream404NoMessages = "404",
   JetStream408RequestTimeout = "408",
+  //@deprecated: use JetStream409
   JetStream409MaxAckPendingExceeded = "409",
+  JetStream409 = "409",
   JetStreamNotEnabled = "503",
 
   // emitted by the server

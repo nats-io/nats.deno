@@ -66,6 +66,9 @@ export function millis(ns: Nanos) {
 }
 
 export function isFlowControlMsg(msg: Msg): boolean {
+  if (msg.data.length > 0) {
+    return false;
+  }
   const h = msg.headers;
   if (!h) {
     return false;
@@ -78,6 +81,10 @@ export function isHeartbeatMsg(msg: Msg): boolean {
 }
 
 export function checkJsError(msg: Msg): NatsError | null {
+  // JS error only if no payload - otherwise assume it is application data
+  if (msg.data.length !== 0) {
+    return null;
+  }
   const h = msg.headers;
   if (!h) {
     return null;
@@ -94,10 +101,17 @@ export function checkJsErrorCode(
   }
   description = description.toLowerCase();
   switch (code) {
+    case 404:
+      // 404 for jetstream will provide different messages ensure we
+      // keep whatever the server returned
+      return new NatsError(description, ErrorCode.JetStream404NoMessages);
     case 408:
-      return NatsError.errorForCode(
-        ErrorCode.JetStream408RequestTimeout,
-        new Error(description),
+      return new NatsError(description, ErrorCode.JetStream408RequestTimeout);
+    case 409:
+      // the description can be exceeded max waiting or max ack pending
+      return new NatsError(
+        description,
+        ErrorCode.JetStream409,
       );
     case 503:
       return NatsError.errorForCode(

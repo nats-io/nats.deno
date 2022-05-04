@@ -311,7 +311,7 @@ export interface JetStreamClient {
     data?: Uint8Array,
     options?: Partial<JetStreamPublishOptions>,
   ): Promise<PubAck>;
-  pull(stream: string, durable: string): Promise<JsMsg>;
+  pull(stream: string, durable: string, expires?: number): Promise<JsMsg>;
   fetch(
     stream: string,
     durable: string,

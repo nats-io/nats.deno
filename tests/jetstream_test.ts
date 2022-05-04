@@ -74,7 +74,7 @@ function callbackConsume(debug = false): JsMsgCallback {
     if (err) {
       switch (err.code) {
         case ErrorCode.JetStream408RequestTimeout:
-        case ErrorCode.JetStream409MaxAckPendingExceeded:
+        case ErrorCode.JetStream409:
         case ErrorCode.JetStream404NoMessages:
           return;
         default:
@@ -817,7 +817,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
     if (err) {
       switch (err.code) {
         case ErrorCode.JetStream408RequestTimeout:
-        case ErrorCode.JetStream409MaxAckPendingExceeded:
+        case ErrorCode.JetStream409:
         case ErrorCode.JetStream404NoMessages:
           return;
         default:
@@ -3008,5 +3008,98 @@ Deno.test("jetstream - pull next", async () => {
   assertEquals(ci.delivered.stream_seq, 2);
   assertEquals(ci.ack_floor.stream_seq, 2);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull errors", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+
+  async function expectError(
+    expires: number,
+    code: ErrorCode,
+  ) {
+    try {
+      await js.pull(stream, "me", expires);
+    } catch (err) {
+      assertEquals(err.code, code);
+    }
+  }
+
+  await expectError(0, ErrorCode.JetStream404NoMessages);
+  await expectError(1000, ErrorCode.JetStream408RequestTimeout);
+
+  await js.publish(subj);
+
+  // we expect a message
+  const a = await js.pull(stream, "me", 1000);
+  assertEquals(a.seq, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull error: max_waiting", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.8.2")) {
+    return;
+  }
+
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    max_waiting: 1,
+  });
+  const js = nc.jetstream();
+
+  async function expectError(
+    expires: number,
+    code: ErrorCode,
+  ): Promise<NatsError> {
+    const d = deferred<NatsError>();
+    try {
+      await js.pull(stream, "me", expires);
+    } catch (err) {
+      d.resolve(err);
+      assertEquals(err.code, code);
+    }
+    return d;
+  }
+  await Promise.all([
+    expectError(
+      3000,
+      ErrorCode.JetStream408RequestTimeout,
+    ),
+    expectError(3000, ErrorCode.JetStream409),
+  ]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull error: js not enabled", async () => {
+  const { ns, nc } = await setup();
+  const js = nc.jetstream();
+  async function expectError(code: ErrorCode, expires: number) {
+    const noMsgs = deferred<NatsError>();
+    try {
+      await js.pull("stream", "me", expires);
+    } catch (err) {
+      noMsgs.resolve(err);
+    }
+    const ne = await noMsgs;
+    assertEquals(ne.code, code);
+  }
+
+  await expectError(ErrorCode.JetStreamNotEnabled, 0);
   await cleanup(ns, nc);
 });
