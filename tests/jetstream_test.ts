@@ -3065,25 +3065,23 @@ Deno.test("jetstream - pull error: max_waiting", async () => {
   async function expectError(
     expires: number,
     code: ErrorCode,
-    message?: string,
-  ) {
+  ): Promise<NatsError> {
+    const d = deferred<NatsError>();
     try {
       await js.pull(stream, "me", expires);
     } catch (err) {
+      d.resolve(err);
       assertEquals(err.code, code);
-      if (message) {
-        assertEquals(err.message, message);
-      }
     }
+    return d;
   }
-  await Promise.all([
+  const errors = await Promise.all([
     expectError(
       3000,
       ErrorCode.JetStream408RequestTimeout,
-      "408 request canceled",
     ),
     // this a server bug, it should be a 408
-    expectError(3000, ErrorCode.JetStream408RequestTimeout),
+    expectError(3000, ErrorCode.JetStream409MaxWaitingExceeded),
   ]);
 
   await cleanup(ns, nc);

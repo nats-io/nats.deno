@@ -49,6 +49,7 @@ export enum ErrorCode {
   JetStream404NoMessages = "404",
   JetStream408RequestTimeout = "408",
   JetStream409MaxAckPendingExceeded = "409",
+  JetStream409MaxWaitingExceeded = "409",
   JetStreamNotEnabled = "503",
 
   // emitted by the server

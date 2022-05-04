@@ -104,13 +104,14 @@ export function checkJsErrorCode(
     case 404:
       // 404 for jetstream will provide different messages ensure we
       // keep whatever the server returned
-      return new NatsError(description, "404");
+      return new NatsError(description, ErrorCode.JetStream404NoMessages);
     case 408:
       return new NatsError(description, ErrorCode.JetStream408RequestTimeout);
     case 409:
-      return NatsError.errorForCode(
-        ErrorCode.JetStream409MaxAckPendingExceeded,
-        new Error(description),
+      // the description can be exceeded max waiting or max ack pending
+      return new NatsError(
+        description,
+        ErrorCode.JetStream409MaxWaitingExceeded,
       );
     case 503:
       return NatsError.errorForCode(
