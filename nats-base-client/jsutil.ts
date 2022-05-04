@@ -111,7 +111,7 @@ export function checkJsErrorCode(
       // the description can be exceeded max waiting or max ack pending
       return new NatsError(
         description,
-        ErrorCode.JetStream409MaxWaitingExceeded,
+        ErrorCode.JetStream409,
       );
     case 503:
       return NatsError.errorForCode(

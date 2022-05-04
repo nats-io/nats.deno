@@ -744,7 +744,7 @@ function iterMsgAdapter(
     switch (ne.code) {
       case ErrorCode.JetStream404NoMessages:
       case ErrorCode.JetStream408RequestTimeout:
-      case ErrorCode.JetStream409MaxAckPendingExceeded:
+      case ErrorCode.JetStream409:
         return [null, null];
       default:
         return [ne, null];

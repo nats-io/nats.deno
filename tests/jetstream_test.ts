@@ -74,7 +74,7 @@ function callbackConsume(debug = false): JsMsgCallback {
     if (err) {
       switch (err.code) {
         case ErrorCode.JetStream408RequestTimeout:
-        case ErrorCode.JetStream409MaxAckPendingExceeded:
+        case ErrorCode.JetStream409:
         case ErrorCode.JetStream404NoMessages:
           return;
         default:
@@ -817,7 +817,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
     if (err) {
       switch (err.code) {
         case ErrorCode.JetStream408RequestTimeout:
-        case ErrorCode.JetStream409MaxAckPendingExceeded:
+        case ErrorCode.JetStream409:
         case ErrorCode.JetStream404NoMessages:
           return;
         default:
@@ -3080,7 +3080,7 @@ Deno.test("jetstream - pull error: max_waiting", async () => {
       3000,
       ErrorCode.JetStream408RequestTimeout,
     ),
-    expectError(3000, ErrorCode.JetStream409MaxWaitingExceeded),
+    expectError(3000, ErrorCode.JetStream409),
   ]);
 
   await cleanup(ns, nc);
