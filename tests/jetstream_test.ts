@@ -3075,7 +3075,7 @@ Deno.test("jetstream - pull error: max_waiting", async () => {
     }
     return d;
   }
-  const errors = await Promise.all([
+  await Promise.all([
     expectError(
       3000,
       ErrorCode.JetStream408RequestTimeout,
