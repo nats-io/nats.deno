@@ -22,6 +22,7 @@ import {
   connect,
   credsAuthenticator,
   ErrorCode,
+  Events,
   jwtAuthenticator,
   nkeyAuthenticator,
   Status,
@@ -34,6 +35,16 @@ import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
 import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
+import {
+  createAccount,
+  createOperator,
+  createUser,
+} from "https://raw.githubusercontent.com/nats-io/nkeys.js/main/src/nkeys.ts";
+import {
+  encodeAccount,
+  encodeOperator,
+  encodeUser,
+} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 
 const conf = {
   authorization: {
@@ -523,4 +534,50 @@ Deno.test("auth - creds authenticator validation", () => {
       }
     }
   });
+});
+
+Deno.test("auth - expiration is notified", async () => {
+  const O = createOperator();
+  const A = createAccount();
+
+  const resolver: Record<string, string> = {};
+  resolver[A.getPublicKey()] = await encodeAccount("A", A, {
+    limits: {
+      conn: -1,
+      subs: -1,
+    },
+  }, { signer: O });
+  const conf = {
+    operator: await encodeOperator("O", O),
+    resolver: "MEMORY",
+    "resolver_preload": resolver,
+  };
+
+  const ns = await NatsServer.start(conf, true);
+
+  const U = createUser();
+  const ujwt = await encodeUser("U", U, A, { bearer_token: true }, {
+    exp: Math.round(Date.now() / 1000) + 3,
+  });
+
+  const nc = await connect({
+    port: ns.port,
+    maxReconnectAttempts: -1,
+    authenticator: jwtAuthenticator(ujwt),
+  });
+
+  let authErrors = 0;
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.type === Events.Error && s.data === ErrorCode.AuthenticationExpired
+      ) {
+        authErrors++;
+      }
+    }
+  })().then();
+
+  const err = await nc.closed();
+  assertErrorCode(err!, ErrorCode.AuthenticationExpired);
+  await cleanup(ns);
 });
