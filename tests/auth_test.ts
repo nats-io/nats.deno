@@ -553,7 +553,7 @@ Deno.test("auth - expiration is notified", async () => {
     "resolver_preload": resolver,
   };
 
-  const ns = await NatsServer.start(conf, true);
+  const ns = await NatsServer.start(conf);
 
   const U = createUser();
   const ujwt = await encodeUser("U", U, A, { bearer_token: true }, {
@@ -578,6 +578,7 @@ Deno.test("auth - expiration is notified", async () => {
   })().then();
 
   const err = await nc.closed();
+  assert(authErrors >= 1);
   assertErrorCode(err!, ErrorCode.AuthenticationExpired);
   await cleanup(ns);
 });
