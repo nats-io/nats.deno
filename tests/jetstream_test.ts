@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { NatsServer } from "./helpers/launcher.ts";
 
 import {
   cleanup,
@@ -3102,4 +3103,30 @@ Deno.test("jetstream - pull error: js not enabled", async () => {
 
   await expectError(ErrorCode.JetStreamNotEnabled, 0);
   await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - mirror alternates", async () => {
+  const servers = await NatsServer.jetstreamCluster(3);
+  const nc = await connect({ port: servers[0].port });
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "src", subjects: ["A", "B"] });
+
+  const nc1 = await connect({ port: servers[1].port });
+  const jsm1 = await nc1.jetstreamManager();
+
+  await jsm1.streams.add({
+    name: "mirror",
+    mirror: {
+      name: "src",
+    },
+  });
+
+  const n = await jsm1.streams.find("A");
+  const si = await jsm1.streams.info(n);
+  assertEquals(si.alternates?.length, 2);
+
+  await nc.close();
+  await nc1.close();
+  await NatsServer.stopAll(servers);
 });
