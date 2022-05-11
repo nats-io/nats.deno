@@ -3108,6 +3108,10 @@ Deno.test("jetstream - pull error: js not enabled", async () => {
 Deno.test("jetstream - mirror alternates", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
+  if (await notCompatible(servers[0], nc, "2.8.2")) {
+    await NatsServer.stopAll([servers[1], servers[2]]);
+    return;
+  }
 
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "src", subjects: ["A", "B"] });
