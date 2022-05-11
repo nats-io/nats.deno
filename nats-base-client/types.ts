@@ -434,6 +434,7 @@ export interface ConsumerAPI {
 
 export type StreamInfoRequestOptions = {
   "deleted_details": boolean;
+  "subjects_filter": string;
 };
 
 export interface StreamAPI {
@@ -650,6 +651,8 @@ export interface StreamState {
   deleted: number[];
   lost: LostStreamData;
   "consumer_count": number;
+  num_subjects?: number;
+  subjects?: Record<string, number>;
 }
 
 export interface LostStreamData {
