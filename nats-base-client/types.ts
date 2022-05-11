@@ -546,6 +546,11 @@ export interface ApiPagedRequest {
   offset: number;
 }
 
+export interface StreamAlternate {
+  name: string;
+  cluster: string;
+}
+
 export interface StreamInfo {
   config: StreamConfig;
   created: number; // in ns
@@ -553,6 +558,7 @@ export interface StreamInfo {
   cluster?: ClusterInfo;
   mirror?: StreamSourceInfo;
   sources?: StreamSourceInfo[];
+  alternates?: StreamAlternate[];
 }
 
 export interface StreamConfig extends StreamUpdateConfig {
