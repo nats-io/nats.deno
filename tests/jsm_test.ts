@@ -999,12 +999,23 @@ Deno.test("jsm - stream info subjects", async () => {
   await js.publish(`${name}.a.b`);
   await js.publish(`${name}.a.b.c`);
 
-  const si = await jsm.streams.info(name, { subjects_filter: `>` });
+  let si = await jsm.streams.info(name, { subjects_filter: `>` });
   assertEquals(si.state.num_subjects, 3);
   assert(si.state.subjects);
+  assertEquals(Object.keys(si.state.subjects).length, 3);
   assertEquals(si.state.subjects[`${name}.a`], 1);
   assertEquals(si.state.subjects[`${name}.a.b`], 1);
   assertEquals(si.state.subjects[`${name}.a.b.c`], 1);
+
+  si = await jsm.streams.info(name, { subjects_filter: `${name}.a.>` });
+  assertEquals(si.state.num_subjects, 3);
+  assert(si.state.subjects);
+  assertEquals(Object.keys(si.state.subjects).length, 2);
+  assertEquals(si.state.subjects[`${name}.a.b`], 1);
+  assertEquals(si.state.subjects[`${name}.a.b.c`], 1);
+
+  si = await jsm.streams.info(name);
+  assertEquals(si.state.subjects, undefined);
 
   await cleanup(ns, nc);
 });
