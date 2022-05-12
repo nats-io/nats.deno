@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 The NATS Authors
+ * Copyright 2018-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -339,7 +339,13 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       let maxWait = wait;
       const srv = this.selectServer();
       if (!srv || this.abortReconnect) {
-        throw lastError || NatsError.errorForCode(ErrorCode.ConnectionRefused);
+        if (lastError) {
+          throw lastError;
+        } else if (this.lastError) {
+          throw this.lastError;
+        } else {
+          throw NatsError.errorForCode(ErrorCode.ConnectionRefused);
+        }
       }
       const now = Date.now();
       if (srv.lastConnect === 0 || srv.lastConnect + wait <= now) {

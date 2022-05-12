@@ -45,6 +45,7 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+import { UserPass } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/authenticator.ts";
 
 const conf = {
   authorization: {
@@ -581,4 +582,40 @@ Deno.test("auth - expiration is notified", async () => {
   assert(authErrors >= 1);
   assertErrorCode(err!, ErrorCode.AuthenticationExpired);
   await cleanup(ns);
+});
+
+Deno.test("auth - bad auth is notified", async () => {
+  let ns = await NatsServer.start(conf);
+
+  let count = 0;
+
+  // authenticator that works once
+  const authenticator = (): UserPass => {
+    const pass = count === 0 ? "foobar" : "bad";
+    count++;
+    return { user: "derek", pass };
+  };
+
+  const nc = await connect(
+    { port: ns.port, authenticator, debug: true },
+  );
+  let badAuths = 0;
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.type === Events.Error && s.data === ErrorCode.AuthorizationViolation
+      ) {
+        badAuths++;
+      }
+    }
+  })().then();
+
+  await ns.stop();
+  ns = await ns.restart();
+
+  const err = await nc.closed();
+  assert(badAuths > 1);
+  assertErrorCode(err!, ErrorCode.AuthorizationViolation);
+
+  await ns.stop();
 });
