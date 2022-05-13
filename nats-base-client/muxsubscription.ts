@@ -58,6 +58,33 @@ export class MuxSubscription {
     return null;
   }
 
+  all(): Request[] {
+    return Array.from(this.reqs.values());
+  }
+
+  handleError(isMuxPermissionError: boolean, err?: NatsError): boolean {
+    if (err && err.permissionContext) {
+      if (isMuxPermissionError) {
+        // one or more requests queued but mux cannot process them
+        this.all().forEach((r) => {
+          r.resolver(err, {} as Msg);
+        });
+        return true;
+      }
+      const ctx = err.permissionContext;
+      if (ctx.operation === "publish") {
+        const req = this.all().find((s) => {
+          return s.requestSubject === ctx.subject;
+        });
+        if (req) {
+          req.resolver(err, {} as Msg);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   dispatcher() {
     return (err: NatsError | null, m: Msg) => {
       const token = this.getToken(m);

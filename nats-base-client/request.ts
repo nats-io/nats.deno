@@ -24,13 +24,16 @@ export class Request {
   deferred: Deferred<Msg>;
   timer: Timeout<Msg>;
   ctx: Error;
+  requestSubject: string;
   private mux: MuxSubscription;
 
   constructor(
     mux: MuxSubscription,
+    requestSubject: string,
     opts: RequestOptions = { timeout: 1000 },
   ) {
     this.mux = mux;
+    this.requestSubject = requestSubject;
     this.received = 0;
     this.deferred = deferred();
     this.token = nuid.next();

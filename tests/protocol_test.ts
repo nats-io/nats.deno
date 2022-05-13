@@ -34,7 +34,7 @@ Deno.test("protocol - mux subscription unknown return null", async () => {
   const mux = new MuxSubscription();
   mux.init();
 
-  const r = new Request(mux);
+  const r = new Request(mux, "");
   r.token = "alberto";
   mux.add(r);
   assertEquals(mux.size(), 1);

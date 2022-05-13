@@ -136,7 +136,7 @@ export class JsMsgImpl implements JsMsg {
       if (this.msg.reply) {
         const mi = this.msg as MsgImpl;
         const proto = mi.publisher as unknown as ProtocolHandler;
-        const r = new Request(proto.muxSubscriptions);
+        const r = new Request(proto.muxSubscriptions, this.msg.reply);
         proto.request(r);
         try {
           proto.publish(

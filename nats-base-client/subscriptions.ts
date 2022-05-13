@@ -59,11 +59,7 @@ export class Subscriptions {
   }
 
   all(): (SubscriptionImpl)[] {
-    const buf = [];
-    for (const s of this.subs.values()) {
-      buf.push(s);
-    }
-    return buf;
+    return Array.from(this.subs.values());
   }
 
   cancel(s: SubscriptionImpl): void {
@@ -74,22 +70,28 @@ export class Subscriptions {
   }
 
   handleError(err?: NatsError): boolean {
-    let handled = false;
-    if (err) {
-      const re = /^'Permissions Violation for Subscription to "(\S+)"'/i;
-      const ma = re.exec(err.message);
-      if (ma) {
-        const subj = ma[1];
-        this.subs.forEach((sub) => {
-          if (subj == sub.subject) {
-            sub.callback(err, {} as Msg);
-            sub.close();
-            handled = sub !== this.mux;
-          }
+    if (err && err.permissionContext) {
+      const ctx = err.permissionContext;
+      const subs = this.all();
+      let sub;
+      if (ctx.operation === "subscription") {
+        sub = subs.find((s) => {
+          return s.subject === ctx.subject;
         });
       }
+      if (ctx.operation === "publish") {
+        // we have a no mux subscription
+        sub = subs.find((s) => {
+          return s.requestSubject === ctx.subject;
+        });
+      }
+      if (sub) {
+        sub.callback(err, {} as Msg);
+        sub.close();
+        return sub !== this.mux;
+      }
     }
-    return handled;
+    return false;
   }
 
   close() {

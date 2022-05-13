@@ -37,6 +37,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
   info?: unknown;
   cleanupFn?: (sub: Subscription, info?: unknown) => void;
   closed: Deferred<void>;
+  requestSubject?: string;
 
   constructor(
     protocol: ProtocolHandler,

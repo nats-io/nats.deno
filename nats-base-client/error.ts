@@ -96,6 +96,7 @@ export class NatsError extends Error {
   name: string;
   message: string;
   code: string;
+  permissionContext?: { operation: string; subject: string };
   chainedError?: Error;
   // these are for supporting jetstream
   api_error?: ApiError;

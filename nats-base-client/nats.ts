@@ -173,7 +173,7 @@ export class NatsConnectionImpl implements NatsConnection {
         : createInbox(this.options.inboxPrefix);
       const d = deferred<Msg>();
       const errCtx = new Error();
-      this.subscribe(
+      const sub = this.subscribe(
         inbox,
         {
           max: 1,
@@ -198,10 +198,11 @@ export class NatsConnectionImpl implements NatsConnection {
           },
         },
       );
+      (sub as SubscriptionImpl).requestSubject = subject;
       this.protocol.publish(subject, data, { reply: inbox });
       return d;
     } else {
-      const r = new Request(this.protocol.muxSubscriptions, opts);
+      const r = new Request(this.protocol.muxSubscriptions, subject, opts);
       this.protocol.request(r);
 
       try {
