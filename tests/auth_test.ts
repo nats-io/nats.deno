@@ -20,15 +20,20 @@ import {
 } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 import {
   connect,
+  createInbox,
   credsAuthenticator,
+  Empty,
   ErrorCode,
   Events,
   jwtAuthenticator,
+  NatsConnection,
+  NatsError,
   nkeyAuthenticator,
   Status,
   StringCodec,
   tokenAuthenticator,
   usernamePasswordAuthenticator,
+  UserPass,
 } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
@@ -40,7 +45,6 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { UserPass } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/authenticator.ts";
 
 const conf = {
   authorization: {
@@ -242,7 +246,6 @@ Deno.test("auth - req permissions keep connection", async () => {
   const errStatus = deferred<Status>();
   const _ = (async () => {
     for await (const s of nc.status()) {
-      console.log(s);
       errStatus.resolve(s);
     }
   })();
@@ -251,8 +254,10 @@ Deno.test("auth - req permissions keep connection", async () => {
     async () => {
       await nc.request("bar");
     },
-    Error,
-    ErrorCode.Timeout,
+    (err: Error) => {
+      const ne = err as NatsError;
+      assertEquals(ne.code, ErrorCode.PermissionsViolation);
+    },
   );
 
   const v = await errStatus;
@@ -613,4 +618,303 @@ Deno.test("auth - bad auth is notified", async () => {
   assertErrorCode(err!, ErrorCode.AuthorizationViolation);
 
   await ns.stop();
+});
+
+Deno.test("auth - perm request error", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+        permission: {
+          publish: "r",
+        },
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  });
+
+  const [nc, sc] = await Promise.all([
+    connect(
+      { port: ns.port, user: "a", pass: "b" },
+    ),
+    connect(
+      { port: ns.port, user: "s", pass: "s" },
+    ),
+  ]);
+
+  sc.subscribe("q", {
+    callback: (err, msg) => {
+      if (err) {
+        return;
+      }
+      msg.respond();
+    },
+  });
+
+  const status = deferred<Status>();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.permissionContext?.operation === "publish" &&
+        s.permissionContext?.subject === "q"
+      ) {
+        status.resolve(s);
+      }
+    }
+  })().then();
+
+  const response = deferred<Error>();
+  nc.request("q")
+    .catch((err) => {
+      response.resolve(err);
+    });
+
+  const [r, s] = await Promise.all([response, status]);
+  assertErrorCode(r, ErrorCode.PermissionsViolation);
+  const ne = r as NatsError;
+  assertEquals(ne.permissionContext?.operation, "publish");
+  assertEquals(ne.permissionContext?.subject, "q");
+
+  assertEquals(s.type, Events.Error);
+  assertEquals(s.data, ErrorCode.PermissionsViolation);
+  assertEquals(s.permissionContext?.operation, "publish");
+  assertEquals(s.permissionContext?.subject, "q");
+
+  await cleanup(ns, nc, sc);
+});
+
+Deno.test("auth - perm request error no mux", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+        permission: {
+          publish: "r",
+        },
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  });
+
+  const [nc, sc] = await Promise.all([
+    connect(
+      { port: ns.port, user: "a", pass: "b" },
+    ),
+    connect(
+      { port: ns.port, user: "s", pass: "s" },
+    ),
+  ]);
+
+  sc.subscribe("q", {
+    callback: (err, msg) => {
+      if (err) {
+        return;
+      }
+      msg.respond();
+    },
+  });
+
+  const status = deferred<Status>();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.permissionContext?.operation === "publish" &&
+        s.permissionContext?.subject === "q"
+      ) {
+        status.resolve(s);
+      }
+    }
+  })().then();
+
+  const response = deferred<Error>();
+  nc.request("q", Empty, { noMux: true, timeout: 1000 })
+    .catch((err) => {
+      response.resolve(err);
+    });
+
+  const [r, s] = await Promise.all([response, status]);
+  assertErrorCode(r, ErrorCode.PermissionsViolation);
+  const ne = r as NatsError;
+  assertEquals(ne.permissionContext?.operation, "publish");
+  assertEquals(ne.permissionContext?.subject, "q");
+
+  assertEquals(s.type, Events.Error);
+  assertEquals(s.data, ErrorCode.PermissionsViolation);
+  assertEquals(s.permissionContext?.operation, "publish");
+  assertEquals(s.permissionContext?.subject, "q");
+
+  await cleanup(ns, nc, sc);
+});
+
+Deno.test("auth - perm request error deliver to sub", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+        permission: {
+          publish: "r",
+        },
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  });
+
+  const [nc, sc] = await Promise.all([
+    connect(
+      { port: ns.port, user: "a", pass: "b" },
+    ),
+    connect(
+      { port: ns.port, user: "s", pass: "s" },
+    ),
+  ]);
+
+  sc.subscribe("q", {
+    callback: (err, msg) => {
+      if (err) {
+        return;
+      }
+      msg.respond();
+    },
+  });
+
+  const status = deferred<Status>();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.permissionContext?.operation === "publish" &&
+        s.permissionContext?.subject === "q"
+      ) {
+        status.resolve(s);
+      }
+    }
+  })().then();
+
+  const inbox = createInbox();
+  const sub = nc.subscribe(inbox, {
+    callback: () => {
+    },
+  });
+
+  const response = deferred<Error>();
+  nc.request("q", Empty, { noMux: true, reply: inbox, timeout: 1000 })
+    .catch((err) => {
+      response.resolve(err);
+    });
+
+  const [r, s] = await Promise.all([response, status]);
+  assertErrorCode(r, ErrorCode.PermissionsViolation);
+  const ne = r as NatsError;
+  assertEquals(ne.permissionContext?.operation, "publish");
+  assertEquals(ne.permissionContext?.subject, "q");
+
+  assertEquals(s.type, Events.Error);
+  assertEquals(s.data, ErrorCode.PermissionsViolation);
+  assertEquals(s.permissionContext?.operation, "publish");
+  assertEquals(s.permissionContext?.subject, "q");
+
+  assertEquals(sub.isClosed(), false);
+
+  await cleanup(ns, nc, sc);
+});
+
+Deno.test("auth - mux sub ok", async () => {
+  const conf = {
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+        permission: {
+          subscribe: "r",
+        },
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  };
+  let ns = await NatsServer.start(conf);
+
+  const [nc, sc] = await Promise.all([
+    connect(
+      { port: ns.port, user: "a", pass: "b", maxReconnectAttempts: -1 },
+    ),
+    connect(
+      { port: ns.port, user: "s", pass: "s", maxReconnectAttempts: -1 },
+    ),
+  ]);
+
+  sc.subscribe("q", {
+    callback: (_err, msg) => {
+      msg.respond();
+    },
+  });
+
+  const response = deferred<NatsError>();
+  nc.request("q")
+    .catch((err) => {
+      response.resolve(err);
+    });
+  const ne = await response as NatsError;
+  assertEquals(ne.permissionContext?.operation, "subscription");
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.getMux(), null);
+
+  function reconnected(nc: NatsConnection): Promise<void> {
+    const v = deferred<void>();
+    (async () => {
+      for await (const s of nc.status()) {
+        if (s.type === Events.Reconnect) {
+          v.resolve();
+          break;
+        }
+      }
+    })().then();
+    return v;
+  }
+
+  // restart the server with new permissions, client should be able to request
+  const port = ns.port;
+  await ns.stop();
+  const proms = Promise.all([reconnected(nc), reconnected(sc)]);
+
+  ns = await NatsServer.start({
+    port: port,
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  });
+
+  await proms;
+  await nc.request("q");
+  await cleanup(ns, nc, sc);
 });

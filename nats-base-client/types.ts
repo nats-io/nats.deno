@@ -31,6 +31,7 @@ export enum Events {
 export interface Status {
   type: Events | DebugEvents;
   data: string | ServersChanged | number;
+  permissionContext?: { operation: string; subject: string };
 }
 
 export enum DebugEvents {

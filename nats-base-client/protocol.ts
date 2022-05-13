@@ -386,7 +386,15 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   static toError(s: string) {
     const t = s ? s.toLowerCase() : "";
     if (t.indexOf("permissions violation") !== -1) {
-      return new NatsError(s, ErrorCode.PermissionsViolation);
+      const err = new NatsError(s, ErrorCode.PermissionsViolation);
+      const m = s.match(/(Publish|Subscription) to "(\S+)"/);
+      if (m) {
+        err.permissionContext = {
+          operation: m[1].toLowerCase(),
+          subject: m[2],
+        };
+      }
+      return err;
     } else if (t.indexOf("authorization violation") !== -1) {
       return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
@@ -421,8 +429,20 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
+    let isMuxPermissionError = false;
+    const status: Status = { type: Events.Error, data: err.code };
+    if (err.permissionContext) {
+      status.permissionContext = err.permissionContext;
+      const mux = this.subscriptions.getMux();
+      isMuxPermissionError = mux?.subject === err.permissionContext.subject;
+    }
     this.subscriptions.handleError(err);
-    this.dispatchStatus({ type: Events.Error, data: err.code });
+    this.muxSubscriptions.handleError(isMuxPermissionError, err);
+    if (isMuxPermissionError) {
+      // remove the permission - enable it to be recreated
+      this.subscriptions.setMux(null);
+    }
+    this.dispatchStatus(status);
     await this.handleError(err);
   }
 
