@@ -17,12 +17,13 @@ import type { NatsError } from "./error.ts";
 import type { Msg } from "./types.ts";
 
 export class Subscriptions {
-  mux!: SubscriptionImpl;
+  mux: SubscriptionImpl | null;
   subs: Map<number, SubscriptionImpl>;
   sidCounter: number;
 
   constructor() {
     this.sidCounter = 0;
+    this.mux = null;
     this.subs = new Map<number, SubscriptionImpl>();
   }
 
@@ -37,7 +38,7 @@ export class Subscriptions {
     return s;
   }
 
-  setMux(s: SubscriptionImpl): SubscriptionImpl {
+  setMux(s: SubscriptionImpl | null): SubscriptionImpl | null {
     this.mux = s;
     return s;
   }

@@ -26,6 +26,7 @@ import {
   ErrorCode,
   Events,
   jwtAuthenticator,
+  NatsConnection,
   NatsError,
   nkeyAuthenticator,
   Status,
@@ -835,7 +836,7 @@ Deno.test("auth - perm request error deliver to sub", async () => {
 });
 
 Deno.test("auth - mux sub ok", async () => {
-  const ns = await NatsServer.start({
+  const conf = {
     authorization: {
       users: [{
         user: "a",
@@ -851,14 +852,15 @@ Deno.test("auth - mux sub ok", async () => {
         },
       }],
     },
-  });
+  };
+  let ns = await NatsServer.start(conf);
 
   const [nc, sc] = await Promise.all([
     connect(
-      { port: ns.port, user: "a", pass: "b" },
+      { port: ns.port, user: "a", pass: "b", maxReconnectAttempts: -1 },
     ),
     connect(
-      { port: ns.port, user: "s", pass: "s" },
+      { port: ns.port, user: "s", pass: "s", maxReconnectAttempts: -1 },
     ),
   ]);
 
@@ -875,5 +877,44 @@ Deno.test("auth - mux sub ok", async () => {
     });
   const ne = await response as NatsError;
   assertEquals(ne.permissionContext?.operation, "subscription");
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.getMux(), null);
+
+  function reconnected(nc: NatsConnection): Promise<void> {
+    const v = deferred<void>();
+    (async () => {
+      for await (const s of nc.status()) {
+        if (s.type === Events.Reconnect) {
+          v.resolve();
+          break;
+        }
+      }
+    })().then();
+    return v;
+  }
+
+  // restart the server with new permissions, client should be able to request
+  const port = ns.port;
+  await ns.stop();
+  const proms = Promise.all([reconnected(nc), reconnected(sc)]);
+
+  ns = await NatsServer.start({
+    port: port,
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+      }, {
+        user: "s",
+        password: "s",
+        permission: {
+          subscribe: "q",
+        },
+      }],
+    },
+  });
+
+  await proms;
+  await nc.request("q");
   await cleanup(ns, nc, sc);
 });

@@ -433,11 +433,15 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const status: Status = { type: Events.Error, data: err.code };
     if (err.permissionContext) {
       status.permissionContext = err.permissionContext;
-      isMuxPermissionError = this.subscriptions.mux &&
-        this.subscriptions.mux.subject === err.permissionContext.subject;
+      const mux = this.subscriptions.getMux();
+      isMuxPermissionError = mux?.subject === err.permissionContext.subject;
     }
     this.subscriptions.handleError(err);
     this.muxSubscriptions.handleError(isMuxPermissionError, err);
+    if (isMuxPermissionError) {
+      // remove the permission - enable it to be recreated
+      this.subscriptions.setMux(null);
+    }
     this.dispatchStatus(status);
     await this.handleError(err);
   }
