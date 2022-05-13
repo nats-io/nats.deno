@@ -36,11 +36,6 @@ import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 import {
-  createAccount,
-  createOperator,
-  createUser,
-} from "https://raw.githubusercontent.com/nats-io/nkeys.js/main/src/nkeys.ts";
-import {
   encodeAccount,
   encodeOperator,
   encodeUser,
@@ -538,8 +533,8 @@ Deno.test("auth - creds authenticator validation", () => {
 });
 
 Deno.test("auth - expiration is notified", async () => {
-  const O = createOperator();
-  const A = createAccount();
+  const O = nkeys.createOperator();
+  const A = nkeys.createAccount();
 
   const resolver: Record<string, string> = {};
   resolver[A.getPublicKey()] = await encodeAccount("A", A, {
@@ -556,7 +551,7 @@ Deno.test("auth - expiration is notified", async () => {
 
   const ns = await NatsServer.start(conf);
 
-  const U = createUser();
+  const U = nkeys.createUser();
   const ujwt = await encodeUser("U", U, A, { bearer_token: true }, {
     exp: Math.round(Date.now() / 1000) + 3,
   });
