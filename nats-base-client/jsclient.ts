@@ -444,7 +444,12 @@ export class JetStreamClientImpl extends BaseApiClient
           ) {
             throw new Error("subject does not match consumer");
           }
+          // check if server returned push_bound, but there's no qn
           const qn = jsi.config.deliver_group ?? "";
+          if (qn === "" && info.push_bound === true) {
+            throw new Error(`duplicate subscription`);
+          }
+
           const rqn = info.config.deliver_group ?? "";
           if (qn !== rqn) {
             if (rqn === "") {
