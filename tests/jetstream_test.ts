@@ -3193,3 +3193,39 @@ Deno.test("jetstream - backoff", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - push bound", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_subject: "here",
+  });
+
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.deliverTo("here");
+  opts.callback((_err, msg) => {
+    if (msg) {
+      msg.ack();
+    }
+  });
+  const js = nc.jetstream();
+  await js.subscribe(subj, opts);
+
+  const nc2 = await connect({ port: ns.port });
+  const js2 = nc2.jetstream();
+  await assertRejects(
+    async () => {
+      await js2.subscribe(subj, opts);
+    },
+    Error,
+    "duplicate subscription",
+  );
+
+  await cleanup(ns, nc, nc2);
+});
