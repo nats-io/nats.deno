@@ -39,8 +39,6 @@ import {
   JsMsg,
   JsMsgCallback,
   JSONCodec,
-  millis,
-  Nanos,
   nanos,
   NatsConnectionImpl,
   NatsError,
@@ -51,7 +49,6 @@ import {
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
-  assertArrayIncludes,
   assertEquals,
   assertRejects,
   assertThrows,

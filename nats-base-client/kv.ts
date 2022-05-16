@@ -35,6 +35,7 @@ import {
   KvPutOptions,
   KvRemove,
   KvStatus,
+  MsgRequest,
   PurgeOpts,
   PurgeResponse,
   RetentionPolicy,
@@ -367,13 +368,20 @@ export class Bucket implements KV, KvRemove {
     return pa.seq;
   }
 
-  async get(k: string): Promise<KvEntry | null> {
+  async get(
+    k: string,
+    opts: { revision: number } = { revision: 0 },
+  ): Promise<KvEntry | null> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
+
+    let arg: MsgRequest = { last_by_subj: this.fullKeyName(ek) };
+    if (opts.revision !== 0) {
+      arg = { seq: opts.revision };
+    }
+
     try {
-      const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-        last_by_subj: this.fullKeyName(ek),
-      });
+      const sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
       return this.smToEntry(k, sm);
     } catch (err) {
       if (err.message === "no message found") {
