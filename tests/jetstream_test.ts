@@ -39,6 +39,8 @@ import {
   JsMsg,
   JsMsgCallback,
   JSONCodec,
+  millis,
+  Nanos,
   nanos,
   NatsConnectionImpl,
   NatsError,
@@ -49,6 +51,7 @@ import {
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
+  assertArrayIncludes,
   assertEquals,
   assertRejects,
   assertThrows,
@@ -3133,6 +3136,62 @@ Deno.test("jetstream - mirror alternates", async () => {
   await nc.close();
   await nc1.close();
   await NatsServer.stopAll(servers);
+});
+
+Deno.test("jetstream - backoff", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.7.2")) {
+    return;
+  }
+
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  const backoff = [nanos(250), nanos(1000), nanos(3000)];
+  const ci = await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    max_deliver: 4,
+    deliver_subject: "here",
+    backoff,
+  });
+
+  assert(ci.config.backoff);
+  assertEquals(ci.config.backoff[0], backoff[0]);
+  assertEquals(ci.config.backoff[1], backoff[1]);
+  assertEquals(ci.config.backoff[2], backoff[2]);
+
+  const js = nc.jetstream();
+  await js.publish(subj);
+
+  const opts = consumerOpts();
+  opts.bind(stream, "me");
+  opts.manualAck();
+
+  const arrive: number[] = [];
+  let start = 0;
+  const sub = await js.subscribe(subj, opts);
+  await (async () => {
+    for await (const m of sub) {
+      if (start === 0) {
+        start = Date.now();
+      }
+      arrive.push(Date.now());
+      if (m.info.redeliveryCount === 4) {
+        break;
+      }
+    }
+  })();
+
+  const delta = arrive.map((v) => {
+    return v - start;
+  });
+
+  assert(delta[1] > 250 && delta[1] < 1000);
+  assert(delta[2] > 1250 && delta[2] < 1500);
+  assert(delta[3] > 4250 && delta[2] < 4500);
+
+  await cleanup(ns, nc);
 });
 
 Deno.test("jetstream - push bound", async () => {
