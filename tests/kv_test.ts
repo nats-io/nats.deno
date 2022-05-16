@@ -1279,13 +1279,10 @@ Deno.test("kv - get revision", async () => {
   const js = nc.jetstream();
   const sc = StringCodec();
 
-  const b = await js.views.kv("a", { history: 3 }) as Bucket;
-  await b.put("A", sc.encode("a"));
-  await b.put("A", sc.encode("b"));
-  await b.put("A", sc.encode("c"));
+  const b = await js.views.kv(nuid.next(), { history: 3 }) as Bucket;
 
-  async function check(value: string | null, revision = 0) {
-    const e = await b.get("A", { revision });
+  async function check(key: string, value: string | null, revision = 0) {
+    const e = await b.get(key, { revision });
     if (value === null) {
       assertEquals(e, null);
     } else {
@@ -1293,13 +1290,20 @@ Deno.test("kv - get revision", async () => {
     }
   }
 
-  await check("c");
-  await check("a", 1);
-  await check("b", 2);
+  await b.put("A", sc.encode("a"));
+  await b.put("A", sc.encode("b"));
+  await b.put("A", sc.encode("c"));
+
+  // expect null, as sequence 1, holds "A"
+  await check("B", null, 1);
+
+  await check("A", "c");
+  await check("A", "a", 1);
+  await check("A", "b", 2);
 
   await b.put("A", sc.encode("d"));
-  await check("d");
-  await check(null, 1);
+  await check("A", "d");
+  await check("A", null, 1);
 
   await cleanup(ns, nc);
 });
