@@ -50,7 +50,7 @@ import {
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
-import { consumerOpts } from "./mod.ts";
+import { consumerOpts, deferred } from "./mod.ts";
 import { compare, parseSemVer } from "./semver.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
@@ -401,6 +401,43 @@ export class Bucket implements KV, KvRemove {
 
   delete(k: string): Promise<void> {
     return this._deleteOrPurge(k, "DEL");
+  }
+
+  async purgeDeletes(
+    olderMillis: number = 30 * 60 * 1000,
+  ): Promise<PurgeResponse> {
+    const done = deferred();
+    const buf: KvEntry[] = [];
+    const i = await this.watch({
+      key: ">",
+      initializedFn: () => {
+        done.resolve();
+      },
+    });
+    (async () => {
+      for await (const e of i) {
+        if (e.operation === "DEL" || e.operation === "PURGE") {
+          buf.push(e);
+        }
+      }
+    })().then();
+    await done;
+    i.stop();
+    const min = Date.now() - olderMillis;
+    const proms = buf.map((e) => {
+      const subj = this.subjectForKey(e.key);
+      if (e.created.getTime() >= min) {
+        return this.jsm.streams.purge(this.stream, { filter: subj, keep: 1 });
+      } else {
+        return this.jsm.streams.purge(this.stream, { filter: subj, keep: 0 });
+      }
+    });
+    const purged = await Promise.all(proms);
+    purged.unshift({ success: true, purged: 0 });
+    return purged.reduce((pv: PurgeResponse, cv: PurgeResponse) => {
+      pv.purged += cv.purged;
+      return pv;
+    });
   }
 
   async _deleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
