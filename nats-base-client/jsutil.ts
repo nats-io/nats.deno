@@ -62,7 +62,7 @@ export function nanos(millis: number): Nanos {
 }
 
 export function millis(ns: Nanos) {
-  return ns / 1000000;
+  return Math.floor(ns / 1000000);
 }
 
 export function isFlowControlMsg(msg: Msg): boolean {

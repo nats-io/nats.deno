@@ -820,6 +820,7 @@ export interface ConsumerUpdateConfig {
   "max_batch"?: number;
   "max_expires"?: Nanos;
   "inactive_threshold"?: Nanos;
+  "backoff"?: Nanos[];
 }
 
 export interface Consumer {
