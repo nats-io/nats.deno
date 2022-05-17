@@ -923,3 +923,32 @@ Deno.test("basics - port and server are mutually exclusive", async () => {
     undefined,
   );
 });
+
+Deno.test("basics - rtt", async () => {
+  const { ns, nc } = await setup({}, {
+    maxReconnectAttempts: 5,
+    reconnectTimeWait: 250,
+  });
+  const rtt = await nc.rtt();
+  assert(rtt > 0);
+
+  await ns.stop();
+  await delay(500);
+  await assertRejects(
+    async () => {
+      await nc.rtt();
+    },
+    Error,
+    ErrorCode.Disconnect,
+  );
+
+  await nc.closed();
+
+  await assertRejects(
+    async () => {
+      await nc.rtt();
+    },
+    Error,
+    ErrorCode.ConnectionClosed,
+  );
+});

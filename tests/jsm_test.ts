@@ -28,8 +28,10 @@ import {
   ErrorCode,
   headers,
   JSONCodec,
+  jwtAuthenticator,
   nanos,
   NatsError,
+  nkeys,
   nuid,
   StreamConfig,
   StreamInfo,
@@ -43,8 +45,17 @@ import {
   setup,
 } from "./jstest_util.ts";
 import { connect } from "../src/mod.ts";
-import { assertThrowsAsyncErrorCode, notCompatible } from "./helpers/mod.ts";
+import {
+  assertThrowsAsyncErrorCode,
+  NatsServer,
+  notCompatible,
+} from "./helpers/mod.ts";
 import { validateName } from "../nats-base-client/jsutil.ts";
+import {
+  encodeAccount,
+  encodeOperator,
+  encodeUser,
+} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1016,6 +1027,61 @@ Deno.test("jsm - stream info subjects", async () => {
 
   si = await jsm.streams.info(name);
   assertEquals(si.state.subjects, undefined);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - account limits", async () => {
+  const O = nkeys.createOperator();
+  const SYS = nkeys.createAccount();
+  const A = nkeys.createAccount();
+
+  const resolver: Record<string, string> = {};
+  resolver[A.getPublicKey()] = await encodeAccount("A", A, {
+    limits: {
+      conn: -1,
+      subs: -1,
+      tiered_limits: {
+        R1: {
+          disk_storage: 1024 * 1024,
+          consumer: -1,
+          streams: -1,
+        },
+      },
+    },
+  }, { signer: O });
+  resolver[SYS.getPublicKey()] = await encodeAccount("SYS", SYS, {
+    limits: {
+      conn: -1,
+      subs: -1,
+    },
+  }, { signer: O });
+
+  const conf = {
+    operator: await encodeOperator("O", O, {
+      system_account: SYS.getPublicKey(),
+    }),
+    resolver: "MEMORY",
+    "resolver_preload": resolver,
+  };
+
+  const ns = await NatsServer.start(jetstreamServerConf(conf, true), true);
+
+  const U = nkeys.createUser();
+  const ujwt = await encodeUser("U", U, A, { bearer_token: true });
+
+  const nc = await connect({
+    port: ns.port,
+    maxReconnectAttempts: -1,
+    authenticator: jwtAuthenticator(ujwt),
+  });
+
+  const jsm = await nc.jetstreamManager();
+
+  const ai = await jsm.getAccountInfo();
+  assertEquals(ai.tiers?.R1?.limits.max_storage, 1024 * 1024);
+  assertEquals(ai.tiers?.R1?.limits.max_consumers, -1);
+  assertEquals(ai.tiers?.R1?.limits.max_streams, -1);
 
   await cleanup(ns, nc);
 });
