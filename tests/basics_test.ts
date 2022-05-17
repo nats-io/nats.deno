@@ -44,6 +44,7 @@ import {
 import {
   deferred,
   delay,
+  headers,
   isIP,
   NatsConnectionImpl,
   SubscriptionImpl,
@@ -445,6 +446,50 @@ Deno.test("basics - request with custom subject", async () => {
     const nerr = err as NatsError;
     assertEquals(ErrorCode.InvalidOption, nerr.code);
   }
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request with headers", async () => {
+  const { ns, nc } = await setup();
+  const sc = StringCodec();
+  const s = createInbox();
+  const sub = nc.subscribe(s);
+  (async () => {
+    for await (const m of sub) {
+      const headerContent = m.headers?.get("test-header");
+      m.respond(sc.encode(`header content: ${headerContent}`));
+    }
+  })().then();
+  const requestHeaders = headers();
+  requestHeaders.append("test-header", "Hello, world!");
+  const msg = await nc.request(s, Empty, {
+    headers: requestHeaders,
+    timeout: 5000,
+  });
+  assertEquals(sc.decode(msg.data), "header content: Hello, world!");
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request with headers and custom subject", async () => {
+  const { ns, nc } = await setup();
+  const sc = StringCodec();
+  const s = createInbox();
+  const sub = nc.subscribe(s);
+  (async () => {
+    for await (const m of sub) {
+      const headerContent = m.headers?.get("test-header");
+      m.respond(sc.encode(`header content: ${headerContent}`));
+    }
+  })().then();
+  const requestHeaders = headers();
+  requestHeaders.append("test-header", "Hello, world!");
+  const msg = await nc.request(s, Empty, {
+    headers: requestHeaders,
+    timeout: 5000,
+    reply: "reply-subject",
+    noMux: true,
+  });
+  assertEquals(sc.decode(msg.data), "header content: Hello, world!");
   await cleanup(ns, nc);
 });
 
