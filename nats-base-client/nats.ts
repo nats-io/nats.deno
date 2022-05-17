@@ -199,7 +199,10 @@ export class NatsConnectionImpl implements NatsConnection {
         },
       );
       (sub as SubscriptionImpl).requestSubject = subject;
-      this.protocol.publish(subject, data, { reply: inbox });
+      this.protocol.publish(subject, data, {
+        reply: inbox,
+        headers: opts.headers,
+      });
       return d;
     } else {
       const r = new Request(this.protocol.muxSubscriptions, subject, opts);
