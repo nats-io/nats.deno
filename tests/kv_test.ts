@@ -1307,3 +1307,31 @@ Deno.test("kv - get revision", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - purge deletes", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a") as Bucket;
+
+  // keep the marker if delete is younger
+  await b.put("a", Empty);
+  await b.put("b", Empty);
+  await b.put("c", Empty);
+  await b.delete("a");
+  await b.delete("c");
+  await delay(1000);
+  await b.delete("b");
+
+  const pr = await b.purgeDeletes(700);
+  assertEquals(pr.purged, 2);
+  assertEquals(await b.get("a"), null);
+  assertEquals(await b.get("c"), null);
+
+  const e = await b.get("b");
+  assertEquals(e?.operation, "DEL");
+
+  await cleanup(ns, nc);
+});
