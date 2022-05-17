@@ -35,6 +35,7 @@ import {
   KvPutOptions,
   KvRemove,
   KvStatus,
+  MsgRequest,
   PurgeOpts,
   PurgeResponse,
   RetentionPolicy,
@@ -311,10 +312,10 @@ export class Bucket implements KV, KvRemove {
     return data.length;
   }
 
-  smToEntry(key: string, sm: StoredMsg): KvEntry {
+  smToEntry(sm: StoredMsg): KvEntry {
     return {
       bucket: this.bucket,
-      key: key,
+      key: sm.subject.substring(this.prefixLen),
       value: sm.data,
       delta: 0,
       created: sm.time,
@@ -324,7 +325,7 @@ export class Bucket implements KV, KvRemove {
     };
   }
 
-  jmToEntry(_k: string, jm: JsMsg): KvEntry {
+  jmToEntry(jm: JsMsg): KvEntry {
     const key = this.decodeKey(jm.subject.substring(this.prefixLen));
     return {
       bucket: this.bucket,
@@ -367,14 +368,25 @@ export class Bucket implements KV, KvRemove {
     return pa.seq;
   }
 
-  async get(k: string): Promise<KvEntry | null> {
+  async get(
+    k: string,
+    opts?: { revision: number },
+  ): Promise<KvEntry | null> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
+
+    let arg: MsgRequest = { last_by_subj: this.fullKeyName(ek) };
+    if (opts && opts.revision > 0) {
+      arg = { seq: opts.revision };
+    }
+
     try {
-      const sm = await this.jsm.streams.getMessage(this.bucketName(), {
-        last_by_subj: this.fullKeyName(ek),
-      });
-      return this.smToEntry(k, sm);
+      const sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
+      const ke = this.smToEntry(sm);
+      if (ke.key !== ek) {
+        return null;
+      }
+      return ke;
     } catch (err) {
       if (err.message === "no message found") {
         return null;
@@ -468,7 +480,7 @@ export class Bucket implements KV, KvRemove {
         return;
       }
       if (jm) {
-        const e = this.jmToEntry(k, jm);
+        const e = this.jmToEntry(jm);
         qi.push(e);
         qi.received++;
         //@ts-ignore - function will be removed
@@ -545,7 +557,7 @@ export class Bucket implements KV, KvRemove {
         return;
       }
       if (jm) {
-        const e = this.jmToEntry(k, jm);
+        const e = this.jmToEntry(jm);
         qi.push(e);
         qi.received++;
 

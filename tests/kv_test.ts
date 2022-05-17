@@ -1271,3 +1271,39 @@ Deno.test("kv - watch init callback exceptions terminate the iterator", async ()
   assertEquals(err.message, "crash");
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - get revision", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+  const sc = StringCodec();
+
+  const b = await js.views.kv(nuid.next(), { history: 3 }) as Bucket;
+
+  async function check(key: string, value: string | null, revision = 0) {
+    const e = await b.get(key, { revision });
+    if (value === null) {
+      assertEquals(e, null);
+    } else {
+      assertEquals(sc.decode(e!.value), value);
+    }
+  }
+
+  await b.put("A", sc.encode("a"));
+  await b.put("A", sc.encode("b"));
+  await b.put("A", sc.encode("c"));
+
+  // expect null, as sequence 1, holds "A"
+  await check("B", null, 1);
+
+  await check("A", "c");
+  await check("A", "a", 1);
+  await check("A", "b", 2);
+
+  await b.put("A", sc.encode("d"));
+  await check("A", "d");
+  await check("A", null, 1);
+
+  await cleanup(ns, nc);
+});
