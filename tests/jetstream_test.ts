@@ -3231,7 +3231,7 @@ Deno.test("jetstream - detailed errors", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
 
-  await assertRejects(async () => {
+  await assertRejects(() => {
     return jsm.streams.add({
       name: "test",
       num_replicas: 3,
