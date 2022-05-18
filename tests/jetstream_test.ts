@@ -3226,3 +3226,31 @@ Deno.test("jetstream - push bound", async () => {
 
   await cleanup(ns, nc, nc2);
 });
+
+Deno.test("jetstream - detailed errors", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+
+  await assertRejects(async () => {
+    return jsm.streams.add({
+      name: "test",
+      num_replicas: 3,
+      subjects: ["foo"],
+    });
+  }, (err: Error) => {
+    const ne = err as NatsError;
+    assert(ne.api_error);
+    assertEquals(
+      ne.message,
+      "replicas > 1 not supported in non-clustered mode",
+    );
+    assertEquals(
+      ne.api_error.description,
+      "replicas > 1 not supported in non-clustered mode",
+    );
+    assertEquals(ne.api_error.code, 500);
+    assertEquals(ne.api_error.err_code, 10074);
+  });
+
+  await cleanup(ns, nc);
+});

@@ -78,6 +78,7 @@ export interface NatsConnection {
 
   jetstreamManager(opts?: JetStreamOptions): Promise<JetStreamManager>;
   jetstream(opts?: JetStreamOptions): JetStreamClient;
+  rtt(): Promise<number>;
 }
 
 export interface ConnectionOptions {
@@ -770,14 +771,34 @@ export interface MsgDeleteRequest extends SeqMsgRequest {
   "no_erase"?: boolean;
 }
 
-export interface JetStreamAccountStats {
+export interface AccountLimits {
+  "max_memory": number;
+  "max_storage": number;
+  "max_streams": number;
+  "max_consumers": number;
+  "memory_max_stream_bytes": number;
+  "storage_max_stream_bytes": number;
+  "max_bytes_required": number;
+}
+
+export interface JetStreamUsage {
   memory: number;
   storage: number;
   streams: number;
   consumers: number;
-  api: JetStreamApiStats;
+}
+
+export interface JetStreamUsageAccountLimits extends JetStreamUsage {
   limits: AccountLimits;
+}
+
+export interface JetStreamAccountStats extends JetStreamUsageAccountLimits {
+  api: JetStreamApiStats;
   domain?: string;
+  tiers?: {
+    R1?: JetStreamUsageAccountLimits;
+    R3?: JetStreamUsageAccountLimits;
+  };
 }
 
 export interface JetStreamApiStats {
@@ -787,13 +808,6 @@ export interface JetStreamApiStats {
 
 export interface AccountInfoResponse
   extends ApiResponse, JetStreamAccountStats {}
-
-export interface AccountLimits {
-  "max_memory": number;
-  "max_storage": number;
-  "max_streams": number;
-  "max_consumers": number;
-}
 
 export interface ConsumerConfig extends ConsumerUpdateConfig {
   "ack_policy": AckPolicy;

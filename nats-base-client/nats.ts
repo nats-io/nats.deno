@@ -315,4 +315,13 @@ export class NatsConnectionImpl implements NatsConnection {
     const info = this.info;
     return info ? parseSemVer(info.version) : undefined;
   }
+
+  async rtt(): Promise<number> {
+    if (!this.protocol._closed && !this.protocol.connected) {
+      throw NatsError.errorForCode(ErrorCode.Disconnect);
+    }
+    const start = Date.now();
+    await this.flush();
+    return Date.now() - start;
+  }
 }
