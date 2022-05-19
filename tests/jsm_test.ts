@@ -1065,7 +1065,7 @@ Deno.test("jsm - account limits", async () => {
     "resolver_preload": resolver,
   };
 
-  const ns = await NatsServer.start(jetstreamServerConf(conf, true), true);
+  const ns = await NatsServer.start(jetstreamServerConf(conf, true));
 
   const U = nkeys.createUser();
   const ujwt = await encodeUser("U", U, A, { bearer_token: true });
