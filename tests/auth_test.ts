@@ -918,3 +918,54 @@ Deno.test("auth - mux sub ok", async () => {
   await nc.request("q");
   await cleanup(ns, nc, sc);
 });
+
+Deno.test("auth - perm sub iterator error", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "b",
+        permission: {
+          subscribe: "s",
+        },
+      }],
+    },
+  });
+
+  const nc = await connect({ port: ns.port, user: "a", pass: "b" });
+
+  const status = deferred<Status>();
+  (async () => {
+    for await (const s of nc.status()) {
+      console.log(s);
+      if (
+        s.permissionContext?.operation === "subscription" &&
+        s.permissionContext?.subject === "q"
+      ) {
+        status.resolve(s);
+      }
+    }
+  })().then();
+
+  const sub = nc.subscribe("q");
+  const iterReject = deferred<NatsError>();
+  (async () => {
+    for await (const m of sub) {
+      // ignored
+    }
+  })().catch((err) => {
+    iterReject.resolve(err as NatsError);
+  });
+
+  const [s, i] = await Promise.all([status, iterReject]);
+  assertEquals(s.type, Events.Error);
+  assertEquals(s.data, ErrorCode.PermissionsViolation);
+  assertEquals(s.permissionContext?.operation, "subscription");
+  assertEquals(s.permissionContext?.subject, "q");
+
+  assertEquals(i.code, ErrorCode.PermissionsViolation);
+  assertEquals(i.permissionContext?.operation, "subscription");
+  assertEquals(i.permissionContext?.subject, "q");
+
+  await cleanup(ns, nc);
+});
