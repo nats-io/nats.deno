@@ -110,7 +110,8 @@ export type { PH } from "./heartbeats.ts";
 export { MuxSubscription } from "./muxsubscription.ts";
 export { DataBuffer } from "./databuffer.ts";
 export { checkOptions, checkUnsupportedOption } from "./options.ts";
-export { Request } from "./request.ts";
+export type { Request } from "./request.ts";
+export { RequestOne } from "./request.ts";
 export type {
   Auth,
   Authenticator,

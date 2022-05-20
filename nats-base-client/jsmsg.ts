@@ -25,7 +25,7 @@ import { DataBuffer } from "./databuffer.ts";
 import { JSONCodec, StringCodec } from "./codec.ts";
 import { MsgImpl } from "./msg.ts";
 import { ProtocolHandler } from "./protocol.ts";
-import { Request } from "./request.ts";
+import { RequestOne } from "./request.ts";
 import { nanos } from "./jsutil.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
@@ -136,7 +136,7 @@ export class JsMsgImpl implements JsMsg {
       if (this.msg.reply) {
         const mi = this.msg as MsgImpl;
         const proto = mi.publisher as unknown as ProtocolHandler;
-        const r = new Request(proto.muxSubscriptions, this.msg.reply);
+        const r = new RequestOne(proto.muxSubscriptions, this.msg.reply);
         proto.request(r);
         try {
           proto.publish(

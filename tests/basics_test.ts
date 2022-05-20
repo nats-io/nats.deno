@@ -50,6 +50,7 @@ import {
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
+import { RequestStrategy } from "../nats-base-client/types.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -951,4 +952,213 @@ Deno.test("basics - rtt", async () => {
     Error,
     ErrorCode.ConnectionClosed,
   );
+});
+
+Deno.test("basics - request many count", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      for (let i = 0; i < 5; i++) {
+        msg.respond();
+      }
+    },
+  });
+
+  const lock = Lock(5, 2000);
+
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.Count,
+    maxWait: 2000,
+    maxMessages: 5,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    lock.unlock();
+  }
+  await lock;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many jitter", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      for (let i = 0; i < 10; i++) {
+        msg.respond();
+      }
+    },
+  });
+
+  let count = 0;
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.JitterTimer,
+    maxWait: 5000,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    count++;
+  }
+  const time = Date.now() - start;
+  assert(500 > time);
+  assertEquals(count, 10);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many sentinel", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  const sc = StringCodec();
+  const payload = sc.encode("hello");
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      for (let i = 0; i < 10; i++) {
+        msg.respond(payload);
+      }
+      msg.respond();
+    },
+  });
+
+  let count = 0;
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.SentinelMsg,
+    maxWait: 2000,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    count++;
+  }
+  const time = Date.now() - start;
+  assert(500 > time);
+  assertEquals(count, 11);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many sentinel - partial response", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  const sc = StringCodec();
+  const payload = sc.encode("hello");
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      for (let i = 0; i < 10; i++) {
+        msg.respond(payload);
+      }
+    },
+  });
+
+  let count = 0;
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.SentinelMsg,
+    maxWait: 2000,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    count++;
+  }
+  const time = Date.now() - start;
+  assert(time >= 2000);
+  assertEquals(count, 10);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many wait for timer - no respone", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    callback: () => {
+      // ignore it
+    },
+  });
+
+  let count = 0;
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.Timer,
+    maxWait: 2000,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    count++;
+  }
+  const time = Date.now() - start;
+  assert(time >= 2000);
+  assertEquals(count, 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many waits for timer late response", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  nc.subscribe(subj, {
+    callback: async (_err, msg) => {
+      await delay(1750);
+      msg.respond();
+    },
+  });
+
+  let count = 0;
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.Timer,
+    maxWait: 2000,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+    count++;
+  }
+  const time = Date.now() - start;
+  assert(time >= 2000);
+  assertEquals(count, 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - request many stops on error", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.Timer,
+    maxWait: 2000,
+  });
+  const d = deferred<Error>();
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      d.resolve(mer);
+    }
+  }
+  const err = await d;
+  assertErrorCode(err, ErrorCode.NoResponders);
+  await cleanup(ns, nc);
 });
