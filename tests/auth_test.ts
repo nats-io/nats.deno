@@ -949,7 +949,7 @@ Deno.test("auth - perm sub iterator error", async () => {
   const sub = nc.subscribe("q");
   const iterReject = deferred<NatsError>();
   (async () => {
-    for await (const m of sub) {
+    for await (const _m of sub) {
       // ignored
     }
   })().catch((err) => {

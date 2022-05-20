@@ -26,7 +26,9 @@ import {
   Msg,
   NatsConnection,
   PublishOptions,
+  RequestManyOptions,
   RequestOptions,
+  RequestStrategy,
   ServerInfo,
   Stats,
   Status,
@@ -39,7 +41,11 @@ import { parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { Request } from "./request.ts";
+import {
+  RequestMany,
+  RequestManyOptionsInternal,
+  RequestOne,
+} from "./request.ts";
 import { isRequestError } from "./msg.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
@@ -144,6 +150,76 @@ export class NatsConnectionImpl implements NatsConnection {
     this.protocol.resub(si, subject);
   }
 
+  // possibilities are:
+  // stop on error or any non-100 status
+  // AND:
+  // - wait for timer
+  // - wait for n messages or timer
+  // - wait for unknown messages, done when empty or reset timer expires (with possible alt wait)
+  // - wait for unknown messages, done when an empty payload is received or timer expires (with possible alt wait)
+  requestMany(
+    subject: string,
+    data: Uint8Array = Empty,
+    opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
+  ): Promise<QueuedIterator<Msg | Error>> {
+    try {
+      this._check(subject, true, true);
+    } catch (err) {
+      return Promise.reject(err);
+    }
+
+    opts.strategy = opts.strategy || RequestStrategy.Timer;
+    opts.maxWait = opts.maxWait || 1000;
+    if (opts.maxWait < 1) {
+      return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
+    }
+
+    const qi = new QueuedIteratorImpl<Msg | Error>();
+    const stop = () => {
+      qi.stop();
+    };
+
+    const callback = (err: Error | null, msg: Msg | null) => {
+      if (err || msg === null) {
+        // FIXME: the stop function should not require commenting
+        if (err !== null) {
+          qi.push(err);
+        }
+        //@ts-ignore: stop function after consuming
+        qi.push(stop);
+      } else {
+        qi.push(msg);
+      }
+    };
+
+    const rmo = opts as RequestManyOptionsInternal;
+    rmo.callback = callback;
+
+    qi.iterClosed.then(() => {
+      r.cancel();
+    }).catch((err) => {
+      r.cancel(err);
+    });
+
+    const r = new RequestMany(this.protocol.muxSubscriptions, subject, rmo);
+    this.protocol.request(r);
+
+    try {
+      this.publish(
+        subject,
+        data,
+        {
+          reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
+          headers: opts.headers,
+        },
+      );
+    } catch (err) {
+      r.cancel(err);
+    }
+
+    return Promise.resolve(qi);
+  }
+
   request(
     subject: string,
     data: Uint8Array = Empty,
@@ -205,7 +281,7 @@ export class NatsConnectionImpl implements NatsConnection {
       });
       return d;
     } else {
-      const r = new Request(this.protocol.muxSubscriptions, subject, opts);
+      const r = new RequestOne(this.protocol.muxSubscriptions, subject, opts);
       this.protocol.request(r);
 
       try {

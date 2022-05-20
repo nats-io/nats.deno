@@ -212,6 +212,20 @@ export interface RequestOptions {
   reply?: string;
 }
 
+export enum RequestStrategy {
+  Timer = "timer",
+  Count = "count",
+  JitterTimer = "jitterTimer",
+  SentinelMsg = "sentinelMsg",
+}
+
+export interface RequestManyOptions {
+  strategy: RequestStrategy;
+  maxWait: number;
+  headers?: MsgHdrs;
+  maxMessages?: number;
+}
+
 export interface PublishOptions {
   reply?: string;
   headers?: MsgHdrs;

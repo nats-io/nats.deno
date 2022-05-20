@@ -19,7 +19,7 @@ import {
   Msg,
   MuxSubscription,
   ProtocolHandler,
-  Request,
+  RequestOne,
   SubscriptionImpl,
   Subscriptions,
 } from "../nats-base-client/internal_mod.ts";
@@ -34,7 +34,7 @@ Deno.test("protocol - mux subscription unknown return null", async () => {
   const mux = new MuxSubscription();
   mux.init();
 
-  const r = new Request(mux, "");
+  const r = new RequestOne(mux, "");
   r.token = "alberto";
   mux.add(r);
   assertEquals(mux.size(), 1);
