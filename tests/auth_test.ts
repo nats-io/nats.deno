@@ -597,7 +597,7 @@ Deno.test("auth - bad auth is notified", async () => {
   };
 
   const nc = await connect(
-    { port: ns.port, authenticator, debug: true },
+    { port: ns.port, authenticator },
   );
   let badAuths = 0;
   (async () => {
@@ -937,7 +937,6 @@ Deno.test("auth - perm sub iterator error", async () => {
   const status = deferred<Status>();
   (async () => {
     for await (const s of nc.status()) {
-      console.log(s);
       if (
         s.permissionContext?.operation === "subscription" &&
         s.permissionContext?.subject === "q"
