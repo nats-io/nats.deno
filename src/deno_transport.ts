@@ -187,7 +187,7 @@ export class DenoTransport implements Transport {
     this._closed(reason).then().catch();
   }
 
-  private enqueue(frame: Uint8Array): Promise<void> {
+  private enqueue(frame: Uint8Array): Promise<void | Error> {
     if (this.done) {
       return Promise.resolve();
     }
@@ -215,7 +215,7 @@ export class DenoTransport implements Transport {
         if (this.options.debug) {
           console.error(`!!! ${render(frame)}: ${err}`);
         }
-        d.reject(err);
+        d.resolve(err);
       })
       .finally(() => {
         this.sendQueue.shift();
@@ -223,8 +223,13 @@ export class DenoTransport implements Transport {
       });
   }
 
-  send(frame: Uint8Array): Promise<void> {
-    return this.enqueue(frame);
+  send(frame: Uint8Array): void {
+    const p = this.enqueue(frame);
+    p.catch((err) => {
+      // we ignore write errors because client will
+      // fail on a read or when the heartbeat timer
+      // detects a stale connection
+    });
   }
 
   isEncrypted(): boolean {

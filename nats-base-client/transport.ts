@@ -73,7 +73,7 @@ export interface Transport extends AsyncIterable<Uint8Array> {
 
   isEncrypted(): boolean;
 
-  send(frame: Uint8Array): Promise<void>;
+  send(frame: Uint8Array): void;
 
   close(err?: Error): Promise<void>;
 
