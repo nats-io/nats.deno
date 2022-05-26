@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -33,7 +33,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import type { TlsOptions } from "../nats-base-client/types.ts";
 
-const VERSION = "1.7.0";
+const VERSION = "1.7.1";
 const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason
@@ -223,8 +223,13 @@ export class DenoTransport implements Transport {
       });
   }
 
-  send(frame: Uint8Array): Promise<void> {
-    return this.enqueue(frame);
+  send(frame: Uint8Array): void {
+    const p = this.enqueue(frame);
+    p.catch((_err) => {
+      // we ignore write errors because client will
+      // fail on a read or when the heartbeat timer
+      // detects a stale connection
+    });
   }
 
   isEncrypted(): boolean {
@@ -247,6 +252,7 @@ export class DenoTransport implements Transport {
       try {
         // this is a noop but gives us a place to hang
         // a close and ensure that we sent all before closing
+        // we wait for the operation to fail or succeed
         await this.enqueue(TE.encode(""));
       } catch (err) {
         if (this.options.debug) {

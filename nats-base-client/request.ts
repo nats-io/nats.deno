@@ -81,6 +81,7 @@ export class RequestMany extends BaseRequest implements Request {
     this.done.then(() => {
       this.callback(null, null);
     });
+    // @ts-ignore: node is not a number
     this.timer = setTimeout(() => {
       this.cancel();
     }, opts.maxWait);
@@ -110,6 +111,7 @@ export class RequestMany extends BaseRequest implements Request {
 
       if (this.opts.strategy === RequestStrategy.JitterTimer) {
         clearTimeout(this.timer);
+        // @ts-ignore: node is not a number
         this.timer = setTimeout(() => {
           this.cancel();
         }, 300);
