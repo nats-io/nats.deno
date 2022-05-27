@@ -582,7 +582,6 @@ export interface StreamConfig extends StreamUpdateConfig {
   name: string;
   retention: RetentionPolicy;
   storage: StorageType;
-  "num_replicas": number;
   "template_owner"?: string;
   "max_consumers": number;
   placement?: Placement;
@@ -605,6 +604,7 @@ export interface StreamUpdateConfig {
   "duplicate_window": Nanos;
   sources?: StreamSource[];
   "allow_rollup_hdrs": boolean;
+  "num_replicas": number;
 }
 
 export interface StreamSource {
