@@ -36,6 +36,7 @@ import {
   KvRemove,
   KvStatus,
   MsgRequest,
+  Placement,
   PurgeOpts,
   PurgeResponse,
   RetentionPolicy,
@@ -218,6 +219,12 @@ export class Bucket implements KV, KvRemove {
     sc.max_bytes = bo.maxBucketSize;
     sc.max_msg_size = bo.maxValueSize;
     sc.storage = bo.storage;
+    const location = opts.placementCluster ?? "";
+    if (location) {
+      sc.placement = {} as Placement;
+      sc.placement.cluster = location;
+      sc.placement.tags = [];
+    }
 
     const nci = (this.js as JetStreamClientImpl).nc;
     const have = nci.getServerVersion();
@@ -701,6 +708,8 @@ export class Bucket implements KV, KvRemove {
       ttl: si.config.max_age,
       bucket_location: cluster,
       backingStore: si.config.storage,
+      storage: si.config.storage,
+      replicas: si.config.num_replicas,
     } as KvStatus;
   }
 }
