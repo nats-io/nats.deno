@@ -24,6 +24,7 @@ import {
   AckPolicy,
   AdvisoryKind,
   deferred,
+  DiscardPolicy,
   Empty,
   ErrorCode,
   headers,
@@ -33,6 +34,8 @@ import {
   NatsError,
   nkeys,
   nuid,
+  RetentionPolicy,
+  StorageType,
   StreamConfig,
   StreamInfo,
   StringCodec,
@@ -56,6 +59,7 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+import { StreamUpdateConfig } from "../nats-base-client/types.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1084,4 +1088,82 @@ Deno.test("jsm - account limits", async () => {
   assertEquals(ai.tiers?.R1?.limits.max_streams, -1);
 
   await cleanup(ns, nc);
+});
+
+Deno.test("jsm - stream update properties", async () => {
+  const servers = await NatsServer.jetstreamCluster(3);
+  const nc = await connect({ port: servers[0].port });
+
+  const jsm = await nc.jetstreamManager({ timeout: 3000 });
+
+  await jsm.streams.add({
+    name: "a",
+    storage: StorageType.File,
+    subjects: ["x"],
+  });
+
+  const info = await jsm.streams.add({
+    name: "n",
+    storage: StorageType.File,
+    subjects: ["subj"],
+    duplicate_window: nanos(30 * 1000),
+  });
+  let config = info.config;
+  let sn = info.config.name;
+
+  async function updateOption(
+    opt: Partial<StreamUpdateConfig | StreamConfig>,
+    shouldFail = false,
+  ): Promise<void> {
+    const update = Object.assign({}, config, opt);
+    try {
+      const si = await jsm.streams.update(sn, update);
+      for (const v of Object.keys(opt)) {
+        const sc = si.config;
+        //@ts-ignore: test
+        assertEquals(sc[v], opt[v]);
+      }
+      if (shouldFail) {
+        fail("expected to fail with update: " + JSON.stringify(opt));
+      }
+      config = si.config;
+    } catch (err) {
+      if (!shouldFail) {
+        fail(err.message);
+      }
+    }
+  }
+
+  await updateOption({ name: "nn" }, true);
+  await updateOption({ retention: RetentionPolicy.Interest }, true);
+  await updateOption({ storage: StorageType.Memory }, true);
+  await updateOption({ max_consumers: 5 }, true);
+
+  await updateOption({ subjects: ["subj", "a"] });
+  await updateOption({ description: "xx" });
+  await updateOption({ max_msgs_per_subject: 5 });
+  await updateOption({ max_msgs: 100 });
+  await updateOption({ max_age: nanos(45 * 1000) });
+  await updateOption({ max_bytes: 10240 });
+  await updateOption({ max_msg_size: 10240 });
+  await updateOption({ discard: DiscardPolicy.New });
+  await updateOption({ no_ack: true });
+  await updateOption({ duplicate_window: nanos(15 * 1000) });
+  await updateOption({ allow_rollup_hdrs: true });
+  await updateOption({ allow_rollup_hdrs: false });
+  await updateOption({ num_replicas: 3 });
+  await updateOption({ num_replicas: 1 });
+  await updateOption({ deny_delete: true });
+  await updateOption({ deny_purge: true });
+  await updateOption({ sources: [{ name: "a" }] });
+  await updateOption({ sealed: true });
+  await updateOption({ sealed: false }, true);
+
+  const mi = await jsm.streams.add({ name: "m", mirror: { name: "a" } });
+  config = mi.config;
+  sn = mi.config.name;
+  await updateOption({ mirror: { name: "nn" } }, true);
+
+  await nc.close();
+  await NatsServer.stopAll(servers);
 });

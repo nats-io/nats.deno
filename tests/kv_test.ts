@@ -875,16 +875,19 @@ Deno.test("kv - mem and file", async () => {
   const js = nc.jetstream();
   const d = await js.views.kv("default") as Bucket;
   assertEquals((await d.status()).backingStore, StorageType.File);
+  assertEquals((await d.status()).storage, StorageType.File);
 
   const f = await js.views.kv("file", {
     storage: StorageType.File,
   }) as Bucket;
   assertEquals((await f.status()).backingStore, StorageType.File);
+  assertEquals((await f.status()).storage, StorageType.File);
 
   const m = await js.views.kv("mem", {
     storage: StorageType.Memory,
   }) as Bucket;
   assertEquals((await m.status()).backingStore, StorageType.Memory);
+  assertEquals((await m.status()).storage, StorageType.Memory);
 
   await cleanup(ns, nc);
 });

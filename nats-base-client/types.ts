@@ -582,13 +582,9 @@ export interface StreamConfig extends StreamUpdateConfig {
   name: string;
   retention: RetentionPolicy;
   storage: StorageType;
-  "template_owner"?: string;
   "max_consumers": number;
-  placement?: Placement;
   mirror?: StreamSource; // same as a source
   sealed: boolean;
-  "deny_delete": boolean;
-  "deny_purge": boolean;
 }
 
 export interface StreamUpdateConfig {
@@ -605,6 +601,10 @@ export interface StreamUpdateConfig {
   sources?: StreamSource[];
   "allow_rollup_hdrs": boolean;
   "num_replicas": number;
+
+  placement?: Placement;
+  "deny_delete": boolean;
+  "deny_purge": boolean;
 }
 
 export interface StreamSource {
@@ -911,26 +911,37 @@ export interface KvCodecs {
   value: KvCodec<Uint8Array>;
 }
 
-export interface KvStatus {
-  bucket: string;
-  values: number;
+export interface KvLimits {
+  replicas: number;
   history: number;
-  ttl: Nanos;
+  maxBucketSize: number;
+  maxValueSize: number;
+  ttl: number; // millis
+  storage: StorageType;
+  placementCluster: string;
+
+  /**
+   * deprecated: use storage
+   * FIXME: remove this on 1.8
+   */
   backingStore: StorageType;
 }
 
-export interface KvOptions {
-  replicas: number;
-  history: number;
+export interface KvStatus extends KvLimits {
+  bucket: string;
+  values: number;
+
+  /**
+   * deprecated: use placementCluster
+   * FIXME: remove this on 1.8
+   */
+  bucket_location: string;
+}
+
+export interface KvOptions extends KvLimits {
   timeout: number;
-  maxBucketSize: number;
-  maxValueSize: number;
-  placementCluster: string;
-  mirrorBucket: string;
-  ttl: number; // millis
   streamName: string;
   codec: KvCodecs;
-  storage: StorageType;
   bindOnly: boolean;
 }
 
