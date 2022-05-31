@@ -75,11 +75,12 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       );
     }
     validateStreamName(name);
-    const ncfg = cfg as Partial<StreamUpdateConfig> & { name: string };
-    ncfg.name = name;
+    const old = await this.info(name);
+    const update = Object.assign(old.config, cfg);
+
     const r = await this._request(
       `${this.prefix}.STREAM.UPDATE.${name}`,
-      ncfg,
+      update,
     );
     const si = r as StreamInfo;
     this._fixInfo(si);
