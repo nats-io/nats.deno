@@ -1090,6 +1090,24 @@ Deno.test("jsm - account limits", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - stream update preserves other value", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({
+    name: "a",
+    storage: StorageType.File,
+    discard: DiscardPolicy.New,
+    subjects: ["x"],
+  });
+
+  const si = await jsm.streams.update("a", { subjects: ["x", "y"] });
+  assertEquals(si.config.discard, DiscardPolicy.New);
+  assertEquals(si.config.subjects, ["x", "y"]);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - stream update properties", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
@@ -1102,22 +1120,20 @@ Deno.test("jsm - stream update properties", async () => {
     subjects: ["x"],
   });
 
-  const info = await jsm.streams.add({
-    name: "n",
+  let sn = "n";
+  await jsm.streams.add({
+    name: sn,
     storage: StorageType.File,
     subjects: ["subj"],
     duplicate_window: nanos(30 * 1000),
   });
-  let config = info.config;
-  let sn = info.config.name;
 
   async function updateOption(
     opt: Partial<StreamUpdateConfig | StreamConfig>,
     shouldFail = false,
   ): Promise<void> {
-    const update = Object.assign({}, config, opt);
     try {
-      const si = await jsm.streams.update(sn, update);
+      const si = await jsm.streams.update(sn, opt);
       for (const v of Object.keys(opt)) {
         const sc = si.config;
         //@ts-ignore: test
@@ -1126,7 +1142,6 @@ Deno.test("jsm - stream update properties", async () => {
       if (shouldFail) {
         fail("expected to fail with update: " + JSON.stringify(opt));
       }
-      config = si.config;
     } catch (err) {
       if (!shouldFail) {
         fail(err.message);
@@ -1159,9 +1174,8 @@ Deno.test("jsm - stream update properties", async () => {
   await updateOption({ sealed: true });
   await updateOption({ sealed: false }, true);
 
-  const mi = await jsm.streams.add({ name: "m", mirror: { name: "a" } });
-  config = mi.config;
-  sn = mi.config.name;
+  await jsm.streams.add({ name: "m", mirror: { name: "a" } });
+  sn = "m";
   await updateOption({ mirror: { name: "nn" } }, true);
 
   await nc.close();
