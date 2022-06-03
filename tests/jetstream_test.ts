@@ -3301,6 +3301,9 @@ Deno.test("jetstream - ephemeral pull consumer", async () => {
 
 Deno.test("jetstream - fetch max_bytes", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.8.3")) {
+    return;
+  }
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
@@ -3344,6 +3347,9 @@ Deno.test("jetstream - fetch max_bytes", async () => {
 
 Deno.test("jetstream - pull consumer max_bytes", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.8.3")) {
+    return;
+  }
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
@@ -3383,6 +3389,9 @@ Deno.test("jetstream - pull consumer max_bytes", async () => {
 
 Deno.test("jetstream - pull consumer callback max_bytes", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.8.3")) {
+    return;
+  }
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
