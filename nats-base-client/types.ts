@@ -516,6 +516,11 @@ export interface StoredMsg {
   time: Date;
 }
 
+export interface DirectMsg extends StoredMsg {
+  stream: string;
+  lastSequence: number;
+}
+
 export interface Advisory {
   kind: AdvisoryKind;
   data: unknown;
@@ -601,10 +606,10 @@ export interface StreamUpdateConfig {
   sources?: StreamSource[];
   "allow_rollup_hdrs": boolean;
   "num_replicas": number;
-
   placement?: Placement;
   "deny_delete": boolean;
   "deny_purge": boolean;
+  "allow_direct": boolean;
 }
 
 export interface StreamSource {
@@ -943,6 +948,7 @@ export interface KvOptions extends KvLimits {
   streamName: string;
   codec: KvCodecs;
   bindOnly: boolean;
+  allow_direct: boolean;
 }
 
 /**
@@ -981,3 +987,11 @@ export interface KvPutOptions {
 }
 
 export type callbackFn = () => void;
+
+export enum RepublishedHeaders {
+  JsStream = "Nats-Stream",
+  JsSequence = "Nats-Sequence",
+  JsTimeStamp = "Nats-Time-Stamp",
+  JsSubject = "Nats-Subject",
+  JsLastSequence = "Nats-Last-Sequence",
+}

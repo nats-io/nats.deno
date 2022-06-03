@@ -51,8 +51,9 @@ import {
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
-import { consumerOpts, deferred } from "./mod.ts";
+import { consumerOpts, deferred, ErrorCode } from "./mod.ts";
 import { compare, parseSemVer } from "./semver.ts";
+import { StreamAPIImpl } from "./jsmstream_api.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -158,6 +159,7 @@ export class Bucket implements KV, KvRemove {
   js: JetStreamClient;
   stream!: string;
   bucket: string;
+  direct!: boolean;
   codec!: KvCodecs;
   _prefixLen: number;
   subjPrefix: string;
@@ -205,6 +207,7 @@ export class Bucket implements KV, KvRemove {
     const bucket = new Bucket(name, jsm, js);
     Object.assign(bucket, info);
     bucket.codec = opts.codec || NoopKvCodecs();
+    bucket.direct = info.config.allow_direct ?? false;
     return bucket;
   }
 
@@ -230,6 +233,10 @@ export class Bucket implements KV, KvRemove {
     const have = nci.getServerVersion();
     const discardNew = have ? compare(have, parseSemVer("2.7.2")) >= 0 : false;
     sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
+
+    const direct = have ? compare(have, parseSemVer("2.8.5")) >= 0 : false;
+    sc.allow_direct = opts.allow_direct ? direct : false;
+    this.direct = sc.allow_direct;
 
     sc.num_replicas = bo.replicas;
     if (bo.ttl) {
@@ -387,15 +394,23 @@ export class Bucket implements KV, KvRemove {
       arg = { seq: opts.revision };
     }
 
+    let sm: StoredMsg;
     try {
-      const sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
+      if (this.direct) {
+        const sai = this.jsm.streams as StreamAPIImpl;
+        sm = await sai.getDirectMessage(this.bucketName(), arg);
+      } else {
+        sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
+      }
       const ke = this.smToEntry(sm);
       if (ke.key !== ek) {
         return null;
       }
       return ke;
     } catch (err) {
-      if (err.message === "no message found") {
+      if (
+        err.code === ErrorCode.JetStream404NoMessages
+      ) {
         return null;
       }
       throw err;

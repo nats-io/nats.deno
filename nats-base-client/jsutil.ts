@@ -89,7 +89,7 @@ export function checkJsError(msg: Msg): NatsError | null {
   if (!h) {
     return null;
   }
-  return checkJsErrorCode(h.code, h.status);
+  return checkJsErrorCode(h.code, h.description);
 }
 
 export function checkJsErrorCode(

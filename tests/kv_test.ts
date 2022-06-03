@@ -1357,3 +1357,51 @@ Deno.test("kv - replicas", async () => {
   await nc.close();
   await NatsServer.stopAll(servers);
 });
+
+Deno.test("kv - direct message", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.8.5")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const sc = StringCodec();
+
+  const kv = await js.views.kv("a", { allow_direct: true, history: 3 });
+  assertEquals(await kv.get("a"), null);
+
+  await kv.put("a", sc.encode("hello"));
+
+  const m = await kv.get("a");
+  assert(m !== null);
+  assertEquals(m.key, "a");
+  assertEquals(m.delta, 0);
+  assertEquals(m.revision, 1);
+  assertEquals(m.operation, "PUT");
+  assertEquals(m.bucket, "a");
+
+  await kv.delete("a");
+
+  const d = await kv.get("a");
+  assert(d !== null);
+  assertEquals(d.key, "a");
+  assertEquals(d.delta, 0);
+  assertEquals(d.revision, 2);
+  assertEquals(d.operation, "DEL");
+  assertEquals(d.bucket, "a");
+
+  await kv.put("c", sc.encode("hi"));
+  await kv.put("c", sc.encode("hello"));
+
+  // should not fail
+  await kv.get("c");
+
+  const o = await kv.get("c", { revision: 3 });
+  assert(o !== null);
+  assertEquals(o.revision, 3);
+
+  await cleanup(ns, nc);
+});
