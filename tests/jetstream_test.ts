@@ -3254,3 +3254,167 @@ Deno.test("jetstream - detailed errors", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - ephemeral pull consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const d = deferred<JsMsg>();
+  const js = nc.jetstream();
+
+  // no durable name specified
+  const opts = consumerOpts();
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.deliverAll();
+  opts.inactiveEphemeralThreshold(500);
+  opts.callback((_err, msg) => {
+    assert(msg !== null);
+    d.resolve(msg);
+  });
+
+  const sub = await js.pullSubscribe(subj, opts);
+  const old = await sub.consumerInfo();
+
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("hello"));
+  sub.pull({ batch: 1, expires: 1000 });
+
+  const m = await d;
+  assertEquals(sc.decode(m.data), "hello");
+
+  sub.unsubscribe();
+  await nc.flush();
+
+  const jsm = await nc.jetstreamManager();
+  await delay(1000);
+  await assertRejects(
+    async () => {
+      await jsm.consumers.info(stream, old.name);
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch max_bytes", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: ">",
+  });
+  const js = nc.jetstream() as JetStreamClientImpl;
+
+  //@ts-ignore: test
+  nc.options.debug = true;
+  let iter = await js.fetch(stream, "me", { expires: 2000, max_bytes: 1 });
+  await (async () => {
+    for await (const m of iter) {
+      m.ack();
+    }
+  })();
+
+  const sc = StringCodec();
+  // this exceeds the request
+  await js.publish(subj, sc.encode("aaaa"));
+  await js.publish(subj, sc.encode("aa"));
+
+  iter = await js.fetch(stream, "me", { expires: 2000, max_bytes: 2 });
+  await assertRejects(
+    async () => {
+      await (async () => {
+        for await (const m of iter) {
+          m.ack();
+          await nc.flush();
+        }
+      })();
+    },
+    Error,
+    "message size exceeds maxbytes",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer max_bytes", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: ">",
+  });
+  const js = nc.jetstream() as JetStreamClientImpl;
+
+  const opts = consumerOpts();
+  opts.deliverAll();
+  opts.ackExplicit();
+  opts.manualAck();
+
+  const sub = await js.pullSubscribe(subj, opts);
+  const done = assertRejects(
+    async () => {
+      for await (const m of sub) {
+        m.ack();
+      }
+    },
+    Error,
+    "message size exceeds maxbytes",
+  );
+
+  sub.pull({ expires: 2000, max_bytes: 2 });
+
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("aaaa"));
+  await js.publish(subj, sc.encode("aa"));
+
+  await done;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer callback max_bytes", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: ">",
+  });
+  const js = nc.jetstream() as JetStreamClientImpl;
+
+  const d = deferred<NatsError>();
+
+  const opts = consumerOpts();
+  opts.deliverAll();
+  opts.ackExplicit();
+  opts.manualAck();
+  opts.callback((err, _msg) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+
+  const sub = await js.pullSubscribe(subj, opts);
+  sub.pull({ expires: 2000, max_bytes: 2 });
+
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("aaaa"));
+  await js.publish(subj, sc.encode("aa"));
+
+  const ne = await d;
+  assertEquals(ne.code, ErrorCode.JetStream408RequestTimeout);
+  assertEquals(ne.message, "message size exceeds maxbytes");
+
+  await cleanup(ns, nc);
+});

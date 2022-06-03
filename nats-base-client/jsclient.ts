@@ -167,7 +167,7 @@ export class JetStreamClientImpl extends BaseApiClient
     }
 
     expires = expires < 0 ? 0 : nanos(expires);
-    const pullOpts: PullOptions = {
+    const pullOpts: Partial<PullOptions> = {
       batch: 1,
       no_wait: expires === 0,
       expires,
@@ -203,9 +203,15 @@ export class JetStreamClientImpl extends BaseApiClient
     validateDurableName(durable);
 
     let timer: Timeout<void> | null = null;
+    const trackBytes = (opts.max_bytes ?? 0) > 0;
+    let receivedBytes = 0;
+    const max_bytes = trackBytes ? opts.max_bytes! : 0;
 
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
+    if (max_bytes) {
+      args.max_bytes = max_bytes;
+    }
     args.no_wait = opts.no_wait || false;
     if (args.no_wait && args.expires) {
       args.expires = 0;
@@ -225,6 +231,9 @@ export class JetStreamClientImpl extends BaseApiClient
     //   but doing it from a dispatchedFn...
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
+        if (trackBytes) {
+          receivedBytes += m.data.length;
+        }
         received++;
         if (timer && m.info.pending === 0) {
           // the expiration will close it
@@ -233,7 +242,8 @@ export class JetStreamClientImpl extends BaseApiClient
         // if we have one pending and we got the expected
         // or there are no more stop the iterator
         if (
-          qi.getPending() === 1 && m.info.pending === 0 || wants === received
+          qi.getPending() === 1 && m.info.pending === 0 || wants === received ||
+          (max_bytes > 0 && receivedBytes >= max_bytes)
         ) {
           qi.stop();
         }
@@ -252,12 +262,18 @@ export class JetStreamClientImpl extends BaseApiClient
             timer.cancel();
             timer = null;
           }
-          if (
-            isNatsError(err) &&
-            (err.code === ErrorCode.JetStream404NoMessages ||
-              err.code === ErrorCode.JetStream408RequestTimeout)
-          ) {
-            qi.stop();
+          if (isNatsError(err)) {
+            switch (err.code) {
+              case ErrorCode.JetStream404NoMessages:
+              case ErrorCode.JetStream409:
+                qi.stop();
+                return [null, null];
+              case ErrorCode.JetStream408RequestTimeout:
+                if ("message size exceeds maxbytes" === err.message) {
+                  qi.stop(err);
+                }
+                qi.stop();
+            }
           } else {
             qi.stop(err);
           }
@@ -679,6 +695,10 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
+    if ((opts.max_bytes ?? 0) > 0) {
+      args.max_bytes = opts.max_bytes!;
+    }
+
     if (opts.expires && opts.expires > 0) {
       args.expires = nanos(opts.expires);
     }
@@ -748,8 +768,12 @@ function iterMsgAdapter(
   if (ne !== null) {
     switch (ne.code) {
       case ErrorCode.JetStream404NoMessages:
-      case ErrorCode.JetStream408RequestTimeout:
       case ErrorCode.JetStream409:
+        return [null, null];
+      case ErrorCode.JetStream408RequestTimeout:
+        if ("message size exceeds maxbytes" === ne.message) {
+          return [ne, null];
+        }
         return [null, null];
       default:
         return [ne, null];
