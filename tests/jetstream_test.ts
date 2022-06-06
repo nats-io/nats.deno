@@ -3463,7 +3463,7 @@ Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async (
       sub.pull({ expires: 2000, max_bytes: 2 });
     },
     Error,
-    "max_bytes is only supported on servers 2.8.5 or better",
+    "max_bytes is only supported on servers 2.8.3 or better",
   );
 
   await cleanup(ns, nc);

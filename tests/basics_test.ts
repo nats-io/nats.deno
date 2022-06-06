@@ -1168,12 +1168,12 @@ Deno.test("basics - server version", async () => {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
   assertEquals(nci.protocol.features.require("3.0.0"), false);
-  assertEquals(nci.protocol.features.require("2.8.3"), true);
+  assertEquals(nci.protocol.features.require("2.8.2"), true);
 
-  const ok = nci.protocol.features.require("2.8.5");
+  const ok = nci.protocol.features.require("2.8.3");
   const bytes = nci.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
   assertEquals(ok, bytes.ok);
-  assertEquals(bytes.min, "2.8.5");
+  assertEquals(bytes.min, "2.8.3");
   assertEquals(ok, nci.protocol.features.supports(Feature.JS_PULL_MAX_BYTES));
 
   await cleanup(ns, nc);

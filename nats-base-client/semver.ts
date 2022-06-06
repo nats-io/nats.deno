@@ -38,7 +38,7 @@ export class Features {
     this.features = new Map<Feature, FeatureVersion>();
     this.server = v;
 
-    this.set(Feature.JS_PULL_MAX_BYTES, "2.8.5");
+    this.set(Feature.JS_PULL_MAX_BYTES, "2.8.3");
   }
 
   set(f: Feature, requires: string) {
