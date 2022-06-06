@@ -54,6 +54,7 @@ import { Heartbeat, PH } from "./heartbeats.ts";
 import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
 import { decode, encode } from "./encoders.ts";
+import { Features, parseSemVer } from "./semver.ts";
 
 const FLUSH_THRESHOLD = 1024 * 32;
 
@@ -145,6 +146,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   servers: Servers;
   server!: ServerImpl;
+  features: Features;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
     this._closed = false;
@@ -167,6 +169,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.pongs = [];
     //@ts-ignore: options.pendingLimit is hidden
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
+    this.features = new Features({ major: 0, minor: 0, micro: 0 });
 
     const servers = typeof options.servers === "string"
       ? [options.servers]
@@ -485,6 +488,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       ? undefined
       : this.servers.update(info);
     if (!this.infoReceived) {
+      this.features = new Features(parseSemVer(info.version));
       this.infoReceived = true;
       if (this.transport.isEncrypted()) {
         this.servers.updateTLSName();

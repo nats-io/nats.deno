@@ -70,6 +70,7 @@ import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
+import { Feature } from "./semver.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -696,6 +697,12 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
     if ((opts.max_bytes ?? 0) > 0) {
+      const fv = this.js.nc.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+      if (!fv.ok) {
+        throw new Error(
+          `max_bytes is only supported on servers ${fv.min} or better`,
+        );
+      }
       args.max_bytes = opts.max_bytes!;
     }
 

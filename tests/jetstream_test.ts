@@ -69,6 +69,7 @@ import {
   isFlowControlMsg,
   isHeartbeatMsg,
 } from "../nats-base-client/jsutil.ts";
+import { Features } from "../nats-base-client/semver.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -3424,6 +3425,46 @@ Deno.test("jetstream - pull consumer callback max_bytes", async () => {
   const ne = await d;
   assertEquals(ne.code, ErrorCode.JetStream408RequestTimeout);
   assertEquals(ne.message, "message size exceeds maxbytes");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  // change the version of the server to fail pull with max bytes
+  const nci = nc as NatsConnectionImpl;
+  nci.protocol.features = new Features({ major: 2, minor: 7, micro: 0 });
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: ">",
+  });
+  const js = nc.jetstream() as JetStreamClientImpl;
+
+  const d = deferred<NatsError>();
+
+  const opts = consumerOpts();
+  opts.deliverAll();
+  opts.ackExplicit();
+  opts.manualAck();
+  opts.callback((err, _msg) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+
+  const sub = await js.pullSubscribe(subj, opts);
+  assertThrows(
+    () => {
+      sub.pull({ expires: 2000, max_bytes: 2 });
+    },
+    Error,
+    "max_bytes is only supported on servers 2.8.5 or better",
+  );
 
   await cleanup(ns, nc);
 });
