@@ -45,6 +45,7 @@ import {
   checkJsError,
   isFlowControlMsg,
   isHeartbeatMsg,
+  isTerminal409,
   nanos,
   validateDurableName,
   validateStreamName,
@@ -270,17 +271,7 @@ export class JetStreamClientImpl extends BaseApiClient
             timer = null;
           }
           if (isNatsError(err)) {
-            switch (err.code) {
-              case ErrorCode.JetStream404NoMessages:
-              case ErrorCode.JetStream409:
-                qi.stop();
-                return [null, null];
-              case ErrorCode.JetStream408RequestTimeout:
-                if ("message size exceeds maxbytes" === err.message) {
-                  qi.stop(err);
-                }
-                qi.stop();
-            }
+            qi.stop(hideNonTerminalJsErrors(err) === null ? undefined : err);
           } else {
             qi.stop(err);
           }
@@ -774,26 +765,32 @@ function iterMsgAdapter(
   if (err) {
     return [err, null];
   }
-
   // iterator will close if we have an error
   // check for errors that shouldn't close it
   const ne = checkJsError(msg);
   if (ne !== null) {
-    switch (ne.code) {
-      case ErrorCode.JetStream404NoMessages:
-      case ErrorCode.JetStream409:
-        return [null, null];
-      case ErrorCode.JetStream408RequestTimeout:
-        if ("message size exceeds maxbytes" === ne.message) {
-          return [ne, null];
-        }
-        return [null, null];
-      default:
-        return [ne, null];
-    }
+    return [hideNonTerminalJsErrors(ne), null];
   }
   // assuming that the protocolFilterFn is set
   return [null, toJsMsg(msg)];
+}
+
+function hideNonTerminalJsErrors(ne: NatsError): NatsError | null {
+  if (ne !== null) {
+    switch (ne.code) {
+      case ErrorCode.JetStream404NoMessages:
+      case ErrorCode.JetStream408RequestTimeout:
+        return null;
+      case ErrorCode.JetStream409:
+        if (isTerminal409(ne)) {
+          return ne;
+        }
+        return null;
+      default:
+        return ne;
+    }
+  }
+  return null;
 }
 
 function autoAckJsMsg(data: JsMsg | null) {

@@ -92,6 +92,40 @@ export function checkJsError(msg: Msg): NatsError | null {
   return checkJsErrorCode(h.code, h.description);
 }
 
+export enum Js409Errors {
+  MaxBatchExceeded = "exceeded maxrequestbatch of",
+  MaxExpiresExceeded = "exceeded maxrequestexpires of",
+  MaxBytesExceeded = "exceeded maxrequestmaxbytes of",
+  MaxMessageSizeExceeded = "message size exceeds maxbytes",
+  PushConsumer = "consumer is push based",
+  MaxWaitingExceeded = "exceeded maxwaiting", // not terminal
+}
+
+let MAX_WAITING_FAIL = false;
+export function setMaxWaitingToFail(tf: boolean) {
+  MAX_WAITING_FAIL = tf;
+}
+
+export function isTerminal409(err: NatsError): boolean {
+  if (err.code !== ErrorCode.JetStream409) {
+    return false;
+  }
+  const fatal = [
+    Js409Errors.MaxBatchExceeded,
+    Js409Errors.MaxExpiresExceeded,
+    Js409Errors.MaxBytesExceeded,
+    Js409Errors.MaxMessageSizeExceeded,
+    Js409Errors.PushConsumer,
+  ];
+  if (MAX_WAITING_FAIL) {
+    fatal.push(Js409Errors.MaxWaitingExceeded);
+  }
+
+  return fatal.find((s) => {
+    return err.message.indexOf(s) !== -1;
+  }) !== undefined;
+}
+
 export function checkJsErrorCode(
   code: number,
   description = "",
@@ -108,7 +142,9 @@ export function checkJsErrorCode(
     case 408:
       return new NatsError(description, ErrorCode.JetStream408RequestTimeout);
     case 409:
-      // the description can be exceeded max waiting or max ack pending
+      // the description can be exceeded max waiting or max ack pending, which are
+      // recoverable, but can also be terminal errors where the request exceeds
+      // some value in the consumer configuration
       return new NatsError(
         description,
         ErrorCode.JetStream409,
