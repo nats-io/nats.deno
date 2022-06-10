@@ -16,7 +16,6 @@ import {
   DeliveryInfo,
   JsMsg,
   Msg,
-  NextRequest,
   PullOptions,
   RequestOptions,
 } from "./types.ts";
@@ -178,7 +177,7 @@ export class JsMsgImpl implements JsMsg {
     this.doAck(WPI);
   }
 
-  next(subj: string, opts: Partial<NextRequest> = { batch: 1 }) {
+  next(subj: string, opts: Partial<PullOptions> = { batch: 1 }) {
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;

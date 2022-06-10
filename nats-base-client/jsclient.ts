@@ -45,6 +45,7 @@ import {
   checkJsError,
   isFlowControlMsg,
   isHeartbeatMsg,
+  isTerminal409,
   nanos,
   validateDurableName,
   validateStreamName,
@@ -70,6 +71,7 @@ import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
+import { Feature } from "./semver.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -167,7 +169,7 @@ export class JetStreamClientImpl extends BaseApiClient
     }
 
     expires = expires < 0 ? 0 : nanos(expires);
-    const pullOpts: PullOptions = {
+    const pullOpts: Partial<PullOptions> = {
       batch: 1,
       no_wait: expires === 0,
       expires,
@@ -203,9 +205,21 @@ export class JetStreamClientImpl extends BaseApiClient
     validateDurableName(durable);
 
     let timer: Timeout<void> | null = null;
+    const trackBytes = (opts.max_bytes ?? 0) > 0;
+    let receivedBytes = 0;
+    const max_bytes = trackBytes ? opts.max_bytes! : 0;
 
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
+    if (max_bytes) {
+      const fv = this.nc.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+      if (!fv.ok) {
+        throw new Error(
+          `max_bytes is only supported on servers ${fv.min} or better`,
+        );
+      }
+      args.max_bytes = max_bytes;
+    }
     args.no_wait = opts.no_wait || false;
     if (args.no_wait && args.expires) {
       args.expires = 0;
@@ -225,6 +239,9 @@ export class JetStreamClientImpl extends BaseApiClient
     //   but doing it from a dispatchedFn...
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
+        if (trackBytes) {
+          receivedBytes += m.data.length;
+        }
         received++;
         if (timer && m.info.pending === 0) {
           // the expiration will close it
@@ -233,7 +250,8 @@ export class JetStreamClientImpl extends BaseApiClient
         // if we have one pending and we got the expected
         // or there are no more stop the iterator
         if (
-          qi.getPending() === 1 && m.info.pending === 0 || wants === received
+          qi.getPending() === 1 && m.info.pending === 0 || wants === received ||
+          (max_bytes > 0 && receivedBytes >= max_bytes)
         ) {
           qi.stop();
         }
@@ -252,12 +270,8 @@ export class JetStreamClientImpl extends BaseApiClient
             timer.cancel();
             timer = null;
           }
-          if (
-            isNatsError(err) &&
-            (err.code === ErrorCode.JetStream404NoMessages ||
-              err.code === ErrorCode.JetStream408RequestTimeout)
-          ) {
-            qi.stop();
+          if (isNatsError(err)) {
+            qi.stop(hideNonTerminalJsErrors(err) === null ? undefined : err);
           } else {
             qi.stop(err);
           }
@@ -679,6 +693,16 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
+    if ((opts.max_bytes ?? 0) > 0) {
+      const fv = this.js.nc.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+      if (!fv.ok) {
+        throw new Error(
+          `max_bytes is only supported on servers ${fv.min} or better`,
+        );
+      }
+      args.max_bytes = opts.max_bytes!;
+    }
+
     if (opts.expires && opts.expires > 0) {
       args.expires = nanos(opts.expires);
     }
@@ -741,22 +765,32 @@ function iterMsgAdapter(
   if (err) {
     return [err, null];
   }
-
   // iterator will close if we have an error
   // check for errors that shouldn't close it
   const ne = checkJsError(msg);
   if (ne !== null) {
-    switch (ne.code) {
-      case ErrorCode.JetStream404NoMessages:
-      case ErrorCode.JetStream408RequestTimeout:
-      case ErrorCode.JetStream409:
-        return [null, null];
-      default:
-        return [ne, null];
-    }
+    return [hideNonTerminalJsErrors(ne), null];
   }
   // assuming that the protocolFilterFn is set
   return [null, toJsMsg(msg)];
+}
+
+function hideNonTerminalJsErrors(ne: NatsError): NatsError | null {
+  if (ne !== null) {
+    switch (ne.code) {
+      case ErrorCode.JetStream404NoMessages:
+      case ErrorCode.JetStream408RequestTimeout:
+        return null;
+      case ErrorCode.JetStream409:
+        if (isTerminal409(ne)) {
+          return ne;
+        }
+        return null;
+      default:
+        return ne;
+    }
+  }
+  return null;
 }
 
 function autoAckJsMsg(data: JsMsg | null) {

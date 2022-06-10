@@ -24,6 +24,7 @@ import {
 } from "./jstest_util.ts";
 import {
   AckPolicy,
+  checkJsError,
   collect,
   ConsumerConfig,
   ConsumerOpts,
@@ -69,6 +70,7 @@ import {
   isFlowControlMsg,
   isHeartbeatMsg,
 } from "../nats-base-client/jsutil.ts";
+import { Features } from "../nats-base-client/semver.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -751,6 +753,11 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
   (async () => {
     for await (const msg of sub) {
       assert(msg);
+      //@ts-ignore: test
+      const ne = checkJsError(msg.msg);
+      if (ne) {
+        console.log(ne.message);
+      }
       const n = jc.decode(msg.data);
       sum += n;
       msg.ack();
@@ -3251,6 +3258,90 @@ Deno.test("jetstream - detailed errors", async () => {
     assertEquals(ne.api_error.code, 500);
     assertEquals(ne.api_error.err_code, 10074);
   });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - ephemeral pull consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const d = deferred<JsMsg>();
+  const js = nc.jetstream();
+
+  // no durable name specified
+  const opts = consumerOpts();
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.deliverAll();
+  opts.inactiveEphemeralThreshold(500);
+  opts.callback((_err, msg) => {
+    assert(msg !== null);
+    d.resolve(msg);
+  });
+
+  const sub = await js.pullSubscribe(subj, opts);
+  const old = await sub.consumerInfo();
+
+  const sc = StringCodec();
+  await js.publish(subj, sc.encode("hello"));
+  sub.pull({ batch: 1, expires: 1000 });
+
+  const m = await d;
+  assertEquals(sc.decode(m.data), "hello");
+
+  sub.unsubscribe();
+  await nc.flush();
+
+  const jsm = await nc.jetstreamManager();
+  await delay(1000);
+  await assertRejects(
+    async () => {
+      await jsm.consumers.info(stream, old.name);
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  // change the version of the server to fail pull with max bytes
+  const nci = nc as NatsConnectionImpl;
+  nci.protocol.features = new Features({ major: 2, minor: 7, micro: 0 });
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: ">",
+  });
+  const js = nc.jetstream() as JetStreamClientImpl;
+
+  const d = deferred<NatsError>();
+
+  const opts = consumerOpts();
+  opts.deliverAll();
+  opts.ackExplicit();
+  opts.manualAck();
+  opts.callback((err, _msg) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+
+  const sub = await js.pullSubscribe(subj, opts);
+  assertThrows(
+    () => {
+      sub.pull({ expires: 2000, max_bytes: 2 });
+    },
+    Error,
+    "max_bytes is only supported on servers 2.8.3 or better",
+  );
 
   await cleanup(ns, nc);
 });

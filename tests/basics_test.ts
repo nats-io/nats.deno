@@ -51,6 +51,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 import { RequestStrategy } from "../nats-base-client/types.ts";
+import { Feature } from "../nats-base-client/semver.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1160,5 +1161,20 @@ Deno.test("basics - request many stops on error", async () => {
   }
   const err = await d;
   assertErrorCode(err, ErrorCode.NoResponders);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - server version", async () => {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.features.require("3.0.0"), false);
+  assertEquals(nci.protocol.features.require("2.8.2"), true);
+
+  const ok = nci.protocol.features.require("2.8.3");
+  const bytes = nci.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+  assertEquals(ok, bytes.ok);
+  assertEquals(bytes.min, "2.8.3");
+  assertEquals(ok, nci.protocol.features.supports(Feature.JS_PULL_MAX_BYTES));
+
   await cleanup(ns, nc);
 });

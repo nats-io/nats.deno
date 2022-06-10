@@ -264,6 +264,7 @@ export interface PullOptions {
   batch: number;
   "no_wait": boolean;
   expires: number;
+  "max_bytes": number;
 }
 
 export interface PubAck {
@@ -442,7 +443,7 @@ export interface ConsumerAPI {
   update(
     stream: string,
     durable: string,
-    cfg: ConsumerUpdateConfig,
+    cfg: Partial<ConsumerUpdateConfig>,
   ): Promise<ConsumerInfo>;
   delete(stream: string, consumer: string): Promise<boolean>;
   list(stream: string): Lister<ConsumerInfo>;
@@ -481,6 +482,8 @@ export interface JsMsg {
   nak(millis?: number): void;
   working(): void;
   /**
+   * !! this is an experimental feature - and could be removed
+   *
    * next() combines ack() and pull(), requires the subject for a
    * subscription processing to process a message is provided
    * (can be the same) however, because the ability to specify
@@ -490,7 +493,7 @@ export interface JsMsg {
    * there was a timeout. In an iterator, the error will close
    * the iterator, requiring a subscription to be reset.
    */
-  next(subj: string, ro?: Partial<NextRequest>): void;
+  next(subj: string, ro?: Partial<PullOptions>): void;
   term(): void;
   ackAck(): Promise<boolean>;
 }
@@ -855,6 +858,7 @@ export interface ConsumerUpdateConfig {
   "max_expires"?: Nanos;
   "inactive_threshold"?: Nanos;
   "backoff"?: Nanos[];
+  "max_bytes"?: number;
 }
 
 export interface Consumer {
@@ -868,12 +872,6 @@ export interface StreamNames {
 
 export interface StreamNameBySubject {
   subject: string;
-}
-
-export interface NextRequest {
-  expires: number;
-  batch: number;
-  "no_wait": boolean;
 }
 
 export enum JsHeaders {
