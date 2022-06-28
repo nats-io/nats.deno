@@ -1086,6 +1086,7 @@ Deno.test("jsm - account limits", async () => {
   assertEquals(ai.tiers?.R1?.limits.max_storage, 1024 * 1024);
   assertEquals(ai.tiers?.R1?.limits.max_consumers, -1);
   assertEquals(ai.tiers?.R1?.limits.max_streams, -1);
+  assertEquals(ai.tiers?.R1?.limits.max_ack_pending, -1);
 
   await cleanup(ns, nc);
 });

@@ -798,6 +798,7 @@ export interface AccountLimits {
   "max_storage": number;
   "max_streams": number;
   "max_consumers": number;
+  "max_ack_pending": number;
   "memory_max_stream_bytes": number;
   "storage_max_stream_bytes": number;
   "max_bytes_required": number;
