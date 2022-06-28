@@ -265,6 +265,7 @@ export interface PullOptions {
   "no_wait": boolean;
   expires: number;
   "max_bytes": number;
+  "idle_heartbeat": number;
 }
 
 export interface PubAck {

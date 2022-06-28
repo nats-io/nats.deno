@@ -171,7 +171,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   ): Promise<StoredMsg> {
     validateStreamName(stream);
     const r = await this.nc.request(
-      `$JS.DS.GET.${stream}`,
+      `$JS.API.DIRECT.GET.${stream}`,
       this.jc.encode(query),
     );
 

@@ -72,6 +72,7 @@ import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
+import { IdleHeartbeat } from "./idleheartbeat.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -208,6 +209,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const trackBytes = (opts.max_bytes ?? 0) > 0;
     let receivedBytes = 0;
     const max_bytes = trackBytes ? opts.max_bytes! : 0;
+    let monitor: IdleHeartbeat | null = null;
 
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
@@ -231,14 +233,39 @@ export class JetStreamClientImpl extends BaseApiClient
     if (expires === 0 && args.no_wait === false) {
       throw new Error("expires or no_wait is required");
     }
+    const hb = opts.idle_heartbeat || 0;
+    if (hb) {
+      args.idle_heartbeat = nanos(hb);
+      //@ts-ignore: for testing
+      if (opts.delay_heartbeat === true) {
+        //@ts-ignore
+        args.idle_heartbeat = nanos(hb * 4);
+      }
+    }
 
     const qi = new QueuedIteratorImpl<JsMsg>();
     const wants = args.batch;
     let received = 0;
+    qi.protocolFilterFn = (jm, ingest = false): boolean => {
+      const jsmi = jm as JsMsgImpl;
+      if (isHeartbeatMsg(jsmi.msg)) {
+        const keys = jsmi.msg.headers?.keys()!;
+        keys.forEach((k) => {
+          console.log(k, jsmi.msg.headers?.get(k));
+        });
+
+        monitor?.ok();
+        return false;
+      }
+      return true;
+    };
     // FIXME: this looks weird, we want to stop the iterator
     //   but doing it from a dispatchedFn...
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
+        // if we are doing heartbeats, message resets
+        monitor?.ok();
+
         if (trackBytes) {
           receivedBytes += m.data.length;
         }
@@ -292,15 +319,41 @@ export class JetStreamClientImpl extends BaseApiClient
           sub.drain();
           timer = null;
         }
+        if (monitor) {
+          monitor.cancel();
+        }
       });
     }
 
     (async () => {
+      try {
+        if (hb) {
+          monitor = new IdleHeartbeat(hb, 3);
+          monitor.done.then((v) => {
+            if (v !== 0) {
+              //@ts-ignore: pushing a fn
+              qi.push(() => {
+                // this will throw
+                qi.err = new NatsError(
+                  `idle heartbeats missed: ${v}`,
+                  ErrorCode.JetStreamIdleHeartBeat,
+                );
+              });
+            }
+          });
+        }
+      } catch (_err) {
+        // ignore it
+      }
+
       // close the iterator if the connection or subscription closes unexpectedly
       await (sub as SubscriptionImpl).closed;
       if (timer !== null) {
         timer.cancel();
         timer = null;
+      }
+      if (monitor) {
+        monitor.cancel();
       }
       qi.stop();
     })().catch();

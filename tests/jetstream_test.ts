@@ -3345,3 +3345,59 @@ Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async (
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - missed idleheartbeat on fetch", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const iter = js.fetch(stream, "me", {
+    expires: 2000,
+    idle_heartbeat: 250,
+    //@ts-ignore: testing
+    delay_heartbeat: true,
+  });
+
+  await assertRejects(
+    async () => {
+      for await (const _m of iter) {
+        // no message expected
+      }
+    },
+    NatsError,
+    "idle heartbeats missed",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - idleheartbeat on fetch", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const iter = js.fetch(stream, "me", {
+    expires: 2000,
+    idle_heartbeat: 250,
+  });
+
+  await (async () => {
+    for await (const _m of iter) {
+      // no message expected
+    }
+  })();
+
+  await cleanup(ns, nc);
+});
