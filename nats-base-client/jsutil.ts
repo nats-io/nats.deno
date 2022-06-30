@@ -16,11 +16,16 @@ import {
   AckPolicy,
   ConsumerConfig,
   DeliverPolicy,
+  Empty,
   Msg,
   Nanos,
   ReplayPolicy,
 } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
+import { MsgArg } from "./parser.ts";
+import { headers, MsgHdrsImpl } from "./headers.ts";
+import { MsgImpl } from "./msg.ts";
+import { Publisher } from "./protocol.ts";
 
 export function validateDurableName(name?: string) {
   return validateName("durable", name);
@@ -80,6 +85,23 @@ export function isHeartbeatMsg(msg: Msg): boolean {
   return isFlowControlMsg(msg) && msg.headers?.description === "Idle Heartbeat";
 }
 
+export function newJsErrorMsg(
+  code: number,
+  description: string,
+  subject: string,
+): Msg {
+  const h = headers() as MsgHdrsImpl;
+  h.code = code;
+  h.description = description;
+
+  const arg = { hdr: 1, sid: 0, size: 0 } as MsgArg;
+  const msg = new MsgImpl(arg, Empty, {} as Publisher);
+  msg._headers = h;
+  msg._subject = subject;
+
+  return msg;
+}
+
 export function checkJsError(msg: Msg): NatsError | null {
   // JS error only if no payload - otherwise assume it is application data
   if (msg.data.length !== 0) {
@@ -99,6 +121,7 @@ export enum Js409Errors {
   MaxMessageSizeExceeded = "message size exceeds maxbytes",
   PushConsumer = "consumer is push based",
   MaxWaitingExceeded = "exceeded maxwaiting", // not terminal
+  IdleHeartbeatMissed = "`idle heartbeats missed`",
 }
 
 let MAX_WAITING_FAIL = false;
@@ -107,6 +130,7 @@ export function setMaxWaitingToFail(tf: boolean) {
 }
 
 export function isTerminal409(err: NatsError): boolean {
+  console.log(err.message);
   if (err.code !== ErrorCode.JetStream409) {
     return false;
   }
@@ -116,6 +140,7 @@ export function isTerminal409(err: NatsError): boolean {
     Js409Errors.MaxBytesExceeded,
     Js409Errors.MaxMessageSizeExceeded,
     Js409Errors.PushConsumer,
+    Js409Errors.IdleHeartbeatMissed,
   ];
   if (MAX_WAITING_FAIL) {
     fatal.push(Js409Errors.MaxWaitingExceeded);
@@ -141,14 +166,18 @@ export function checkJsErrorCode(
       return new NatsError(description, ErrorCode.JetStream404NoMessages);
     case 408:
       return new NatsError(description, ErrorCode.JetStream408RequestTimeout);
-    case 409:
+    case 409: {
       // the description can be exceeded max waiting or max ack pending, which are
       // recoverable, but can also be terminal errors where the request exceeds
       // some value in the consumer configuration
+      const ec = description.startsWith(Js409Errors.IdleHeartbeatMissed)
+        ? ErrorCode.JetStreamIdleHeartBeat
+        : ErrorCode.JetStream409;
       return new NatsError(
         description,
-        ErrorCode.JetStream409,
+        ec,
       );
+    }
     case 503:
       return NatsError.errorForCode(
         ErrorCode.JetStreamNotEnabled,

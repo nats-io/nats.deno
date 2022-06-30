@@ -60,6 +60,7 @@ import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
+  JetStreamSubscriptionImpl,
   JetStreamSubscriptionInfoable,
 } from "../nats-base-client/jsclient.ts";
 import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
@@ -69,8 +70,10 @@ import { assertBetween, disabled, Lock, notCompatible } from "./helpers/mod.ts";
 import {
   isFlowControlMsg,
   isHeartbeatMsg,
+  Js409Errors,
 } from "../nats-base-client/jsutil.ts";
 import { Features } from "../nats-base-client/semver.ts";
+import { assertIsError } from "https://deno.land/std@0.138.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -3346,7 +3349,7 @@ Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async (
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - missed idleheartbeat on fetch", async () => {
+Deno.test("jetstream - idleheartbeat missed on fetch", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -3371,7 +3374,7 @@ Deno.test("jetstream - missed idleheartbeat on fetch", async () => {
       }
     },
     NatsError,
-    "idle heartbeats missed",
+    Js409Errors.IdleHeartbeatMissed,
   );
 
   await cleanup(ns, nc);
@@ -3393,11 +3396,86 @@ Deno.test("jetstream - idleheartbeat on fetch", async () => {
     idle_heartbeat: 250,
   });
 
+  // we don't expect this to throw
   await (async () => {
     for await (const _m of iter) {
       // no message expected
     }
   })();
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - idleheartbeats errors repeat in callback push sub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty);
+
+  const buf: NatsError[] = [];
+
+  const d = deferred<void>();
+  const fn = (err: NatsError | null, _msg: JsMsg | null): void => {
+    if (err) {
+      buf.push(err);
+      if (buf.length === 3) {
+        d.resolve();
+      }
+    }
+  };
+
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.idleHeartbeat(800);
+  opts.deliverTo(createInbox());
+  opts.callback(fn);
+
+  const sub = await js.subscribe(subj, opts) as JetStreamSubscriptionImpl;
+  assert(sub.monitor);
+  await delay(3000);
+  sub.monitor._change(100, 3);
+
+  buf.forEach((err) => {
+    assertIsError(err, NatsError, Js409Errors.IdleHeartbeatMissed);
+  });
+
+  assertEquals(sub.sub.isClosed(), false);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - idleheartbeats errors in iterator push sub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.idleHeartbeat(800);
+  opts.deliverTo(createInbox());
+
+  const js = nc.jetstream();
+  const sub = await js.subscribe(subj, opts) as JetStreamSubscriptionImpl;
+
+  const d = deferred<NatsError>();
+  (async () => {
+    for await (const _m of sub) {
+      // not going to get anything
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+  assert(sub.monitor);
+  await delay(1700);
+  sub.monitor._change(100, 1);
+  const err = await d;
+  assertIsError(err, NatsError, Js409Errors.IdleHeartbeatMissed);
+  assertEquals(err.code, ErrorCode.JetStreamIdleHeartBeat);
+  assertEquals(sub.sub.isClosed(), true);
 
   await cleanup(ns, nc);
 });

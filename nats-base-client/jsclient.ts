@@ -46,7 +46,10 @@ import {
   isFlowControlMsg,
   isHeartbeatMsg,
   isTerminal409,
+  Js409Errors,
+  millis,
   nanos,
+  newJsErrorMsg,
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
@@ -238,7 +241,7 @@ export class JetStreamClientImpl extends BaseApiClient
       args.idle_heartbeat = nanos(hb);
       //@ts-ignore: for testing
       if (opts.delay_heartbeat === true) {
-        //@ts-ignore
+        //@ts-ignore: test option
         args.idle_heartbeat = nanos(hb * 4);
       }
     }
@@ -246,15 +249,10 @@ export class JetStreamClientImpl extends BaseApiClient
     const qi = new QueuedIteratorImpl<JsMsg>();
     const wants = args.batch;
     let received = 0;
-    qi.protocolFilterFn = (jm, ingest = false): boolean => {
+    qi.protocolFilterFn = (jm, _ingest = false): boolean => {
       const jsmi = jm as JsMsgImpl;
       if (isHeartbeatMsg(jsmi.msg)) {
-        const keys = jsmi.msg.headers?.keys()!;
-        keys.forEach((k) => {
-          console.log(k, jsmi.msg.headers?.get(k));
-        });
-
-        monitor?.ok();
+        monitor?.work();
         return false;
       }
       return true;
@@ -263,9 +261,6 @@ export class JetStreamClientImpl extends BaseApiClient
     //   but doing it from a dispatchedFn...
     qi.dispatchedFn = (m: JsMsg | null) => {
       if (m) {
-        // if we are doing heartbeats, message resets
-        monitor?.ok();
-
         if (trackBytes) {
           receivedBytes += m.data.length;
         }
@@ -303,6 +298,8 @@ export class JetStreamClientImpl extends BaseApiClient
             qi.stop(err);
           }
         } else {
+          // if we are doing heartbeats, message resets
+          monitor?.work();
           qi.received++;
           qi.push(toJsMsg(msg));
         }
@@ -328,18 +325,16 @@ export class JetStreamClientImpl extends BaseApiClient
     (async () => {
       try {
         if (hb) {
-          monitor = new IdleHeartbeat(hb, 3);
-          monitor.done.then((v) => {
-            if (v !== 0) {
-              //@ts-ignore: pushing a fn
-              qi.push(() => {
-                // this will throw
-                qi.err = new NatsError(
-                  `idle heartbeats missed: ${v}`,
-                  ErrorCode.JetStreamIdleHeartBeat,
-                );
-              });
-            }
+          monitor = new IdleHeartbeat(hb, (v: number): boolean => {
+            //@ts-ignore: pushing a fn
+            qi.push(() => {
+              // this will terminate the iterator
+              qi.err = new NatsError(
+                `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
+                ErrorCode.JetStreamIdleHeartBeat,
+              );
+            });
+            return true;
           });
         }
       } catch (_err) {
@@ -431,6 +426,9 @@ export class JetStreamClientImpl extends BaseApiClient
       sub.unsubscribe();
       throw err;
     }
+
+    sub._maybeSetupHbMonitoring();
+
     return sub;
   }
 
@@ -607,10 +605,14 @@ export class JetStreamClientImpl extends BaseApiClient
     return (jm: JsMsg | null, ctx?: unknown): IngestionFilterFnResult => {
       // ctx is expected to be the iterator (the JetstreamSubscriptionImpl)
       const jsub = ctx as JetStreamSubscriptionImpl;
+
       // this shouldn't happen
       if (!jm) return { ingest: false, protocol: false };
 
       const jmi = jm as JsMsgImpl;
+      if (!checkJsError(jmi.msg)) {
+        jsub.monitor?.work();
+      }
       if (isHeartbeatMsg(jmi.msg)) {
         const ingest = ordered ? jsub._checkHbOrderConsumer(jmi.msg) : true;
         if (!ordered) {
@@ -627,9 +629,10 @@ export class JetStreamClientImpl extends BaseApiClient
   }
 }
 
-class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
+export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
   js: BaseApiClient;
+  monitor: IdleHeartbeat | null;
 
   constructor(
     js: BaseApiClient,
@@ -638,6 +641,13 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   ) {
     super(js.nc, subject, opts);
     this.js = js;
+    this.monitor = null;
+
+    this.sub.closed.then(() => {
+      if (this.monitor) {
+        this.monitor.cancel();
+      }
+    });
   }
 
   set info(info: JetStreamSubscriptionInfo | null) {
@@ -678,6 +688,25 @@ class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
         );
         this.sub.callback(nerr, {} as Msg);
       });
+  }
+
+  _maybeSetupHbMonitoring() {
+    const ns = this.info?.config?.idle_heartbeat || 0;
+    if (ns) {
+      const sub = this.sub as SubscriptionImpl;
+      const handler = (v: number): boolean => {
+        const msg = newJsErrorMsg(
+          409,
+          `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
+          this.sub.subject,
+        );
+        this.sub.callback(null, msg);
+        // if we are a handler, we'll continue reporting
+        // iterators will stop
+        return !sub.noIterator;
+      };
+      this.monitor = new IdleHeartbeat(millis(ns), handler);
+    }
   }
 
   _checkHbOrderConsumer(msg: Msg): boolean {

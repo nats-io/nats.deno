@@ -65,7 +65,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   processed: number;
   // FIXME: this is updated by the protocol
   received: number;
-  protected noIterator: boolean;
+  noIterator: boolean;
   iterClosed: Deferred<void>;
   protected done: boolean;
   private signal: Deferred<void>;
