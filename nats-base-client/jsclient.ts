@@ -191,15 +191,6 @@ export class JetStreamClientImpl extends BaseApiClient
     return toJsMsg(msg);
   }
 
-  /*
-  * Returns available messages upto specified batch count.
-  * If expires is set the iterator will wait for the specified
-  * amount of millis before closing the subscription.
-  * If no_wait is specified, the iterator will return no messages.
-  * @param stream
-  * @param durable
-  * @param opts
-  */
   fetch(
     stream: string,
     durable: string,
@@ -690,23 +681,34 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
       });
   }
 
+  // this is called by push subscriptions, to initialize the monitoring
+  // if configured on the consumer
   _maybeSetupHbMonitoring() {
     const ns = this.info?.config?.idle_heartbeat || 0;
     if (ns) {
-      const sub = this.sub as SubscriptionImpl;
-      const handler = (v: number): boolean => {
-        const msg = newJsErrorMsg(
-          409,
-          `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
-          this.sub.subject,
-        );
-        this.sub.callback(null, msg);
-        // if we are a handler, we'll continue reporting
-        // iterators will stop
-        return !sub.noIterator;
-      };
-      this.monitor = new IdleHeartbeat(millis(ns), handler);
+      this._setupHbMonitoring(millis(ns));
     }
+  }
+
+  _setupHbMonitoring(millis: number, cancelAfter = 0) {
+    const opts = { cancelAfter: 0, maxOut: 2 };
+    if (cancelAfter) {
+      opts.cancelAfter = cancelAfter;
+    }
+    const sub = this.sub as SubscriptionImpl;
+    const handler = (v: number): boolean => {
+      const msg = newJsErrorMsg(
+        409,
+        `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
+        this.sub.subject,
+      );
+      this.sub.callback(null, msg);
+      // if we are a handler, we'll continue reporting
+      // iterators will stop
+      return !sub.noIterator;
+    };
+    // this only applies for push subscriptions
+    this.monitor = new IdleHeartbeat(millis, handler, opts);
   }
 
   _checkHbOrderConsumer(msg: Msg): boolean {
@@ -785,11 +787,37 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
       args.max_bytes = opts.max_bytes!;
     }
 
+    let expires = 0;
     if (opts.expires && opts.expires > 0) {
-      args.expires = nanos(opts.expires);
+      expires = opts.expires;
+      args.expires = nanos(expires);
+    }
+
+    let hb = 0;
+    if (opts.idle_heartbeat && opts.idle_heartbeat > 0) {
+      hb = opts.idle_heartbeat;
+      args.idle_heartbeat = nanos(hb);
+    }
+
+    if (hb && expires === 0) {
+      throw new Error("idle_heartbeat requires expires");
+    }
+    if (hb > expires) {
+      throw new Error("expires must be greater than idle_heartbeat");
     }
 
     if (this.info) {
+      if (this.monitor) {
+        this.monitor.cancel();
+      }
+      if (expires && hb) {
+        if (!this.monitor) {
+          this._setupHbMonitoring(hb, expires);
+        } else {
+          this.monitor._change(hb, expires);
+        }
+      }
+
       const api = (this.info.api as BaseApiClient);
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;

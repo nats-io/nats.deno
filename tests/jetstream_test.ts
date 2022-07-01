@@ -3436,7 +3436,7 @@ Deno.test("jetstream - idleheartbeats errors repeat in callback push sub", async
   const sub = await js.subscribe(subj, opts) as JetStreamSubscriptionImpl;
   assert(sub.monitor);
   await delay(3000);
-  sub.monitor._change(100, 3);
+  sub.monitor._change(100, 0, 3);
 
   buf.forEach((err) => {
     assertIsError(err, NatsError, Js409Errors.IdleHeartbeatMissed);
@@ -3471,7 +3471,7 @@ Deno.test("jetstream - idleheartbeats errors in iterator push sub", async () => 
   });
   assert(sub.monitor);
   await delay(1700);
-  sub.monitor._change(100, 1);
+  sub.monitor._change(100, 0, 1);
   const err = await d;
   assertIsError(err, NatsError, Js409Errors.IdleHeartbeatMissed);
   assertEquals(err.code, ErrorCode.JetStreamIdleHeartBeat);
