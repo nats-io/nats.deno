@@ -224,6 +224,7 @@ export interface RequestManyOptions {
   maxWait: number;
   headers?: MsgHdrs;
   maxMessages?: number;
+  noMux?: boolean;
 }
 
 export interface PublishOptions {
