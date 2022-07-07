@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,11 +14,9 @@
  */
 
 import {
-  DirectMsg,
   Empty,
   JetStreamOptions,
   Lister,
-  Msg,
   MsgDeleteRequest,
   MsgRequest,
   NatsConnection,
@@ -26,7 +24,6 @@ import {
   PurgeOpts,
   PurgeResponse,
   PurgeTrimOpts,
-  RepublishedHeaders,
   StoredMsg,
   StreamAPI,
   StreamConfig,
@@ -39,7 +36,7 @@ import {
 } from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
-import { checkJsError, validateStreamName } from "./jsutil.ts";
+import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 
 export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
@@ -165,62 +162,8 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return new StoredMsgImpl(sm);
   }
 
-  async getDirectMessage(
-    stream: string,
-    query: MsgRequest,
-  ): Promise<StoredMsg> {
-    validateStreamName(stream);
-    const r = await this.nc.request(
-      `$JS.API.DIRECT.GET.${stream}`,
-      this.jc.encode(query),
-    );
-
-    // response is not a JS.API response
-    const err = checkJsError(r);
-    if (err) {
-      return Promise.reject(err);
-    }
-    const dm = new DirectMsgImpl(r);
-    return Promise.resolve(dm);
-  }
-
   find(subject: string): Promise<string> {
     return this.findStream(subject);
-  }
-}
-
-export class DirectMsgImpl implements DirectMsg {
-  data: Uint8Array;
-  header: MsgHdrs;
-
-  constructor(m: Msg) {
-    if (!m.headers) {
-      throw new Error("headers expected");
-    }
-    this.data = m.data;
-    this.header = m.headers;
-  }
-
-  get subject(): string {
-    return this.header.get(RepublishedHeaders.JsSubject);
-  }
-
-  get seq(): number {
-    const v = this.header.get(RepublishedHeaders.JsSequence);
-    return typeof v === "string" ? parseInt(v) : 0;
-  }
-
-  get time(): Date {
-    return new Date(this.header.get(RepublishedHeaders.JsTimeStamp));
-  }
-
-  get stream(): string {
-    return this.header.get(RepublishedHeaders.JsStream);
-  }
-
-  get lastSequence(): number {
-    const v = this.header.get(RepublishedHeaders.JsLastSequence);
-    return typeof v === "string" ? parseInt(v) : 0;
   }
 }
 

@@ -53,7 +53,7 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
 import { consumerOpts, deferred, ErrorCode } from "./mod.ts";
 import { compare, parseSemVer } from "./semver.ts";
-import { StreamAPIImpl } from "./jsmstream_api.ts";
+import { JetStreamManagerImpl } from "./jsm.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -397,8 +397,8 @@ export class Bucket implements KV, KvRemove {
     let sm: StoredMsg;
     try {
       if (this.direct) {
-        const sai = this.jsm.streams as StreamAPIImpl;
-        sm = await sai.getDirectMessage(this.bucketName(), arg);
+        const jsmi = this.jsm as JetStreamManagerImpl;
+        sm = await jsmi.direct.getMessage(this.bucketName(), arg);
       } else {
         sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
       }

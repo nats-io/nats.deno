@@ -469,6 +469,27 @@ export interface StreamAPI {
   find(subject: string): Promise<string>;
 }
 
+/**
+ * Request the next stream message by sequence for the specified subject.
+ * Note that if the specified seq matches the specified subject, that
+ * sequence is returned.
+ * @field seq - the seq to start looking
+ * @field next_by_subject - the subject to look for
+ */
+export type NextMsgRequest = {
+  seq: number;
+  next_by_subj: string;
+};
+
+export type DirectMsgRequest =
+  | SeqMsgRequest
+  | LastForMsgRequest
+  | NextMsgRequest;
+
+export interface DirectStreamAPI {
+  getMessage(stream: string, query: DirectMsgRequest): Promise<StoredMsg>;
+}
+
 export interface JsMsg {
   redelivered: boolean;
   info: DeliveryInfo;
@@ -521,7 +542,6 @@ export interface StoredMsg {
 
 export interface DirectMsg extends StoredMsg {
   stream: string;
-  lastSequence: number;
 }
 
 export interface Advisory {
@@ -987,10 +1007,9 @@ export interface KvPutOptions {
 
 export type callbackFn = () => void;
 
-export enum RepublishedHeaders {
+export enum DirectMsgHeaders {
   JsStream = "Nats-Stream",
   JsSequence = "Nats-Sequence",
   JsTimeStamp = "Nats-Time-Stamp",
   JsSubject = "Nats-Subject",
-  JsLastSequence = "Nats-Last-Sequence",
 }
