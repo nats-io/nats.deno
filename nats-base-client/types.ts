@@ -774,6 +774,7 @@ export interface PullOptions {
    * number of messages in the batch to fit within this setting.
    */
   "max_bytes": number;
+  "idle_heartbeat": number;
 }
 
 /**

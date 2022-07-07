@@ -65,7 +65,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   processed: number;
   // FIXME: this is updated by the protocol
   received: number;
-  protected noIterator: boolean;
+  noIterator: boolean;
   iterClosed: Deferred<void>;
   protected done: boolean;
   private signal: Deferred<void>;
@@ -77,7 +77,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   dispatchedFn?: DispatchedFn<T>;
   ctx?: unknown;
   _data?: unknown; //data is for use by extenders in any way they like
-  private err?: Error;
+  err?: Error;
 
   constructor() {
     this.inflight = 0;
