@@ -31,6 +31,7 @@ import {
   JSONCodec,
   jwtAuthenticator,
   nanos,
+  NatsConnectionImpl,
   NatsError,
   nkeys,
   nuid,
@@ -60,6 +61,7 @@ import {
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 import { StreamUpdateConfig } from "../nats-base-client/types.ts";
+import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1181,4 +1183,50 @@ Deno.test("jsm - stream update properties", async () => {
 
   await nc.close();
   await NatsServer.stopAll(servers);
+});
+
+Deno.test("jsm - direct getMessage", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["foo", "bar"],
+    allow_direct: true,
+  });
+
+  const sc = StringCodec();
+
+  const js = nc.jetstream();
+  await js.publish("foo", sc.encode("a"), { expect: { lastSequence: 0 } });
+  await js.publish("foo", sc.encode("b"), { expect: { lastSequence: 1 } });
+  await js.publish("foo", sc.encode("c"), { expect: { lastSequence: 2 } });
+  await js.publish("bar", sc.encode("d"), { expect: { lastSequence: 3 } });
+  await js.publish("foo", sc.encode("e"), { expect: { lastSequence: 4 } });
+
+  const nci = nc as NatsConnectionImpl;
+  nci.options.debug = true;
+
+  let m = await jsm.direct.getMessage("A", { seq: 0, next_by_subj: "bar" });
+  assertEquals(m.seq, 4);
+
+  m = await jsm.direct.getMessage("A", { last_by_subj: "foo" });
+  assertEquals(m.seq, 5);
+
+  m = await jsm.direct.getMessage("A", { seq: 0, next_by_subj: "foo" });
+  assertEquals(m.seq, 1);
+
+  m = await jsm.direct.getMessage("A", { seq: 4, next_by_subj: "foo" });
+  assertEquals(m.seq, 5);
+
+  m = await jsm.direct.getMessage("A", { seq: 2, next_by_subj: "foo" });
+  assertEquals(m.seq, 2);
+
+  await cleanup(ns, nc);
 });

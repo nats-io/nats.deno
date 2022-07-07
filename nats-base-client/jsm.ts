@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import {
   AdvisoryKind,
   ApiResponse,
   ConsumerAPI,
+  DirectStreamAPI,
   JetStreamAccountStats,
   JetStreamManager,
   JetStreamOptions,
@@ -30,15 +31,18 @@ import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { StreamAPIImpl } from "./jsmstream_api.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import { DirectStreamAPIImpl } from "./jsmdirect_api.ts";
 
 export class JetStreamManagerImpl extends BaseApiClient
   implements JetStreamManager {
   streams: StreamAPI;
   consumers: ConsumerAPI;
+  direct: DirectStreamAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
     this.streams = new StreamAPIImpl(nc, opts);
     this.consumers = new ConsumerAPIImpl(nc, opts);
+    this.direct = new DirectStreamAPIImpl(nc, opts);
   }
 
   async getAccountInfo(): Promise<JetStreamAccountStats> {
