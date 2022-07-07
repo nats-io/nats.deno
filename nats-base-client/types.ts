@@ -542,7 +542,6 @@ export interface StoredMsg {
 
 export interface DirectMsg extends StoredMsg {
   stream: string;
-  lastSequence: number;
 }
 
 export interface Advisory {
@@ -1008,10 +1007,9 @@ export interface KvPutOptions {
 
 export type callbackFn = () => void;
 
-export enum RepublishedHeaders {
+export enum DirectMsgHeaders {
   JsStream = "Nats-Stream",
   JsSequence = "Nats-Sequence",
   JsTimeStamp = "Nats-Time-Stamp",
   JsSubject = "Nats-Subject",
-  JsLastSequence = "Nats-Last-Sequence",
 }

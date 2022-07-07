@@ -15,12 +15,12 @@
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import {
   DirectMsg,
+  DirectMsgHeaders,
   DirectMsgRequest,
   DirectStreamAPI,
   JetStreamOptions,
   Msg,
   NatsConnection,
-  RepublishedHeaders,
   StoredMsg,
 } from "./types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
@@ -65,24 +65,19 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get subject(): string {
-    return this.header.get(RepublishedHeaders.JsSubject);
+    return this.header.get(DirectMsgHeaders.JsSubject);
   }
 
   get seq(): number {
-    const v = this.header.get(RepublishedHeaders.JsSequence);
+    const v = this.header.get(DirectMsgHeaders.JsSequence);
     return typeof v === "string" ? parseInt(v) : 0;
   }
 
   get time(): Date {
-    return new Date(this.header.get(RepublishedHeaders.JsTimeStamp));
+    return new Date(this.header.get(DirectMsgHeaders.JsTimeStamp));
   }
 
   get stream(): string {
-    return this.header.get(RepublishedHeaders.JsStream);
-  }
-
-  get lastSequence(): number {
-    const v = this.header.get(RepublishedHeaders.JsLastSequence);
-    return typeof v === "string" ? parseInt(v) : 0;
+    return this.header.get(DirectMsgHeaders.JsStream);
   }
 }
