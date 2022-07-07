@@ -19,6 +19,7 @@ import {
   AdvisoryKind,
   ApiResponse,
   ConsumerAPI,
+  DirectStreamAPI,
   JetStreamAccountStats,
   JetStreamManager,
   JetStreamOptions,
@@ -30,15 +31,18 @@ import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { StreamAPIImpl } from "./jsmstream_api.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import { DirectStreamAPIImpl } from "./jsmdirect_api.ts";
 
 export class JetStreamManagerImpl extends BaseApiClient
   implements JetStreamManager {
   streams: StreamAPI;
   consumers: ConsumerAPI;
+  direct: DirectStreamAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
     this.streams = new StreamAPIImpl(nc, opts);
     this.consumers = new ConsumerAPIImpl(nc, opts);
+    this.direct = new DirectStreamAPIImpl(nc, opts);
   }
 
   async getAccountInfo(): Promise<JetStreamAccountStats> {

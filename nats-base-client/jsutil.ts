@@ -21,7 +21,6 @@ import {
   ReplayPolicy,
 } from "./types.ts";
 import { ErrorCode, NatsError } from "./error.ts";
-import { connect } from "../src/mod.ts";
 
 export function validateDurableName(name?: string) {
   return validateName("durable", name);
