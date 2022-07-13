@@ -3345,3 +3345,69 @@ Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async (
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - bind ephemeral can get consumer info", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+
+  async function testEphemeral(deliverSubject = ""): Promise<void> {
+    const ci = await jsm.consumers.add(stream, {
+      ack_policy: AckPolicy.Explicit,
+      inactive_threshold: nanos(5000),
+      deliver_subject: deliverSubject,
+    });
+
+    const js = nc.jetstream();
+    const opts = consumerOpts();
+    opts.bind(stream, ci.name);
+    const sub = deliverSubject
+      ? await js.subscribe(subj, opts)
+      : await js.pullSubscribe(subj, opts);
+    const sci = await sub.consumerInfo();
+    assertEquals(
+      sci.name,
+      ci.name,
+      `failed getting ci for ${deliverSubject ? "push" : "pull"}`,
+    );
+  }
+
+  await testEphemeral();
+  await testEphemeral(createInbox());
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - create ephemeral with config can get consumer info", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  async function testEphemeral(deliverSubject = ""): Promise<void> {
+    const opts = {
+      stream,
+      config: {
+        ack_policy: AckPolicy.Explicit,
+        deliver_subject: deliverSubject,
+      },
+    };
+    const sub = deliverSubject
+      ? await js.subscribe(subj, opts)
+      : await js.pullSubscribe(subj, opts);
+    const ci = await sub.consumerInfo();
+    assert(
+      ci.name,
+      `failed getting name for ${deliverSubject ? "push" : "pull"}`,
+    );
+    assert(
+      !ci.config.durable_name,
+      `unexpected durable name for ${deliverSubject ? "push" : "pull"}`,
+    );
+  }
+
+  await testEphemeral();
+  await testEphemeral(createInbox());
+
+  await cleanup(ns, nc);
+});

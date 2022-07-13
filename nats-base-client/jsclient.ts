@@ -479,6 +479,11 @@ export class JetStreamClientImpl extends BaseApiClient
           jsi.last = info;
           jsi.config = info.config;
           jsi.attached = true;
+          // if not a durable capture the name of the ephemeral so
+          // that consumerInfo from the sub will work
+          if (!jsi.config.durable_name) {
+            jsi.name = info.name;
+          }
         }
       } catch (err) {
         //consumer doesn't exist
