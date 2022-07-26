@@ -3429,6 +3429,9 @@ Deno.test("jetstream - duplicate message pub", async () => {
 
 Deno.test("jetstream - republish", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
   const jsm = await nc.jetstreamManager();
   const si = await jsm.streams.add({
     name: nuid.next(),
