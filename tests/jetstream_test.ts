@@ -57,7 +57,7 @@ import {
 } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { PubAck } from "../nats-base-client/types.ts";
+import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionInfoable,
@@ -3408,6 +3408,53 @@ Deno.test("jetstream - create ephemeral with config can get consumer info", asyn
 
   await testEphemeral();
   await testEphemeral(createInbox());
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - duplicate message pub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  let ack = await js.publish(subj, Empty, { msgID: "x" });
+  assertEquals(ack.duplicate, false);
+
+  ack = await js.publish(subj, Empty, { msgID: "x" });
+  assertEquals(ack.duplicate, true);
+  console.log(ack);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - republish", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({
+    name: nuid.next(),
+    subjects: ["foo"],
+    republish: {
+      src: "foo",
+      dest: "bar",
+    },
+  });
+
+  assertEquals(si.config.republish?.src, "foo");
+  assertEquals(si.config.republish?.dest, "bar");
+
+  const sub = nc.subscribe("bar", { max: 1 });
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.subject, "bar");
+      assert(m.headers?.get(RepublishHeaders.Subject), "foo");
+      assert(m.headers?.get(RepublishHeaders.Sequence), "1");
+      assert(m.headers?.get(RepublishHeaders.Stream), si.config.name);
+      assert(m.headers?.get(RepublishHeaders.LastSequence), "0");
+    }
+  })();
+
+  nc.publish("foo");
+  await done;
 
   await cleanup(ns, nc);
 });

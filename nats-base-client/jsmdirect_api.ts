@@ -65,19 +65,19 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get subject(): string {
-    return this.header.get(DirectMsgHeaders.JsSubject);
+    return this.header.get(DirectMsgHeaders.Subject);
   }
 
   get seq(): number {
-    const v = this.header.get(DirectMsgHeaders.JsSequence);
+    const v = this.header.get(DirectMsgHeaders.Sequence);
     return typeof v === "string" ? parseInt(v) : 0;
   }
 
   get time(): Date {
-    return new Date(this.header.get(DirectMsgHeaders.JsTimeStamp));
+    return new Date(this.header.get(DirectMsgHeaders.TimeStamp));
   }
 
   get stream(): string {
-    return this.header.get(DirectMsgHeaders.JsStream);
+    return this.header.get(DirectMsgHeaders.Stream);
   }
 }
