@@ -57,14 +57,26 @@ export function defaultConsumer(
   }, opts);
 }
 
+/**
+ * Converts the specified millis into Nanos
+ * @param millis
+ */
 export function nanos(millis: number): Nanos {
   return millis * 1000000;
 }
 
+/**
+ * Convert the specified Nanos into millis
+ * @param ns
+ */
 export function millis(ns: Nanos) {
   return Math.floor(ns / 1000000);
 }
 
+/**
+ * Returns true if the message is a flow control message
+ * @param msg
+ */
 export function isFlowControlMsg(msg: Msg): boolean {
   if (msg.data.length > 0) {
     return false;
@@ -76,6 +88,10 @@ export function isFlowControlMsg(msg: Msg): boolean {
   return h.code >= 100 && h.code < 200;
 }
 
+/**
+ * Returns true if the message is a heart beat message
+ * @param msg
+ */
 export function isHeartbeatMsg(msg: Msg): boolean {
   return isFlowControlMsg(msg) && msg.headers?.description === "Idle Heartbeat";
 }

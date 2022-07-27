@@ -57,7 +57,7 @@ import {
 } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { PubAck } from "../nats-base-client/types.ts";
+import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionInfoable,
@@ -3412,6 +3412,7 @@ Deno.test("jetstream - create ephemeral with config can get consumer info", asyn
   await cleanup(ns, nc);
 });
 
+
 Deno.test("jetstream - repub on 503", async () => {
   let servers = await NatsServer.jetstreamCluster(4, {});
   servers[0].config.jetstream = "disabled";
@@ -3459,4 +3460,53 @@ Deno.test("jetstream - repub on 503", async () => {
 
   await nc.close();
   await NatsServer.stopAll(servers);
+ 
+Deno.test("jetstream - duplicate message pub", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { subj } = await initStream(nc);
+  const js = nc.jetstream();
+
+  let ack = await js.publish(subj, Empty, { msgID: "x" });
+  assertEquals(ack.duplicate, false);
+
+  ack = await js.publish(subj, Empty, { msgID: "x" });
+  assertEquals(ack.duplicate, true);
+  console.log(ack);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - republish", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({
+    name: nuid.next(),
+    subjects: ["foo"],
+    republish: {
+      src: "foo",
+      dest: "bar",
+    },
+  });
+
+  assertEquals(si.config.republish?.src, "foo");
+  assertEquals(si.config.republish?.dest, "bar");
+
+  const sub = nc.subscribe("bar", { max: 1 });
+  const done = (async () => {
+    for await (const m of sub) {
+      assertEquals(m.subject, "bar");
+      assert(m.headers?.get(RepublishHeaders.Subject), "foo");
+      assert(m.headers?.get(RepublishHeaders.Sequence), "1");
+      assert(m.headers?.get(RepublishHeaders.Stream), si.config.name);
+      assert(m.headers?.get(RepublishHeaders.LastSequence), "0");
+    }
+  })();
+
+  nc.publish("foo");
+  await done;
+
+  await cleanup(ns, nc);
 });
