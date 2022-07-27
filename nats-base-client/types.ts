@@ -1229,6 +1229,12 @@ export interface ConsumerOptsBuilder {
   inactiveEphemeralThreshold(millis: number): this;
 
   /**
+   * Force the consumer state to be kept in memory rather than inherit the setting from
+   * the Stream
+   */
+  memory(): this;
+
+  /**
    * When set do not inherit the replica count from the stream but specifically set it to this amount
    */
   numReplicas(n: number): this;

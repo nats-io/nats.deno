@@ -3511,6 +3511,41 @@ Deno.test("jetstream - republish", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - mem_storage consumer option", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const { stream, subj } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.config.storage, StorageType.File);
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.durable("opts");
+  opts.memory();
+
+  const js = nc.jetstream();
+  const sub = await js.pullSubscribe(subj, opts);
+  let ci = await sub.consumerInfo();
+  assertEquals(ci.config.mem_storage, true);
+
+  ci.config.mem_storage = false;
+  ci = await jsm.consumers.update(stream, "opts", ci.config);
+  assertEquals(ci.config.mem_storage, undefined);
+
+  ci = await jsm.consumers.add(stream, {
+    durable_name: "dopts",
+    mem_storage: true,
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(ci.config.mem_storage, true);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - num_replicas consumer option", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({port: servers[0].port});
