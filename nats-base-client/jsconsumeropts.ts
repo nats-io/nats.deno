@@ -255,6 +255,11 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.max_expires = nanos(millis);
     return this;
   }
+
+  numReplicas(n: number) {
+    this.config.num_replicas = n;
+    return this;
+  }
 }
 
 export function isConsumerOptsBuilder(

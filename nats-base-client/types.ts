@@ -1227,6 +1227,11 @@ export interface ConsumerOptsBuilder {
    * @param millis
    */
   inactiveEphemeralThreshold(millis: number): this;
+
+  /**
+   * When set do not inherit the replica count from the stream but specifically set it to this amount
+   */
+  numReplicas(n: number): this;
 }
 
 /**
@@ -2386,7 +2391,8 @@ export interface ConsumerUpdateConfig {
    */
   "max_bytes"?: number;
   /**
-   * When set do not inherit the replica count from the stream but specifically set it to this amount
+   * When set do not inherit the replica count from the stream but specifically set it to this amount.
+   * Min is 1, Max is 5
    */
   "num_replicas"?: number;
   /**

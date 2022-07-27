@@ -3510,3 +3510,35 @@ Deno.test("jetstream - republish", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - num_replicas consumer option", async () => {
+  const servers = await NatsServer.jetstreamCluster(3);
+  const nc = await connect({port: servers[0].port});
+  if (await notCompatible(servers[0], nc, "2.9.0")) {
+    return;
+  }
+
+  const { stream, subj } = await initStream(nc, nuid.next(), {
+    num_replicas: 3,
+  });
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(stream);
+  assertEquals(si.config.num_replicas, 3);
+
+  const opts = consumerOpts();
+  opts.ackExplicit();
+  opts.durable("opts");
+
+  const js = nc.jetstream();
+  const sub = await js.pullSubscribe(subj, opts);
+  let ci = await sub.consumerInfo();
+  assertEquals(ci.config.num_replicas, 0);
+
+  ci.config.num_replicas = 2
+  ci = await jsm.consumers.update(stream, "opts", ci.config);
+  assertEquals(ci.config.num_replicas, 2);
+
+
+  await nc.close();
+  await NatsServer.stopAll(servers);
+});
