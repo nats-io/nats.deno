@@ -3412,7 +3412,6 @@ Deno.test("jetstream - create ephemeral with config can get consumer info", asyn
   await cleanup(ns, nc);
 });
 
-
 Deno.test("jetstream - repub on 503", async () => {
   let servers = await NatsServer.jetstreamCluster(4, {});
   servers[0].config.jetstream = "disabled";
@@ -3460,7 +3459,8 @@ Deno.test("jetstream - repub on 503", async () => {
 
   await nc.close();
   await NatsServer.stopAll(servers);
- 
+});
+
 Deno.test("jetstream - duplicate message pub", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { subj } = await initStream(nc);
