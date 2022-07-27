@@ -3548,7 +3548,7 @@ Deno.test("jetstream - mem_storage consumer option", async () => {
 
 Deno.test("jetstream - num_replicas consumer option", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
-  const nc = await connect({port: servers[0].port});
+  const nc = await connect({ port: servers[0].port });
   if (await notCompatible(servers[0], nc, "2.9.0")) {
     return;
   }
@@ -3569,10 +3569,9 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
   let ci = await sub.consumerInfo();
   assertEquals(ci.config.num_replicas, 0);
 
-  ci.config.num_replicas = 2
+  ci.config.num_replicas = 2;
   ci = await jsm.consumers.update(stream, "opts", ci.config);
   assertEquals(ci.config.num_replicas, 2);
-
 
   await nc.close();
   await NatsServer.stopAll(servers);
