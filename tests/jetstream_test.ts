@@ -3412,6 +3412,55 @@ Deno.test("jetstream - create ephemeral with config can get consumer info", asyn
   await cleanup(ns, nc);
 });
 
+
+Deno.test("jetstream - repub on 503", async () => {
+  let servers = await NatsServer.jetstreamCluster(4, {});
+  servers[0].config.jetstream = "disabled";
+  await NatsServer.stopAll(servers);
+  const proms = servers.map((s) => {
+    return s.restart();
+  });
+
+  const connection = await proms[0];
+  const data = await NatsServer.dataClusterFormed([
+    proms[1],
+    proms[2],
+    proms[3],
+  ]);
+  servers = [connection, data[0], data[1], data[2]];
+
+  const nc = await connect({ port: connection.port });
+
+  const { stream, subj } = await initStream(nc, nuid.next(), {
+    num_replicas: 3,
+  });
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info(stream);
+  const host = si.cluster!.leader || "";
+  const leader = servers.find((s) => {
+    return s.config.server_name === host;
+  });
+
+  // publish a message
+  const js = nc.jetstream();
+  const pa = await js.publish(subj);
+  assertEquals(pa.stream, stream);
+
+  // now stop and wait a bit for the servers
+  await leader?.stop();
+  await delay(1000);
+
+  await js.publish(subj, Empty, {
+    //@ts-ignore: testing
+    retries: 15,
+    retry_delay: 1000,
+    timeout: 15000,
+  });
+
+  await nc.close();
+  await NatsServer.stopAll(servers);
+ 
 Deno.test("jetstream - duplicate message pub", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { subj } = await initStream(nc);
