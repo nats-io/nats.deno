@@ -255,6 +255,11 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.max_expires = nanos(millis);
     return this;
   }
+
+  memory() {
+    this.config.mem_storage = true;
+    return this;
+  }
 }
 
 export function isConsumerOptsBuilder(
