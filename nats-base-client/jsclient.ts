@@ -65,7 +65,7 @@ import {
   QueuedIterator,
   QueuedIteratorImpl,
 } from "./queued_iterator.ts";
-import { Timeout, timeout } from "./util.ts";
+import { delay, Timeout, timeout } from "./util.ts";
 import { createInbox } from "./protocol.ts";
 import { headers } from "./headers.ts";
 import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
@@ -149,9 +149,30 @@ export class JetStreamClientImpl extends BaseApiClient
       ro.headers = mh;
     }
 
-    const r = await this.nc.request(subj, data, ro);
+    let { retries, retry_delay } = opts as {
+      retries: number;
+      retry_delay: number;
+    };
+    retries = retries || 1;
+    retry_delay = retry_delay || 250;
 
-    const pa = this.parseJsResponse(r) as PubAck;
+    let r: Msg;
+    for (let i = 0; i < retries; i++) {
+      try {
+        r = await this.nc.request(subj, data, ro);
+        // if here we succeeded
+        break;
+      } catch (err) {
+        const ne = err as NatsError;
+        if (ne.code === "503" && i + 1 < retries) {
+          await delay(retry_delay);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    const pa = this.parseJsResponse(r!) as PubAck;
     if (pa.stream === "") {
       throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
     }
