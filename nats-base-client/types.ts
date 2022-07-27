@@ -1227,6 +1227,12 @@ export interface ConsumerOptsBuilder {
    * @param millis
    */
   inactiveEphemeralThreshold(millis: number): this;
+
+  /**
+   * Force the consumer state to be kept in memory rather than inherit the setting from
+   * the Stream
+   */
+  memory(): this;
 }
 
 /**
