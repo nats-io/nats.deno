@@ -183,7 +183,7 @@ let msgs = await js.fetch(stream, durable, { batch: 10, expires: 5000 });
 // for 5000ms for messages to arrive.
 
 const done = (async () => {
-  for await (const m of iter) {
+  for await (const m of msgs) {
     // do something with the message
     // and if the consumer is not set to auto-ack, ack!
     m.ack();
