@@ -3579,3 +3579,24 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
   // in ci this hangs
   await delay(500);
 });
+
+Deno.test("jetstream - filter_subject consumer update", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({ name: nuid.next(), subjects: ["foo.>"] });
+  let ci = await jsm.consumers.add(si.config.name, {
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: "foo.bar",
+    durable_name: "a",
+  });
+  assertEquals(ci.config.filter_subject, "foo.bar");
+
+  ci.config.filter_subject = "foo.baz";
+  ci = await jsm.consumers.update(si.config.name, "a", ci.config);
+  assertEquals(ci.config.filter_subject, "foo.baz");
+  await cleanup(ns, nc);
+});
