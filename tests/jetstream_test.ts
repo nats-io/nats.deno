@@ -3550,6 +3550,7 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
   if (await notCompatible(servers[0], nc, "2.9.0")) {
+    await NatsServer.stopAll(servers);
     return;
   }
 
