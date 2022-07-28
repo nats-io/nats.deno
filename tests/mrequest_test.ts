@@ -15,7 +15,6 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { createInbox } from "../nats-base-client/protocol.ts";
-import { Lock } from "./helpers/lock.ts";
 import { Empty, RequestStrategy } from "../nats-base-client/types.ts";
 
 import {
@@ -28,7 +27,7 @@ import { assertErrorCode } from "./helpers/mod.ts";
 import { deferred, ErrorCode } from "../nats-base-client/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
-Deno.test("mreq - request many count", async () => {
+async function requestManyCount(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
@@ -41,27 +40,33 @@ Deno.test("mreq - request many count", async () => {
     },
   });
 
-  const lock = Lock(5, 2000);
-
   const iter = await nci.requestMany(subj, Empty, {
     strategy: RequestStrategy.Count,
     maxWait: 2000,
     maxMessages: 5,
-    noMux: true,
+    noMux,
   });
+
   for await (const mer of iter) {
     if (mer instanceof Error) {
       fail(mer.message);
     }
-    lock.unlock();
   }
-  await lock;
 
-  assertEquals(nci.protocol.subscriptions.size(), 1);
+  assertEquals(nci.protocol.subscriptions.size(), noMux ? 1 : 2);
+  assertEquals(iter.getProcessed(), 5);
   await cleanup(ns, nc);
+}
+
+Deno.test("mreq - request many count", async () => {
+  await requestManyCount();
 });
 
-Deno.test("mreq - nomux request many jitter", async () => {
+Deno.test("mreq - request many count noMux", async () => {
+  await requestManyCount(true);
+});
+
+async function requestManyJitter(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
@@ -74,96 +79,89 @@ Deno.test("mreq - nomux request many jitter", async () => {
     },
   });
 
-  let count = 0;
   const start = Date.now();
 
   const iter = await nci.requestMany(subj, Empty, {
     strategy: RequestStrategy.JitterTimer,
     maxWait: 5000,
-    noMux: true,
+    noMux,
   });
   for await (const mer of iter) {
     if (mer instanceof Error) {
       fail(mer.message);
     }
-    count++;
   }
   const time = Date.now() - start;
   assert(500 > time);
-  assertEquals(count, 10);
+  assertEquals(iter.getProcessed(), 10);
   await cleanup(ns, nc);
+}
+
+Deno.test("mreq - request many jitter", async () => {
+  await requestManyJitter();
 });
+
+Deno.test("mreq - request many jitter noMux", async () => {
+  await requestManyJitter(true);
+});
+
+async function requestManySentinel(
+  noMux = false,
+  partial = false,
+): Promise<void> {
+  const { ns, nc } = await setup({});
+  const nci = nc as NatsConnectionImpl;
+
+  const subj = createInbox();
+  const sc = StringCodec();
+  const payload = sc.encode("hello");
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      for (let i = 0; i < 10; i++) {
+        msg.respond(payload);
+      }
+      if (!partial) {
+        msg.respond();
+      }
+    },
+  });
+
+  const start = Date.now();
+  const iter = await nci.requestMany(subj, Empty, {
+    strategy: RequestStrategy.SentinelMsg,
+    maxWait: 2000,
+    noMux,
+  });
+  for await (const mer of iter) {
+    if (mer instanceof Error) {
+      fail(mer.message);
+    }
+  }
+  const time = Date.now() - start;
+  // partial will timeout
+  assert(partial ? time > 500 : 500 > time);
+  // partial will not have the empty message
+  assertEquals(iter.getProcessed(), partial ? 10 : 11);
+  await cleanup(ns, nc);
+}
 
 Deno.test("mreq - nomux request many sentinel", async () => {
-  const { ns, nc } = await setup({});
-  const nci = nc as NatsConnectionImpl;
-
-  const subj = createInbox();
-  const sc = StringCodec();
-  const payload = sc.encode("hello");
-  nc.subscribe(subj, {
-    callback: (_err, msg) => {
-      for (let i = 0; i < 10; i++) {
-        msg.respond(payload);
-      }
-      msg.respond();
-    },
-  });
-
-  let count = 0;
-  const start = Date.now();
-  const iter = await nci.requestMany(subj, Empty, {
-    strategy: RequestStrategy.SentinelMsg,
-    maxWait: 2000,
-    noMux: true,
-  });
-  for await (const mer of iter) {
-    if (mer instanceof Error) {
-      fail(mer.message);
-    }
-    count++;
-  }
-  const time = Date.now() - start;
-  assert(500 > time);
-  assertEquals(count, 11);
-  await cleanup(ns, nc);
+  await requestManySentinel();
 });
 
-Deno.test("mreq - nomux request many sentinel - partial response", async () => {
-  const { ns, nc } = await setup({});
-  const nci = nc as NatsConnectionImpl;
-
-  const subj = createInbox();
-  const sc = StringCodec();
-  const payload = sc.encode("hello");
-  nc.subscribe(subj, {
-    callback: (_err, msg) => {
-      for (let i = 0; i < 10; i++) {
-        msg.respond(payload);
-      }
-    },
-  });
-
-  let count = 0;
-  const start = Date.now();
-  const iter = await nci.requestMany(subj, Empty, {
-    strategy: RequestStrategy.SentinelMsg,
-    maxWait: 2000,
-    noMux: true,
-  });
-  for await (const mer of iter) {
-    if (mer instanceof Error) {
-      fail(mer.message);
-    }
-    count++;
-  }
-  const time = Date.now() - start;
-  assert(time >= 2000);
-  assertEquals(count, 10);
-  await cleanup(ns, nc);
+Deno.test("mreq - nomux request many sentinel noMux", async () => {
+  await requestManySentinel(true);
 });
 
-Deno.test("mreq - nomux request many wait for timer - no response", async () => {
+Deno.test("mreq - nomux request many sentinel partial", async () => {
+  await requestManySentinel(false, true);
+});
+
+Deno.test("mreq - nomux request many sentinel partial noMux", async () => {
+  await requestManySentinel(true, true);
+});
+
+async function requestManyTimerNoResponse(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
@@ -179,7 +177,7 @@ Deno.test("mreq - nomux request many wait for timer - no response", async () => 
   const iter = await nci.requestMany(subj, Empty, {
     strategy: RequestStrategy.Timer,
     maxWait: 2000,
-    noMux: true,
+    noMux,
   });
   for await (const mer of iter) {
     if (mer instanceof Error) {
@@ -191,9 +189,17 @@ Deno.test("mreq - nomux request many wait for timer - no response", async () => 
   assert(time >= 2000);
   assertEquals(count, 0);
   await cleanup(ns, nc);
+}
+
+Deno.test("mreq - request many wait for timer - no response", async () => {
+  await requestManyTimerNoResponse();
 });
 
-Deno.test("mreq - nomux request many waits for timer late response", async () => {
+Deno.test("mreq - request many wait for timer noMux - no response", async () => {
+  await requestManyTimerNoResponse(true);
+});
+
+async function requestTimerLateResponse(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
@@ -210,7 +216,7 @@ Deno.test("mreq - nomux request many waits for timer late response", async () =>
   const iter = await nci.requestMany(subj, Empty, {
     strategy: RequestStrategy.Timer,
     maxWait: 2000,
-    noMux: true,
+    noMux,
   });
   for await (const mer of iter) {
     if (mer instanceof Error) {
@@ -222,9 +228,17 @@ Deno.test("mreq - nomux request many waits for timer late response", async () =>
   assert(time >= 2000);
   assertEquals(count, 1);
   await cleanup(ns, nc);
+}
+
+Deno.test("mreq - request many waits for timer late response", async () => {
+  await requestTimerLateResponse();
 });
 
-Deno.test("mreq - nomux request many stops on error", async () => {
+Deno.test("mreq - request many waits for timer late response noMux", async () => {
+  await requestTimerLateResponse(true);
+});
+
+async function requestManyStopsOnError(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
@@ -233,7 +247,7 @@ Deno.test("mreq - nomux request many stops on error", async () => {
   const iter = await nci.requestMany(subj, Empty, {
     strategy: RequestStrategy.Timer,
     maxWait: 2000,
-    noMux: true,
+    noMux,
   });
   const d = deferred<Error>();
   for await (const mer of iter) {
@@ -244,4 +258,12 @@ Deno.test("mreq - nomux request many stops on error", async () => {
   const err = await d;
   assertErrorCode(err, ErrorCode.NoResponders);
   await cleanup(ns, nc);
+}
+
+Deno.test("mreq - request many stops on error", async () => {
+  await requestManyStopsOnError();
+});
+
+Deno.test("mreq - request many stops on error noMux", async () => {
+  await requestManyStopsOnError(true);
 });
