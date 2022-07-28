@@ -163,7 +163,7 @@ Deno.test("mreq - nomux request many sentinel - partial response", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("mreq - nomux request many wait for timer - no respone", async () => {
+Deno.test("mreq - nomux request many wait for timer - no response", async () => {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
