@@ -352,7 +352,7 @@ export class NatsConnectionImpl implements NatsConnection {
     return iter;
   }
 
-  get info(): (ServerInfo | undefined) {
+  get info(): ServerInfo | undefined {
     return this.protocol.isClosed() ? undefined : this.protocol.info;
   }
 

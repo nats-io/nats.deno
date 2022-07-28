@@ -47,7 +47,7 @@ export class Subscriptions {
     return this.mux;
   }
 
-  get(sid: number): (SubscriptionImpl | undefined) {
+  get(sid: number): SubscriptionImpl | undefined {
     return this.subs.get(sid);
   }
 
