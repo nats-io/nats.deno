@@ -3575,4 +3575,6 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
 
   await nc.close();
   await NatsServer.stopAll(servers);
+  // in ci this hangs
+  await delay(500);
 });
