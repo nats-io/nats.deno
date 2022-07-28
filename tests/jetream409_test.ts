@@ -188,7 +188,7 @@ Deno.test("409 - max_bytes", async () => {
 
 Deno.test("409 - max msg size", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  if (await notCompatible(ns, nc, "2.8.3")) {
+  if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
   const { stream, subj } = await initStream(nc);
