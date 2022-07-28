@@ -555,7 +555,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  sendCommand(cmd: (string | Uint8Array), ...payloads: Uint8Array[]) {
+  sendCommand(cmd: string | Uint8Array, ...payloads: Uint8Array[]) {
     const len = this.outbound.length();
     let buf: Uint8Array;
     if (typeof cmd === "string") {

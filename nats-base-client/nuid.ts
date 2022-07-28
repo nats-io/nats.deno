@@ -29,7 +29,9 @@ const cryptoObj = initCrypto();
 function initCrypto() {
   let cryptoObj = null;
   if (typeof globalThis !== "undefined") {
-    if ("crypto" in globalThis && globalThis.crypto.getRandomValues) {
+    if (
+      "crypto" in globalThis && globalThis.crypto.getRandomValues !== undefined
+    ) {
       cryptoObj = globalThis.crypto;
     }
   }

@@ -47,7 +47,7 @@ export function isIP(h: string) {
   return parseIP(h) !== undefined;
 }
 
-export function parseIP(h: string): (Uint8Array | undefined) {
+export function parseIP(h: string): Uint8Array | undefined {
   for (let i = 0; i < h.length; i++) {
     switch (h[i]) {
       case ".":
@@ -59,7 +59,7 @@ export function parseIP(h: string): (Uint8Array | undefined) {
   return;
 }
 
-function parseIPv4(s: string): (Uint8Array | undefined) {
+function parseIPv4(s: string): Uint8Array | undefined {
   const ip = new Uint8Array(IPv4LEN);
   for (let i = 0; i < IPv4LEN; i++) {
     if (s.length === 0) {
@@ -81,7 +81,7 @@ function parseIPv4(s: string): (Uint8Array | undefined) {
   return ipV4(ip[0], ip[1], ip[2], ip[3]);
 }
 
-function parseIPv6(s: string): (Uint8Array | undefined) {
+function parseIPv6(s: string): Uint8Array | undefined {
   const ip = new Uint8Array(IPv6LEN);
   let ellipsis = -1;
 

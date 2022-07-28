@@ -260,6 +260,11 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     this.config.mem_storage = true;
     return this;
   }
+
+  numReplicas(n: number) {
+    this.config.num_replicas = n;
+    return this;
+  }
 }
 
 export function isConsumerOptsBuilder(

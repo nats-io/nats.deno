@@ -19,7 +19,7 @@ import type { MsgArg } from "./parser.ts";
 import { TD } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
-export function isRequestError(msg: Msg): (NatsError | null) {
+export function isRequestError(msg: Msg): NatsError | null {
   // to consider an error from the server we expect no payload
   if (msg && msg.data.length === 0 && msg.headers) {
     const headers = msg.headers as MsgHdrsImpl;
@@ -67,7 +67,7 @@ export class MsgImpl implements Msg {
     return this._msg.sid;
   }
 
-  get headers(): (MsgHdrs | undefined) {
+  get headers(): MsgHdrs | undefined {
     if (this._msg.hdr > -1 && !this._headers) {
       const buf = this._rdata.subarray(0, this._msg.hdr);
       this._headers = MsgHdrsImpl.decode(buf);

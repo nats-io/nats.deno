@@ -1233,6 +1233,11 @@ export interface ConsumerOptsBuilder {
    * the Stream
    */
   memory(): this;
+
+  /**
+   * When set do not inherit the replica count from the stream but specifically set it to this amount
+   */
+  numReplicas(n: number): this;
 }
 
 /**
@@ -2392,7 +2397,7 @@ export interface ConsumerUpdateConfig {
    */
   "max_bytes"?: number;
   /**
-   * When set do not inherit the replica count from the stream but specifically set it to this amount
+   * When set do not inherit the replica count from the stream but specifically set it to this amount.
    */
   "num_replicas"?: number;
   /**
