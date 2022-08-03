@@ -909,6 +909,10 @@ export interface Views {
    * @param opts - optional options to configure the KV and stream backing
    */
   kv: (name: string, opts?: Partial<KvOptions>) => Promise<KV>;
+  os: (
+    name: string,
+    opts?: Partial<ObjectStoreOptions>,
+  ) => Promise<ObjectStore>;
 }
 
 // FIXME: pulls must limit to maxAcksInFlight
@@ -2554,6 +2558,76 @@ export interface KV extends RoKV {
 
 export interface KvPutOptions {
   previousSeq: number;
+}
+
+export type ObjectStoreLink = {
+  // name of other object store
+  bucket: string;
+  // link to single object, when empty this means the whole store
+  name?: string;
+};
+
+export type ObjectStoreMetaOptions = {
+  link?: ObjectStoreLink;
+  max_chunk_size?: number;
+};
+
+export type ObjectStoreMeta = {
+  name: string;
+  description?: string;
+  headers?: MsgHdrs;
+  options?: ObjectStoreMetaOptions;
+};
+
+export interface ObjectInfo {
+  bucket: string;
+  nuid: string;
+  size: number;
+  chunks: number;
+  digest: string;
+  deleted: boolean;
+  mtime: Nanos;
+  meta: ObjectStoreMeta;
+}
+
+export type ObjectStoreInfo = {
+  bucket: string;
+  description: string;
+  ttl: Nanos;
+  storage: StorageType;
+  replicas: number;
+  sealed: boolean;
+  size: number;
+  backingStore: string;
+};
+
+export type ObjectStoreOptions = {
+  description?: string;
+  ttl?: Nanos;
+  storage: StorageType;
+  replicas: number;
+  "max_bytes": number;
+  placement: Placement;
+};
+
+export type ObjectResult = {
+  info: ObjectInfo;
+  data: ReadableStream<Uint8Array>;
+  error: Promise<Error | null>;
+};
+
+export interface ObjectStore {
+  info(name: string): Promise<ObjectInfo | null>;
+  put(
+    meta: ObjectStoreMeta,
+    rs: ReadableStream<Uint8Array>,
+  ): Promise<ObjectInfo>;
+  get(name: string): Promise<ObjectResult | null>;
+  delete(name: string): Promise<PurgeResponse>;
+  seal(): Promise<ObjectStoreInfo>;
+  status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreInfo>;
+  update(name: string, meta: Partial<ObjectStoreMeta>): Promise<PubAck>;
+  destroy(): Promise<boolean>;
 }
 
 export type callbackFn = () => void;

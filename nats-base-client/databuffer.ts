@@ -67,6 +67,17 @@ export class DataBuffer {
     }
   }
 
+  shift(): Uint8Array {
+    if (this.buffers.length) {
+      const a = this.buffers.shift();
+      if (a) {
+        this.byteLength -= a.length;
+        return a;
+      }
+    }
+    return new Uint8Array(0);
+  }
+
   drain(n?: number): Uint8Array {
     if (this.buffers.length) {
       this.pack();

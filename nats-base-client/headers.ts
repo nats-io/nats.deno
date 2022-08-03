@@ -284,4 +284,20 @@ export class MsgHdrsImpl implements MsgHdrs {
   get status(): string {
     return `${this.code} ${this.description}`.trim();
   }
+
+  toRecord(): Record<string, string[]> {
+    const data = {} as Record<string, string[]>;
+    this.keys().forEach((v) => {
+      data[v] = this.values(v);
+    });
+    return data;
+  }
+
+  static fromRecord(r: Record<string, string[]>): MsgHdrs {
+    const h = new MsgHdrsImpl();
+    for (const k in r) {
+      h.headers.set(k, r[k]);
+    }
+    return h;
+  }
 }

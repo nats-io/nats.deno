@@ -13,7 +13,14 @@
  * limitations under the License.
  */
 
-import type { ConsumerOptsBuilder, KV, KvOptions, Views } from "./types.ts";
+import type {
+  ConsumerOptsBuilder,
+  KV,
+  KvOptions,
+  ObjectStore,
+  ObjectStoreOptions,
+  Views,
+} from "./types.ts";
 import {
   AckPolicy,
   ConsumerAPI,
@@ -72,6 +79,7 @@ import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
+import { ObjectStoreImpl } from "./objectstore.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -96,6 +104,12 @@ class ViewsImpl implements Views {
       return Bucket.bind(this.js, name);
     }
     return Bucket.create(this.js, name, opts);
+  }
+  os(
+    name: string,
+    opts: Partial<ObjectStoreOptions> = {},
+  ): Promise<ObjectStore> {
+    return ObjectStoreImpl.create(this.js, name, opts);
   }
 }
 
