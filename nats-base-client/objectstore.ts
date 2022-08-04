@@ -19,6 +19,7 @@ import {
   JetStreamManager,
   JetStreamOptions,
   JsHeaders,
+  JsMsg,
   Nanos,
   ObjectInfo,
   ObjectResult,
@@ -42,7 +43,8 @@ import { JetStreamClientImpl } from "./jsclient.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { headers, MsgHdrsImpl } from "./headers.ts";
 import { consumerOpts } from "./jsconsumeropts.ts";
-import { millis, nanos } from "./mod.ts";
+import { millis, nanos, NatsError } from "./mod.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 
 export function objectStoreStreamName(bucket: string): string {
   validateBucket(bucket);
@@ -206,6 +208,21 @@ export class ObjectStoreImpl implements ObjectStore {
     } else {
       return new ObjectInfoImpl(info);
     }
+  }
+
+  async list(): Promise<ObjectInfo[]> {
+    const buf: ObjectInfo[] = [];
+    const iter = await this.watch({
+      ignoreDeletes: true,
+      includeHistory: true,
+    });
+    for await (const info of iter) {
+      if (info === null) {
+        break;
+      }
+      buf.push(info);
+    }
+    return Promise.resolve(buf);
   }
 
   async rawInfo(name: string): Promise<ServerObjectInfo | null> {
@@ -443,6 +460,69 @@ export class ObjectStoreImpl implements ObjectStore {
     return this.js.publish(this._metaSubject(info.meta.name), jc.encode(info));
   }
 
+  async watch(opts: Partial<
+    {
+      ignoreDeletes?: boolean;
+      includeHistory?: boolean;
+    }
+  > = {}): Promise<QueuedIterator<ObjectInfo | null>> {
+    opts.includeHistory = opts.includeHistory ?? false;
+    opts.ignoreDeletes = opts.ignoreDeletes ?? false;
+    let initialized = false;
+    const qi = new QueuedIteratorImpl<ObjectInfo | null>();
+    const subj = this._metaSubjectAll();
+    try {
+      await this.jsm.streams.getMessage(this.stream, { last_by_subj: subj });
+    } catch (err) {
+      if (err.code === "404") {
+        qi.push(null);
+        initialized = true;
+      } else {
+        qi.stop(err);
+      }
+    }
+    const jc = JSONCodec<ObjectInfo>();
+    const copts = consumerOpts();
+    copts.orderedConsumer();
+    if (opts.includeHistory) {
+      copts.deliverLastPerSubject();
+    } else {
+      initialized = true;
+      copts.deliverNew();
+    }
+    copts.callback((err: NatsError | null, jm: JsMsg | null) => {
+      if (err) {
+        qi.stop(err);
+        return;
+      }
+      if (jm !== null) {
+        const oi = jc.decode(jm.data);
+        if (oi.deleted && opts.ignoreDeletes === true) {
+          // do nothing
+        } else {
+          qi.push(oi);
+        }
+        if (jm.info?.pending === 0 && !initialized) {
+          initialized = true;
+          qi.push(null);
+        }
+      }
+    });
+
+    const sub = await this.js.subscribe(subj, copts);
+    qi._data = sub;
+    qi.iterClosed.then(() => {
+      sub.unsubscribe();
+    });
+    sub.closed.then(() => {
+      qi.stop();
+    }).catch((err) => {
+      qi.stop(err);
+    });
+
+    return qi;
+  }
+
   _chunkSubject(id: string) {
     return `$O.${this.name}.C.${id}`;
   }
@@ -451,6 +531,10 @@ export class ObjectStoreImpl implements ObjectStore {
     n = this._sanitizeName(n);
     validateKey(n);
     return `$O.${this.name}.M.${n}`;
+  }
+
+  _metaSubjectAll(): string {
+    return `$O.${this.name}.M.>`;
   }
 
   async init(opts: Partial<ObjectStoreOptions> = {}): Promise<void> {

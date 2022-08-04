@@ -2618,11 +2618,20 @@ export type ObjectResult = {
 
 export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
+  list(): Promise<ObjectInfo[]>;
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
   ): Promise<ObjectInfo>;
   get(name: string): Promise<ObjectResult | null>;
+  watch(
+    opts?: Partial<
+      {
+        ignoreDeletes?: boolean;
+        includeHistory?: boolean;
+      }
+    >,
+  ): Promise<QueuedIterator<ObjectInfo | null>>;
   delete(name: string): Promise<PurgeResponse>;
   seal(): Promise<ObjectStoreInfo>;
   status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreInfo>;

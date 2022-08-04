@@ -17,7 +17,7 @@ import {
 } from "../nats-base-client/mod.ts";
 import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { equals } from "https://deno.land/std@0.111.0/bytes/mod.ts";
-import { ObjectStoreMeta } from "../nats-base-client/types.ts";
+import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -316,6 +316,171 @@ Deno.test("objectstore - empty entry", async () => {
   assertEquals(await or.error, null);
   const v = await fromReadableStream(or.data);
   assertEquals(v.length, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - list", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+  let infos = await os.list();
+  assertEquals(infos.length, 0);
+
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(new Uint8Array(0)),
+  );
+
+  infos = await os.list();
+  assertEquals(infos.length, 1);
+  assertEquals(infos[0].meta.name, "a");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - watch initially empty", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const buf: ObjectInfo[] = [];
+  const iter = await os.watch({ includeHistory: true });
+  const done = (async () => {
+    for await (const info of iter) {
+      if (info === null) {
+        assertEquals(buf.length, 0);
+      } else {
+        buf.push(info);
+        if (buf.length === 3) {
+          break;
+        }
+      }
+    }
+  })();
+  const infos = await os.list();
+  assertEquals(infos.length, 0);
+
+  const sc = StringCodec();
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("aa")),
+  );
+
+  await os.put({ name: "b" }, readableStreamFrom(sc.encode("b")));
+
+  await done;
+
+  assertEquals(buf.length, 3);
+  assertEquals(buf[0].meta.name, "a");
+  assertEquals(buf[0].size, 1);
+  assertEquals(buf[1].meta.name, "a");
+  assertEquals(buf[1].size, 2);
+  assertEquals(buf[2].meta.name, "b");
+  assertEquals(buf[2].size, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - watch skip history", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const sc = StringCodec();
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("aa")),
+  );
+
+  const buf: ObjectInfo[] = [];
+  const iter = await os.watch({ includeHistory: false });
+  const done = (async () => {
+    for await (const info of iter) {
+      if (info === null) {
+        assertEquals(buf.length, 1);
+      } else {
+        buf.push(info);
+        if (buf.length === 1) {
+          break;
+        }
+      }
+    }
+  })();
+
+  await os.put({ name: "c" }, readableStreamFrom(sc.encode("c")));
+
+  await done;
+
+  assertEquals(buf.length, 1);
+  assertEquals(buf[0].meta.name, "c");
+  assertEquals(buf[0].size, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - watch history", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const sc = StringCodec();
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("aa")),
+  );
+
+  const buf: ObjectInfo[] = [];
+  const iter = await os.watch({ includeHistory: true });
+  const done = (async () => {
+    for await (const info of iter) {
+      if (info === null) {
+        assertEquals(buf.length, 1);
+      } else {
+        buf.push(info);
+        if (buf.length === 2) {
+          break;
+        }
+      }
+    }
+  })();
+
+  await os.put({ name: "c" }, readableStreamFrom(sc.encode("c")));
+
+  await done;
+
+  assertEquals(buf.length, 2);
+  assertEquals(buf[0].meta.name, "a");
+  assertEquals(buf[0].size, 2);
+  assertEquals(buf[1].meta.name, "c");
+  assertEquals(buf[1].size, 1);
 
   await cleanup(ns, nc);
 });
