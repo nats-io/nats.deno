@@ -18,7 +18,9 @@ import {
   DirectMsgHeaders,
   DirectMsgRequest,
   DirectStreamAPI,
+  Empty,
   JetStreamOptions,
+  LastForMsgRequest,
   Msg,
   NatsConnection,
   StoredMsg,
@@ -37,9 +39,21 @@ export class DirectStreamAPIImpl extends BaseApiClient
     query: DirectMsgRequest,
   ): Promise<StoredMsg> {
     validateStreamName(stream);
+    // if doing a last_by_subj request, we append the subject
+    // this allows last_by_subj to be subject to permissions (KV)
+    let qq: DirectMsgRequest | null = query;
+    const { last_by_subj } = qq as LastForMsgRequest;
+    if (last_by_subj) {
+      qq = null;
+    }
+
+    const payload = qq ? this.jc.encode(qq) : Empty;
+    const subj = last_by_subj
+      ? `$JS.API.DIRECT.GET.${stream}.${last_by_subj}`
+      : `$JS.API.DIRECT.GET.${stream}`;
     const r = await this.nc.request(
-      `$JS.API.DIRECT.GET.${stream}`,
-      this.jc.encode(query),
+      subj,
+      payload,
     );
 
     // response is not a JS.API response

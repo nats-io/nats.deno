@@ -31,7 +31,6 @@ import {
   JSONCodec,
   jwtAuthenticator,
   nanos,
-  NatsConnectionImpl,
   NatsError,
   nkeys,
   nuid,
@@ -1209,9 +1208,6 @@ Deno.test("jsm - direct getMessage", async () => {
   await js.publish("foo", sc.encode("c"), { expect: { lastSequence: 2 } });
   await js.publish("bar", sc.encode("d"), { expect: { lastSequence: 3 } });
   await js.publish("foo", sc.encode("e"), { expect: { lastSequence: 4 } });
-
-  const nci = nc as NatsConnectionImpl;
-  nci.options.debug = true;
 
   let m = await jsm.direct.getMessage("A", { seq: 0, next_by_subj: "bar" });
   assertEquals(m.seq, 4);
