@@ -2477,12 +2477,22 @@ export interface KvCodecs {
 }
 
 export interface KvLimits {
+  description: string;
   replicas: number;
   history: number;
+  max_bytes: number;
+  /**
+   * @deprecated use max_bytes
+   */
   maxBucketSize: number;
   maxValueSize: number;
   ttl: number; // millis
   storage: StorageType;
+  placement: Placement;
+  republish: Republish;
+  /**
+   * @deprecated: use placement
+   */
   placementCluster: string;
 
   /**
@@ -2497,7 +2507,7 @@ export interface KvStatus extends KvLimits {
   values: number;
 
   /**
-   * deprecated: use placementCluster
+   * @deprecated
    * FIXME: remove this on 1.8
    */
   bucket_location: string;

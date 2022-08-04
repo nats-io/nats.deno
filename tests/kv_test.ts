@@ -39,6 +39,7 @@ import {
 
 import {
   ConnectionOptions,
+  DirectMsgHeaders,
   JetStreamOptions,
   KV,
   KvEntry,
@@ -1403,5 +1404,35 @@ Deno.test("kv - direct message", async () => {
   assert(o !== null);
   assertEquals(o.revision, 3);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - republish", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("test", {
+    republish: {
+      src: ">",
+      dest: "republished-kv.>",
+    },
+  }) as Bucket;
+
+  const sc = StringCodec();
+
+  const sub = nc.subscribe("republished-kv.>", { max: 1 });
+  (async () => {
+    for await (const m of sub) {
+      assertEquals(m.subject, `republished-kv.${kv.subjectForKey("hello")}`);
+      assertEquals(sc.decode(m.data), "world");
+      assertEquals(m.headers?.get(DirectMsgHeaders.Stream), kv.bucketName());
+    }
+  })().then();
+
+  await kv.put("hello", sc.encode("world"));
+  await sub.closed;
   await cleanup(ns, nc);
 });

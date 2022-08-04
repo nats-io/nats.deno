@@ -219,14 +219,28 @@ export class Bucket implements KV, KvRemove {
     sc.subjects = [this.subjectForBucket()];
     sc.retention = RetentionPolicy.Limits;
     sc.max_msgs_per_subject = bo.history;
-    sc.max_bytes = bo.maxBucketSize;
+    if (bo.maxBucketSize) {
+      bo.max_bytes = bo.maxBucketSize;
+    }
+    if (bo.max_bytes) {
+      sc.max_bytes = bo.max_bytes;
+    }
     sc.max_msg_size = bo.maxValueSize;
     sc.storage = bo.storage;
     const location = opts.placementCluster ?? "";
     if (location) {
-      sc.placement = {} as Placement;
-      sc.placement.cluster = location;
-      sc.placement.tags = [];
+      opts.placement = {} as Placement;
+      opts.placement.cluster = location;
+      opts.placement.tags = [];
+    }
+    if (opts.placement) {
+      sc.placement = opts.placement;
+    }
+    if (opts.republish) {
+      sc.republish = opts.republish;
+    }
+    if (opts.description) {
+      sc.description = opts.description;
     }
 
     const nci = (this.js as JetStreamClientImpl).nc;
