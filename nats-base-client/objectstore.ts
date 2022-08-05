@@ -41,7 +41,7 @@ import { nuid } from "./nuid.ts";
 import { deferred } from "./util.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
 import { DataBuffer } from "./databuffer.ts";
-import { headers, MsgHdrsImpl } from "./headers.ts";
+import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { consumerOpts } from "./jsconsumeropts.ts";
 import { millis, nanos, NatsError } from "./mod.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
@@ -107,13 +107,28 @@ type ServerObjectInfo = {
   digest: string;
   deleted?: boolean;
   mtime: Nanos;
-  meta: ServerObjectStoreMeta;
-};
+} & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
   info: ServerObjectInfo;
+  hdrs!: MsgHdrs;
   constructor(oi: ServerObjectInfo) {
     this.info = oi;
+  }
+  get name(): string {
+    return this.info.name;
+  }
+  get description(): string {
+    return this.info.description ?? "";
+  }
+  get headers(): MsgHdrs {
+    if (!this.hdrs) {
+      this.hdrs = MsgHdrsImpl.fromRecord(this.info.headers || {});
+    }
+    return this.hdrs;
+  }
+  get options(): ObjectStoreMetaOptions | undefined {
+    return this.info.options;
   }
   get bucket(): string {
     return this.info.bucket;
@@ -126,9 +141,6 @@ class ObjectInfoImpl implements ObjectInfo {
   }
   get digest(): string {
     return this.info.digest;
-  }
-  get meta(): ObjectStoreMeta {
-    return toObjectStoreMeta(this.info.meta);
   }
   get mtime(): Nanos {
     return this.info.mtime;
@@ -160,17 +172,13 @@ function toServerObjectStoreMeta(
   return v;
 }
 
-function toObjectStoreMeta(meta: ServerObjectStoreMeta): ObjectStoreMeta {
-  const v = {
-    name: meta.name,
-    description: meta.description,
-    options: meta.options,
-  } as ObjectStoreMeta;
-
-  if (meta.headers) {
-    v.headers = MsgHdrsImpl.fromRecord(meta.headers);
-  }
-  return v;
+function meta(oi: ObjectInfo): ObjectStoreMeta {
+  return {
+    name: oi.name,
+    description: oi.description,
+    headers: oi.headers,
+    options: oi.options,
+  };
 }
 
 function emptyReadableStream(): ReadableStream {
@@ -194,20 +202,24 @@ export class ObjectStoreImpl implements ObjectStore {
     this.js = js;
   }
 
-  _sanitizeName(name: string): string {
-    // FIXME: the names of the keys need to be encoded - current
-    //  go implementation only does these checks and transforms
+  _sanitizeName(name: string): { name: string; error?: Error } {
+    if (!name || name.length === 0) {
+      return { name, error: new Error("name cannot be empty") };
+    }
     name = name.replace(".", "_");
-    return name.replace(" ", "_");
+    name = name.replace(" ", "_");
+    let error = undefined;
+    try {
+      validateKey(name);
+    } catch (err) {
+      error = err;
+    }
+    return { name, error };
   }
 
   async info(name: string): Promise<ObjectInfo | null> {
     const info = await this.rawInfo(name);
-    if (info === null) {
-      return info;
-    } else {
-      return new ObjectInfoImpl(info);
-    }
+    return info ? new ObjectInfoImpl(info) : null;
   }
 
   async list(): Promise<ObjectInfo[]> {
@@ -217,6 +229,8 @@ export class ObjectStoreImpl implements ObjectStore {
       includeHistory: true,
     });
     for await (const info of iter) {
+      // watch will give a null when it has initialized
+      // for us that is the hint we are done
       if (info === null) {
         break;
       }
@@ -226,8 +240,10 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   async rawInfo(name: string): Promise<ServerObjectInfo | null> {
-    const obj = this._sanitizeName(name);
-    validateKey(obj);
+    const { name: obj, error } = this._sanitizeName(name);
+    if (error) {
+      return Promise.reject(error);
+    }
 
     const meta = `$O.${this.name}.M.${obj}`;
     try {
@@ -271,7 +287,7 @@ export class ObjectStoreImpl implements ObjectStore {
 
   async put(
     meta: ObjectStoreMeta,
-    rs: ReadableStream<Uint8Array>,
+    rs: ReadableStream<Uint8Array> | null,
   ): Promise<ObjectInfo> {
     const jsi = this.js as JetStreamClientImpl;
     const max = jsi.nc.info?.max_payload || 1024;
@@ -279,31 +295,34 @@ export class ObjectStoreImpl implements ObjectStore {
     meta.options = meta.options || {};
     meta.options.max_chunk_size = meta.options.max_chunk_size || max;
 
-    const d = deferred<ObjectInfo>();
-    if (!meta || meta.name.length === 0) {
-      throw new Error("bad meta - name is required");
-    }
-
     const old = await this.info(meta.name);
+    const { name: n, error } = this._sanitizeName(meta.name);
+    if (error) {
+      return Promise.reject(error);
+    }
+    meta.name = n;
 
     const id = nuid.next();
     const chunkSubj = this._chunkSubject(id);
     const metaSubj = this._metaSubject(meta.name);
 
-    const info = {
+    const info = Object.assign({
       bucket: this.name,
       nuid: id,
-      meta: toServerObjectStoreMeta(meta),
       size: 0,
       chunks: 0,
-    } as ServerObjectInfo;
+    }, toServerObjectStoreMeta(meta)) as ServerObjectInfo;
+
+    const d = deferred<ObjectInfo>();
 
     const proms: Promise<unknown>[] = [];
     const db = new DataBuffer();
     try {
-      const reader = rs.getReader();
+      const reader = rs ? rs.getReader() : null;
       while (true) {
-        const { done, value } = await reader.read();
+        const { done, value } = reader
+          ? await reader.read()
+          : { done: true, value: undefined };
         if (done) {
           // put any partial chunk in
           if (db.size() > 0) {
@@ -363,14 +382,14 @@ export class ObjectStoreImpl implements ObjectStore {
       return Promise.resolve(null);
     }
 
-    if (info.meta.options && info.meta.options.link) {
-      const ln = info.meta.options.link.name || "";
+    if (info.options && info.options.link) {
+      const ln = info.options.link.name || "";
       if (ln === "") {
         throw new Error("link is a bucket");
       }
       const os = await ObjectStoreImpl.create(
         this.js,
-        info.meta.options.link.bucket,
+        info.options.link.bucket,
       );
       return os.get(ln);
     }
@@ -421,6 +440,52 @@ export class ObjectStoreImpl implements ObjectStore {
     return r as ObjectResult;
   }
 
+  linkStore(name: string, bucket: ObjectStore): Promise<ObjectInfo> {
+    if (!(bucket instanceof ObjectStoreImpl)) {
+      return Promise.reject("bucket required");
+    }
+    const osi = bucket as ObjectStoreImpl;
+    const { name: n, error } = this._sanitizeName(name);
+    if (error) {
+      return Promise.reject(error);
+    }
+
+    const meta = {
+      name: n,
+      options: { link: { bucket: osi.name } },
+    };
+    return this.put(meta, null);
+  }
+
+  async link(name: string, info: ObjectInfo): Promise<ObjectInfo> {
+    if (info.deleted) {
+      return Promise.reject(new Error("object is deleted"));
+    }
+    const { name: n, error } = this._sanitizeName(name);
+    if (error) {
+      return Promise.reject(error);
+    }
+
+    // same object store
+    if (this.name === info.bucket) {
+      const copy = Object.assign({}, meta(info)) as ObjectStoreMeta;
+      copy.name = n;
+      try {
+        await this.update(info.name, copy);
+        const ii = await this.info(n);
+        return ii!;
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    }
+    const link = { bucket: info.bucket, name: info.name };
+    const mm = {
+      name: n,
+      options: { link: link },
+    } as ObjectStoreMeta;
+    return this.put(mm, null);
+  }
+
   async delete(name: string): Promise<PurgeResponse> {
     const info = await this.rawInfo(name);
     if (info === null) {
@@ -434,10 +499,10 @@ export class ObjectStoreImpl implements ObjectStore {
     const jc = JSONCodec();
     const h = headers();
     h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-    await this.js.publish(this._metaSubject(name), jc.encode(info), {
+
+    await this.js.publish(this._metaSubject(info.name), jc.encode(info), {
       headers: h,
     });
-
     return this.jsm.streams.purge(this.stream, {
       filter: this._chunkSubject(info.nuid),
     });
@@ -454,10 +519,16 @@ export class ObjectStoreImpl implements ObjectStore {
     // FIXME: Go's implementation doesn't seem correct - it possibly adds a new meta entry
     //  effectively making the object available under 2 names, but it doesn't remove the
     //  older one.
-    meta.name = meta.name ?? info.meta.name;
-    info.meta = Object.assign({}, info.meta, toServerObjectStoreMeta(meta!));
+    meta.name = meta.name ?? info.name;
+    const { name: n, error } = this._sanitizeName(meta.name);
+    if (error) {
+      return Promise.reject(error);
+    }
+    meta.name = n;
+    const ii = Object.assign({}, info, toServerObjectStoreMeta(meta!));
     const jc = JSONCodec();
-    return this.js.publish(this._metaSubject(info.meta.name), jc.encode(info));
+
+    return this.js.publish(this._metaSubject(ii.name), jc.encode(ii));
   }
 
   async watch(opts: Partial<
@@ -487,6 +558,8 @@ export class ObjectStoreImpl implements ObjectStore {
     if (opts.includeHistory) {
       copts.deliverLastPerSubject();
     } else {
+      // FIXME: Go's implementation doesn't seem correct - if history is not desired
+      //  the watch should only be giving notifications on new entries
       initialized = true;
       copts.deliverNew();
     }
@@ -528,8 +601,6 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   _metaSubject(n: string): string {
-    n = this._sanitizeName(n);
-    validateKey(n);
     return `$O.${this.name}.M.${n}`;
   }
 
@@ -544,8 +615,11 @@ export class ObjectStoreImpl implements ObjectStore {
         "unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
       );
     }
-
-    this.stream = objectStoreStreamName(this.name);
+    try {
+      this.stream = objectStoreStreamName(this.name);
+    } catch (err) {
+      return Promise.reject(err);
+    }
     const sc = Object.assign({}, opts) as StreamConfig;
     sc.name = this.stream;
     sc.allow_rollup_hdrs = true;
@@ -576,7 +650,7 @@ export class ObjectStoreImpl implements ObjectStore {
     const jsm = await jsi.nc.jetstreamManager(jsopts);
     const os = new ObjectStoreImpl(name, jsm, js);
     await os.init(opts);
-    return os;
+    return Promise.resolve(os);
   }
 }
 

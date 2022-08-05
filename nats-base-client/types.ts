@@ -2579,7 +2579,7 @@ export type ObjectStoreMeta = {
   options?: ObjectStoreMetaOptions;
 };
 
-export interface ObjectInfo {
+export interface ObjectInfo extends ObjectStoreMeta {
   bucket: string;
   nuid: string;
   size: number;
@@ -2587,7 +2587,11 @@ export interface ObjectInfo {
   digest: string;
   deleted: boolean;
   mtime: Nanos;
-  meta: ObjectStoreMeta;
+}
+
+export interface ObjectLink {
+  bucket: string;
+  name?: string;
 }
 
 export type ObjectStoreInfo = {
@@ -2619,11 +2623,14 @@ export type ObjectResult = {
 export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
   list(): Promise<ObjectInfo[]>;
+  get(name: string): Promise<ObjectResult | null>;
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
   ): Promise<ObjectInfo>;
-  get(name: string): Promise<ObjectResult | null>;
+  delete(name: string): Promise<PurgeResponse>;
+  link(name: string, meta: ObjectInfo): Promise<ObjectInfo>;
+  linkStore(name: string, bucket: ObjectStore): Promise<ObjectInfo>;
   watch(
     opts?: Partial<
       {
@@ -2632,7 +2639,6 @@ export interface ObjectStore {
       }
     >,
   ): Promise<QueuedIterator<ObjectInfo | null>>;
-  delete(name: string): Promise<PurgeResponse>;
   seal(): Promise<ObjectStoreInfo>;
   status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreInfo>;
   update(name: string, meta: Partial<ObjectStoreMeta>): Promise<PubAck>;

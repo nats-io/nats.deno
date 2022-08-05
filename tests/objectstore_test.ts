@@ -77,7 +77,7 @@ Deno.test("objectstore - basics", async () => {
   const oi = await os.put({ name: "BLOB" }, readableStreamFrom(blob));
   assertEquals(oi.bucket, "OBJS");
   assertEquals(oi.nuid.length, 22);
-  assertEquals(oi.meta.name, "BLOB");
+  assertEquals(oi.name, "BLOB");
   assert(1000 > (Date.now() - millis(oi.mtime)));
 
   const jsm = await nc.jetstreamManager();
@@ -281,7 +281,7 @@ Deno.test("objectstore - metadata", async () => {
   await os.update("a", meta);
   let info = await os.info("b");
   assertExists(info);
-  assertEquals(info!.meta.name, "b");
+  assertEquals(info!.name, "b");
 
   // add some headers
   meta = {} as ObjectStoreMeta;
@@ -291,7 +291,7 @@ Deno.test("objectstore - metadata", async () => {
 
   info = await os.info("b");
   assertExists(info);
-  assertEquals(info!.meta.headers?.get("color"), "red");
+  assertEquals(info!.headers?.get("color"), "red");
 
   await cleanup(ns, nc);
 });
@@ -309,7 +309,7 @@ Deno.test("objectstore - empty entry", async () => {
     readableStreamFrom(new Uint8Array(0)),
   );
   assertEquals(oi.nuid.length, 22);
-  assertEquals(oi.meta.name, "empty");
+  assertEquals(oi.name, "empty");
 
   const or = await os.get("empty");
   assert(or !== null);
@@ -337,7 +337,7 @@ Deno.test("objectstore - list", async () => {
 
   infos = await os.list();
   assertEquals(infos.length, 1);
-  assertEquals(infos[0].meta.name, "a");
+  assertEquals(infos[0].name, "a");
 
   await cleanup(ns, nc);
 });
@@ -383,11 +383,11 @@ Deno.test("objectstore - watch initially empty", async () => {
   await done;
 
   assertEquals(buf.length, 3);
-  assertEquals(buf[0].meta.name, "a");
+  assertEquals(buf[0].name, "a");
   assertEquals(buf[0].size, 1);
-  assertEquals(buf[1].meta.name, "a");
+  assertEquals(buf[1].name, "a");
   assertEquals(buf[1].size, 2);
-  assertEquals(buf[2].meta.name, "b");
+  assertEquals(buf[2].name, "b");
   assertEquals(buf[2].size, 1);
 
   await cleanup(ns, nc);
@@ -432,7 +432,7 @@ Deno.test("objectstore - watch skip history", async () => {
   await done;
 
   assertEquals(buf.length, 1);
-  assertEquals(buf[0].meta.name, "c");
+  assertEquals(buf[0].name, "c");
   assertEquals(buf[0].size, 1);
 
   await cleanup(ns, nc);
@@ -477,10 +477,74 @@ Deno.test("objectstore - watch history", async () => {
   await done;
 
   assertEquals(buf.length, 2);
-  assertEquals(buf[0].meta.name, "a");
+  assertEquals(buf[0].name, "a");
   assertEquals(buf[0].size, 2);
-  assertEquals(buf[1].meta.name, "c");
+  assertEquals(buf[1].name, "c");
   assertEquals(buf[1].size, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - self link", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const sc = StringCodec();
+  const src = await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+  const oi = await os.link("ref", src);
+  assertEquals(oi.options?.link, undefined);
+  assertEquals(oi.nuid, src.nuid);
+
+  const a = await os.list();
+  assertEquals(a.length, 2);
+  assertEquals(a[0].name, "a");
+  assertEquals(a[1].name, "ref");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - external link", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const sc = StringCodec();
+  const src = await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+
+  const os2 = await js.views.os("another");
+  const io = await os2.link("ref", src);
+  assertExists(io.options?.link);
+  assertEquals(io.options?.link?.bucket, "test");
+  assertEquals(io.options?.link?.name, "a");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - store link", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const os2 = await js.views.os("another");
+  const si = await os2.linkStore("src", os);
+  assertExists(si.options?.link);
+  assertEquals(si.options?.link?.bucket, "test");
 
   await cleanup(ns, nc);
 });
