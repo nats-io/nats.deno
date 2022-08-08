@@ -548,3 +548,47 @@ Deno.test("objectstore - store link", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - max chunk is max payload", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 8 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  assertEquals(nc.info?.max_payload, 8 * 1024);
+
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const rs = readableStreamFrom(makeData(32 * 1024));
+
+  const info = await os.put({ name: "t" }, rs);
+  assertEquals(info.size, 32 * 1024);
+  assertEquals(info.chunks, 4);
+  assertEquals(info.options?.max_chunk_size, 8 * 1024);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - default chunk is 128k", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  assertEquals(nc.info?.max_payload, 1024 * 1024);
+
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const rs = readableStreamFrom(makeData(129 * 1024));
+
+  const info = await os.put({ name: "t" }, rs);
+  assertEquals(info.size, 129 * 1024);
+  assertEquals(info.chunks, 2);
+  assertEquals(info.options?.max_chunk_size, 128 * 1024);
+
+  await cleanup(ns, nc);
+});

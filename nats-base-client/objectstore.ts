@@ -290,10 +290,12 @@ export class ObjectStoreImpl implements ObjectStore {
     rs: ReadableStream<Uint8Array> | null,
   ): Promise<ObjectInfo> {
     const jsi = this.js as JetStreamClientImpl;
-    const max = jsi.nc.info?.max_payload || 1024;
+    const maxPayload = jsi.nc.info?.max_payload || 1024;
     meta = meta || {};
     meta.options = meta.options || {};
-    meta.options.max_chunk_size = meta.options.max_chunk_size || max;
+    let maxChunk = meta.options?.max_chunk_size || 128 * 1024;
+    maxChunk = maxChunk > maxPayload ? maxPayload : maxChunk;
+    meta.options.max_chunk_size = maxChunk;
 
     const old = await this.info(meta.name);
     const { name: n, error } = this._sanitizeName(meta.name);
@@ -358,9 +360,9 @@ export class ObjectStoreImpl implements ObjectStore {
         }
         if (value) {
           db.fill(value);
-          while (db.size() > meta.options.max_chunk_size) {
+          while (db.size() > maxChunk) {
             info.chunks!++;
-            info.size! += meta.options.max_chunk_size;
+            info.size! += maxChunk;
             proms.push(
               this.js.publish(chunkSubj, db.drain(meta.options.max_chunk_size)),
             );
