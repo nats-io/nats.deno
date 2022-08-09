@@ -2586,7 +2586,7 @@ export interface ObjectInfo extends ObjectStoreMeta {
   chunks: number;
   digest: string;
   deleted: boolean;
-  mtime: Nanos;
+  mtime: string;
 }
 
 export interface ObjectLink {

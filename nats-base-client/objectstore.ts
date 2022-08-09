@@ -20,7 +20,6 @@ import {
   JetStreamOptions,
   JsHeaders,
   JsMsg,
-  Nanos,
   ObjectInfo,
   ObjectResult,
   ObjectStore,
@@ -43,7 +42,7 @@ import { JetStreamClientImpl } from "./jsclient.ts";
 import { DataBuffer } from "./databuffer.ts";
 import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { consumerOpts } from "./jsconsumeropts.ts";
-import { millis, nanos, NatsError } from "./mod.ts";
+import { NatsError } from "./mod.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { SHA256 } from "./sha256.js";
 
@@ -107,7 +106,7 @@ type ServerObjectInfo = {
   chunks: number;
   digest: string;
   deleted?: boolean;
-  mtime: Nanos;
+  mtime: string;
 } & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
@@ -143,11 +142,8 @@ class ObjectInfoImpl implements ObjectInfo {
   get digest(): string {
     return this.info.digest;
   }
-  get mtime(): Nanos {
+  get mtime(): string {
     return this.info.mtime;
-  }
-  get modified(): Date {
-    return new Date(millis(this.info.mtime));
   }
   get nuid(): string {
     return this.info.nuid;
@@ -207,8 +203,8 @@ export class ObjectStoreImpl implements ObjectStore {
     if (!name || name.length === 0) {
       return { name, error: new Error("name cannot be empty") };
     }
-    name = name.replace(".", "_");
-    name = name.replace(" ", "_");
+    name = name.replaceAll(".", "_");
+    name = name.replaceAll(" ", "_");
     let error = undefined;
     try {
       validateKey(name);
@@ -303,11 +299,10 @@ export class ObjectStoreImpl implements ObjectStore {
     if (error) {
       return Promise.reject(error);
     }
-    meta.name = n;
 
     const id = nuid.next();
     const chunkSubj = this._chunkSubject(id);
-    const metaSubj = this._metaSubject(meta.name);
+    const metaSubj = this._metaSubject(n);
 
     const info = Object.assign({
       bucket: this.name,
@@ -335,8 +330,11 @@ export class ObjectStoreImpl implements ObjectStore {
             sha.update(payload);
             info.chunks!++;
             info.size! += payload.length;
-            info.mtime = nanos(Date.now());
-            info.digest = `sha-256:${sha.digest("base64")}`;
+            info.mtime = new Date().toISOString();
+            const digest = sha.digest("base64");
+            const pad = digest.length % 3;
+            const padding = pad > 0 ? "=".repeat(pad) : "";
+            info.digest = `sha-256=${digest}${padding}`;
             info.deleted = false;
             proms.push(this.js.publish(chunkSubj, payload));
           }
@@ -424,10 +422,16 @@ export class ObjectStoreImpl implements ObjectStore {
           controller!.enqueue(jm.data);
         }
         if (jm.info.pending === 0) {
-          const hash = `sha-256:${sha.digest("base64")}`;
-          if (info.digest !== hash) {
+          const hash = sha.digest("base64");
+          // go pads the hash - which should be multiple of 3 - otherwise pads with '='
+          const pad = hash.length % 3;
+          const padding = pad > 0 ? "=".repeat(pad) : "";
+          const digest = `sha-256=${hash}${padding}`;
+          if (digest !== info.digest) {
             controller!.error(
-              new Error("received a corrupt object, digests do not match"),
+              new Error(
+                `received a corrupt object, digests do not match received: ${info.digest} calculated ${digest}`,
+              ),
             );
           } else {
             controller!.close();

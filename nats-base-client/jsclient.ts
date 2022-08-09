@@ -97,7 +97,6 @@ class ViewsImpl implements Views {
   js: JetStreamClientImpl;
   constructor(js: JetStreamClientImpl) {
     this.js = js;
-    jetstreamPreview(this.js.nc);
   }
   kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
     if (opts.bindOnly) {
@@ -109,6 +108,7 @@ class ViewsImpl implements Views {
     name: string,
     opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
+    jetstreamPreview(this.js.nc);
     return ObjectStoreImpl.create(this.js, name, opts);
   }
 }
@@ -847,11 +847,11 @@ const jetstreamPreview = (() => {
       const { lang } = nci?.protocol?.transport;
       if (lang) {
         console.log(
-          `\u001B[33m >> jetstream's materialized views functionality in ${lang} is beta functionality \u001B[0m`,
+          `\u001B[33m >> jetstream's materialized views object store functionality in ${lang} is beta functionality \u001B[0m`,
         );
       } else {
         console.log(
-          `\u001B[33m >> jetstream's materialized views functionality is beta functionality \u001B[0m`,
+          `\u001B[33m >> jetstream's materialized views object store functionality is beta functionality \u001B[0m`,
         );
       }
     }
