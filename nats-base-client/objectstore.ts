@@ -635,12 +635,6 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   async init(opts: Partial<ObjectStoreOptions> = {}): Promise<void> {
-    // we may not have support in the environment
-    if (typeof crypto?.subtle?.digest !== "function") {
-      throw new Error(
-        "unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
-      );
-    }
     try {
       this.stream = objectStoreStreamName(this.name);
     } catch (err) {
@@ -669,6 +663,15 @@ export class ObjectStoreImpl implements ObjectStore {
     name: string,
     opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
+    // we may not have support in the environment
+    if (typeof crypto?.subtle?.digest !== "function") {
+      return Promise.reject(
+        new Error(
+          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
+        ),
+      );
+    }
+
     const jsi = js as JetStreamClientImpl;
     let jsopts = jsi.opts || {} as JetStreamOptions;
     const to = jsopts.timeout || 2000;
