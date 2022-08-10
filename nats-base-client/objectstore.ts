@@ -250,7 +250,7 @@ export class ObjectStoreImpl implements ObjectStore {
       const m = await this.jsm.streams.getMessage(this.stream, {
         last_by_subj: meta,
       });
-      const jc = JSONCodec<ObjectInfo>();
+      const jc = JSONCodec<ServerObjectInfo>();
       const info = jc.decode(m.data) as ServerObjectInfo;
       return info;
     } catch (err) {
@@ -291,7 +291,7 @@ export class ObjectStoreImpl implements ObjectStore {
   ): Promise<ObjectInfo> {
     const jsi = this.js as JetStreamClientImpl;
     const maxPayload = jsi.nc.info?.max_payload || 1024;
-    meta = meta || {};
+    meta = meta || {} as ObjectStoreMeta;
     meta.options = meta.options || {};
     let maxChunk = meta.options?.max_chunk_size || 128 * 1024;
     maxChunk = maxChunk > maxPayload ? maxPayload : maxChunk;
@@ -404,7 +404,10 @@ export class ObjectStoreImpl implements ObjectStore {
 
     const d = deferred<Error | null>();
 
-    const r = { info: info!, error: d } as Partial<ObjectResult>;
+    const r: Partial<ObjectResult> = {
+      info: new ObjectInfoImpl(info),
+      error: d,
+    };
     if (info.size === 0) {
       r.data = emptyReadableStream();
       d.resolve(null);

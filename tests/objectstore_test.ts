@@ -619,8 +619,6 @@ Deno.test("objectstore - sanitize", async () => {
   );
 
   const info = await os.status({ subjects_filter: ">" }) as ObjectStoreInfoImpl;
-  console.log(info);
-
   assertEquals(info.si.state?.subjects!["$O.test.M.has_dots_here"], 1);
   assertEquals(info.si.state.subjects!["$O.test.M.the_spaces_are_here"], 1);
 
