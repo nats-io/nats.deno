@@ -13,7 +13,14 @@
  * limitations under the License.
  */
 
-import type { ConsumerOptsBuilder, KV, KvOptions, Views } from "./types.ts";
+import type {
+  ConsumerOptsBuilder,
+  KV,
+  KvOptions,
+  ObjectStore,
+  ObjectStoreOptions,
+  Views,
+} from "./types.ts";
 import {
   AckPolicy,
   ConsumerAPI,
@@ -72,6 +79,7 @@ import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
+import { ObjectStoreImpl } from "./objectstore.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -89,13 +97,19 @@ class ViewsImpl implements Views {
   js: JetStreamClientImpl;
   constructor(js: JetStreamClientImpl) {
     this.js = js;
-    jetstreamPreview(this.js.nc);
   }
   kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
     if (opts.bindOnly) {
       return Bucket.bind(this.js, name);
     }
     return Bucket.create(this.js, name, opts);
+  }
+  os(
+    name: string,
+    opts: Partial<ObjectStoreOptions> = {},
+  ): Promise<ObjectStore> {
+    jetstreamPreview(this.js.nc);
+    return ObjectStoreImpl.create(this.js, name, opts);
   }
 }
 
@@ -833,11 +847,11 @@ const jetstreamPreview = (() => {
       const { lang } = nci?.protocol?.transport;
       if (lang) {
         console.log(
-          `\u001B[33m >> jetstream's materialized views functionality in ${lang} is beta functionality \u001B[0m`,
+          `\u001B[33m >> jetstream's materialized views object store functionality in ${lang} is beta functionality \u001B[0m`,
         );
       } else {
         console.log(
-          `\u001B[33m >> jetstream's materialized views functionality is beta functionality \u001B[0m`,
+          `\u001B[33m >> jetstream's materialized views object store functionality is beta functionality \u001B[0m`,
         );
       }
     }

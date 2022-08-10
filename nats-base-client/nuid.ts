@@ -24,28 +24,18 @@ const minInc = 33;
 const maxInc = 333;
 const totalLen = preLen + seqLen;
 
-const cryptoObj = initCrypto();
+function _getRandomValues(a: Uint8Array) {
+  for (let i = 0; i < a.length; i++) {
+    a[i] = Math.floor(Math.random() * 255);
+  }
+}
 
-function initCrypto() {
-  let cryptoObj = null;
-  if (typeof globalThis !== "undefined") {
-    if (
-      "crypto" in globalThis && globalThis.crypto.getRandomValues !== undefined
-    ) {
-      cryptoObj = globalThis.crypto;
-    }
+function fillRandom(a: Uint8Array) {
+  if (globalThis?.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(a);
+  } else {
+    _getRandomValues(a);
   }
-  if (!cryptoObj) {
-    // shim it
-    cryptoObj = {
-      getRandomValues: function (array: Uint8Array) {
-        for (let i = 0; i < array.length; i++) {
-          array[i] = Math.floor(Math.random() * 255);
-        }
-      },
-    };
-  }
-  return cryptoObj;
 }
 
 /**
@@ -92,7 +82,7 @@ export class Nuid {
    */
   private setPre() {
     const cbuf = new Uint8Array(preLen);
-    cryptoObj.getRandomValues(cbuf);
+    fillRandom(cbuf);
     for (let i = 0; i < preLen; i++) {
       const di = cbuf[i] % base;
       this.buf[i] = digits.charCodeAt(di);
