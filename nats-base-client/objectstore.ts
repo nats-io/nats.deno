@@ -203,8 +203,11 @@ export class ObjectStoreImpl implements ObjectStore {
     if (!name || name.length === 0) {
       return { name, error: new Error("name cannot be empty") };
     }
-    name = name.replaceAll(".", "_");
-    name = name.replaceAll(" ", "_");
+    // cannot use replaceAll - node until node 16 is min
+    // name = name.replaceAll(".", "_");
+    // name = name.replaceAll(" ", "_");
+    name = name.replace(/[\. ]/g, "_");
+
     let error = undefined;
     try {
       validateKey(name);

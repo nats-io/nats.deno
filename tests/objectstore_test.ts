@@ -603,6 +603,30 @@ Deno.test("objectstore - default chunk is 128k", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("objectstore - sanitize", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+  await os.put({ name: "has.dots.here" }, readableStreamFrom(makeData(1)));
+  await os.put(
+    { name: "the spaces are here" },
+    readableStreamFrom(makeData(1)),
+  );
+
+  const info = await os.status({ subjects_filter: ">" }) as ObjectStoreInfoImpl;
+  console.log(info);
+
+  assertEquals(info.si.state?.subjects!["$O.test.M.has_dots_here"], 1);
+  assertEquals(info.si.state.subjects!["$O.test.M.the_spaces_are_here"], 1);
+
+  await cleanup(ns, nc);
+});
+
 // Deno.test("objectstore - compat", async () => {
 //   const nc = await connect();
 //   const js = nc.jetstream();
