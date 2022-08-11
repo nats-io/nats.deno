@@ -177,7 +177,7 @@ export class StoredMsgImpl implements StoredMsg {
   constructor(smr: StreamMsgResponse) {
     this.subject = smr.message.subject;
     this.seq = smr.message.seq;
-    this.time = new Date(smr.message.time);
+    this.time = new Date(Date.parse(smr.message.time));
     this.data = smr.message.data ? this._parse(smr.message.data) : Empty;
     if (smr.message.hdrs) {
       const hd = this._parse(smr.message.hdrs);
