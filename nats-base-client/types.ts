@@ -2470,29 +2470,69 @@ export interface KvEntry {
   length: number;
 }
 
+/**
+ * An interface for encoding and decoding values
+ * before they are stored or returned to the client.
+ */
 export interface KvCodec<T> {
   encode(k: T): T;
   decode(k: T): T;
 }
 
 export interface KvCodecs {
+  /**
+   * Codec for Keys in the KV
+   */
   key: KvCodec<string>;
+  /**
+   * Codec for Data in the KV
+   */
   value: KvCodec<Uint8Array>;
 }
 
 export interface KvLimits {
+  /**
+   * Sets the specified description on the stream of the KV.
+   */
   description: string;
+  /**
+   * Number of replicas for the KV (1,3,or 5).
+   */
   replicas: number;
+  /**
+   * Number of maximum messages allowed per subject (key).
+   */
   history: number;
+  /**
+   * The maximum number of bytes on the KV
+   */
   max_bytes: number;
   /**
    * @deprecated use max_bytes
    */
   maxBucketSize: number;
+  /**
+   * The maximum size of a value on the KV
+   */
   maxValueSize: number;
+  /**
+   * The maximum number of millis the key should live
+   * in the KV. The server will automatically remove
+   * keys older than this amount. Note that no delete
+   * marker or notifications are performed.
+   */
   ttl: number; // millis
+  /**
+   * The backing store of the stream hosting the KV
+   */
   storage: StorageType;
+  /**
+   * Placement hints for the stream hosting the KV
+   */
   placement: Placement;
+  /**
+   * Republishes edits to the KV on a NATS core subject.
+   */
   republish: Republish;
   /**
    * @deprecated: use placement
@@ -2507,7 +2547,13 @@ export interface KvLimits {
 }
 
 export interface KvStatus extends KvLimits {
+  /**
+   * The simple name for a Kv - this name is typically prefixed by `KV_`.
+   */
   bucket: string;
+  /**
+   * Number of entries in the KV
+   */
   values: number;
 
   /**
@@ -2518,10 +2564,27 @@ export interface KvStatus extends KvLimits {
 }
 
 export interface KvOptions extends KvLimits {
+  /**
+   * How long to wait in milliseconds for a response from the KV
+   */
   timeout: number;
+  /**
+   * The underlying stream name for the KV
+   */
   streamName: string;
+  /**
+   * An encoder/decoder for keys and values
+   */
   codec: KvCodecs;
+  /**
+   * Doesn't attempt to create the KV stream if it doesn't exist.
+   */
   bindOnly: boolean;
+  /**
+   * If true and on a recent server, changes the way the KV
+   * retrieves values. This option is significantly faster,
+   * but has the possibility of inconsistency during a read.
+   */
   allow_direct: boolean;
 }
 
@@ -2532,31 +2595,128 @@ export interface KvRemove {
   remove(k: string): Promise<void>;
 }
 
+export type KvWatchOptions = {
+  /**
+   * A key or wildcarded key following keys as if they were NATS subject names.
+   */
+  key?: string;
+  /**
+   * Notification should only include entry headers
+   */
+  headers_only?: boolean;
+  /**
+   * A callback that notifies when the watch has yielded all the initial values.
+   * Subsequent notifications are updates since the initial watch was established.
+   * @deprecated
+   */
+  initializedFn?: callbackFn;
+};
+
 export interface RoKV {
+  /**
+   * Returns the KvEntry stored under the key if it exists or null if not.
+   * Note that the entry returned could be marked with a "DEL" or "PURGE"
+   * operation which signifies the server stored the value, but it is now
+   * deleted.
+   * @param k
+   * @param opts
+   */
   get(k: string, opts?: { revision: number }): Promise<KvEntry | null>;
+
+  /**
+   * Returns an iterator of the specified key's history (or all keys).
+   * @param opts
+   */
   history(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+
+  /**
+   * Returns an iterator that will yield KvEntry updates as they happen.
+   * @param opts
+   */
   watch(
-    opts?: { key?: string; headers_only?: boolean; initializedFn?: callbackFn },
+    opts?: KvWatchOptions,
   ): Promise<QueuedIterator<KvEntry>>;
+
+  /**
+   * @deprecated - this api is removed.
+   */
   close(): Promise<void>;
+
+  /**
+   * Returns information about the Kv
+   */
   status(): Promise<KvStatus>;
-  keys(k?: string): Promise<QueuedIterator<string>>;
+
+  /**
+   * Returns an iterator of all the keys optionally matching
+   * the specified filter.
+   * @param filter
+   */
+  keys(filter?: string): Promise<QueuedIterator<string>>;
 }
 
 export interface KV extends RoKV {
+  /**
+   * Creates a new entry ensuring that the entry does not exist.
+   * If the entry already exists, this operation fails.
+   * @param k
+   * @param data
+   */
   create(k: string, data: Uint8Array): Promise<number>;
+
+  /**
+   * Updates the existing entry provided that the previous sequence
+   * for the Kv is at the specified version. This ensures that the
+   * KV has not been modified prior to the update.
+   * @param k
+   * @param data
+   * @param version
+   */
   update(k: string, data: Uint8Array, version: number): Promise<number>;
+
+  /**
+   * Sets or updates the value stored under the specified key.
+   * @param k
+   * @param data
+   * @param opts
+   */
   put(
     k: string,
     data: Uint8Array,
     opts?: Partial<KvPutOptions>,
   ): Promise<number>;
+
+  /**
+   * Deletes the entry stored under the specified key.
+   * Deletes are soft-deletes. The server will add a new
+   * entry marked by a "DEL" operation.
+   * Note that if the KV was created with an underlying limit
+   * (such as a TTL on keys) it is possible for
+   * a key or the soft delete marker to be removed without
+   * additional notification on a watch.
+   * @param k
+   */
   delete(k: string): Promise<void>;
+
+  /**
+   * Deletes and purges the specified key and any value
+   * history.
+   * @param k
+   */
   purge(k: string): Promise<void>;
+
+  /**
+   * Destroys the underlying stream used by the KV. This
+   * effectively deletes all data stored under the KV.
+   */
   destroy(): Promise<boolean>;
 }
 
 export interface KvPutOptions {
+  /**
+   * If set the KV must be at the current sequence or the
+   * put will fail.
+   */
   previousSeq: number;
 }
 
