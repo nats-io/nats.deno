@@ -15,7 +15,7 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.136.0/testing/asserts.ts";
+} from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import { connect, createInbox, Empty, Msg, StringCodec } from "../src/mod.ts";
 import { nanos } from "../nats-base-client/jsutil.ts";
 import { parseInfo, toJsMsg } from "../nats-base-client/jsmsg.ts";

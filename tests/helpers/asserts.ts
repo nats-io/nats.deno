@@ -15,10 +15,9 @@
 
 import {
   assert,
-  assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.136.0/testing/asserts.ts";
+} from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import { isNatsError, NatsError } from "../../nats-base-client/error.ts";
 
 export function assertErrorCode(err?: Error, ...codes: string[]) {
@@ -52,9 +51,12 @@ export async function assertThrowsAsyncErrorCode<T = void>(
   fn: () => Promise<T>,
   ...codes: string[]
 ) {
-  await assertRejects(fn, (err: Error) => {
+  try {
+    await fn();
+    fail("expected to throw");
+  } catch (err) {
     assertErrorCode(err, ...codes);
-  });
+  }
 }
 
 export function assertBetween(n: number, low: number, high: number) {

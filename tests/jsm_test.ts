@@ -18,7 +18,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.136.0/testing/asserts.ts";
+} from "https://deno.land/std@0.152.0/testing/asserts.ts";
 
 import {
   AckPolicy,
@@ -492,12 +492,11 @@ Deno.test("jsm - purge seq and keep fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
   await assertRejects(
-    async () => {
-      await jsm.streams.purge("a", { keep: 10, seq: 5 });
+    () => {
+      return jsm.streams.purge("a", { keep: 10, seq: 5 });
     },
-    undefined,
-    "",
-    undefined,
+    Error,
+    "can specify one of keep or seq",
   );
   await cleanup(ns, nc);
 });
@@ -515,7 +514,6 @@ Deno.test("jsm - stream delete", async () => {
     },
     Error,
     "stream not found",
-    undefined,
   );
   await cleanup(ns, nc);
 });
