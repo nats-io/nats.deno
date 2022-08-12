@@ -145,10 +145,10 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
 
   drain(): Promise<void> {
     if (this.protocol.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.ConnectionClosed);
+      return Promise.reject(NatsError.errorForCode(ErrorCode.ConnectionClosed));
     }
     if (this.isClosed()) {
-      throw NatsError.errorForCode(ErrorCode.SubClosed);
+      return Promise.reject(NatsError.errorForCode(ErrorCode.SubClosed));
     }
     if (!this.drained) {
       this.protocol.unsub(this);

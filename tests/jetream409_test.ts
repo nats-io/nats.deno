@@ -14,8 +14,8 @@ import {
   NatsError,
   StringCodec,
 } from "../nats-base-client/mod.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
-import { assertStringIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+import { assertRejects } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import { assertStringIncludes } from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import {
   cleanup,
   initStream,

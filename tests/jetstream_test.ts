@@ -54,7 +54,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.136.0/testing/asserts.ts";
+} from "https://deno.land/std@0.152.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";

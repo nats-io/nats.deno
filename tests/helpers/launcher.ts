@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 // deno-lint-ignore-file no-explicit-any
-import * as path from "https://deno.land/std@0.136.0/path/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.136.0/fmt/colors.ts";
+import * as path from "https://deno.land/std@0.152.0/path/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.152.0/fmt/colors.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -24,7 +24,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.136.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
