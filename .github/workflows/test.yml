@@ -52,7 +52,7 @@ jobs:
 #          rm nats-server/README.md LICENSE
 
       - name: Lint Deno Module
-        run: deno fmt --check
+        run: deno fmt --check --ignore=docs/
 
       - name: Test Deno Module
         env:
