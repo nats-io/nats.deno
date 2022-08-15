@@ -312,9 +312,11 @@ export interface ConnectionOptions {
   /**
    * When set (can be an empty object), the client requires a secure connection.
    * TlsOptions honored depend on the runtime. Consult the specific NATS javascript
-   * client GitHub repo/documentation.
+   * client GitHub repo/documentation. When set to null, the client should fail
+   * should not connect using TLS. In the case where TLS is available on the server
+   * a standard connection will be used. If TLS is required, the connection will fail.
    */
-  tls?: TlsOptions;
+  tls?: TlsOptions | null;
   /**
    * Set to a client authentication token. Note that these tokens are
    * a specific authentication strategy on the nats-server. This option

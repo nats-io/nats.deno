@@ -20,6 +20,9 @@ import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 import { join, resolve } from "https://deno.land/std@0.152.0/path/mod.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { cleanup } from "./jstest_util.ts";
+import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
@@ -94,4 +97,47 @@ Deno.test("tls - custom ca with root connects", async () => {
   await nc.flush();
   await nc.close();
   await ns.stop();
+});
+
+Deno.test("tls - available connects with or without", async () => {
+  const cwd = Deno.cwd();
+  const config = {
+    host: "0.0.0.0",
+    allow_non_tls: true,
+    tls: {
+      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+    },
+  };
+
+  const ns = await NatsServer.start(config);
+  // will upgrade to tls but fail in the test because the
+  // certificate will not be trusted
+  await assertRejects(async () => {
+    await connect({
+      servers: `localhost:${ns.port}`,
+    });
+  });
+
+  // will upgrade to tls as tls is required
+  const a = connect({
+    servers: `localhost:${ns.port}`,
+    tls: {
+      caFile: config.tls.ca_file,
+    },
+  });
+  // will NOT upgrade to tls
+  const b = connect({
+    servers: `localhost:${ns.port}`,
+    tls: null,
+  });
+  const conns = await Promise.all([a, b]) as NatsConnectionImpl[];
+  await conns[0].flush();
+  await conns[1].flush();
+
+  assertEquals(conns[0].protocol.transport.isEncrypted(), true);
+  assertEquals(conns[1].protocol.transport.isEncrypted(), false);
+
+  await cleanup(ns, ...conns);
 });
