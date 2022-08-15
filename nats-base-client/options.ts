@@ -128,11 +128,11 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
 }
 
 export function checkOptions(info: ServerInfo, options: ConnectionOptions) {
-  const { proto, tls_required: tlsRequired } = info;
+  const { proto, tls_available: tlsAvailable } = info;
   if ((proto === undefined || proto < 1) && options.noEcho) {
     throw new NatsError("noEcho", ErrorCode.ServerOptionNotAvailable);
   }
-  if (options.tls && !tlsRequired) {
+  if (options.tls && !tlsAvailable) {
     throw new NatsError("tls", ErrorCode.ServerOptionNotAvailable);
   }
 }
