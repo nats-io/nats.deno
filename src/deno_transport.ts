@@ -80,8 +80,9 @@ export class DenoTransport implements Transport {
       this.conn = await Deno.connect(hp);
       const info = await this.peekInfo();
       checkOptions(info, this.options);
-      const { tls_required: tlsRequired } = info;
-      if (tlsRequired) {
+      const { tls_required: tlsRequired, tls_available: tlsAvailable } = info;
+      const desired = tlsAvailable === true && options.tls !== null;
+      if (tlsRequired || desired) {
         const tlsn = hp.tlsName ? hp.tlsName : hp.hostname;
         await this.startTLS(tlsn);
       } else {
