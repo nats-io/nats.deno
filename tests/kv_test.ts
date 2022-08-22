@@ -1436,3 +1436,19 @@ Deno.test("kv - republish", async () => {
   await sub.closed;
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - ttl is in nanos", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+
+  const b = await js.views.kv("a", { ttl: 1000 });
+  const status = await b.status();
+  assertEquals(status.ttl, 1000);
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.info("KV_a");
+  assertEquals(si.config.max_age, nanos(1000));
+  await cleanup(ns, nc);
+});
