@@ -734,7 +734,7 @@ export class Bucket implements KV, KvRemove {
       bucket: this.bucketName(),
       values: si.state.messages,
       history: si.config.max_msgs_per_subject,
-      ttl: si.config.max_age,
+      ttl: millis(si.config.max_age),
       bucket_location: cluster,
       backingStore: si.config.storage,
       storage: si.config.storage,
