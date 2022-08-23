@@ -220,6 +220,33 @@ Deno.test("objectstore - delete markers", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("objectstore - get on deleted returns error", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test", { storage: StorageType.Memory });
+
+  const a = makeData(128);
+  await os.put(
+    { name: "a", options: { max_chunk_size: 10 } },
+    readableStreamFrom(a),
+  );
+
+  const p = await os.delete("a");
+  assertEquals(p.purged, 13);
+
+  const info = await os.info("a");
+  assertExists(info);
+  assertEquals(info!.deleted, true);
+
+  const r = await os.get("a");
+  assertEquals(r, null);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("objectstore - multi with delete", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.6.3")) {
