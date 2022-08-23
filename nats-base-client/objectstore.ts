@@ -251,8 +251,7 @@ export class ObjectStoreImpl implements ObjectStore {
         last_by_subj: meta,
       });
       const jc = JSONCodec<ServerObjectInfo>();
-      const info = jc.decode(m.data) as ServerObjectInfo;
-      return info;
+      return jc.decode(m.data) as ServerObjectInfo;
     } catch (err) {
       if (err.code === "404") {
         return null;
@@ -387,6 +386,10 @@ export class ObjectStoreImpl implements ObjectStore {
   async get(name: string): Promise<ObjectResult | null> {
     const info = await this.rawInfo(name);
     if (info === null) {
+      return Promise.resolve(null);
+    }
+
+    if (info.deleted) {
       return Promise.resolve(null);
     }
 
