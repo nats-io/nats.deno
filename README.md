@@ -23,7 +23,13 @@ You can get the current development version by:
 import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
 ```
 
-To see a list of items that are under development see [TODO](TODO.md).
+## Documentation
+
+While the best documentation is looking at code examples, you may want to browse
+the [JSDoc documentation](https://nats-io.github.io/nats.deno). The best entry
+point into the JS Doc is the
+[NatsConnection](https://nats-io.github.io/nats.deno/interfaces/NatsConnection.html)
+all functionality starts with a connection.
 
 ## Basics
 

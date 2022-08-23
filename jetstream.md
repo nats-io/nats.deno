@@ -498,6 +498,14 @@ Use callbacks or iterators as desired to process the messages.
 
 JetStream clients can use streams to store and access data. The materialized
 views present a different _API_ to interact with the data stored in a stream.
+
+Currently there are two materialized views:
+
+- KV
+- ObjectStore
+
+##### KV
+
 First materialized view for JetStream is the _KV_ view. The _KV_ view implements
 a Key-Value API on top of JetStream. Clients can store and retrieve values by
 Keys:
@@ -533,6 +541,9 @@ const watch = await kv.watch();
 (async () => {
   for await (const e of watch) {
     // do something with the change
+    console.log(
+      `watch: ${e.key}: ${e.operation} ${e.value ? sc.decode(e.value) : ""}`,
+    );
   }
 })().then();
 
@@ -541,9 +552,8 @@ await kv.put("hello.world", sc.encode("world"));
 // retrieve the KvEntry storing the value
 // returns null if the value is not found
 const e = await kv.get("hello.world");
-assert(e);
 // initial value of "hi" was overwritten above
-assertEquals(sc.decode(e.value), "world");
+console.log(`value for get ${sc.decode(e!.value)}`);
 
 const buf: string[] = [];
 const keys = await kv.keys();
@@ -552,8 +562,7 @@ await (async () => {
     buf.push(k);
   }
 })();
-assertEquals(buf.length, 1);
-assertEquals(buf[0], "hello.world");
+console.log(`keys contains hello.world: ${buf[0] === "hello.world"}`);
 
 let h = await kv.history({ key: "hello.world" });
 await (async () => {
@@ -562,6 +571,9 @@ await (async () => {
     // you can test e.operation for "PUT", "DEL", or "PURGE"
     // to know if the entry is a marker for a value set
     // or for a deletion or purge.
+    console.log(
+      `history: ${e.key}: ${e.operation} ${e.value ? sc.decode(e.value) : ""}`,
+    );
   }
 })();
 
@@ -577,4 +589,122 @@ watch.stop();
 
 // danger: destroys all values in the KV!
 await kv.destroy();
+```
+
+##### ObjectStore
+
+The second materialized view is objectstore. It allows you to store large assets
+under JetStream. Data for an entry can span multiple JetStream messages, called
+"chunks". When an asset is added you can specify how small the chunks should be.
+Assets sport a sha256 hash, so that corruption can be detected by the client.
+
+```typescript
+const sc = StringCodec();
+const js = nc.jetstream();
+// create the named ObjectStore or bind to it if it exists:
+const os = await js.views.os("testing", { storage: StorageType.File });
+
+// ReadableStreams allows JavaScript to work with large data without
+// necessarily keeping it all in memory.
+//
+// ObjectStore reads and writes to JetStream via ReadableStreams
+// https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
+// You can easily create ReadableStreams from static data or iterators
+
+// here's an example of creating a readable stream from static data
+function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      // the readable stream adds data
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+}
+
+// reading from a ReadableStream is similar to working with an async iterator:
+async function fromReadableStream(
+  rs: ReadableStream<Uint8Array>,
+) {
+  let i = 1;
+  const reader = rs.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (value && value.length) {
+      // do something with the accumulated data
+      console.log(`chunk ${i++}: ${sc.decode(value)}`);
+    }
+  }
+}
+
+let e = await os.get("hello");
+console.log(`hello entry exists? ${e !== null}`);
+
+// watch notifies when a change in the object store happens
+const watch = await os.watch();
+(async () => {
+  for await (const i of watch) {
+    // when asking for history you get a null
+    // that tells you when all the existing values
+    // are provided
+    if (i === null) {
+      continue;
+    }
+    console.log(`watch: ${i!.name} deleted?: ${i!.deleted}`);
+  }
+})();
+
+// putting an object returns an info describing the object
+const info = await os.put({
+  name: "hello",
+  description: "first entry",
+  options: {
+    max_chunk_size: 1,
+  },
+}, readableStreamFrom(sc.encode("hello world")));
+
+console.log(
+  `object size: ${info.size} number of chunks: ${info.size} deleted: ${info.deleted}`,
+);
+
+// reading it back:
+const r = await os.get("hello");
+// it is possible while we read the ReadableStream that something goes wrong
+// the error property on the result will resolve to null if there's no error
+// otherwise to the error from the ReadableStream
+r?.error.then((err) => {
+  if (err) {
+    console.error("reading the readable stream failed:", err);
+  }
+});
+
+// use our sample stream reader to process output to the console
+// chunk 1: h
+// chunk 2: e
+// ...
+// chunk 11: d
+await fromReadableStream(r!.data);
+
+// list all the entries in the object store
+// returns the info for each entry
+const list = await os.list();
+list.forEach((i) => {
+  console.log(`list: ${i.name}`);
+});
+
+// you can also get info on the object store as a whole:
+const status = await os.status();
+console.log(`bucket: '${status.bucket}' size in bytes: ${status.size}`);
+
+// you can prevent additional modifications by sealing it
+const final = await os.seal();
+console.log(`bucket: '${final.bucket}' sealed: ${final.sealed}`);
+
+// only other thing that you can do is destroy it
+// this gets rid of the objectstore
+const destroyed = await os.destroy();
+console.log(`destroyed: ${destroyed}`);
 ```
