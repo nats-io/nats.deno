@@ -65,16 +65,17 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
 
-    if (cfg.name && !ok) {
+    const name = cfg.name === "" ? undefined : cfg.name;
+    if (name && !ok) {
       return Promise.reject(`consumer 'name' requires server ${min}`);
     }
 
-    if (cfg.name !== undefined && cfg.durable_name !== undefined) {
+    if (name !== undefined && cfg.durable_name !== undefined) {
       return Promise.reject(`use only one of durable_name or name`);
     }
 
     let subj;
-    if (cfg.name) {
+    if (name) {
       subj = cfg.filter_subject
         ? `${this.prefix}.CONSUMER.CREATE.${stream}.${cfg.name}.${cfg.filter_subject}`
         : `${this.prefix}.CONSUMER.CREATE.${stream}.${cfg.name}`;

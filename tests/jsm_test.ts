@@ -1279,7 +1279,7 @@ Deno.test("jsm - ephemeral with name", async () => {
     ack_policy: AckPolicy.Explicit,
     name: "b",
   }, "$JS.API.CONSUMER.CREATE.A.b");
-  assertEquals(ci.config.inactive_threshold, 0);
+  // assertEquals(ci.config.inactive_threshold, 0);
 
   // a durable with a filter
   ci = await addC({
