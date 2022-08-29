@@ -55,7 +55,7 @@ await (async () => {
 })();
 console.log(`keys contains hello.world: ${buf[0] === "hello.world"}`);
 
-let h = await kv.history({ key: "hello.world" });
+const h = await kv.history({ key: "hello.world" });
 await (async () => {
   for await (const e of h) {
     // do something with the historical value

@@ -43,7 +43,7 @@ async function fromReadableStream(
   }
 }
 
-let e = await os.get("hello");
+const e = await os.get("hello");
 console.log(`hello entry exists? ${e !== null}`);
 
 // watch notifies when a change in the object store happens

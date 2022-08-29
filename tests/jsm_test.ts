@@ -23,6 +23,8 @@ import {
 import {
   AckPolicy,
   AdvisoryKind,
+  ConsumerConfig,
+  ConsumerInfo,
   deferred,
   DiscardPolicy,
   Empty,
@@ -61,6 +63,7 @@ import {
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 import { StreamUpdateConfig } from "../nats-base-client/types.ts";
 import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
+import { assertExists } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1221,6 +1224,87 @@ Deno.test("jsm - direct getMessage", async () => {
 
   m = await jsm.direct.getMessage("A", { seq: 2, next_by_subj: "foo" });
   assertEquals(m.seq, 2);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - ephemeral with name", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["foo", "bar"],
+  });
+
+  async function addC(
+    config: Partial<ConsumerConfig>,
+    expect: string,
+  ): Promise<ConsumerInfo> {
+    const d = deferred();
+
+    nc.subscribe("$JS.API.CONSUMER.>", {
+      callback: (err, msg) => {
+        if (err) {
+          d.reject(err);
+        }
+        if (msg.subject === expect) {
+          d.resolve();
+        }
+      },
+      timeout: 1000,
+    });
+    const ci = await jsm.consumers.add("A", config);
+    await d;
+
+    return Promise.resolve(ci);
+  }
+
+  // an ephemeral with a name
+  let ci = await addC({
+    ack_policy: AckPolicy.Explicit,
+    inactive_threshold: nanos(1000),
+    name: "a",
+  }, "$JS.API.CONSUMER.CREATE.A.a");
+  assertExists(ci.config.inactive_threshold);
+
+  // a durable with name
+  ci = await addC({
+    ack_policy: AckPolicy.Explicit,
+    name: "b",
+  }, "$JS.API.CONSUMER.CREATE.A.b");
+  assertEquals(ci.config.inactive_threshold, 0);
+
+  // a durable with a filter
+  ci = await addC({
+    ack_policy: AckPolicy.Explicit,
+    name: "c",
+    filter_subject: "bar",
+  }, "$JS.API.CONSUMER.CREATE.A.c.bar");
+  // assertEquals(ci.config.inactive_threshold, 0);
+
+  // a deprecated ephemeral
+  ci = await addC({
+    ack_policy: AckPolicy.Explicit,
+    filter_subject: "bar",
+  }, "$JS.API.CONSUMER.CREATE.A");
+  assertExists(ci.name);
+  assertEquals(ci.config.durable_name, undefined);
+  assertExists(ci.config.inactive_threshold);
+
+  // a deprecated durable
+  ci = await addC({
+    durable_name: "d",
+    ack_policy: AckPolicy.Explicit,
+  }, "$JS.API.CONSUMER.DURABLE.CREATE.A.d");
+  assertExists(ci.name);
+  assertEquals(ci.config.durable_name, "d");
 
   await cleanup(ns, nc);
 });
