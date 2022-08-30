@@ -61,24 +61,28 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     }
 
     const nci = this.nc as NatsConnectionImpl;
-    const { min, ok } = nci.protocol.features.get(
+    const { min, ok: newAPI } = nci.protocol.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
 
     const name = cfg.name === "" ? undefined : cfg.name;
-    if (name && !ok) {
-      return Promise.reject(`consumer 'name' requires server ${min}`);
-    }
-
-    if (name !== undefined && cfg.durable_name !== undefined) {
-      return Promise.reject(`use only one of durable_name or name`);
+    if (name && !newAPI) {
+      throw new Error(`consumer 'name' requires server ${min}`);
     }
 
     let subj;
-    if (name) {
-      subj = cfg.filter_subject
-        ? `${this.prefix}.CONSUMER.CREATE.${stream}.${cfg.name}.${cfg.filter_subject}`
-        : `${this.prefix}.CONSUMER.CREATE.${stream}.${cfg.name}`;
+    let consumerName = "";
+    if (newAPI) {
+      consumerName = cfg.name ?? cfg.durable_name ?? "";
+    }
+    if (consumerName !== "") {
+      let fs = cfg.filter_subject ?? undefined;
+      if (fs === ">") {
+        fs = undefined;
+      }
+      subj = fs !== undefined
+        ? `${this.prefix}.CONSUMER.CREATE.${stream}.${consumerName}.${fs}`
+        : `${this.prefix}.CONSUMER.CREATE.${stream}.${consumerName}`;
     } else {
       subj = cfg.durable_name
         ? `${this.prefix}.CONSUMER.DURABLE.CREATE.${stream}.${cfg.durable_name}`
