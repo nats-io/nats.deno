@@ -1363,7 +1363,7 @@ Deno.test("jsm - consumer name apis are not used on old servers", async () => {
     "consumer 'name' requires server",
   );
 
-  let ci = await addC({
+  const ci = await addC({
     ack_policy: AckPolicy.Explicit,
     inactive_threshold: nanos(1000),
   }, "$JS.API.CONSUMER.CREATE.A");
