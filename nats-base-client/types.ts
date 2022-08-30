@@ -2308,7 +2308,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
   "deliver_group"?: string;
   /**
    * A unique name for a durable consumer
-   * @deprecated set {@link ConsumerConfig.name} - for ephemeral consumers, also set {@link ConsumerConfig.idle_heartbeat}
+   * Set {@link ConsumerConfig.name} - for ephemeral consumers, also set {@link ConsumerConfig.idle_heartbeat}
    */
   "durable_name"?: string;
   /**
