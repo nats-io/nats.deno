@@ -24,6 +24,7 @@ export function compare(a: SemVer, b: SemVer): number {
 
 export enum Feature {
   JS_PULL_MAX_BYTES = "js_pull_max_bytes",
+  JS_NEW_CONSUMER_CREATE_API = "js_new_consumer_create",
 }
 
 type FeatureVersion = {
@@ -39,6 +40,7 @@ export class Features {
     this.server = v;
 
     this.set(Feature.JS_PULL_MAX_BYTES, "2.8.3");
+    this.set(Feature.JS_NEW_CONSUMER_CREATE_API, "2.9.0");
   }
 
   set(f: Feature, requires: string) {

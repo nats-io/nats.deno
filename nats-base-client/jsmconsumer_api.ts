@@ -27,6 +27,8 @@ import {
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import { validateDurableName, validateStreamName } from "./jsutil.ts";
+import { NatsConnectionImpl } from "./nats.ts";
+import { Feature } from "./semver.ts";
 
 export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
@@ -58,9 +60,34 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       validateDurableName(cr.config.durable_name);
     }
 
-    const subj = cfg.durable_name
-      ? `${this.prefix}.CONSUMER.DURABLE.CREATE.${stream}.${cfg.durable_name}`
-      : `${this.prefix}.CONSUMER.CREATE.${stream}`;
+    const nci = this.nc as NatsConnectionImpl;
+    const { min, ok: newAPI } = nci.protocol.features.get(
+      Feature.JS_NEW_CONSUMER_CREATE_API,
+    );
+
+    const name = cfg.name === "" ? undefined : cfg.name;
+    if (name && !newAPI) {
+      throw new Error(`consumer 'name' requires server ${min}`);
+    }
+
+    let subj;
+    let consumerName = "";
+    if (newAPI) {
+      consumerName = cfg.name ?? cfg.durable_name ?? "";
+    }
+    if (consumerName !== "") {
+      let fs = cfg.filter_subject ?? undefined;
+      if (fs === ">") {
+        fs = undefined;
+      }
+      subj = fs !== undefined
+        ? `${this.prefix}.CONSUMER.CREATE.${stream}.${consumerName}.${fs}`
+        : `${this.prefix}.CONSUMER.CREATE.${stream}.${consumerName}`;
+    } else {
+      subj = cfg.durable_name
+        ? `${this.prefix}.CONSUMER.DURABLE.CREATE.${stream}.${cfg.durable_name}`
+        : `${this.prefix}.CONSUMER.CREATE.${stream}`;
+    }
     const r = await this._request(subj, cr);
     return r as ConsumerInfo;
   }

@@ -3,7 +3,7 @@
 build: test
 
 lint:
-	deno lint --unstable
+	deno lint --unstable --ignore=docs/
 
 test: clean
 	deno test --allow-all --unstable --reload --quiet --parallel --coverage=coverage --fail-fast tests/
