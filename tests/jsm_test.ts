@@ -1377,3 +1377,36 @@ Deno.test("jsm - consumer name apis are not used on old servers", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - mirror_direct options", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  let si = await jsm.streams.add({
+    name: "A",
+    allow_direct: true,
+    subjects: ["a.*"],
+    max_msgs_per_subject: 1,
+  });
+  assertEquals(si.config.allow_direct, true);
+
+  si = await jsm.streams.add({
+    name: "B",
+    allow_direct: true,
+    mirror_direct: true,
+    mirror: {
+      name: "A",
+    },
+    max_msgs_per_subject: 1,
+  });
+  assertEquals(si.config.allow_direct, true);
+  assertEquals(si.config.mirror_direct, true);
+
+  await cleanup(ns, nc);
+});

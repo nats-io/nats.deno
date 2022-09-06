@@ -1786,6 +1786,10 @@ export interface StreamUpdateConfig {
    */
   "allow_direct": boolean;
   /**
+   * Allow higher performance, direct access to get individual messages via the $JS.DS.GET API
+   */
+  "mirror_direct": boolean;
+  /**
    * Rules for republishing messages from a stream with subject mapping
    * onto new subjects for partitioning and more
    */
