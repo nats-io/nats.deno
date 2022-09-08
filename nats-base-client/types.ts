@@ -781,7 +781,7 @@ export interface PullOptions {
    * If set, the max number of bytes to receive. The server will limit the
    * number of messages in the batch to fit within this setting.
    */
-  "max_bytes": number;
+  "max_bytes"?: number;
   "idle_heartbeat": number;
 }
 
@@ -1011,6 +1011,8 @@ export interface JetStreamClient {
    * Accessor for the JetStream materialized views API
    */
   views: Views;
+
+  exportedConsumer(subject: string): ExportedConsumer;
 }
 
 export interface ConsumerOpts {
@@ -1300,6 +1302,9 @@ export interface ConsumerAPI {
    * @param stream
    */
   list(stream: string): Lister<ConsumerInfo>;
+
+  get(stream: string, name: string): Promise<Consumer>;
+  exportedConsumer(subject: string): ExportedConsumer;
 }
 
 /**
@@ -2457,15 +2462,52 @@ export interface ConsumerUpdateConfig {
   "mem_storage"?: boolean;
 }
 
-export interface Consumer {
+export interface JetStreamReader {
   /**
-   * The name of the Stream the consumer is bound to
+   * Request the StreamReader to stop.
+   * @return the `closed` promise
    */
-  "stream_name": string;
+  stop(): Promise<null | NatsError>;
+
   /**
-   * The consumer configuration
+   * A Promise that resolves to null if the reader
+   * closed normaly or to an error if the reader closed
+   * due to an error
    */
-  config: ConsumerConfig;
+  closed: Promise<null | NatsError>;
+}
+
+export interface ExportedConsumer {
+  /**
+   * Retrieve the next message for the consumer
+   * @param opts - how long to keep the request open and wait for a response
+   * @return a Promise that resolves to a JsMsg or null if no messages available
+   */
+  next(opts?: Partial<{ expires: number }>): Promise<JsMsg>;
+
+  /**
+   * Read messages available to the Consumer
+   * @param opts - limits on how many messages or bytes should be buffered
+   * an optional callback, if no iterator is desired.
+   * an optional statusHandler, reporting on status/notifications from the consumer
+   *
+   * @return a Promise to a JsMsg iterator or a JetStreamReader
+   */
+  read(
+    opts?: Partial<
+      {
+        inflight_limit: Partial<{
+          bytes: number;
+          messages: number;
+        }>;
+        callback: (m: JsMsg) => void;
+      }
+    >,
+  ): Promise<QueuedIterator<JsMsg> | JetStreamReader>;
+}
+
+export interface Consumer extends ExportedConsumer {
+  info(): Promise<ConsumerInfo>;
 }
 
 export interface StreamNames {

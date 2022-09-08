@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 import {
+  Consumer,
   ConsumerAPI,
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
   ConsumerUpdateConfig,
   CreateConsumerRequest,
+  ExportedConsumer,
   JetStreamOptions,
   Lister,
   NatsConnection,
@@ -33,6 +35,7 @@ import {
 } from "./jsutil.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
+import { ConsumerImpl, ExportedConsumerImpl } from "./consumer.ts";
 
 export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
@@ -141,5 +144,16 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     };
     const subj = `${this.prefix}.CONSUMER.LIST.${stream}`;
     return new ListerImpl<ConsumerInfo>(subj, filter, this);
+  }
+
+  get(stream: string, name: string): Promise<Consumer> {
+    return this.info(stream, name)
+      .then((ci) => {
+        return Promise.resolve(new ConsumerImpl(this, ci));
+      });
+  }
+
+  exportedConsumer(subject: string): ExportedConsumer {
+    return new ExportedConsumerImpl(this.nc, subject);
   }
 }
