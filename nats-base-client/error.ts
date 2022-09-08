@@ -52,6 +52,7 @@ export enum ErrorCode {
   JetStream409MaxAckPendingExceeded = "409",
   JetStream409 = "409",
   JetStreamNotEnabled = "503",
+  JetStreamIdleHeartBeat = "IDLE_HEARTBEAT",
 
   // emitted by the server
   AuthorizationViolation = "AUTHORIZATION_VIOLATION",
