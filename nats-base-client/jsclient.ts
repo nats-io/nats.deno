@@ -15,6 +15,7 @@
 
 import type {
   ConsumerOptsBuilder,
+  ExportedConsumer,
   KV,
   KvOptions,
   ObjectStore,
@@ -85,6 +86,7 @@ import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
+import { ExportedConsumerImpl } from "./consumer.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -128,6 +130,10 @@ export class JetStreamClientImpl extends BaseApiClient
 
   get views(): Views {
     return new ViewsImpl(this);
+  }
+
+  exportedConsumer(subj: string): ExportedConsumer {
+    return new ExportedConsumerImpl(this.nc, subj);
   }
 
   async publish(
@@ -962,7 +968,7 @@ function iterMsgAdapter(
   return [null, toJsMsg(msg)];
 }
 
-function hideNonTerminalJsErrors(ne: NatsError): NatsError | null {
+export function hideNonTerminalJsErrors(ne: NatsError): NatsError | null {
   if (ne !== null) {
     switch (ne.code) {
       case ErrorCode.JetStream404NoMessages:
