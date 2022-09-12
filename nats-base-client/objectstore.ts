@@ -260,8 +260,23 @@ export class ObjectStoreImpl implements ObjectStore {
     }
   }
 
+  async _si(
+    opts?: Partial<StreamInfoRequestOptions>,
+  ): Promise<StreamInfo | null> {
+    try {
+      const info = await this.jsm.streams.info(this.stream, opts);
+      return info;
+    } catch (err) {
+      const nerr = err as NatsError;
+      if (nerr.code === "404") {
+        return null;
+      }
+      return Promise.reject(err);
+    }
+  }
+
   async seal(): Promise<ObjectStoreInfo> {
-    let info = await this.jsm.streams.info(this.stream);
+    let info = await this._si();
     if (info === null) {
       return Promise.reject(new Error("object store not found"));
     }
@@ -273,7 +288,7 @@ export class ObjectStoreImpl implements ObjectStore {
   async status(
     opts?: Partial<StreamInfoRequestOptions>,
   ): Promise<ObjectStoreInfo> {
-    const info = await this.jsm.streams.info(this.stream, opts);
+    const info = await this._si(opts);
     if (info === null) {
       return Promise.reject(new Error("object store not found"));
     }
@@ -332,14 +347,15 @@ export class ObjectStoreImpl implements ObjectStore {
             sha.update(payload);
             info.chunks!++;
             info.size! += payload.length;
-            info.mtime = new Date().toISOString();
-            const digest = sha.digest("base64");
-            const pad = digest.length % 3;
-            const padding = pad > 0 ? "=".repeat(pad) : "";
-            info.digest = `sha-256=${digest}${padding}`;
-            info.deleted = false;
             proms.push(this.js.publish(chunkSubj, payload));
           }
+          info.mtime = new Date().toISOString();
+          const digest = sha.digest("base64");
+          const pad = digest.length % 3;
+          const padding = pad > 0 ? "=".repeat(pad) : "";
+          info.digest = `sha-256=${digest}${padding}`;
+          info.deleted = false;
+
           // trailing md for the object
           const h = headers();
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
@@ -683,50 +699,5 @@ export class ObjectStoreImpl implements ObjectStore {
     const os = new ObjectStoreImpl(name, jsm, js);
     await os.init(opts);
     return Promise.resolve(os);
-  }
-}
-
-class Base64Codec {
-  static encode(bytes: string | Uint8Array): string {
-    if (typeof bytes === "string") {
-      return btoa(bytes);
-    }
-    const a = Array.from(bytes);
-    return btoa(String.fromCharCode(...a));
-  }
-
-  static decode(s: string, binary = false): Uint8Array | string {
-    const bin = atob(s);
-    if (!binary) {
-      return bin;
-    }
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) {
-      bytes[i] = bin.charCodeAt(i);
-    }
-    return bytes;
-  }
-}
-
-class Base64UrlCodec {
-  static encode(bytes: string | Uint8Array): string {
-    return Base64UrlCodec.toB64URLEncoding(Base64Codec.encode(bytes));
-  }
-
-  static decode(s: string, binary = false): Uint8Array | string {
-    return Base64Codec.decode(Base64UrlCodec.fromB64URLEncoding(s), binary);
-  }
-
-  static toB64URLEncoding(b64str: string): string {
-    b64str = b64str.replace(/=/g, "");
-    b64str = b64str.replace(/\+/g, "-");
-    return b64str.replace(/\//g, "_");
-  }
-
-  static fromB64URLEncoding(b64str: string): string {
-    // pads are % 4, but not necessary on decoding
-    b64str = b64str.replace(/_/g, "/");
-    b64str = b64str.replace(/-/g, "+");
-    return b64str;
   }
 }
