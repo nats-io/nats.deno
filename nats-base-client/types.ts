@@ -782,6 +782,11 @@ export interface PullOptions {
    * number of messages in the batch to fit within this setting.
    */
   "max_bytes"?: number;
+  /**
+   * If set, server will send heartbeat messages at this interval of millis,
+   * allowing the client to detect a stale pull. This value should be less
+   * than expires.
+   */
   "idle_heartbeat": number;
 }
 
@@ -2476,6 +2481,18 @@ export interface JetStreamReader {
    */
   closed: Promise<null | NatsError>;
 }
+export type ConsumerReadPullOptions = {
+  batch?: number;
+  max_bytes?: number;
+  low?: number;
+  idle_heartbeat?: number;
+  expires?: number;
+};
+
+export type ConsumerReadOptions = {
+  inflight_limit: ConsumerReadPullOptions;
+  callback: (m: JsMsg) => void;
+};
 
 export interface ExportedConsumer {
   /**
@@ -2494,15 +2511,7 @@ export interface ExportedConsumer {
    * @return a Promise to a JsMsg iterator or a JetStreamReader
    */
   read(
-    opts?: Partial<
-      {
-        inflight_limit: Partial<{
-          bytes: number;
-          messages: number;
-        }>;
-        callback: (m: JsMsg) => void;
-      }
-    >,
+    opts?: Partial<ConsumerReadOptions>,
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader>;
 }
 
