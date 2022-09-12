@@ -289,7 +289,7 @@ Deno.test("consumer - exported consumer", async () => {
   m.ack();
 
   const iter = await ec.read({
-    inflight_limit: { messages: 2 },
+    inflight_limit: { batch: 2 },
   }) as QueuedIterator<JsMsg>;
   const done = (async () => {
     for await (const m of iter) {

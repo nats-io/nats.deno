@@ -1,13 +1,15 @@
 import {
   Consumer,
   ConsumerInfo,
+  ConsumerReadOptions,
+  ConsumerReadPullOptions,
   ExportedConsumer,
   JetStreamReader,
+  JsMsg,
   NatsConnection,
   PullOptions,
 } from "./types.ts";
-import { JsMsg } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/types.ts";
-import { checkJsError, isHeartbeatMsg, nanos } from "./jsutil.ts";
+import { checkJsError, isHeartbeatMsg, Js409Errors, nanos } from "./jsutil.ts";
 import { toJsMsg } from "./jsmsg.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import {
@@ -22,8 +24,11 @@ import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { isNatsError } from "./error.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { hideNonTerminalJsErrors } from "./jsclient.ts";
+import { IdleHeartbeat } from "./idleheartbeat.ts";
 
 const jc = JSONCodec();
+
+type BufferedPullOptions = PullOptions & { low?: number };
 
 export class ExportedConsumerImpl implements ExportedConsumer {
   nc: NatsConnection;
@@ -58,15 +63,10 @@ export class ExportedConsumerImpl implements ExportedConsumer {
   }
 
   read(
-    opts: Partial<
-      {
-        inflight_limit: Partial<{ bytes: number; messages: number }>;
-        callback: (m: JsMsg) => void;
-      }
-    > = {},
+    opts: Partial<ConsumerReadOptions> = {},
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
     const limits = opts.inflight_limit || {};
-    const batch = limits.messages || 1000;
+    const batch = limits.batch || 1000;
 
     const qi = new QueuedIteratorImpl<JsMsg>();
     const inbox = createInbox();
@@ -194,8 +194,8 @@ export class ConsumerImpl implements Consumer {
     if (expires > timeout) {
       timeout = expires;
     }
-
     expires = expires < 0 ? 0 : nanos(expires);
+
     const pullOpts: Partial<PullOptions> = {
       batch: 1,
       no_wait: expires === 0,
@@ -221,24 +221,23 @@ export class ConsumerImpl implements Consumer {
   }
 
   async _handleWithIterator(
-    _opts: Partial<
-      {
-        inflight_limit: Partial<{
-          bytes: number;
-          messages: number;
-        }>;
-        callback: (m: JsMsg) => void;
-      }
-    > = {},
+    opts: Partial<ConsumerReadOptions> = {},
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
     const qi = new QueuedIteratorImpl<JsMsg>();
-
     try {
       if (typeof this.ci.config.deliver_subject === "string") {
         await this.setupPush(qi);
       } else {
-        const batch = _opts.inflight_limit?.messages ?? 1;
-        this.pull(qi, batch);
+        let batch = opts.inflight_limit?.batch || 0;
+        const max_bytes = opts.inflight_limit?.max_bytes || 0;
+        if (max_bytes) {
+          batch = 0;
+        }
+        const idle_heartbeat = opts.inflight_limit?.idle_heartbeat || 0;
+        const expires = opts?.inflight_limit?.expires || 5000;
+        const low = opts?.inflight_limit?.low || 0;
+
+        this.pull(qi, { batch, max_bytes, idle_heartbeat, expires, low });
       }
     } catch (err) {
       qi.stop(err);
@@ -247,59 +246,127 @@ export class ConsumerImpl implements Consumer {
   }
 
   _handleWithCallback(
-    _opts: Partial<
-      {
-        inflight_limit: Partial<{
-          bytes: number;
-          messages: number;
-        }>;
-        callback: (m: JsMsg) => void;
-      }
-    > = {},
+    opts: Partial<ConsumerReadOptions> = {},
   ): Promise<JetStreamReader> {
-    if (typeof _opts.callback !== "function") {
+    if (typeof opts.callback !== "function") {
       return Promise.reject("`callback` is required");
     }
     if (this.ci.config.deliver_subject) {
       throw new Error("push cb not implemented");
     } else {
-      const batch = _opts.inflight_limit?.messages ?? 1;
-      return Promise.resolve(this.pullCallback(_opts.callback, batch));
+      return Promise.resolve(
+        this.pullCallback(opts.callback, opts?.inflight_limit),
+      );
     }
   }
 
   read(
-    _opts: Partial<
-      {
-        inflight_limit: Partial<{
-          bytes: number;
-          messages: number;
-        }>;
-        callback: (m: JsMsg) => void;
-      }
-    > = {},
+    opts: Partial<ConsumerReadOptions> = {},
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
-    return typeof _opts.callback !== "function"
-      ? this._handleWithIterator(_opts)
-      : this._handleWithCallback(_opts);
+    return typeof opts.callback !== "function"
+      ? this._handleWithIterator(opts)
+      : this._handleWithCallback(opts);
   }
 
-  #pullOptions(batch = 1, expires = 5000): Uint8Array {
-    const jc = JSONCodec();
-    return jc.encode({ batch, expires: nanos(expires) });
-  }
+  _processPullOptions(inbox: string, opts: Partial<ConsumerReadPullOptions>): {
+    monitor: IdleHeartbeat | null;
+    pullFn: (Uint8Array) => void;
+    fullOptions: Uint8Array;
+    partialOptions: Uint8Array;
+    missed: Promise<void> | null;
+  } {
+    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
+    expires = nanos(expires || 5000);
 
-  pullCallback(callback: (m: JsMsg) => void, batch = 1): JetStreamReader {
-    const nc = this.consumerAPI.nc as NatsConnectionImpl;
-    const low = Math.floor(batch * .25) ?? 1;
-    let seen = 0;
+    const max = (max_bytes ? max_bytes : batch) || 0;
+    low = !low ? Math.floor(max * .25) || 1 : low;
+
+    const full = max_bytes
+      ? {
+        max_bytes,
+        expires,
+      }
+      : { batch, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      full.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const fullOptions = jc.encode(full);
+
+    const partial = max_bytes
+      ? { max_bytes: low, expires }
+      : { batch: low, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      partial.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const partialOptions = jc.encode(partial);
 
     const { streamName, consumerName, prefix } = this;
     const pullSubject =
       `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
 
-    const fullPullOpts = this.#pullOptions(batch, 5000);
-    const partialPullOpts = this.#pullOptions(low, 5000);
+    let monitor: IdleHeartbeat | null = null;
+    let missed: Promise<void> | null = null;
+    if (idle_heartbeat) {
+      missed = deferred();
+      monitor = new IdleHeartbeat(idle_heartbeat, (v: number): boolean => {
+        missed.reject(
+          new NatsError(
+            `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
+            ErrorCode.JetStreamIdleHeartBeat,
+          ),
+        );
+        return true;
+      });
+    }
+
+    function pull(payload: Uint8Array) {
+      nc.publish(pullSubject, payload, { reply: sub.getSubject() });
+    }
+
+    return {
+      monitor: monitor,
+      pullFn: pull,
+      fullOptions,
+      partialOptions,
+      missed,
+    };
+  }
+
+  pullCallback(
+    callback: (m: JsMsg) => void,
+    opts: Partial<BufferedPullOptions> = {},
+  ): JetStreamReader {
+    const nc = this.consumerAPI.nc as NatsConnectionImpl;
+    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
+    expires = nanos(expires || 5000);
+
+    const max = (max_bytes ? max_bytes : batch) || 0;
+    low = !low ? Math.floor(max * .25) || 1 : low;
+    let seen = 0;
+
+    const full = max_bytes
+      ? {
+        max_bytes,
+        expires,
+      }
+      : { batch, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      full.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const fullOptions = jc.encode(full);
+
+    const partial = max_bytes
+      ? { max_bytes: low, expires }
+      : { batch: low, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      partial.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const partialOpts = jc.encode(partial);
+
+    const { streamName, consumerName, prefix } = this;
+    const pullSubject =
+      `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
+
     const _closed = deferred<null | NatsError>();
 
     const reader = {
@@ -330,7 +397,7 @@ export class ConsumerImpl implements Consumer {
           }
           if (err !== null) {
             if (err.code === ErrorCode.JetStream408RequestTimeout) {
-              pull(fullPullOpts);
+              pull(fullOptions);
               return;
             }
             if (isNatsError(err)) {
@@ -345,7 +412,7 @@ export class ConsumerImpl implements Consumer {
             callback(toJsMsg(msg));
             seen++;
             if (seen === low) {
-              pull(partialPullOpts);
+              pull(partialOpts);
             }
           }
         },
@@ -357,25 +424,49 @@ export class ConsumerImpl implements Consumer {
       nc.publish(pullSubject, payload, { reply: sub.getSubject() });
     }
 
-    pull(fullPullOpts);
+    pull(fullOptions);
     return reader;
   }
 
-  pull(qi: QueuedIteratorImpl<JsMsg>, batch = 1) {
+  pull(
+    qi: QueuedIteratorImpl<JsMsg> | null,
+    opts: Partial<ConsumerReadPullOptions>,
+  ) {
     const nc = this.consumerAPI.nc as NatsConnectionImpl;
+    const inbox = createInbox(nc.options.inboxPrefix);
+    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
+    expires = nanos(expires || 5000);
 
-    const low = Math.floor(batch * .25) || 1;
+    const max = (max_bytes ? max_bytes : batch) || 0;
+    low = !low ? Math.floor(max * .25) || 1 : low;
+
     let seen = 0;
+
+    const full = max_bytes
+      ? {
+        max_bytes,
+        expires,
+      }
+      : { batch, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      full.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const fullOptions = jc.encode(full);
+
+    const partial = max_bytes
+      ? { max_bytes: low, expires }
+      : { batch: low, expires } as Partial<PullOptions>;
+    if (idle_heartbeat) {
+      partial.idle_heartbeat = nanos(idle_heartbeat);
+    }
+    const partialOpts = jc.encode(partial);
 
     const { streamName, consumerName, prefix } = this;
     const pullSubject =
       `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
 
-    const fullPullOpts = this.#pullOptions(batch, 5000);
-    const partialPullOpts = this.#pullOptions(low, 5000);
-
     const sub = this.consumerAPI.nc.subscribe(
-      createInbox(nc.options.inboxPrefix),
+      inbox,
       {
         callback: (err, msg) => {
           if (err === null) {
@@ -384,7 +475,7 @@ export class ConsumerImpl implements Consumer {
           if (err !== null) {
             if (err.code === ErrorCode.JetStream408RequestTimeout) {
               // pull right now
-              pull(fullPullOpts);
+              pull(fullOptions);
               return;
             }
             if (isNatsError(err)) {
@@ -394,13 +485,21 @@ export class ConsumerImpl implements Consumer {
             }
             sub.unsubscribe();
           } else {
+            monitor?.work();
+            if (isHeartbeatMsg(msg)) {
+              return;
+            }
             qi.received++;
-            seen++;
+            if (max_bytes) {
+              seen += msg.data.length;
+            } else {
+              seen++;
+            }
             qi.push(toJsMsg(msg));
             if (seen === low) {
               //@ts-ignore: pull when the user has processed the low message
               qi.push(() => {
-                pull(partialPullOpts);
+                pull(partialOpts);
               });
             }
           }
@@ -408,16 +507,32 @@ export class ConsumerImpl implements Consumer {
       },
     );
 
+    let monitor: IdleHeartbeat | null = null;
+    if (idle_heartbeat) {
+      monitor = new IdleHeartbeat(idle_heartbeat, (v: number): boolean => {
+        //@ts-ignore: pushing a fn
+        qi.push(() => {
+          // this will terminate the iterator
+          qi.err = new NatsError(
+            `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
+            ErrorCode.JetStreamIdleHeartBeat,
+          );
+        });
+        return true;
+      });
+    }
+
     function pull(payload: Uint8Array) {
       seen = 0;
       nc.publish(pullSubject, payload, { reply: sub.getSubject() });
     }
 
     qi.iterClosed.then(() => {
+      monitor?.cancel();
       sub.unsubscribe();
     });
 
-    pull(fullPullOpts);
+    pull(fullOptions);
   }
 
   async setupPush(
