@@ -15,6 +15,7 @@ import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import {
   consumerOpts,
   createInbox,
+  Deferred,
   deferred,
   ErrorCode,
   JSONCodec,
@@ -268,15 +269,22 @@ export class ConsumerImpl implements Consumer {
       : this._handleWithCallback(opts);
   }
 
-  _processPullOptions(inbox: string, opts: Partial<ConsumerReadPullOptions>): {
+  _processPullOptions(
+    nc: NatsConnection,
+    inbox: string,
+    opts: Partial<ConsumerReadPullOptions>,
+  ): {
     monitor: IdleHeartbeat | null;
-    pullFn: (Uint8Array) => void;
+    pullFn: (data: Uint8Array) => void;
     fullOptions: Uint8Array;
     partialOptions: Uint8Array;
     missed: Promise<void> | null;
+    low: number;
+    max_bytes: number;
   } {
     let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
     expires = nanos(expires || 5000);
+    max_bytes = max_bytes || 0;
 
     const max = (max_bytes ? max_bytes : batch) || 0;
     low = !low ? Math.floor(max * .25) || 1 : low;
@@ -305,11 +313,11 @@ export class ConsumerImpl implements Consumer {
       `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
 
     let monitor: IdleHeartbeat | null = null;
-    let missed: Promise<void> | null = null;
+    let missed: Deferred<void> | null = null;
     if (idle_heartbeat) {
       missed = deferred();
       monitor = new IdleHeartbeat(idle_heartbeat, (v: number): boolean => {
-        missed.reject(
+        missed?.reject(
           new NatsError(
             `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
             ErrorCode.JetStreamIdleHeartBeat,
@@ -320,7 +328,7 @@ export class ConsumerImpl implements Consumer {
     }
 
     function pull(payload: Uint8Array) {
-      nc.publish(pullSubject, payload, { reply: sub.getSubject() });
+      nc.publish(pullSubject, payload, { reply: inbox });
     }
 
     return {
@@ -329,6 +337,8 @@ export class ConsumerImpl implements Consumer {
       fullOptions,
       partialOptions,
       missed,
+      low,
+      max_bytes,
     };
   }
 
@@ -337,35 +347,9 @@ export class ConsumerImpl implements Consumer {
     opts: Partial<BufferedPullOptions> = {},
   ): JetStreamReader {
     const nc = this.consumerAPI.nc as NatsConnectionImpl;
-    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
-    expires = nanos(expires || 5000);
-
-    const max = (max_bytes ? max_bytes : batch) || 0;
-    low = !low ? Math.floor(max * .25) || 1 : low;
+    const inbox = createInbox(nc.options.inboxPrefix);
+    const ctx = this._processPullOptions(nc, inbox, opts);
     let seen = 0;
-
-    const full = max_bytes
-      ? {
-        max_bytes,
-        expires,
-      }
-      : { batch, expires } as Partial<PullOptions>;
-    if (idle_heartbeat) {
-      full.idle_heartbeat = nanos(idle_heartbeat);
-    }
-    const fullOptions = jc.encode(full);
-
-    const partial = max_bytes
-      ? { max_bytes: low, expires }
-      : { batch: low, expires } as Partial<PullOptions>;
-    if (idle_heartbeat) {
-      partial.idle_heartbeat = nanos(idle_heartbeat);
-    }
-    const partialOpts = jc.encode(partial);
-
-    const { streamName, consumerName, prefix } = this;
-    const pullSubject =
-      `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
 
     const _closed = deferred<null | NatsError>();
 
@@ -389,7 +373,7 @@ export class ConsumerImpl implements Consumer {
     };
 
     const sub = this.consumerAPI.nc.subscribe(
-      createInbox(nc.options.inboxPrefix),
+      inbox,
       {
         callback: (err, msg) => {
           if (err === null) {
@@ -397,7 +381,7 @@ export class ConsumerImpl implements Consumer {
           }
           if (err !== null) {
             if (err.code === ErrorCode.JetStream408RequestTimeout) {
-              pull(fullOptions);
+              ctx.pullFn(ctx.fullOptions);
               return;
             }
             if (isNatsError(err)) {
@@ -409,61 +393,37 @@ export class ConsumerImpl implements Consumer {
             }
             sub.unsubscribe();
           } else {
+            ctx.monitor?.work();
+            if (isHeartbeatMsg(msg)) {
+              return;
+            }
+            if (ctx.max_bytes) {
+              seen += msg.data.length;
+            } else {
+              seen++;
+            }
             callback(toJsMsg(msg));
-            seen++;
-            if (seen === low) {
-              pull(partialOpts);
+            if (seen === ctx.low) {
+              seen = 0;
+              ctx.pullFn(ctx.partialOptions);
             }
           }
         },
       },
     );
 
-    function pull(payload: Uint8Array) {
-      seen = 0;
-      nc.publish(pullSubject, payload, { reply: sub.getSubject() });
-    }
-
-    pull(fullOptions);
+    ctx.pullFn(ctx.fullOptions);
     return reader;
   }
 
   pull(
-    qi: QueuedIteratorImpl<JsMsg> | null,
+    qi: QueuedIteratorImpl<JsMsg>,
     opts: Partial<ConsumerReadPullOptions>,
   ) {
     const nc = this.consumerAPI.nc as NatsConnectionImpl;
     const inbox = createInbox(nc.options.inboxPrefix);
-    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
-    expires = nanos(expires || 5000);
-
-    const max = (max_bytes ? max_bytes : batch) || 0;
-    low = !low ? Math.floor(max * .25) || 1 : low;
-
+    const ctx = this._processPullOptions(nc, inbox, opts);
     let seen = 0;
-
-    const full = max_bytes
-      ? {
-        max_bytes,
-        expires,
-      }
-      : { batch, expires } as Partial<PullOptions>;
-    if (idle_heartbeat) {
-      full.idle_heartbeat = nanos(idle_heartbeat);
-    }
-    const fullOptions = jc.encode(full);
-
-    const partial = max_bytes
-      ? { max_bytes: low, expires }
-      : { batch: low, expires } as Partial<PullOptions>;
-    if (idle_heartbeat) {
-      partial.idle_heartbeat = nanos(idle_heartbeat);
-    }
-    const partialOpts = jc.encode(partial);
-
-    const { streamName, consumerName, prefix } = this;
-    const pullSubject =
-      `${prefix}.CONSUMER.MSG.NEXT.${streamName}.${consumerName}`;
 
     const sub = this.consumerAPI.nc.subscribe(
       inbox,
@@ -475,7 +435,7 @@ export class ConsumerImpl implements Consumer {
           if (err !== null) {
             if (err.code === ErrorCode.JetStream408RequestTimeout) {
               // pull right now
-              pull(fullOptions);
+              ctx.pullFn(ctx.fullOptions);
               return;
             }
             if (isNatsError(err)) {
@@ -485,21 +445,22 @@ export class ConsumerImpl implements Consumer {
             }
             sub.unsubscribe();
           } else {
-            monitor?.work();
+            ctx.monitor?.work();
             if (isHeartbeatMsg(msg)) {
               return;
             }
             qi.received++;
-            if (max_bytes) {
+            if (ctx.max_bytes) {
               seen += msg.data.length;
             } else {
               seen++;
             }
             qi.push(toJsMsg(msg));
-            if (seen === low) {
+            if (seen === ctx.low) {
               //@ts-ignore: pull when the user has processed the low message
               qi.push(() => {
-                pull(partialOpts);
+                seen = 0;
+                ctx.pullFn(ctx.partialOptions);
               });
             }
           }
@@ -507,32 +468,22 @@ export class ConsumerImpl implements Consumer {
       },
     );
 
-    let monitor: IdleHeartbeat | null = null;
-    if (idle_heartbeat) {
-      monitor = new IdleHeartbeat(idle_heartbeat, (v: number): boolean => {
+    if (ctx.monitor) {
+      ctx.missed?.catch((err) => {
         //@ts-ignore: pushing a fn
         qi.push(() => {
           // this will terminate the iterator
-          qi.err = new NatsError(
-            `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
-            ErrorCode.JetStreamIdleHeartBeat,
-          );
+          qi.err = err;
         });
-        return true;
       });
     }
 
-    function pull(payload: Uint8Array) {
-      seen = 0;
-      nc.publish(pullSubject, payload, { reply: sub.getSubject() });
-    }
-
     qi.iterClosed.then(() => {
-      monitor?.cancel();
+      ctx.monitor?.cancel();
       sub.unsubscribe();
     });
 
-    pull(fullOptions);
+    ctx.pullFn(ctx.fullOptions);
   }
 
   async setupPush(
