@@ -799,3 +799,44 @@ Deno.test("objectstore - no store", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - hashtests", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("hashes");
+
+  const base =
+    "https://raw.githubusercontent.com/nats-io/nats.client.deps/main/digester_test/";
+  const tests: { hash: string; file: string }[] = [{
+    hash: "IdgP4UYMGt47rgecOqFoLrd24AXukHf5-SVzqQ5Psg8=",
+    file: "digester_test_bytes_000100.txt",
+  }, {
+    hash: "DZj4RnBpuEukzFIY0ueZ-xjnHY4Rt9XWn4Dh8nkNfnI=",
+    file: "digester_test_bytes_001000.txt",
+  }, {
+    hash: "RgaJ-VSJtjNvgXcujCKIvaheiX_6GRCcfdRYnAcVy38=",
+    file: "digester_test_bytes_010000.txt",
+  }, {
+    hash: "yan7pwBVnC1yORqqgBfd64_qAw6q9fNA60_KRiMMooE=",
+    file: "digester_test_bytes_100000.txt",
+  }];
+
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    const r = await fetch(`${base}${t.file}`);
+    const rs = await r.blob();
+
+    const oi = await os.put(
+      { name: t.hash, options: { max_chunk_size: 9 } },
+      rs.stream(),
+    );
+    assertEquals(oi.digest, `sha-256=${t.hash}`);
+  }
+
+  await cleanup(ns, nc);
+});
