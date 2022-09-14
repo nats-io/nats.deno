@@ -1420,15 +1420,11 @@ Deno.test("jsm - consumers with name and durable_name", async () => {
     return;
   }
 
-  // change the version of the server to force legacy apis
   const jsm = await nc.jetstreamManager();
-  await jsm.streams.add({
-    name: "A",
-    subjects: ["foo", "bar"],
-  });
+  const { stream } = await initStream(nc);
 
   // should be ok
-  await jsm.consumers.add("A", {
+  await jsm.consumers.add(stream, {
     name: "x",
     durable_name: "x",
     ack_policy: AckPolicy.None,
@@ -1437,7 +1433,7 @@ Deno.test("jsm - consumers with name and durable_name", async () => {
   // should fail from the server
   await assertRejects(
     async () => {
-      await jsm.consumers.add("A", {
+      await jsm.consumers.add(stream, {
         name: "y",
         durable_name: "z",
         ack_policy: AckPolicy.None,
@@ -1445,6 +1441,58 @@ Deno.test("jsm - consumers with name and durable_name", async () => {
     },
     Error,
     "consumer name in subject does not match durable name in request",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - consumer name is validated", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+
+  function test(
+    n: string,
+    conf: Partial<ConsumerConfig> = {},
+  ): Promise<unknown> {
+    const opts = Object.assign({ name: n, ack_policy: AckPolicy.None }, conf);
+    return jsm.consumers.add(stream, opts);
+  }
+
+  await assertRejects(
+    async () => {
+      await test("hello.world");
+    },
+    Error,
+    "consumer 'name' cannot contain '.'",
+  );
+
+  await assertRejects(
+    async () => {
+      await test("hello>world");
+    },
+    Error,
+    "consumer 'name' cannot contain '>'",
+  );
+  await assertRejects(
+    async () => {
+      await test("one*two");
+    },
+    Error,
+    "consumer 'name' cannot contain '*'",
+  );
+  await assertRejects(
+    async () => {
+      await test(".");
+    },
+    Error,
+    "consumer 'name' cannot contain '.'",
   );
 
   await cleanup(ns, nc);
