@@ -1410,3 +1410,42 @@ Deno.test("jsm - mirror_direct options", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - consumers with name and durable_name", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  // change the version of the server to force legacy apis
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["foo", "bar"],
+  });
+
+  // should be ok
+  await jsm.consumers.add("A", {
+    name: "x",
+    durable_name: "x",
+    ack_policy: AckPolicy.None,
+  });
+
+  // should fail from the server
+  await assertRejects(
+    async () => {
+      await jsm.consumers.add("A", {
+        name: "y",
+        durable_name: "z",
+        ack_policy: AckPolicy.None,
+      });
+    },
+    Error,
+    "consumer name in subject does not match durable name in request",
+  );
+
+  await cleanup(ns, nc);
+});
