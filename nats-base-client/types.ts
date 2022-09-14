@@ -952,6 +952,10 @@ export interface JetStreamClient {
 
   /**
    * Retrieves a single message from JetStream
+   * Note that you should be using {@link Consumer} - {@link this.consumer} instead as
+   * this functionality is much simpler to implement. The `pull()` API
+   * will be deprecated.
+   *
    * @param stream - the name of the stream
    * @param consumer - the consumer's durable name (if durable) or name if ephemeral
    * @param expires - the number of milliseconds to wait for a message
@@ -960,6 +964,10 @@ export interface JetStreamClient {
 
   /**
    * Similar to pull, but able to configure the number of messages, etc via PullOptions.
+   *
+   * Note that you should be using {@link Consumer} - {@link this.consumer} instead as
+   * this functionality is much simpler to implement. The `fetch()` API will be deprecated.
+   *
    * @param stream - the name of the stream
    * @param durable - the consumer's durable name (if durable) or name if ephemeral
    * @param opts
@@ -983,6 +991,10 @@ export interface JetStreamClient {
    *
    * It is more efficient than {@link fetch} or {@link pull} because
    * a single subscription is used between invocations.
+   *
+   * Note that you should be using {@link Consumer} - {@link this.consumer} instead as
+   * this functionality is much simpler to implement. The `pullSubscribe()` API will be
+   * deprecated.
    *
    * @param subject - a subject used to locate the stream
    * @param opts
@@ -1017,6 +1029,20 @@ export interface JetStreamClient {
    */
   views: Views;
 
+  /**
+   * Returns the Consumer configured for the specified stream having the specified name.
+   * {@link Consumer} present a simplified construct for handling JetStream messages.
+   * @param stream
+   * @param name
+   */
+  consumer(stream: string, name: string): Promise<Consumer>;
+
+  /**
+   * Returns a {@link Consumer} that is bound simply by its subject. This type of Consumer
+   * is expected to be a Pull Consumer - and the subject expected is the subject exported
+   * to the account to perform the pull.
+   * @param subject
+   */
   exportedConsumer(subject: string): ExportedConsumer;
 }
 
@@ -2515,6 +2541,30 @@ export interface ExportedConsumer {
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader>;
 }
 
+/**
+ * A Consumer is a simplified presentation for JetStream Consumers.
+ * Unlike {@link JetStreamClient#subscribe} or {@link JetStreamClient#pullSubscribe}
+ * require the consumer to be pre-defined defined on the server. This ensures that
+ * the process of creating the subscription or pull subscription doesn't modify
+ * the server's configuration of the consumer. To define a consumer see
+ * {@link JetStreamManager#consumers}. Once the consumer exists, you can retrieve
+ * it via {@link JetStreamClient#consumer}
+ * or {@link JetStreamManager#consumers}.
+ *
+ * A Consumer has a `push` presentation, regardless of whether the
+ * underlying consumer is push or pull. The mechanics of `pull()` which were
+ * telegraphed by the `pullSubscription()` are handled under the covers. The
+ * Consumer will be fed messag
+ *
+ * With a {@link Consumer} you can read the next message by using `next()` or
+ * `read()` from the stream indefinitely. If the JetStreamConsumer is a pull consumer
+ * you can specify a `batch` or `max_bytes` to control how many messages or data
+ * you retrieve. By default, when the client consumes 25% of the data or messages,
+ * the client will re-pull 25% the same amount of data. Thus keeping the client
+ * fed with messages without over-requesting. Push consumers can be flow-controlled
+ * in their configurations, and will just behave as expected. Note that pull consumers
+ * are preferred.
+ */
 export interface Consumer extends ExportedConsumer {
   info(): Promise<ConsumerInfo>;
 }
