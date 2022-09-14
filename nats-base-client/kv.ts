@@ -52,7 +52,7 @@ import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
 import { consumerOpts, deferred, ErrorCode } from "./mod.ts";
-import { compare, parseSemVer } from "./semver.ts";
+import { compare, Feature, parseSemVer } from "./semver.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
@@ -248,8 +248,27 @@ export class Bucket implements KV, KvRemove {
     const discardNew = have ? compare(have, parseSemVer("2.7.2")) >= 0 : false;
     sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
 
-    const direct = have ? compare(have, parseSemVer("2.8.5")) >= 0 : false;
-    sc.allow_direct = opts.allow_direct ? direct : false;
+    const { ok: direct, min } = nci.protocol.features.get(
+      Feature.JS_ALLOW_DIRECT,
+    );
+    if (!direct && opts.allow_direct === true) {
+      const v = have
+        ? `${have!.major}.${have!.minor}.${have!.micro}`
+        : "unknown";
+      return Promise.reject(
+        new Error(
+          `allow_direct is not available on server version ${v} - requires ${min}`,
+        ),
+      );
+    }
+    // if we are given allow_direct we use it, otherwise what
+    // the server supports - in creation this will always rule,
+    // but allows the client to opt-in even if it is already
+    // available on the stream
+    opts.allow_direct = typeof opts.allow_direct === "boolean"
+      ? opts.allow_direct
+      : direct;
+    sc.allow_direct = opts.allow_direct;
     this.direct = sc.allow_direct;
 
     sc.num_replicas = bo.replicas;
@@ -259,7 +278,10 @@ export class Bucket implements KV, KvRemove {
     sc.allow_rollup_hdrs = true;
 
     try {
-      await this.jsm.streams.info(sc.name);
+      const info = await this.jsm.streams.info(sc.name);
+      if (!info.config.allow_direct && this.direct === true) {
+        this.direct = false;
+      }
     } catch (err) {
       if (err.message === "stream not found") {
         await this.jsm.streams.add(sc);
