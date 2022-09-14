@@ -39,14 +39,24 @@ export function validateName(context: string, name = "") {
   if (name === "") {
     throw Error(`${context} name required`);
   }
+  const m = validName(name);
+  if (m.length) {
+    throw new Error(`invalid ${context} name - ${context} name ${m}`);
+  }
+}
+
+export function validName(name = ""): string {
+  if (name === "") {
+    throw Error(`name required`);
+  }
   const bad = [".", "*", ">"];
-  bad.forEach((v) => {
+  for (let i = 0; i < bad.length; i++) {
+    const v = bad[i];
     if (name.indexOf(v) !== -1) {
-      throw Error(
-        `invalid ${context} name - ${context} name cannot contain '${v}'`,
-      );
+      return `cannot contain '${v}'`;
     }
-  });
+  }
+  return "";
 }
 
 export function defaultConsumer(

@@ -26,7 +26,11 @@ import {
 } from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
-import { validateDurableName, validateStreamName } from "./jsutil.ts";
+import {
+  validateDurableName,
+  validateStreamName,
+  validName,
+} from "./jsutil.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
 
@@ -68,6 +72,12 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     const name = cfg.name === "" ? undefined : cfg.name;
     if (name && !newAPI) {
       throw new Error(`consumer 'name' requires server ${min}`);
+    }
+    if (name) {
+      const m = validName(name);
+      if (m.length) {
+        throw new Error(`consumer 'name' ${m}`);
+      }
     }
 
     let subj;
