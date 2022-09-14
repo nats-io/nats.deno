@@ -20,6 +20,7 @@ import {
   delay,
   DiscardPolicy,
   Empty,
+  KvOptions,
   nanos,
   NatsConnectionImpl,
   NatsError,
@@ -57,6 +58,7 @@ import { Lock, NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
 import { connect } from "../src/mod.ts";
+import { Features } from "../nats-base-client/semver.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -1359,12 +1361,71 @@ Deno.test("kv - replicas", async () => {
   await NatsServer.stopAll(servers);
 });
 
+Deno.test("kv - allow direct", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const jsm = await nc.jetstreamManager();
+
+  async function test(
+    name: string,
+    opts: Partial<KvOptions>,
+    direct: boolean,
+  ): Promise<void> {
+    const kv = await js.views.kv(name, opts) as Bucket;
+    assertEquals(kv.direct, direct);
+    const si = await jsm.streams.info(kv.bucketName());
+    assertEquals(si.config.allow_direct, direct);
+  }
+
+  // default is not specified but allowed by the server
+  await test(nuid.next(), { history: 1 }, true);
+  // user opted to no direct
+  await test(nuid.next(), { history: 1, allow_direct: false }, false);
+  // user opted for direct
+  await test(nuid.next(), { history: 1, allow_direct: true }, true);
+
+  // now we create a kv that enables it
+  const xkv = await js.views.kv("X") as Bucket;
+  assertEquals(xkv.direct, true);
+
+  // but the client opts-out of the direct
+  const xc = await js.views.kv("X", { allow_direct: false }) as Bucket;
+  assertEquals(xc.direct, false);
+
+  // now the creator disables it, but the client wants it
+  const ykv = await js.views.kv("Y", { allow_direct: false }) as Bucket;
+  assertEquals(ykv.direct, false);
+  const yc = await js.views.kv("Y", { allow_direct: true }) as Bucket;
+  assertEquals(yc.direct, false);
+
+  // now let's pretend we got a server that doesn't support it
+  const nci = nc as NatsConnectionImpl;
+  nci.protocol.features = new Features({ major: 2, minor: 8, micro: 0 });
+  nci.info!.version = "2.8.0";
+
+  await assertRejects(
+    async () => {
+      await test(nuid.next(), { history: 1, allow_direct: true }, false);
+    },
+    Error,
+    "allow_direct is not available on server version",
+  );
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("kv - direct message", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}, true),
   );
 
-  if (await notCompatible(ns, nc, "2.8.5")) {
+  if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
 
