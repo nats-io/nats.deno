@@ -14,6 +14,7 @@
  */
 
 import type {
+  Consumer,
   ConsumerOptsBuilder,
   ExportedConsumer,
   KV,
@@ -130,6 +131,12 @@ export class JetStreamClientImpl extends BaseApiClient
 
   get views(): Views {
     return new ViewsImpl(this);
+  }
+
+  async consumer(stream: string, name: string): Promise<Consumer> {
+    const apiImpl = this.api as ConsumerAPIImpl;
+    const jsm = await apiImpl.nc.jetstreamManager(apiImpl.opts);
+    return jsm.consumers.get(stream, name);
   }
 
   exportedConsumer(subj: string): ExportedConsumer {
