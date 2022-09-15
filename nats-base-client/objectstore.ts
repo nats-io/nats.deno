@@ -23,10 +23,10 @@ import {
   ObjectInfo,
   ObjectResult,
   ObjectStore,
-  ObjectStoreInfo,
   ObjectStoreMeta,
   ObjectStoreMetaOptions,
   ObjectStoreOptions,
+  ObjectStoreStatus,
   PubAck,
   PurgeResponse,
   StorageType,
@@ -46,19 +46,21 @@ import { NatsError } from "./mod.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { SHA256 } from "./sha256.js";
 
+export const osPrefix = "OBJ_";
+
 export function objectStoreStreamName(bucket: string): string {
   validateBucket(bucket);
-  return `OBJ_${bucket}`;
+  return `${osPrefix}${bucket}`;
 }
 
 export function objectStoreBucketName(stream: string): string {
-  if (stream.startsWith("OBJ_")) {
+  if (stream.startsWith(osPrefix)) {
     return stream.substring(4);
   }
   return stream;
 }
 
-export class ObjectStoreInfoImpl implements ObjectStoreInfo {
+export class ObjectStoreStatusImpl implements ObjectStoreStatus {
   si: StreamInfo;
   backingStore: string;
 
@@ -274,24 +276,24 @@ export class ObjectStoreImpl implements ObjectStore {
     }
   }
 
-  async seal(): Promise<ObjectStoreInfo> {
+  async seal(): Promise<ObjectStoreStatus> {
     let info = await this._si();
     if (info === null) {
       return Promise.reject(new Error("object store not found"));
     }
     info.config.sealed = true;
     info = await this.jsm.streams.update(this.stream, info.config);
-    return Promise.resolve(new ObjectStoreInfoImpl(info));
+    return Promise.resolve(new ObjectStoreStatusImpl(info));
   }
 
   async status(
     opts?: Partial<StreamInfoRequestOptions>,
-  ): Promise<ObjectStoreInfo> {
+  ): Promise<ObjectStoreStatus> {
     const info = await this._si(opts);
     if (info === null) {
       return Promise.reject(new Error("object store not found"));
     }
-    return Promise.resolve(new ObjectStoreInfoImpl(info));
+    return Promise.resolve(new ObjectStoreStatusImpl(info));
   }
 
   destroy(): Promise<boolean> {
