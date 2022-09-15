@@ -840,3 +840,48 @@ Deno.test("objectstore - hashtests", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - meta update", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  // cannot update meta of an object that doesn't exist
+  await assertRejects(
+    async () => {
+      await os.update("A", { name: "B" });
+    },
+    Error,
+    "object not found",
+  );
+
+  // cannot update the meta of a deleted object
+  await os.put({ name: "D" }, readableStreamFrom(makeData(1)));
+  await os.delete("D");
+  await assertRejects(
+    async () => {
+      await os.update("D", { name: "DD" });
+    },
+    Error,
+    "cannot update meta for a deleted object",
+  );
+
+  // cannot update the meta to an object that already exists
+  await os.put({ name: "A" }, readableStreamFrom(makeData(1)));
+  await os.put({ name: "B" }, readableStreamFrom(makeData(1)));
+
+  await assertRejects(
+    async () => {
+      await os.update("A", { name: "B" });
+    },
+    Error,
+    "an object already exists with that name",
+  );
+
+  await cleanup(ns, nc);
+});

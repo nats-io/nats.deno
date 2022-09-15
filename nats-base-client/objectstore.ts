@@ -206,7 +206,7 @@ export class ObjectStoreImpl implements ObjectStore {
     // cannot use replaceAll - node until node 16 is min
     // name = name.replaceAll(".", "_");
     // name = name.replaceAll(" ", "_");
-    name = name.replace(/[\. ]/g, "_");
+    name = name.replace(/[. ]/g, "_");
 
     let error = undefined;
     try {
@@ -264,8 +264,7 @@ export class ObjectStoreImpl implements ObjectStore {
     opts?: Partial<StreamInfoRequestOptions>,
   ): Promise<StreamInfo | null> {
     try {
-      const info = await this.jsm.streams.info(this.stream, opts);
-      return info;
+      return await this.jsm.streams.info(this.stream, opts);
     } catch (err) {
       const nerr = err as NatsError;
       if (nerr.code === "404") {
@@ -561,6 +560,11 @@ export class ObjectStoreImpl implements ObjectStore {
     if (info === null) {
       return Promise.reject(new Error("object not found"));
     }
+    if (info.deleted) {
+      return Promise.reject(
+        new Error("cannot update meta for a deleted object"),
+      );
+    }
     // FIXME: Go's implementation doesn't seem correct - it possibly adds a new meta entry
     //  effectively making the object available under 2 names, but it doesn't remove the
     //  older one.
@@ -569,7 +573,16 @@ export class ObjectStoreImpl implements ObjectStore {
     if (error) {
       return Promise.reject(error);
     }
+    if (name !== meta.name) {
+      const i = await this.info(meta.name);
+      if (i && !i.deleted) {
+        return Promise.reject(
+          new Error("an object already exists with that name"),
+        );
+      }
+    }
     meta.name = n;
+
     const ii = Object.assign({}, info, toServerObjectStoreMeta(meta!));
     const jc = JSONCodec();
 
