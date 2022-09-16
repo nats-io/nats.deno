@@ -14,6 +14,7 @@
  */
 
 import {
+  ApiPagedRequest,
   Empty,
   JetStreamOptions,
   KvStatus,
@@ -96,9 +97,41 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     data?: Partial<StreamInfoRequestOptions>,
   ): Promise<StreamInfo> {
     validateStreamName(name);
-    const r = await this._request(`${this.prefix}.STREAM.INFO.${name}`, data);
-    const si = r as StreamInfo;
+    const subj = `${this.prefix}.STREAM.INFO.${name}`;
+    const r = await this._request(subj, data);
+    let si = r as StreamInfo;
+    const { total } = si;
 
+    // check how many subjects we got in the first request
+    let have = si.state.subjects
+      ? Object.getOwnPropertyNames(si.state.subjects).length
+      : 1;
+
+    // if the response is paged, we have a large list of subjects
+    // handle the paging and return a StreamInfo with all of it
+    if (total && total > have) {
+      const infos: StreamInfo[] = [si];
+      const paged = data || {} as unknown as ApiPagedRequest;
+      while (total > have) {
+        paged.offset = have;
+        const r = await this._request(subj, paged) as StreamInfo;
+        infos.push(r);
+        have += Object.getOwnPropertyNames(r.state.subjects).length;
+      }
+      // collect all the subjects
+      let subjects = {};
+      for (let i = 0; i < infos.length; i++) {
+        si = infos[i];
+        if (si.state.subjects) {
+          subjects = Object.assign(subjects, si.state.subjects);
+        }
+      }
+      // don't give the impression we paged
+      si.offset = 0;
+      si.total = 0;
+      si.limit = 0;
+      si.state.subjects = subjects;
+    }
     this._fixInfo(si);
     return si;
   }
