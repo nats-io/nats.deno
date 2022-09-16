@@ -488,7 +488,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       ? undefined
       : this.servers.update(info);
     if (!this.infoReceived) {
-      this.features = new Features(parseSemVer(info.version));
+      this.features.update(parseSemVer(info.version));
       this.infoReceived = true;
       if (this.transport.isEncrypted()) {
         this.servers.updateTLSName();

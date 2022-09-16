@@ -59,7 +59,6 @@ import { Lock, NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
 import { connect } from "../src/mod.ts";
-import { Features } from "../nats-base-client/semver.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -1410,7 +1409,7 @@ Deno.test("kv - allow direct", async () => {
 
   // now let's pretend we got a server that doesn't support it
   const nci = nc as NatsConnectionImpl;
-  nci.protocol.features = new Features({ major: 2, minor: 8, micro: 0 });
+  nci.features.update("2.8.0");
   nci.info!.version = "2.8.0";
 
   await assertRejects(

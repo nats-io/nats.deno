@@ -37,7 +37,7 @@ import {
 } from "./types.ts";
 
 import type { SemVer } from "./semver.ts";
-import { parseSemVer } from "./semver.ts";
+import { Features, parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
@@ -501,5 +501,9 @@ export class NatsConnectionImpl implements NatsConnection {
     const start = Date.now();
     await this.flush();
     return Date.now() - start;
+  }
+
+  get features(): Features {
+    return this.protocol.features;
   }
 }

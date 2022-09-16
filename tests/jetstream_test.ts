@@ -72,7 +72,6 @@ import {
   isHeartbeatMsg,
   Js409Errors,
 } from "../nats-base-client/jsutil.ts";
-import { Features } from "../nats-base-client/semver.ts";
 import { assertIsError } from "https://deno.land/std@0.138.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
@@ -3315,7 +3314,7 @@ Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async (
 
   // change the version of the server to fail pull with max bytes
   const nci = nc as NatsConnectionImpl;
-  nci.protocol.features = new Features({ major: 2, minor: 7, micro: 0 });
+  nci.features.update("2.7.0");
 
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {

@@ -34,17 +34,55 @@ type FeatureVersion = {
 };
 
 export class Features {
-  server: SemVer;
+  server!: SemVer;
   features: Map<Feature, FeatureVersion>;
+  disabled: Feature[];
   constructor(v: SemVer) {
     this.features = new Map<Feature, FeatureVersion>();
-    this.server = v;
+    this.disabled = [];
+    this.update(v);
+  }
 
+  /**
+   * Removes all disabled entries
+   */
+  resetDisabled() {
+    this.disabled.length = 0;
+    this.update(this.server);
+  }
+
+  /**
+   * Disables a particular feature.
+   * @param f
+   */
+  disable(f: Feature) {
+    this.disabled.push(f);
+    this.update(this.server);
+  }
+
+  isDisabled(f: Feature) {
+    return this.disabled.indexOf(f) !== -1;
+  }
+
+  update(v: SemVer | string) {
+    if (typeof v === "string") {
+      v = parseSemVer(v);
+    }
+    this.server = v;
     this.set(Feature.JS_PULL_MAX_BYTES, "2.8.3");
     this.set(Feature.JS_NEW_CONSUMER_CREATE_API, "2.9.0");
     this.set(Feature.JS_ALLOW_DIRECT, "2.9.0");
+
+    this.disabled.forEach((f) => {
+      this.features.delete(f);
+    });
   }
 
+  /**
+   * Register a feature that requires a particular server version.
+   * @param f
+   * @param requires
+   */
   set(f: Feature, requires: string) {
     this.features.set(f, {
       min: requires,
@@ -52,14 +90,27 @@ export class Features {
     });
   }
 
+  /**
+   * Returns whether the feature is available and the min server
+   * version that supports it.
+   * @param f
+   */
   get(f: Feature): FeatureVersion {
     return this.features.get(f) || { min: "unknown", ok: false };
   }
 
+  /**
+   * Returns true if the feature is supported
+   * @param f
+   */
   supports(f: Feature): boolean {
-    return this.get(f).ok;
+    return this.get(f)?.ok || false;
   }
 
+  /**
+   * Returns true if the server is at least the specified version
+   * @param v
+   */
   require(v: SemVer | string): boolean {
     if (typeof v === "string") {
       v = parseSemVer(v);

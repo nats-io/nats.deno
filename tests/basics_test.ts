@@ -1170,8 +1170,8 @@ Deno.test("basics - server version", async () => {
   assertEquals(nci.protocol.features.require("3.0.0"), false);
   assertEquals(nci.protocol.features.require("2.8.2"), true);
 
-  const ok = nci.protocol.features.require("2.8.3");
-  const bytes = nci.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+  const ok = nci.features.require("2.8.3");
+  const bytes = nci.features.get(Feature.JS_PULL_MAX_BYTES);
   assertEquals(ok, bytes.ok);
   assertEquals(bytes.min, "2.8.3");
   assertEquals(ok, nci.protocol.features.supports(Feature.JS_PULL_MAX_BYTES));
