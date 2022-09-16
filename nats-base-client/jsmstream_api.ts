@@ -16,10 +16,12 @@
 import {
   Empty,
   JetStreamOptions,
+  KvStatus,
   Lister,
   MsgDeleteRequest,
   MsgRequest,
   NatsConnection,
+  ObjectStoreStatus,
   PurgeBySeq,
   PurgeOpts,
   PurgeResponse,
@@ -38,6 +40,8 @@ import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
+import { kvPrefix, KvStatusImpl } from "./kv.ts";
+import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
 
 export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
@@ -164,6 +168,50 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 
   find(subject: string): Promise<string> {
     return this.findStream(subject);
+  }
+
+  listKvs(): Lister<KvStatus> {
+    const filter: ListerFieldFilter<KvStatus> = (
+      v: unknown,
+    ): KvStatus[] => {
+      const slr = v as StreamListResponse;
+      const kvStreams = slr.streams.filter((v) => {
+        return v.config.name.startsWith(kvPrefix);
+      });
+      kvStreams.forEach((si) => {
+        this._fixInfo(si);
+      });
+      let cluster = "";
+      if (kvStreams.length) {
+        cluster = this.nc.info?.cluster ?? "";
+      }
+      const status = kvStreams.map((si) => {
+        return new KvStatusImpl(si, cluster);
+      });
+      return status;
+    };
+    const subj = `${this.prefix}.STREAM.LIST`;
+    return new ListerImpl<KvStatus>(subj, filter, this);
+  }
+
+  listObjectStores(): Lister<ObjectStoreStatus> {
+    const filter: ListerFieldFilter<ObjectStoreStatus> = (
+      v: unknown,
+    ): ObjectStoreStatus[] => {
+      const slr = v as StreamListResponse;
+      const objStreams = slr.streams.filter((v) => {
+        return v.config.name.startsWith(osPrefix);
+      });
+      objStreams.forEach((si) => {
+        this._fixInfo(si);
+      });
+      const status = objStreams.map((si) => {
+        return new ObjectStoreStatusImpl(si);
+      });
+      return status;
+    };
+    const subj = `${this.prefix}.STREAM.LIST`;
+    return new ListerImpl<ObjectStoreStatus>(subj, filter, this);
   }
 }
 

@@ -39,10 +39,12 @@ import {
   Placement,
   PurgeOpts,
   PurgeResponse,
+  Republish,
   RetentionPolicy,
   StorageType,
   StoredMsg,
   StreamConfig,
+  StreamInfo,
 } from "./types.ts";
 import {
   JetStreamClientImpl,
@@ -102,7 +104,7 @@ export function defaultBucketOpts(): Partial<KvOptions> {
 type OperationType = "PUT" | "DEL" | "PURGE";
 
 export const kvOperationHdr = "KV-Operation";
-const kvPrefix = "KV_";
+export const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
 const validKeyRe = /^[-/=.\w]+$/;
@@ -751,16 +753,84 @@ export class Bucket implements KV, KvRemove {
   async status(): Promise<KvStatus> {
     const ji = this.js as JetStreamClientImpl;
     const cluster = ji.nc.info?.cluster ?? "";
-    const si = await this.jsm.streams.info(this.bucketName());
-    return {
-      bucket: this.bucketName(),
-      values: si.state.messages,
-      history: si.config.max_msgs_per_subject,
-      ttl: millis(si.config.max_age),
-      bucket_location: cluster,
-      backingStore: si.config.storage,
-      storage: si.config.storage,
-      replicas: si.config.num_replicas,
-    } as KvStatus;
+    const bn = this.bucketName();
+    const si = await this.jsm.streams.info(bn);
+    return new KvStatusImpl(si, cluster);
+  }
+}
+
+export class KvStatusImpl implements KvStatus {
+  si: StreamInfo;
+  cluster: string;
+
+  constructor(si: StreamInfo, cluster = "") {
+    this.si = si;
+    this.cluster = cluster;
+  }
+
+  get bucket(): string {
+    return this.si.config.name.startsWith(kvPrefix)
+      ? this.si.config.name.substring(kvPrefix.length)
+      : this.si.config.name;
+  }
+
+  get values(): number {
+    return this.si.state.messages;
+  }
+
+  get history(): number {
+    return this.si.config.max_msgs_per_subject;
+  }
+
+  get ttl(): number {
+    return millis(this.si.config.max_age);
+  }
+
+  get bucket_location(): string {
+    return this.cluster;
+  }
+
+  get backingStore(): StorageType {
+    return this.si.config.storage;
+  }
+
+  get storage(): StorageType {
+    return this.si.config.storage;
+  }
+
+  get replicas(): number {
+    return this.si.config.num_replicas;
+  }
+
+  get description(): string {
+    return this.si.config.description ?? "";
+  }
+
+  get maxBucketSize(): number {
+    return this.si.config.max_bytes;
+  }
+
+  get maxValueSize(): number {
+    return this.si.config.max_msg_size;
+  }
+
+  get max_bytes(): number {
+    return this.si.config.max_bytes;
+  }
+
+  get placement(): Placement {
+    return this.si.config.placement || { cluster: "", tags: [] };
+  }
+
+  get placementCluster(): string {
+    return this.si.config.placement?.cluster ?? "";
+  }
+
+  get republish(): Republish {
+    return this.si.config.republish ?? { src: "", dest: "" };
+  }
+
+  get streamInfo(): StreamInfo {
+    return this.si;
   }
 }

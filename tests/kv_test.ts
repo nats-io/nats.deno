@@ -50,6 +50,7 @@ import {
 import {
   Base64KeyCodec,
   Bucket,
+  kvPrefix,
   NoopKvCodecs,
   validateBucket,
   validateKey,
@@ -177,7 +178,7 @@ Deno.test("kv - bind to existing KV", async () => {
 
   const kv = await js.views.kv(n, { bindOnly: true }) as Bucket;
   const status = await kv.status();
-  assertEquals(status.bucket, `KV_${n}`);
+  assertEquals(status.bucket, `${n}`);
   await crud(kv);
   await assertRejects(
     async () => {
@@ -195,8 +196,9 @@ async function crud(bucket: Bucket): Promise<void> {
   const status = await bucket.status();
   assertEquals(status.values, 0);
   assertEquals(status.history, 10);
-  assertEquals(status.bucket, bucket.bucketName());
+  assertEquals(status.bucket, bucket.bucket);
   assertEquals(status.ttl, 0);
+  assertEquals(status.streamInfo.config.name, `${kvPrefix}${bucket.bucket}`);
 
   await bucket.put("k", sc.encode("hello"));
   let r = await bucket.get("k");
@@ -1351,10 +1353,12 @@ Deno.test("kv - replicas", async () => {
   const status = await b.status();
 
   const jsm = await nc.jetstreamManager();
-  let si = await jsm.streams.info(status.bucket);
+  let si = await jsm.streams.info(status.streamInfo.config.name);
   assertEquals(si.config.num_replicas, 3);
 
-  si = await jsm.streams.update(status.bucket, { num_replicas: 1 });
+  si = await jsm.streams.update(status.streamInfo.config.name, {
+    num_replicas: 1,
+  });
   assertEquals(si.config.num_replicas, 1);
 
   await nc.close();

@@ -1362,6 +1362,18 @@ export interface StreamAPI {
    * @param subject
    */
   find(subject: string): Promise<string>;
+
+  /**
+   * Returns a list of KvStatus for all streams that are identified as
+   * being a KV (that is having names that have the prefix `KV_`)
+   */
+  listKvs(): Lister<KvStatus>;
+
+  /**
+   * Returns a list of ObjectStoreInfo for all streams that are identified as
+   * being a ObjectStore (that is having names that have the prefix `OBJ_`)
+   */
+  listObjectStores(): Lister<ObjectStoreStatus>;
 }
 
 /**
@@ -2573,6 +2585,11 @@ export interface KvStatus extends KvLimits {
    * FIXME: remove this on 1.8
    */
   bucket_location: string;
+
+  /**
+   * The StreamInfo backing up the KV
+   */
+  streamInfo: StreamInfo;
 }
 
 export interface KvOptions extends KvLimits {
@@ -2766,7 +2783,7 @@ export interface ObjectLink {
   name?: string;
 }
 
-export type ObjectStoreInfo = {
+export type ObjectStoreStatus = {
   bucket: string;
   description: string;
   ttl: Nanos;
@@ -2775,7 +2792,16 @@ export type ObjectStoreInfo = {
   sealed: boolean;
   size: number;
   backingStore: string;
+  /**
+   * The StreamInfo backing up the ObjectStore
+   */
+  streamInfo: StreamInfo;
 };
+
+/**
+ * @deprecated {@see ObjectStoreStatus}
+ */
+export type ObjectStoreInfo = ObjectStoreStatus;
 
 export type ObjectStoreOptions = {
   description?: string;
@@ -2811,8 +2837,8 @@ export interface ObjectStore {
       }
     >,
   ): Promise<QueuedIterator<ObjectInfo | null>>;
-  seal(): Promise<ObjectStoreInfo>;
-  status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreInfo>;
+  seal(): Promise<ObjectStoreStatus>;
+  status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreStatus>;
   update(name: string, meta: Partial<ObjectStoreMeta>): Promise<PubAck>;
   destroy(): Promise<boolean>;
 }

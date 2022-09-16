@@ -15,7 +15,6 @@
 
 import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import { notCompatible } from "./helpers/mod.ts";
-import { ObjectStoreInfoImpl } from "../nats-base-client/objectstore.ts";
 import {
   assert,
   assertEquals,
@@ -99,7 +98,7 @@ Deno.test("objectstore - basics", async () => {
   const js = nc.jetstream();
   const os = await js.views.os("OBJS", { description: "testing" });
 
-  const info = await os.status() as ObjectStoreInfoImpl;
+  const info = await os.status();
   assertEquals(info.description, "testing");
   assertEquals(info.ttl, 0);
   assertEquals(info.replicas, 1);
@@ -161,8 +160,7 @@ Deno.test("objectstore - default status", async () => {
   const status = await os.status();
   assertEquals(status.backingStore, "JetStream");
   assertEquals(status.bucket, "test");
-  const si = status as ObjectStoreInfoImpl;
-  assertEquals(si.si.config.name, "OBJ_test");
+  assertEquals(status.streamInfo.config.name, "OBJ_test");
 
   await cleanup(ns, nc);
 });
@@ -290,7 +288,7 @@ Deno.test("objectstore - multi with delete", async () => {
     readableStreamFrom(sc.encode("a!")),
   );
 
-  const si = await os.status({ subjects_filter: ">" }) as ObjectStoreInfoImpl;
+  const si = await os.status({ subjects_filter: ">" });
   await os.put(
     { name: "b", options: { max_chunk_size: nc.info!.max_payload } },
     readableStreamFrom(sc.encode("b!")),
@@ -299,9 +297,9 @@ Deno.test("objectstore - multi with delete", async () => {
   await os.get("b");
   await os.delete("b");
 
-  const s2 = await os.status({ subjects_filter: ">" }) as ObjectStoreInfoImpl;
+  const s2 = await os.status({ subjects_filter: ">" });
   // should have the tumbstone for the deleted subject
-  assertEquals(s2.si.state.messages, si.si.state.messages + 1);
+  assertEquals(s2.streamInfo.state.messages, si.streamInfo.state.messages + 1);
 
   await cleanup(ns, nc);
 });
@@ -675,9 +673,14 @@ Deno.test("objectstore - sanitize", async () => {
     readableStreamFrom(makeData(1)),
   );
 
-  const info = await os.status({ subjects_filter: ">" }) as ObjectStoreInfoImpl;
-  assertEquals(info.si.state?.subjects!["$O.test.M.has_dots_here"], 1);
-  assertEquals(info.si.state.subjects!["$O.test.M.the_spaces_are_here"], 1);
+  const info = await os.status({
+    subjects_filter: ">",
+  });
+  assertEquals(info.streamInfo.state?.subjects!["$O.test.M.has_dots_here"], 1);
+  assertEquals(
+    info.streamInfo.state.subjects!["$O.test.M.the_spaces_are_here"],
+    1,
+  );
 
   await cleanup(ns, nc);
 });

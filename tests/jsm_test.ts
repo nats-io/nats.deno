@@ -1497,3 +1497,41 @@ Deno.test("jsm - consumer name is validated", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - list kvs", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  let kvs = await jsm.streams.listKvs().next();
+  assertEquals(kvs.length, 0);
+
+  const js = nc.jetstream();
+  await js.views.kv("A");
+  kvs = await jsm.streams.listKvs().next();
+  assertEquals(kvs.length, 1);
+  assertEquals(kvs[0].bucket, `A`);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - list objectstores", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  let objs = await jsm.streams.listObjectStores().next();
+  assertEquals(objs.length, 0);
+
+  const js = nc.jetstream();
+  await js.views.os("A");
+  objs = await jsm.streams.listObjectStores().next();
+  assertEquals(objs.length, 1);
+  assertEquals(objs[0].bucket, "A");
+
+  await cleanup(ns, nc);
+});
