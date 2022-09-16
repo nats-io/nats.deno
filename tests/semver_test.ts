@@ -1,5 +1,14 @@
-import { compare, parseSemVer } from "../nats-base-client/semver.ts";
-import { assertEquals } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import {
+  compare,
+  Feature,
+  Features,
+  parseSemVer,
+} from "../nats-base-client/semver.ts";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+} from "https://deno.land/std@0.152.0/testing/asserts.ts";
 
 Deno.test("semver", () => {
   const pt: { a: string; b: string; r: number }[] = [
@@ -19,4 +28,33 @@ Deno.test("semver", () => {
       `compare(${t.a}, ${t.b})`,
     );
   });
+});
+
+Deno.test("semver - feature basics", () => {
+  // sanity version check
+  const f = new Features(parseSemVer("4.0.0"));
+  assert(f.require("4.0.0"));
+  assertFalse(f.require("5.0.0"));
+
+  // change the version to 2.8.3
+  f.update(parseSemVer("2.8.3"));
+  let info = f.get(Feature.JS_PULL_MAX_BYTES);
+  assertEquals(info.ok, true);
+  assertEquals(info.min, "2.8.3");
+  assert(f.supports(Feature.JS_PULL_MAX_BYTES));
+  assertFalse(f.isDisabled(Feature.JS_PULL_MAX_BYTES));
+  // disable the feature
+  f.disable(Feature.JS_PULL_MAX_BYTES);
+  assert(f.isDisabled(Feature.JS_PULL_MAX_BYTES));
+  assertFalse(f.supports(Feature.JS_PULL_MAX_BYTES));
+  info = f.get(Feature.JS_PULL_MAX_BYTES);
+  assertEquals(info.ok, false);
+  assertEquals(info.min, "unknown");
+
+  // remove all disablements
+  f.resetDisabled();
+  assert(f.supports(Feature.JS_PULL_MAX_BYTES));
+
+  f.update(parseSemVer("2.8.2"));
+  assertFalse(f.supports(Feature.JS_PULL_MAX_BYTES));
 });

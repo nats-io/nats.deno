@@ -33,6 +33,7 @@ import {
   JSONCodec,
   jwtAuthenticator,
   nanos,
+  NatsConnection,
   NatsConnectionImpl,
   NatsError,
   nkeys,
@@ -65,7 +66,7 @@ import {
 import { StreamUpdateConfig } from "../nats-base-client/types.ts";
 import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
 import { assertExists } from "https://deno.land/std@0.75.0/testing/asserts.ts";
-import { Features } from "../nats-base-client/semver.ts";
+import { Feature } from "../nats-base-client/semver.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1307,15 +1308,7 @@ Deno.test("jsm - consumer name", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jsm - consumer name apis are not used on old servers", async () => {
-  const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
-  );
-
-  // change the version of the server to force legacy apis
-  const nci = nc as NatsConnectionImpl;
-  nci.protocol.features = new Features({ major: 2, minor: 7, micro: 0 });
-
+async function testConsumerNameAPI(nc: NatsConnection) {
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({
     name: "A",
@@ -1374,6 +1367,35 @@ Deno.test("jsm - consumer name apis are not used on old servers", async () => {
     ack_policy: AckPolicy.Explicit,
     durable_name: "b",
   }, "$JS.API.CONSUMER.DURABLE.CREATE.A.b");
+}
+
+Deno.test("jsm - consumer name apis are not used on old servers", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.7.0")) {
+    return;
+  }
+
+  // change the version of the server to force legacy apis
+  const nci = nc as NatsConnectionImpl;
+  nci.features.update("2.7.0");
+  await testConsumerNameAPI(nc);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - consumer name apis are not used when disabled", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const nci = nc as NatsConnectionImpl;
+  nci.features.disable(Feature.JS_NEW_CONSUMER_CREATE_API);
+  await testConsumerNameAPI(nc);
 
   await cleanup(ns, nc);
 });

@@ -252,7 +252,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
     if (max_bytes) {
-      const fv = this.nc.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+      const fv = this.nc.features.get(Feature.JS_PULL_MAX_BYTES);
       if (!fv.ok) {
         throw new Error(
           `max_bytes is only supported on servers ${fv.min} or better`,
@@ -827,7 +827,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
     args.batch = opts.batch || 1;
     args.no_wait = opts.no_wait || false;
     if ((opts.max_bytes ?? 0) > 0) {
-      const fv = this.js.nc.protocol.features.get(Feature.JS_PULL_MAX_BYTES);
+      const fv = this.js.nc.features.get(Feature.JS_PULL_MAX_BYTES);
       if (!fv.ok) {
         throw new Error(
           `max_bytes is only supported on servers ${fv.min} or better`,

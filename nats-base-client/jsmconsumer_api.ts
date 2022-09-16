@@ -65,7 +65,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     }
 
     const nci = this.nc as NatsConnectionImpl;
-    const { min, ok: newAPI } = nci.protocol.features.get(
+    const { min, ok: newAPI } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
 

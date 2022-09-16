@@ -248,7 +248,7 @@ export class Bucket implements KV, KvRemove {
     const discardNew = have ? compare(have, parseSemVer("2.7.2")) >= 0 : false;
     sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
 
-    const { ok: direct, min } = nci.protocol.features.get(
+    const { ok: direct, min } = nci.features.get(
       Feature.JS_ALLOW_DIRECT,
     );
     if (!direct && opts.allow_direct === true) {
