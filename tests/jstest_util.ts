@@ -94,7 +94,7 @@ export async function initStream(
 ): Promise<{ stream: string; subj: string }> {
   const jsm = await nc.jetstreamManager();
   const subj = `${stream}.A`;
-  const sc = Object.assign(opts, { name: stream, subjects: [subj] });
+  const sc = Object.assign({ name: stream, subjects: [subj] }, opts);
   await jsm.streams.add(sc);
   return { stream, subj };
 }

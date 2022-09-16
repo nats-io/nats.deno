@@ -37,6 +37,7 @@ import {
   NatsError,
   nkeys,
   nuid,
+  PubAck,
   RetentionPolicy,
   StorageType,
   StreamConfig,
@@ -1532,6 +1533,120 @@ Deno.test("jsm - list objectstores", async () => {
   objs = await jsm.streams.listObjectStores().next();
   assertEquals(objs.length, 1);
   assertEquals(objs[0].bucket, "A");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - paginated subjects", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        max_memory_store: -1,
+      },
+    }, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await initStream(nc, "a", {
+    subjects: ["a.*"],
+    storage: StorageType.Memory,
+  });
+  const proms: Promise<PubAck>[] = [];
+  for (let i = 1; i <= 100_001; i++) {
+    proms.push(js.publish(`a.${i}`));
+    if (proms.length === 1000) {
+      await Promise.all(proms);
+      proms.length = 0;
+    }
+  }
+  if (proms.length) {
+    await Promise.all(proms);
+  }
+
+  const si = await jsm.streams.info("a", {
+    subjects_filter: ">",
+  });
+  const names = Object.getOwnPropertyNames(si.state.subjects);
+  assertEquals(names.length, 100_001);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - paged stream infos", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        max_memory_store: -1,
+      },
+    }, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+  for (let i = 0; i < 257; i++) {
+    await jsm.streams.add({
+      name: `${i}`,
+      subjects: [`${i}`],
+      storage: StorageType.Memory,
+    });
+  }
+  const lister = jsm.streams.list();
+  const streams: StreamInfo[] = [];
+  for await (const si of lister) {
+    streams.push(si);
+  }
+
+  assertEquals(streams.length, 257);
+  streams.sort((a, b) => {
+    const na = parseInt(a.config.name);
+    const nb = parseInt(b.config.name);
+    return na - nb;
+  });
+
+  for (let i = 0; i < streams.length; i++) {
+    assertEquals(streams[i].config.name, `${i}`);
+  }
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - paged consumer infos", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        max_memory_store: -1,
+      },
+    }, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a"],
+    storage: StorageType.Memory,
+  });
+  for (let i = 0; i < 257; i++) {
+    await jsm.consumers.add("A", {
+      durable_name: `${i}`,
+      ack_policy: AckPolicy.None,
+    });
+  }
+  const lister = jsm.consumers.list("A");
+  const consumers: ConsumerInfo[] = [];
+  for await (const si of lister) {
+    consumers.push(si);
+  }
+
+  assertEquals(consumers.length, 257);
+  consumers.sort((a, b) => {
+    const na = parseInt(a.name);
+    const nb = parseInt(b.name);
+    return na - nb;
+  });
+
+  for (let i = 0; i < consumers.length; i++) {
+    assertEquals(consumers[i].name, `${i}`);
+  }
 
   await cleanup(ns, nc);
 });

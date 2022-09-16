@@ -1252,6 +1252,7 @@ export interface ConsumerOptsBuilder {
  * An interface for listing. Returns a promise with typed list.
  */
 export interface Lister<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T>;
   next(): Promise<T[]>;
 }
 
@@ -1305,7 +1306,7 @@ export type StreamInfoRequestOptions = {
    * Only include information matching the specified subject filter
    */
   "subjects_filter": string;
-};
+} & ApiPagedRequest;
 
 export interface StreamAPI {
   /**
@@ -1659,7 +1660,7 @@ export interface StreamAlternate {
 /**
  * Stream configuration info
  */
-export interface StreamInfo {
+export interface StreamInfo extends ApiPaged {
   /**
    * The active configuration for the Stream
    */
