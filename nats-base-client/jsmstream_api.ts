@@ -103,11 +103,13 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     const { total } = si;
 
     // check how many subjects we got in the first request
-    let have = Object.getOwnPropertyNames(si.state.subjects).length;
+    let have = si.state.subjects
+      ? Object.getOwnPropertyNames(si.state.subjects).length
+      : 1;
 
     // if the response is paged, we have a large list of subjects
     // handle the paging and return a StreamInfo with all of it
-    if (total > have) {
+    if (total && total > have) {
       const infos: StreamInfo[] = [si];
       const paged = data || {} as unknown as ApiPagedRequest;
       while (total > have) {
