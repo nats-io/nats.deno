@@ -24,11 +24,13 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   subject: string;
   jsm: BaseApiClient;
   filter: ListerFieldFilter<T>;
+  payload: unknown;
 
   constructor(
     subject: string,
     filter: ListerFieldFilter<T>,
     jsm: BaseApiClient,
+    payload?: unknown,
   ) {
     if (!subject) {
       throw new Error("subject is required");
@@ -38,6 +40,7 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
     this.offset = 0;
     this.pageInfo = {} as ApiPaged;
     this.filter = filter;
+    this.payload = payload || {};
   }
 
   async next(): Promise<T[]> {
@@ -49,6 +52,9 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
     }
 
     const offset = { offset: this.offset } as ApiPagedRequest;
+    if (this.payload) {
+      Object.assign(offset, this.payload);
+    }
     try {
       const r = await this.jsm._request(
         this.subject,

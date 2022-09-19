@@ -148,8 +148,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     return si;
   }
 
-  list(): Lister<StreamInfo> {
-    const filter: ListerFieldFilter<StreamInfo> = (
+  list(subject = ""): Lister<StreamInfo> {
+    const payload = subject?.length ? { subject } : {};
+    const listerFilter: ListerFieldFilter<StreamInfo> = (
       v: unknown,
     ): StreamInfo[] => {
       const slr = v as StreamListResponse;
@@ -159,7 +160,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       return slr.streams;
     };
     const subj = `${this.prefix}.STREAM.LIST`;
-    return new ListerImpl<StreamInfo>(subj, filter, this);
+    return new ListerImpl<StreamInfo>(subj, listerFilter, this, payload);
   }
 
   // FIXME: init of sealed, deny_delete, deny_purge shouldn't be necessary
