@@ -1672,3 +1672,48 @@ Deno.test("jsm - paged consumer infos", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - list filter", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      jetstream: {
+        max_memory_store: -1,
+      },
+    }, true),
+  );
+
+  const spec: Partial<StreamConfig>[] = [
+    { name: "s1", subjects: ["foo"] },
+    { name: "s2", subjects: ["bar"] },
+    { name: "s3", subjects: ["foo.*", "bar.*"] },
+    { name: "s4", subjects: ["foo-1.A"] },
+    { name: "s5", subjects: ["foo.A.bar.B"] },
+    { name: "s6", subjects: ["foo.C.bar.D.E"] },
+  ];
+
+  const jsm = await nc.jetstreamManager();
+  for (let i = 0; i < spec.length; i++) {
+    const s = spec[i];
+    s.storage = StorageType.Memory;
+    await jsm.streams.add(s);
+  }
+
+  const tests: { filter: string; expected: string[] }[] = [
+    { filter: "foo", expected: ["s1"] },
+    { filter: "bar", expected: ["s2"] },
+    { filter: "*", expected: ["s1", "s2"] },
+    { filter: ">", expected: ["s1", "s2", "s3", "s4", "s5", "s6"] },
+    { filter: "*.A", expected: ["s3", "s4"] },
+  ];
+
+  for (let i = 0; i < tests.length; i++) {
+    const lister = await jsm.streams.list(tests[i].filter);
+    const streams = await lister.next();
+    const names = streams.map((si) => {
+      return si.config.name;
+    });
+    names.sort();
+    assertEquals(names, tests[i].expected);
+  }
+  await cleanup(ns, nc);
+});

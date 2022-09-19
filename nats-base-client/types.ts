@@ -1342,8 +1342,9 @@ export interface StreamAPI {
   delete(stream: string): Promise<boolean>;
   /**
    * Lists all streams stored by JetStream
+   * @param subject - only return streams that include the specified subject
    */
-  list(): Lister<StreamInfo>;
+  list(subject?: string): Lister<StreamInfo>;
   /**
    * Deletes the specified message sequence from the stream
    * @param stream
