@@ -888,3 +888,31 @@ Deno.test("objectstore - meta update", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - cannot put links", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const sc = StringCodec();
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const link = { bucket: "test", name: "a" };
+  const mm = {
+    name: "ref",
+    options: { link: link },
+  } as ObjectStoreMeta;
+
+  await assertRejects(
+    async () => {
+      await os.put(mm, readableStreamFrom(sc.encode("a")));
+    },
+    Error,
+    "link cannot be set when putting the object in bucket",
+  );
+
+  await cleanup(ns, nc);
+});

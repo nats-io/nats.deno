@@ -300,7 +300,7 @@ export class ObjectStoreImpl implements ObjectStore {
     return this.jsm.streams.delete(this.stream);
   }
 
-  async put(
+  async _put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
   ): Promise<ObjectInfo> {
@@ -398,6 +398,18 @@ export class ObjectStoreImpl implements ObjectStore {
     }
 
     return d;
+  }
+
+  async put(
+    meta: ObjectStoreMeta,
+    rs: ReadableStream<Uint8Array> | null,
+  ): Promise<ObjectInfo> {
+    if (meta?.options?.link) {
+      return Promise.reject(
+        new Error("link cannot be set when putting the object in bucket"),
+      );
+    }
+    return this._put(meta, rs);
   }
 
   async get(name: string): Promise<ObjectResult | null> {
@@ -500,7 +512,7 @@ export class ObjectStoreImpl implements ObjectStore {
       name: n,
       options: { link: { bucket: osi.name } },
     };
-    return this.put(meta, null);
+    return this._put(meta, null);
   }
 
   async link(name: string, info: ObjectInfo): Promise<ObjectInfo> {
@@ -529,7 +541,7 @@ export class ObjectStoreImpl implements ObjectStore {
       name: n,
       options: { link: link },
     } as ObjectStoreMeta;
-    return this.put(mm, null);
+    return this._put(mm, null);
   }
 
   async delete(name: string): Promise<PurgeResponse> {
