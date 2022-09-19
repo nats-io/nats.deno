@@ -400,7 +400,7 @@ export class ObjectStoreImpl implements ObjectStore {
     return d;
   }
 
-  async put(
+  put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
   ): Promise<ObjectInfo> {

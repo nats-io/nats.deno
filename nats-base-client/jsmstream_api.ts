@@ -100,7 +100,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     const subj = `${this.prefix}.STREAM.INFO.${name}`;
     const r = await this._request(subj, data);
     let si = r as StreamInfo;
-    const { total } = si;
+    let { total, limit } = si;
 
     // check how many subjects we got in the first request
     let have = si.state.subjects
@@ -112,11 +112,23 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     if (total && total > have) {
       const infos: StreamInfo[] = [si];
       const paged = data || {} as unknown as ApiPagedRequest;
+      let i = 0;
+      // total could change, so it is possible to have collected
+      // more that the total
       while (total > have) {
-        paged.offset = have;
+        i++;
+        paged.offset = limit * i;
         const r = await this._request(subj, paged) as StreamInfo;
+        // update it in case it changed
+        total = r.total;
         infos.push(r);
-        have += Object.getOwnPropertyNames(r.state.subjects).length;
+        const count = Object.getOwnPropertyNames(r.state.subjects).length;
+        have += count;
+        // if request returns less than limit it is done
+        if (count < limit) {
+          // done
+          break;
+        }
       }
       // collect all the subjects
       let subjects = {};
