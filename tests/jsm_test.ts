@@ -1595,7 +1595,7 @@ Deno.test("jsm - paginated subjects", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jsm - paged stream infos", async () => {
+Deno.test("jsm - paged stream list", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({
       jetstream: {
