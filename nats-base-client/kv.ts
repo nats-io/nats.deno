@@ -186,9 +186,15 @@ export class Bucket implements KV, KvRemove {
     name: string,
     opts: Partial<KvOptions> = {},
   ): Promise<KV> {
+    const jsi = js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`kv is only supported on servers ${min} or better`),
+      );
+    }
     validateBucket(name);
     const to = opts.timeout || 2000;
-    const jsi = js as JetStreamClientImpl;
     let jsopts = jsi.opts || {} as JetStreamOptions;
     jsopts = Object.assign(jsopts, { timeout: to });
     const jsm = await jsi.nc.jetstreamManager(jsopts);
