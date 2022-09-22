@@ -15,6 +15,8 @@
 import {
   deferred,
   Msg,
+  NatsConnection,
+  NatsConnectionImpl,
   Subscription,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
@@ -34,4 +36,9 @@ export function consume(sub: Subscription, ms = 1000): Promise<Msg[]> {
   });
 
   return Promise.race([to, d]);
+}
+
+export function debug(nc: NatsConnection) {
+  const nci = nc as NatsConnectionImpl;
+  nci.options.debug = !nci.options.debug;
 }

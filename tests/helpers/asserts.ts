@@ -60,6 +60,8 @@ export async function assertThrowsAsyncErrorCode<T = void>(
 }
 
 export function assertBetween(n: number, low: number, high: number) {
-  console.assert(n >= low, `${n} >= ${low}`);
-  console.assert(n <= high, `${n} <= ${low}`);
+  assert(
+    n >= low && n <= high,
+    `expected ${n} to be between  ${low} and ${high}`,
+  );
 }
