@@ -2510,7 +2510,6 @@ export interface JetStreamReader {
 export type ConsumerReadPullOptions = {
   batch?: number;
   max_bytes?: number;
-  low?: number;
   idle_heartbeat?: number;
   expires?: number;
 };

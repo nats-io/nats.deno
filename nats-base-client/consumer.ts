@@ -26,6 +26,7 @@ import { isNatsError } from "./error.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { hideNonTerminalJsErrors } from "./jsclient.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
+import { MsgImpl } from "./msg.ts";
 
 const jc = JSONCodec();
 
@@ -221,13 +222,21 @@ export class ConsumerImpl implements Consumer {
     return this.consumerAPI.info(this.ci.stream_name, this.ci.name);
   }
 
+  read(
+    opts: Partial<ConsumerReadOptions> = {},
+  ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
+    return typeof opts.callback !== "function"
+      ? this._handleWithIterator(opts)
+      : this._handleWithCallback(opts);
+  }
+
   async _handleWithIterator(
     opts: Partial<ConsumerReadOptions> = {},
   ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
     const qi = new QueuedIteratorImpl<JsMsg>();
     try {
       if (typeof this.ci.config.deliver_subject === "string") {
-        await this.setupPush(qi);
+        await this.push(qi);
       } else {
         let batch = opts.inflight_limit?.batch || 0;
         const max_bytes = opts.inflight_limit?.max_bytes || 0;
@@ -236,9 +245,7 @@ export class ConsumerImpl implements Consumer {
         }
         const idle_heartbeat = opts.inflight_limit?.idle_heartbeat || 0;
         const expires = opts?.inflight_limit?.expires || 5000;
-        const low = opts?.inflight_limit?.low || 0;
-
-        this.pull(qi, { batch, max_bytes, idle_heartbeat, expires, low });
+        this.pull(qi, { batch, max_bytes, idle_heartbeat, expires });
       }
     } catch (err) {
       qi.stop(err);
@@ -253,20 +260,17 @@ export class ConsumerImpl implements Consumer {
       return Promise.reject("`callback` is required");
     }
     if (this.ci.config.deliver_subject) {
+      console.log(
+        "%c push consumer with callback is not implemented",
+        "color: red",
+      );
+
       throw new Error("push cb not implemented");
     } else {
       return Promise.resolve(
         this.pullCallback(opts.callback, opts?.inflight_limit),
       );
     }
-  }
-
-  read(
-    opts: Partial<ConsumerReadOptions> = {},
-  ): Promise<QueuedIterator<JsMsg> | JetStreamReader> {
-    return typeof opts.callback !== "function"
-      ? this._handleWithIterator(opts)
-      : this._handleWithCallback(opts);
   }
 
   _processPullOptions(
@@ -276,37 +280,51 @@ export class ConsumerImpl implements Consumer {
   ): {
     monitor: IdleHeartbeat | null;
     pullFn: (data: Uint8Array) => void;
+    updateOptionsFn: (n: number) => Uint8Array;
     fullOptions: Uint8Array;
     partialOptions: Uint8Array;
     missed: Promise<void> | null;
-    low: number;
+    batchLow: number;
+    bytesLow: number;
     max_bytes: number;
   } {
-    let { batch, max_bytes, idle_heartbeat, expires, low } = opts;
+    let { batch, max_bytes, idle_heartbeat, expires } = opts;
     expires = nanos(expires || 5000);
+    const maxBatch = batch || 4096;
+    const batchLow = Math.floor(maxBatch / 4) || 1;
     max_bytes = max_bytes || 0;
-
-    const max = (max_bytes ? max_bytes : batch) || 0;
-    low = !low ? Math.floor(max * .25) || 1 : low;
+    const bytesLow = max_bytes ? Math.floor(maxBatch / 4) || 1 : 0;
 
     const full = max_bytes
       ? {
+        batch: maxBatch,
         max_bytes,
         expires,
       }
-      : { batch, expires } as Partial<PullOptions>;
+      : { batch: maxBatch, expires } as Partial<PullOptions>;
     if (idle_heartbeat) {
       full.idle_heartbeat = nanos(idle_heartbeat);
     }
     const fullOptions = jc.encode(full);
 
-    const partial = max_bytes
-      ? { max_bytes: low, expires }
-      : { batch: low, expires } as Partial<PullOptions>;
-    if (idle_heartbeat) {
-      partial.idle_heartbeat = nanos(idle_heartbeat);
+    const update: Partial<PullOptions> = {
+      batch: batchLow,
+      max_bytes: bytesLow,
+    };
+    if (full.idle_heartbeat) {
+      update.idle_heartbeat = full.idle_heartbeat;
     }
-    const partialOptions = jc.encode(partial);
+
+    // this is only for when using batch
+    const updateOptions = jc.encode(update);
+
+    function buildUpdateOptions(seenBytes: number): Uint8Array {
+      if (max_bytes) {
+        update.max_bytes = seenBytes;
+        return jc.encode(update);
+      }
+      return updateOptions;
+    }
 
     const { streamName, consumerName, prefix } = this;
     const pullSubject =
@@ -334,10 +352,12 @@ export class ConsumerImpl implements Consumer {
     return {
       monitor: monitor,
       pullFn: pull,
+      updateOptionsFn: buildUpdateOptions,
       fullOptions,
-      partialOptions,
+      partialOptions: updateOptions,
       missed,
-      low,
+      batchLow,
+      bytesLow,
       max_bytes,
     };
   }
@@ -349,7 +369,8 @@ export class ConsumerImpl implements Consumer {
     const nc = this.consumerAPI.nc as NatsConnectionImpl;
     const inbox = createInbox(nc.options.inboxPrefix);
     const ctx = this._processPullOptions(nc, inbox, opts);
-    let seen = 0;
+    let seenBytes = 0;
+    let seenMsgs = 0;
 
     const _closed = deferred<null | NatsError>();
 
@@ -379,11 +400,33 @@ export class ConsumerImpl implements Consumer {
           if (err === null) {
             err = checkJsError(msg);
           }
-          if (err !== null) {
-            if (err.code === ErrorCode.JetStream408RequestTimeout) {
+          if (err) {
+            if (
+              err.code === ErrorCode.JetStream408RequestTimeout ||
+              err.message.indexOf(Js409Errors.MaxBytesExceeded) ||
+              err.message.indexOf(Js409Errors.MaxMessageSizeExceeded)
+            ) {
+              seenBytes = 0;
+              seenMsgs = 0;
               ctx.pullFn(ctx.fullOptions);
               return;
+            } else if (
+              err.message.indexOf(Js409Errors.MaxWaitingExceeded) !== -1
+            ) {
+              // too many pulls
+              return;
+            } else if (
+              err.message.indexOf(Js409Errors.MaxExpiresExceeded) !== -1 ||
+              err.message.indexOf(Js409Errors.MaxBatchExceeded) !== -1
+            ) {
+              // this will stall the consumer config changes - let it fall through
+            } else {
+              // everything else is an error
+              // consumer is push based
             }
+          }
+
+          if (err !== null) {
             if (isNatsError(err)) {
               _closed.reject(
                 hideNonTerminalJsErrors(err) === null ? undefined : err,
@@ -397,21 +440,28 @@ export class ConsumerImpl implements Consumer {
             if (isHeartbeatMsg(msg)) {
               return;
             }
-            if (ctx.max_bytes) {
-              seen += msg.data.length;
-            } else {
-              seen++;
-            }
+            seenMsgs++;
+            seenBytes += (msg as MsgImpl).size();
             callback(toJsMsg(msg));
-            if (seen === ctx.low) {
-              seen = 0;
+
+            if (ctx.batchLow && seenBytes >= ctx.batchLow) {
+              seenBytes = 0;
+              seenMsgs = 0;
+              ctx.pullFn(ctx.updateOptionsFn(seenBytes));
+            } else if (ctx.batchLow && seenMsgs >= ctx.batchLow) {
+              seenBytes = 0;
+              seenMsgs = 0;
               ctx.pullFn(ctx.partialOptions);
             }
           }
         },
       },
     );
-
+    sub.closed.then(() => {
+      if (ctx.monitor) {
+        ctx.monitor.cancel();
+      }
+    });
     ctx.pullFn(ctx.fullOptions);
     return reader;
   }
@@ -423,7 +473,8 @@ export class ConsumerImpl implements Consumer {
     const nc = this.consumerAPI.nc as NatsConnectionImpl;
     const inbox = createInbox(nc.options.inboxPrefix);
     const ctx = this._processPullOptions(nc, inbox, opts);
-    let seen = 0;
+    let seenBytes = 0;
+    let seenMsgs = 0;
 
     const sub = this.consumerAPI.nc.subscribe(
       inbox,
@@ -432,12 +483,33 @@ export class ConsumerImpl implements Consumer {
           if (err === null) {
             err = checkJsError(msg);
           }
-          if (err !== null) {
-            if (err.code === ErrorCode.JetStream408RequestTimeout) {
-              // pull right now
+          if (err) {
+            if (
+              err.code === ErrorCode.JetStream408RequestTimeout ||
+              err.message.indexOf(Js409Errors.MaxBytesExceeded) ||
+              err.message.indexOf(Js409Errors.MaxMessageSizeExceeded)
+            ) {
+              seenBytes = 0;
+              seenMsgs = 0;
               ctx.pullFn(ctx.fullOptions);
               return;
+            } else if (
+              err.message.indexOf(Js409Errors.MaxWaitingExceeded) !== -1
+            ) {
+              // too many pulls
+              return;
+            } else if (
+              err.message.indexOf(Js409Errors.MaxExpiresExceeded) !== -1 ||
+              err.message.indexOf(Js409Errors.MaxBatchExceeded) !== -1
+            ) {
+              // this will stall the consumer config changes - let it fall through
+            } else {
+              // everything else is an error
+              // consumer is push based
             }
+          }
+
+          if (err !== null) {
             if (isNatsError(err)) {
               qi.stop(hideNonTerminalJsErrors(err) === null ? undefined : err);
             } else {
@@ -450,16 +522,23 @@ export class ConsumerImpl implements Consumer {
               return;
             }
             qi.received++;
-            if (ctx.max_bytes) {
-              seen += msg.data.length;
-            } else {
-              seen++;
-            }
+            seenMsgs++;
+            seenBytes += (msg as MsgImpl).size();
             qi.push(toJsMsg(msg));
-            if (seen === ctx.low) {
-              //@ts-ignore: pull when the user has processed the low message
+
+            if (ctx.batchLow && seenBytes >= ctx.bytesLow) {
+              const opts = ctx.updateOptionsFn(seenBytes);
+              //@ts-ignore: pull when msg is processed
               qi.push(() => {
-                seen = 0;
+                seenBytes = 0;
+                seenMsgs = 0;
+                ctx.pullFn(opts);
+              });
+            } else if (ctx.batchLow && seenMsgs >= ctx.batchLow) {
+              //@ts-ignore: pull when msg is processed
+              qi.push(() => {
+                seenBytes = 0;
+                seenMsgs = 0;
                 ctx.pullFn(ctx.partialOptions);
               });
             }
@@ -486,19 +565,18 @@ export class ConsumerImpl implements Consumer {
     ctx.pullFn(ctx.fullOptions);
   }
 
-  async setupPush(
+  async push(
     qi: QueuedIteratorImpl<JsMsg>,
   ) {
     const js = this.consumerAPI.nc.jetstream(this.consumerAPI.opts);
     const co = consumerOpts();
     co.bind(this.ci.stream_name, this.ci.name);
     co.manualAck();
-
     co.callback((err, m) => {
       if (err) {
         //@ts-ignore: stop
         qi.push(() => {
-          qi.stop(err);
+          qi.stop(err!);
         });
       }
       if (m) {

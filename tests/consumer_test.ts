@@ -12,13 +12,19 @@ import {
   DeliverPolicy,
   JsMsg,
   nuid,
+  PubAck,
   StringCodec,
 } from "../nats-base-client/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import {
+  assertExists,
+  assertRejects,
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { QueuedIterator } from "../nats-base-client/queued_iterator.ts";
 import { connect } from "../src/mod.ts";
-import { assertExists } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+import { JetStreamReader } from "../nats-base-client/types.ts";
+import { assertBetween } from "./helpers/mod.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 Deno.test("consumer - create", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
@@ -191,7 +197,7 @@ Deno.test("consumer - read pull", async () => {
     for await (const m of iter) {
       m.ack();
       msgs.push(m);
-      if (msgs.length >= 10) {
+      if (msgs.length === 10) {
         d.resolve(msgs);
         clearInterval(interval);
         break;
@@ -206,6 +212,175 @@ Deno.test("consumer - read pull", async () => {
 
   const m = await d;
   assertEquals(m.length, 10);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - read pull callback", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<JsMsg[]>();
+  const msgs: JsMsg[] = [];
+  const consumer = await jsm.consumers.get(stream, "me");
+  await consumer.read({
+    callback: (m) => {
+      m.ack();
+      msgs.push(m);
+      if (msgs.length >= 10) {
+        d.resolve(msgs);
+        clearInterval(interval);
+      }
+    },
+  });
+
+  const js = nc.jetstream();
+  const interval = setInterval(async () => {
+    await js.publish(subj);
+  }, 300);
+
+  const m = await d;
+  assertEquals(m.length, 10);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - read pull callback batch", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  let pulls = 0;
+  nc.subscribe(`$JS.API.CONSUMER.MSG.NEXT.${stream}.me`, {
+    callback: (_err, _msg) => {
+      pulls++;
+    },
+  });
+
+  const d = deferred<JsMsg[]>();
+  const msgs: JsMsg[] = [];
+  const consumer = await jsm.consumers.get(stream, "me");
+  await consumer.read({
+    inflight_limit: {
+      batch: 2,
+    },
+    callback: (m) => {
+      m.ack();
+      msgs.push(m);
+      if (msgs.length === 4) {
+        d.resolve(msgs);
+      }
+    },
+  });
+
+  const js = nc.jetstream();
+  const proms: Promise<PubAck>[] = [];
+  proms.push(js.publish(subj, new Uint8Array(256)));
+  proms.push(js.publish(subj, new Uint8Array(256)));
+  proms.push(js.publish(subj, new Uint8Array(256)));
+  proms.push(js.publish(subj, new Uint8Array(256)));
+
+  const m = await d;
+  assertEquals(m.length, 4);
+  assertBetween(pulls, 2, 3);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - read pull callback max_bytes", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true), {});
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const proms: Promise<PubAck>[] = [];
+  const sc = StringCodec();
+  proms.push(js.publish(subj, sc.encode("a".repeat(256))));
+  proms.push(js.publish(subj, sc.encode("b".repeat(256))));
+  proms.push(js.publish(subj, sc.encode("c".repeat(256))));
+  proms.push(js.publish(subj, sc.encode("d".repeat(256))));
+  proms.push(js.publish(subj, sc.encode("e".repeat(256))));
+  proms.push(js.publish(subj, sc.encode("f".repeat(256))));
+
+  let pulls = 0;
+  nc.subscribe(`$JS.API.CONSUMER.MSG.NEXT.${stream}.me`, {
+    callback: (_err, _msg) => {
+      pulls++;
+    },
+  });
+
+  const d = deferred<JsMsg[]>();
+  const msgs: JsMsg[] = [];
+
+  const consumer = await jsm.consumers.get(stream, "me");
+  await consumer.read({
+    inflight_limit: {
+      max_bytes: 1024,
+    },
+    callback: (m) => {
+      m.ack();
+      msgs.push(m);
+      if (msgs.length === 6) {
+        d.resolve(msgs);
+      }
+    },
+  });
+
+  const m = await d;
+  assertEquals(m.length, 6);
+  assertBetween(pulls, 2, 7);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - reader.stop()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const msgs: JsMsg[] = [];
+  const consumer = await jsm.consumers.get(stream, "me");
+  const reader = await consumer.read({
+    callback: (m) => {
+      m.ack();
+      msgs.push(m);
+      reader.stop();
+      clearInterval(interval);
+    },
+  }) as JetStreamReader;
+
+  const js = nc.jetstream();
+  const interval = setInterval(async () => {
+    await js.publish(subj);
+  }, 300);
+
+  await reader.closed;
+  assertEquals(msgs.length, 1);
 
   await cleanup(ns, nc);
 });
@@ -303,4 +478,52 @@ Deno.test("consumer - exported consumer", async () => {
   await done;
 
   await cleanup(ns, nc, client);
+});
+
+Deno.test("consumer - no messages", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const consumer = await jsm.consumers.get(stream, "me");
+  await consumer.read({
+    inflight_limit: {
+      idle_heartbeat: 500,
+      expires: 1000,
+    },
+    callback: () => {},
+  });
+  await delay(3000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - push with callback", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: "me",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    deliver_subject: nuid.next(),
+  });
+
+  await assertRejects(async () => {
+    const consumer = await jsm.consumers.get(stream, "me");
+    await consumer.read({
+      inflight_limit: {
+        idle_heartbeat: 1000,
+      },
+      callback: () => {},
+    });
+  });
+
+  await cleanup(ns, nc);
 });
