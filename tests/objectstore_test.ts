@@ -33,6 +33,7 @@ import { assertRejects } from "https://deno.land/std@0.152.0/testing/asserts.ts"
 import { equals } from "https://deno.land/std@0.152.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
+import { Base64UrlCodec } from "../nats-base-client/base64.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -676,9 +677,14 @@ Deno.test("objectstore - sanitize", async () => {
   const info = await os.status({
     subjects_filter: ">",
   });
-  assertEquals(info.streamInfo.state?.subjects!["$O.test.M.has_dots_here"], 1);
   assertEquals(
-    info.streamInfo.state.subjects!["$O.test.M.the_spaces_are_here"],
+    info.streamInfo.state
+      ?.subjects![`$O.test.M.${Base64UrlCodec.encode("has_dots_here")}`],
+    1,
+  );
+  assertEquals(
+    info.streamInfo.state
+      .subjects![`$O.test.M.${Base64UrlCodec.encode("the_spaces_are_here")}`],
     1,
   );
 
