@@ -3733,3 +3733,46 @@ Deno.test("jetstream - filter_subject consumer update", async () => {
   assertEquals(ci.config.filter_subject, "foo.baz");
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - kv and object store views reject in older servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }, true));
+
+  const nci = nc as NatsConnectionImpl;
+  const js = nc.jetstream();
+  async function t(version: string, kv: boolean, os: boolean): Promise<void> {
+    nci.features.update(version);
+
+    if (!kv) {
+      await assertRejects(
+        async () => {
+          await js.views.kv(nuid.next());
+        },
+        Error,
+        `kv is only supported on servers 2.6.2 or better`,
+      );
+    } else {
+      await js.views.kv(nuid.next());
+    }
+
+    if (!os) {
+      await assertRejects(
+        async () => {
+          await js.views.os(nuid.next());
+        },
+        Error,
+        `objectstore is only supported on servers 2.6.3 or better`,
+      );
+    } else {
+      await js.views.os(nuid.next());
+    }
+  }
+
+  await t("2.6.1", false, false);
+  await t("2.6.2", true, false);
+  await t("2.6.3", true, true);
+  await t("2.6.4", true, true);
+
+  await cleanup(ns, nc);
+});

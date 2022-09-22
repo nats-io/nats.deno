@@ -23,6 +23,8 @@ export function compare(a: SemVer, b: SemVer): number {
 }
 
 export enum Feature {
+  JS_KV = "js_kv",
+  JS_OBJECTSTORE = "js_objectstore",
   JS_PULL_MAX_BYTES = "js_pull_max_bytes",
   JS_NEW_CONSUMER_CREATE_API = "js_new_consumer_create",
   JS_ALLOW_DIRECT = "js_allow_direct",
@@ -69,6 +71,8 @@ export class Features {
       v = parseSemVer(v);
     }
     this.server = v;
+    this.set(Feature.JS_KV, "2.6.2");
+    this.set(Feature.JS_OBJECTSTORE, "2.6.3");
     this.set(Feature.JS_PULL_MAX_BYTES, "2.8.3");
     this.set(Feature.JS_NEW_CONSUMER_CREATE_API, "2.9.0");
     this.set(Feature.JS_ALLOW_DIRECT, "2.9.0");

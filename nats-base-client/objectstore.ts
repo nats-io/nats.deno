@@ -45,6 +45,7 @@ import { consumerOpts } from "./jsconsumeropts.ts";
 import { NatsError } from "./mod.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { SHA256 } from "./sha256.js";
+import { Feature } from "./semver.ts";
 
 export const osPrefix = "OBJ_";
 
@@ -717,8 +718,13 @@ export class ObjectStoreImpl implements ObjectStore {
         ),
       );
     }
-
     const jsi = js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`objectstore is only supported on servers ${min} or better`),
+      );
+    }
     let jsopts = jsi.opts || {} as JetStreamOptions;
     const to = jsopts.timeout || 2000;
     jsopts = Object.assign(jsopts, { timeout: to });
