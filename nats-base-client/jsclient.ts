@@ -133,7 +133,7 @@ export class JetStreamClientImpl extends BaseApiClient
     return new ViewsImpl(this);
   }
 
-  async consumer(stream: string, name: string): Promise<Consumer> {
+  async consumer(stream: string, name?: string): Promise<Consumer> {
     const apiImpl = this.api as ConsumerAPIImpl;
     const jsm = await apiImpl.nc.jetstreamManager(apiImpl.opts);
     return jsm.consumers.get(stream, name);
