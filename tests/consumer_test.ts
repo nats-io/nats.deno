@@ -11,6 +11,7 @@ import {
   deferred,
   DeliverPolicy,
   JsMsg,
+  millis,
   nuid,
   PubAck,
   StringCodec,
@@ -524,6 +525,18 @@ Deno.test("consumer - push with callback", async () => {
       callback: () => {},
     });
   });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumer - ephemeral", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { stream } = await initStream(nc);
+
+  const js = nc.jetstream();
+  const consumer = await js.consumer(stream);
+  const info = await consumer.info();
+  assertEquals(millis(info.config.inactive_threshold!), 5000);
 
   await cleanup(ns, nc);
 });

@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 import {
+  AckPolicy,
   Consumer,
   ConsumerAPI,
   ConsumerConfig,
@@ -146,11 +147,15 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     return new ListerImpl<ConsumerInfo>(subj, filter, this);
   }
 
-  get(stream: string, name: string): Promise<Consumer> {
-    return this.info(stream, name)
-      .then((ci) => {
-        return Promise.resolve(new ConsumerImpl(this, ci));
-      });
+  async get(stream: string, name?: string): Promise<Consumer> {
+    let ci: ConsumerInfo;
+    if (name && name.length > 0) {
+      ci = await this.info(stream, name);
+    } else {
+      const jsm = await this.nc.jetstreamManager(this.opts);
+      ci = await jsm.consumers.add(stream, { ack_policy: AckPolicy.Explicit });
+    }
+    return new ConsumerImpl(this, ci);
   }
 
   exportedConsumer(subject: string): ExportedConsumer {

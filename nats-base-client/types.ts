@@ -1035,7 +1035,7 @@ export interface JetStreamClient {
    * @param stream
    * @param name
    */
-  consumer(stream: string, name: string): Promise<Consumer>;
+  consumer(stream: string, name?: string): Promise<Consumer>;
 
   /**
    * Returns a {@link Consumer} that is bound simply by its subject. This type of Consumer
@@ -1334,7 +1334,20 @@ export interface ConsumerAPI {
    */
   list(stream: string): Lister<ConsumerInfo>;
 
-  get(stream: string, name: string): Promise<Consumer>;
+  /**
+   * Return a Consumer. If a name is provided, the consumer must exist,
+   * otherwise an ephemeral consumer is returned.
+   * @param stream
+   * @param name
+   */
+  get(stream: string, name?: string): Promise<Consumer>;
+
+  /**
+   * Returns a Consumer that can be yield messages using the specified
+   * subject. These types of consumers should be reserved for cross-account
+   * access.
+   * @param subject
+   */
   exportedConsumer(subject: string): ExportedConsumer;
 }
 
