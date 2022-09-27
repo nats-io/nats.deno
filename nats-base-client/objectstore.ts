@@ -35,6 +35,7 @@ import {
   StreamInfoRequestOptions,
 } from "./types.ts";
 import { validateBucket, validateKey } from "./kv.ts";
+import { Base64UrlCodec } from "./base64.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { deferred } from "./util.ts";
@@ -248,7 +249,7 @@ export class ObjectStoreImpl implements ObjectStore {
       return Promise.reject(error);
     }
 
-    const meta = `$O.${this.name}.M.${obj}`;
+    const meta = this._metaSubject(obj);
     try {
       const m = await this.jsm.streams.getMessage(this.stream, {
         last_by_subj: meta,
@@ -674,7 +675,7 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   _metaSubject(n: string): string {
-    return `$O.${this.name}.M.${n}`;
+    return `$O.${this.name}.M.${Base64UrlCodec.encode(n)}`;
   }
 
   _metaSubjectAll(): string {
