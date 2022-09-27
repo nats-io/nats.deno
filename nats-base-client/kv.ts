@@ -53,7 +53,7 @@ import {
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
-import { consumerOpts, deferred, ErrorCode } from "./mod.ts";
+import { consumerOpts, deferred, ErrorCode, NatsError } from "./mod.ts";
 import { compare, Feature, parseSemVer } from "./semver.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 
@@ -422,8 +422,18 @@ export class Bucket implements KV, KvRemove {
       o.headers = h;
       h.set("Nats-Expected-Last-Subject-Sequence", `${opts.previousSeq}`);
     }
-    const pa = await this.js.publish(this.subjectForKey(ek), data, o);
-    return pa.seq;
+    try {
+      const pa = await this.js.publish(this.subjectForKey(ek), data, o);
+      return pa.seq;
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.isJetStreamError()) {
+        ne.message = ne.api_error?.description!;
+        ne.code = `${ne.api_error?.code!}`;
+        return Promise.reject(ne);
+      }
+      return Promise.reject(err);
+    }
   }
 
   async get(
