@@ -280,7 +280,7 @@ export class ConsumerImpl implements Consumer {
   ): {
     monitor: IdleHeartbeat | null;
     pullFn: (data: Uint8Array) => void;
-    updateOptionsFn: (n: number) => Uint8Array;
+    updateOptionsFn: (bytes: number) => Uint8Array;
     fullOptions: Uint8Array;
     partialOptions: Uint8Array;
     missed: Promise<void> | null;
@@ -293,7 +293,7 @@ export class ConsumerImpl implements Consumer {
     const maxBatch = batch || 4096;
     const batchLow = Math.floor(maxBatch / 4) || 1;
     max_bytes = max_bytes || 0;
-    const bytesLow = max_bytes ? Math.floor(maxBatch / 4) || 1 : 0;
+    const bytesLow = max_bytes ? Math.floor(max_bytes / 4) || 1 : 0;
 
     const full = max_bytes
       ? {
@@ -346,6 +346,7 @@ export class ConsumerImpl implements Consumer {
     }
 
     function pull(payload: Uint8Array) {
+      // console.log(jc.decode(payload));
       nc.publish(pullSubject, payload, { reply: inbox });
     }
 
@@ -406,6 +407,7 @@ export class ConsumerImpl implements Consumer {
               err.message.indexOf(Js409Errors.MaxBytesExceeded) ||
               err.message.indexOf(Js409Errors.MaxMessageSizeExceeded)
             ) {
+              // console.log(`full pull because ${err.message}`);
               seenBytes = 0;
               seenMsgs = 0;
               ctx.pullFn(ctx.fullOptions);
@@ -444,11 +446,11 @@ export class ConsumerImpl implements Consumer {
             seenBytes += (msg as MsgImpl).size();
             callback(toJsMsg(msg));
 
-            if (ctx.batchLow && seenBytes >= ctx.batchLow) {
+            if (ctx.bytesLow > 0 && seenBytes >= ctx.bytesLow) {
+              ctx.pullFn(ctx.updateOptionsFn(seenBytes));
               seenBytes = 0;
               seenMsgs = 0;
-              ctx.pullFn(ctx.updateOptionsFn(seenBytes));
-            } else if (ctx.batchLow && seenMsgs >= ctx.batchLow) {
+            } else if (ctx.batchLow > 0 && seenMsgs >= ctx.batchLow) {
               seenBytes = 0;
               seenMsgs = 0;
               ctx.pullFn(ctx.partialOptions);
@@ -491,6 +493,7 @@ export class ConsumerImpl implements Consumer {
             ) {
               seenBytes = 0;
               seenMsgs = 0;
+              // console.log("pulling full because of", err);
               ctx.pullFn(ctx.fullOptions);
               return;
             } else if (
@@ -526,7 +529,7 @@ export class ConsumerImpl implements Consumer {
             seenBytes += (msg as MsgImpl).size();
             qi.push(toJsMsg(msg));
 
-            if (ctx.batchLow && seenBytes >= ctx.bytesLow) {
+            if (ctx.bytesLow && seenBytes >= ctx.bytesLow) {
               const opts = ctx.updateOptionsFn(seenBytes);
               //@ts-ignore: pull when msg is processed
               qi.push(() => {
@@ -537,6 +540,8 @@ export class ConsumerImpl implements Consumer {
             } else if (ctx.batchLow && seenMsgs >= ctx.batchLow) {
               //@ts-ignore: pull when msg is processed
               qi.push(() => {
+                // console.log({ seenMsgs, seenBytes, batchLow: ctx.batchLow });
+
                 seenBytes = 0;
                 seenMsgs = 0;
                 ctx.pullFn(ctx.partialOptions);
