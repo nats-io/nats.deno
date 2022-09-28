@@ -1761,6 +1761,11 @@ export interface StreamUpdateConfig {
    */
   discard: DiscardPolicy;
   /**
+   * Sets the context of the on a per subject basis. Requires {@link DiscardPolicy.New} as the
+   * {@link discard} policy.
+   */
+  discard_new_per_subject: boolean;
+  /**
    * Disables acknowledging messages that are received by the Stream.
    */
   "no_ack"?: boolean;

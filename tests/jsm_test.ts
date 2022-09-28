@@ -1717,3 +1717,53 @@ Deno.test("jsm - list filter", async () => {
   }
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - discard_new_per_subject option", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  if (await notCompatible(ns, nc, "2.9.2")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+
+  // discard policy new is required
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "A",
+        discard_new_per_subject: true,
+        subjects: ["$KV.A.>"],
+        max_msgs_per_subject: 1,
+      });
+    },
+    Error,
+    "discard new per subject requires discard new policy to be set",
+  );
+
+  let si = await jsm.streams.add({
+    name: "KV_A",
+    discard: DiscardPolicy.New,
+    discard_new_per_subject: true,
+    subjects: ["$KV.A.>"],
+    max_msgs_per_subject: 1,
+  });
+  assertEquals(si.config.discard_new_per_subject, true);
+
+  const js = nc.jetstream();
+
+  const kv = await js.views.kv("A", { bindOnly: true });
+  await kv.put("B", Empty);
+  await assertRejects(
+    async () => {
+      (nc as NatsConnectionImpl).options.debug = true;
+      await kv.put("B", Empty);
+    },
+    Error,
+    "maximum messages per subject exceeded",
+  );
+
+  await cleanup(ns, nc);
+});
