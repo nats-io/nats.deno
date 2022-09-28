@@ -33,15 +33,17 @@ export function jetstreamExportServerConf(
       JS: {
         jetstream: "enabled",
         users: [{ user: "js", password: "js" }],
-        exports: [{ service: "$JS.API.>" }, {
-          stream: "A.>",
-          accounts: ["A"],
-        }],
+        exports: [
+          { service: "$JS.API.>" },
+          { service: "$JS.ACK.>" },
+          { stream: "A.>", accounts: ["A"] },
+        ],
       },
       A: {
         users: [{ user: "a", password: "s3cret" }],
         imports: [
           { service: { subject: "$JS.API.>", account: "JS" }, to: prefix },
+          { service: { subject: "$JS.ACK.>", account: "JS" } },
           { stream: { subject: "A.>", account: "JS" } },
         ],
       },

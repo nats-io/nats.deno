@@ -1490,15 +1490,23 @@ Deno.test("jetstream - cross account subscribe", async () => {
   const js = nc.jetstream({ apiPrefix: "IPA" });
 
   const opts = bo.getOpts();
+  const acks: Promise<boolean>[] = [];
+  const d = deferred();
   const sub = await js.subscribe(subj, opts);
   await (async () => {
     for await (const m of sub) {
-      m.ack();
+      acks.push(m.ackAck());
+      if (m.seq === 2) {
+        d.resolve();
+      }
     }
   })();
+  await d;
+  await Promise.all(acks);
   const ci = await sub.consumerInfo();
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 2);
+  assertEquals(ci.ack_floor.stream_seq, 2);
   await sub.destroy();
   await assertRejects(
     async () => {
