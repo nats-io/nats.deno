@@ -1496,9 +1496,11 @@ Deno.test("jetstream - cross account subscribe", async () => {
       m.ack();
     }
   })();
+  await nc.flush();
   const ci = await sub.consumerInfo();
   assertEquals(ci.num_pending, 0);
   assertEquals(ci.delivered.stream_seq, 2);
+  assertEquals(ci.ack_floor.stream_seq, 2);
   await sub.destroy();
   await assertRejects(
     async () => {

@@ -1743,7 +1743,7 @@ Deno.test("jsm - discard_new_per_subject option", async () => {
     "discard new per subject requires discard new policy to be set",
   );
 
-  let si = await jsm.streams.add({
+  const si = await jsm.streams.add({
     name: "KV_A",
     discard: DiscardPolicy.New,
     discard_new_per_subject: true,
