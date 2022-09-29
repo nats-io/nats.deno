@@ -34,6 +34,7 @@ import {
   StreamInfoRequestOptions,
   StreamListResponse,
   StreamMsgResponse,
+  StreamNames,
   StreamUpdateConfig,
   SuccessResponse,
 } from "./types.ts";
@@ -258,6 +259,18 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     };
     const subj = `${this.prefix}.STREAM.LIST`;
     return new ListerImpl<ObjectStoreStatus>(subj, filter, this);
+  }
+
+  names(subject = ""): Lister<string> {
+    const payload = subject?.length ? { subject } : {};
+    const listerFilter: ListerFieldFilter<string> = (
+      v: unknown,
+    ): string[] => {
+      const slr = v as StreamNames;
+      return slr.streams;
+    };
+    const subj = `${this.prefix}.STREAM.NAMES`;
+    return new ListerImpl<string>(subj, listerFilter, this, payload);
   }
 }
 

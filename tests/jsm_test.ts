@@ -32,6 +32,7 @@ import {
   headers,
   JSONCodec,
   jwtAuthenticator,
+  Lister,
   nanos,
   NatsConnection,
   NatsConnectionImpl,
@@ -66,7 +67,10 @@ import {
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 import { StreamUpdateConfig } from "../nats-base-client/types.ts";
 import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
-import { assertExists } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+import {
+  assertArrayIncludes,
+  assertExists,
+} from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 
 const StreamNameRequired = "stream name required";
@@ -1764,6 +1768,60 @@ Deno.test("jsm - discard_new_per_subject option", async () => {
     Error,
     "maximum messages per subject exceeded",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - stream names list filtering subject", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const jsm = await nc.jetstreamManager();
+
+  const spec = [
+    { name: "s1", subjects: ["foo"] },
+    { name: "s2", subjects: ["bar"] },
+    { name: "s3", subjects: ["foo.*", "bar.*"] },
+    { name: "s4", subjects: ["foo-1.A"] },
+    { name: "s5", subjects: ["foo.A.bar.B"] },
+    { name: "s6", subjects: ["foo.C.bar.D.E"] },
+  ];
+
+  const buf: Promise<StreamInfo>[] = [];
+  spec.forEach(({ name, subjects }) => {
+    buf.push(jsm.streams.add({ name, subjects }));
+  });
+  await Promise.all(buf);
+
+  async function collect<T>(iter: Lister<T>): Promise<T[]> {
+    const names: T[] = [];
+    for await (const n of iter) {
+      names.push(n);
+    }
+    return names;
+  }
+
+  const tests = [
+    { filter: "foo", expected: ["s1"] },
+    { filter: "bar", expected: ["s2"] },
+    { filter: "*", expected: ["s1", "s2"] },
+    { filter: ">", expected: ["s1", "s2", "s3", "s4", "s5", "s6"] },
+    { filter: "", expected: ["s1", "s2", "s3", "s4", "s5", "s6"] },
+    { filter: "*.A", expected: ["s3", "s4"] },
+  ];
+
+  async function t(filter: string, expected: string[]) {
+    const lister = await jsm.streams.names(filter);
+    const names = await collect<string>(lister);
+    assertArrayIncludes(names, expected);
+    assertEquals(names.length, expected.length);
+  }
+
+  for (let i = 0; i < tests.length; i++) {
+    const { filter, expected } = tests[i];
+    await t(filter, expected);
+  }
 
   await cleanup(ns, nc);
 });
