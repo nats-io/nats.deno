@@ -28,6 +28,7 @@ import {
   ConsumerInfo,
   ConsumerInfoable,
   ConsumerOpts,
+  CreateConsumerRequest,
   DeliverPolicy,
   Destroyable,
   Empty,
@@ -524,6 +525,8 @@ export class JetStreamClientImpl extends BaseApiClient
       jsi.config.flow_control = true;
       jsi.config.idle_heartbeat = jsi.config.idle_heartbeat || nanos(5000);
       jsi.config.ack_wait = nanos(22 * 60 * 60 * 1000);
+      jsi.config.mem_storage = true;
+      jsi.config.num_replicas = 1;
     }
 
     if (jsi.config.ack_policy === AckPolicy.NotSet) {
@@ -714,10 +717,19 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
     info.config.deliver_subject = newDeliver;
     info.config.deliver_policy = DeliverPolicy.StartSequence;
     info.config.opt_start_seq = sseq;
+    // put the stream name
+    const req = {} as CreateConsumerRequest;
+    req.stream_name = this.info.stream;
+    req.config = info.config;
 
     const subj = `${info.api.prefix}.CONSUMER.CREATE.${info.stream}`;
 
-    this.js._request(subj, this.info.config)
+    this.js._request(subj, req)
+      .then((v) => {
+        const ci = v as ConsumerInfo;
+        this.info!.config = ci.config;
+        this.info!.name = ci.name;
+      })
       .catch((err) => {
         // to inform the subscription we inject an error this will
         // be at after the last message if using an iterator.
@@ -751,9 +763,25 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
         `${Js409Errors.IdleHeartbeatMissed}: ${v}`,
         this.sub.subject,
       );
-      this.sub.callback(null, msg);
-      // if we are a handler, we'll continue reporting
-      // iterators will stop
+      const ordered = this.info?.ordered;
+      // non-ordered consumers are always notified of the condition
+      // as they need to try and recover
+      if (!ordered) {
+        this.sub.callback(null, msg);
+      } else {
+        if (!this.js.nc.protocol.connected) {
+          // we are not connected don't do anything
+          return false;
+        }
+        // reset the consumer
+        const seq = this.info?.ordered_consumer_sequence?.stream_seq || 0;
+        this._resetOrderedConsumer(seq + 1);
+        // if we are ordered, we will reset the consumer and keep
+        // feeding the iterator or callback - we are not stopping
+        return false;
+      }
+      // let the hb monitor know if we are stopping for callbacks
+      // we don't as we deliver the errors via the cb.
       return !sub.noIterator;
     };
     // this only applies for push subscriptions
