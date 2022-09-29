@@ -774,7 +774,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
           return false;
         }
         // reset the consumer
-        const seq = this.info?.ordered_consumer_sequence?.delivery_seq || 0;
+        const seq = this.info?.ordered_consumer_sequence?.stream_seq || 0;
         this._resetOrderedConsumer(seq + 1);
         // if we are ordered, we will reset the consumer and keep
         // feeding the iterator or callback - we are not stopping
