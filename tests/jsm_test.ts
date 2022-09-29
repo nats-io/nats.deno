@@ -1758,7 +1758,6 @@ Deno.test("jsm - discard_new_per_subject option", async () => {
   await kv.put("B", Empty);
   await assertRejects(
     async () => {
-      (nc as NatsConnectionImpl).options.debug = true;
       await kv.put("B", Empty);
     },
     Error,

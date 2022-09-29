@@ -3612,7 +3612,6 @@ Deno.test("jetstream - duplicate message pub", async () => {
 
   ack = await js.publish(subj, Empty, { msgID: "x" });
   assertEquals(ack.duplicate, true);
-  console.log(ack);
 
   await cleanup(ns, nc);
 });
@@ -3782,5 +3781,53 @@ Deno.test("jetstream - kv and object store views reject in older servers", async
   await t("2.6.3", true, true);
   await t("2.6.4", true, true);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - ordered consumer reset", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf({}));
+  const { subj } = await initStream(nc, "A");
+  const d = deferred<JsMsg>();
+  const js = nc.jetstream();
+  const opts = consumerOpts();
+  opts.orderedConsumer();
+  opts.callback((err, m) => {
+    if (err) {
+      fail(err.message);
+    }
+    c.unsubscribe();
+    d.resolve(m!);
+  });
+  const c = await js.subscribe(subj, opts);
+
+  // stop the server and wait until hbs are missed
+  await ns.stop();
+  while (true) {
+    const missed = (c as JetStreamSubscriptionImpl).monitor?.missed || 0;
+    const connected = (nc as NatsConnectionImpl).protocol.connected;
+    // we want to wait until after 2 because we want to have a cycle
+    // where we try to recreate the consumer, but skip it because we are
+    // not connected
+    if (!connected && missed >= 3) {
+      break;
+    }
+    await delay(300);
+  }
+  ns = await ns.restart();
+  let ack: PubAck;
+  while (true) {
+    try {
+      ack = await js.publish(subj);
+      break;
+    } catch (err) {
+      if (err.code !== ErrorCode.Timeout) {
+        fail(err.message);
+      }
+      await delay(1000);
+    }
+  }
+  await c.closed;
+
+  assertEquals((await d).seq, ack.seq);
   await cleanup(ns, nc);
 });
