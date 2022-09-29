@@ -1376,6 +1376,13 @@ export interface StreamAPI {
    * being a ObjectStore (that is having names that have the prefix `OBJ_`)
    */
   listObjectStores(): Lister<ObjectStoreStatus>;
+
+  /**
+   * Return a Lister of stream names
+   * @param subject - if specified, the results are filtered to streams that contain the
+   *  subject (can be wildcarded)
+   */
+  names(subject?: string): Lister<string>;
 }
 
 /**
