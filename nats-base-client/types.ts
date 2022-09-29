@@ -2597,6 +2597,11 @@ export interface KvStatus extends KvLimits {
    * The StreamInfo backing up the KV
    */
   streamInfo: StreamInfo;
+
+  /**
+   * Size of the bucket in bytes
+   */
+  size: number;
 }
 
 export interface KvOptions extends KvLimits {
