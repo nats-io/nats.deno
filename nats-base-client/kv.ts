@@ -849,4 +849,8 @@ export class KvStatusImpl implements KvStatus {
   get streamInfo(): StreamInfo {
     return this.si;
   }
+
+  get size(): number {
+    return this.si.state.bytes;
+  }
 }
