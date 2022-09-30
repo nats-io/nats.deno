@@ -13,10 +13,13 @@
 <li><a href="../index.html">nats-base-library</a></li>
 <li><a href="StreamConfig.html">StreamConfig</a></li></ul>
 <h1>Interface StreamConfig</h1></div>
+<section class="tsd-panel tsd-comment">
+<div class="tsd-comment tsd-typography"><p>Stream options that can be updated</p>
+</div></section>
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
-<li><span class="tsd-signature-type">StreamUpdateConfig</span>
+<li><a href="StreamUpdateConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamUpdateConfig</a>
 <ul class="tsd-hierarchy">
 <li><span class="target">StreamConfig</span></li></ul></li></ul></section>
 <section class="tsd-panel-group tsd-index-group">
@@ -32,6 +35,7 @@
 <a href="StreamConfig.html#deny_purge" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>deny_<wbr/>purge</span></a>
 <a href="StreamConfig.html#description" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>description</span></a>
 <a href="StreamConfig.html#discard" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>discard</span></a>
+<a href="StreamConfig.html#discard_new_per_subject" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>discard_<wbr/>new_<wbr/>per_<wbr/>subject</span></a>
 <a href="StreamConfig.html#duplicate_window" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>duplicate_<wbr/>window</span></a>
 <a href="StreamConfig.html#max_age" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>age</span></a>
 <a href="StreamConfig.html#max_bytes" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>bytes</span></a>
@@ -40,6 +44,7 @@
 <a href="StreamConfig.html#max_msgs" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>msgs</span></a>
 <a href="StreamConfig.html#max_msgs_per_subject" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</span></a>
 <a href="StreamConfig.html#mirror" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>mirror</span></a>
+<a href="StreamConfig.html#mirror_direct" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>mirror_<wbr/>direct</span></a>
 <a href="StreamConfig.html#name" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>name</span></a>
 <a href="StreamConfig.html#no_ack" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>no_<wbr/>ack</span></a>
 <a href="StreamConfig.html#num_replicas" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>num_<wbr/>replicas</span></a>
@@ -58,108 +63,117 @@
 <div class="tsd-signature">allow_<wbr/>direct<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Allow higher performance, direct access to get individual messages via the $JS.DS.GET API</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.allow_direct</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#allow_direct">allow_direct</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1785</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1822</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="allow_rollup_hdrs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>allow_<wbr/>rollup_<wbr/>hdrs</span><a href="#allow_rollup_hdrs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">allow_<wbr/>rollup_<wbr/>hdrs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Allows the use of the <a href="../enums/JsHeaders.html#RollupHdr">RollupHdr</a> header to replace all contents of a stream,
 or subject in a stream, with a single new message</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.allow_rollup_hdrs</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#allow_rollup_hdrs">allow_rollup_hdrs</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1763</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1800</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="deny_delete" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>delete</span><a href="#deny_delete" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>delete<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Restricts the ability to delete messages from a stream via the API.
 Cannot be changed once set to true</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.deny_delete</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#deny_delete">deny_delete</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1776</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1813</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="deny_purge" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>purge</span><a href="#deny_purge" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>purge<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Restricts the ability to purge messages from a stream via the API.
 Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.deny_purge</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#deny_purge">deny_purge</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1781</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1818</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="description" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>description</span><a href="#description" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">description<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>A short description of the purpose of this stream</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.description</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#description">description</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1721</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1753</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="discard" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>discard</span><a href="#discard" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">discard<span class="tsd-signature-symbol">:</span> <a href="../enums/DiscardPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">DiscardPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>When a Stream reach its limits either old messages are deleted or new ones are denied</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.discard</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#discard">discard</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1745</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1777</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="discard_new_per_subject" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>discard_<wbr/>new_<wbr/>per_<wbr/>subject</span><a href="#discard_new_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">discard_<wbr/>new_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+<div class="tsd-comment tsd-typography"><p>Sets the context of the on a per subject basis. Requires <a href="../enums/DiscardPolicy.html#New">New</a> as the
+<a href="StreamConfig.html#discard">discard</a> policy.</p>
+</div><aside class="tsd-sources">
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#discard_new_per_subject">discard_new_per_subject</a></p>
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1782</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="duplicate_window" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>duplicate_<wbr/>window</span><a href="#duplicate_window" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">duplicate_<wbr/>window<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The time window to track duplicate messages for, expressed in nanoseconds. 0 for default
 Set <a href="JetStreamPublishOptions.html#msgID">msgID</a> to enable duplicate detection.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.duplicate_window</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#duplicate_window">duplicate_window</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1754</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1791</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_age" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>age</span><a href="#max_age" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>age<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Maximum age of any message in the stream, expressed in nanoseconds. 0 for unlimited.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.max_age</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_age">max_age</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1733</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1765</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How big the Stream may be, when the combined stream size exceeds this old messages are removed. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.max_bytes</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_bytes">max_bytes</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1737</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1769</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_consumers" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>consumers</span><a href="#max_consumers" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>consumers<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many Consumers can be defined for a given Stream. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1696</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1728</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msg_size" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msg_<wbr/>size</span><a href="#max_msg_size" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msg_<wbr/>size<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The largest message that will be accepted by the Stream. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.max_msg_size</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msg_size">max_msg_size</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1741</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1773</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msgs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs</span><a href="#max_msgs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many messages may be in a Stream, oldest messages will be removed if the Stream exceeds this size. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.max_msgs</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msgs">max_msgs</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1729</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1761</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msgs_per_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</span><a href="#max_msgs_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>For wildcard streams ensure that for every unique subject this many messages are kept - a per subject retention limit</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.max_msgs_per_subject</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msgs_per_subject">max_msgs_per_subject</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1725</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1757</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="mirror" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>mirror</span><a href="#mirror" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a></div>
@@ -167,54 +181,62 @@ Set <a href="JetStreamPublishOptions.html#msgID">msgID</a> to enable duplicate d
 When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1701</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1733</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="mirror_direct" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>mirror_<wbr/>direct</span><a href="#mirror_direct" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">mirror_<wbr/>direct<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+<div class="tsd-comment tsd-typography"><p>Allow higher performance, direct access to get individual messages via the $JS.DS.GET API</p>
+</div><aside class="tsd-sources">
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#mirror_direct">mirror_direct</a></p>
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1826</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="name" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>A unique name for the Stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1684</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1716</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="no_ack" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>no_<wbr/>ack</span><a href="#no_ack" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">no_<wbr/>ack<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Disables acknowledging messages that are received by the Stream.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.no_ack</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#no_ack">no_ack</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1749</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1786</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="num_replicas" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>num_<wbr/>replicas</span><a href="#num_replicas" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">num_<wbr/>replicas<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many replicas to keep for each message. Min 1, Max 5. Default 1.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.num_replicas</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#num_replicas">num_replicas</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1767</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1804</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="placement" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>placement</span><a href="#placement" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">placement<span class="tsd-signature-symbol">?:</span> <a href="Placement.html" class="tsd-signature-type" data-tsd-kind="Interface">Placement</a></div>
 <div class="tsd-comment tsd-typography"><p>Placement directives to consider when placing replicas of this stream, random placement when unset</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.placement</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#placement">placement</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1771</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1808</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="republish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>republish</span><a href="#republish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">republish<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Republish</span></div>
+<div class="tsd-signature">republish<span class="tsd-signature-symbol">?:</span> <a href="Republish.html" class="tsd-signature-type" data-tsd-kind="Interface">Republish</a></div>
 <div class="tsd-comment tsd-typography"><p>Rules for republishing messages from a stream with subject mapping
 onto new subjects for partitioning and more</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.republish</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#republish">republish</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1790</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1831</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="retention" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>retention</span><a href="#retention" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">retention<span class="tsd-signature-symbol">:</span> <a href="../enums/RetentionPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">RetentionPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>How messages are retained in the Stream, once this is exceeded old messages are removed.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1688</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1720</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="sealed" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>sealed</span><a href="#sealed" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sealed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -223,30 +245,30 @@ sealed streams can not be unsealed via configuration update.
 Can only be set on already created streams via the Update API</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1707</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1739</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="sources" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>sources</span><a href="#sources" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sources<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>List of Stream names to replicate into this Stream</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.sources</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#sources">sources</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1758</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1795</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="storage" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>storage</span><a href="#storage" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">storage<span class="tsd-signature-symbol">:</span> <a href="../enums/StorageType.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StorageType</a></div>
 <div class="tsd-comment tsd-typography"><p>The storage backend to use for the Stream.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1692</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1724</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="subjects" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>subjects</span><a href="#subjects" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">subjects<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>A list of subjects to consume, supports wildcards. Must be empty when a mirror is configured. May be empty when sources are configured.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from StreamUpdateConfig.subjects</p>
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#subjects">subjects</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1717</li></ul></aside></section></section></div>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1749</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -278,6 +300,7 @@ Can only be set on already created streams via the Update API</p>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#deny_purge" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>deny_<wbr/>purge</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#description" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>description</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#discard" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>discard</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#discard_new_per_subject" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>discard_<wbr/>new_<wbr/>per_<wbr/>subject</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#duplicate_window" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>duplicate_<wbr/>window</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#max_age" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>age</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#max_bytes" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>bytes</a></li>
@@ -286,6 +309,7 @@ Can only be set on already created streams via the Update API</p>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#max_msgs" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>msgs</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#max_msgs_per_subject" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamConfig.html#mirror" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>mirror</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#mirror_direct" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>mirror_<wbr/>direct</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamConfig.html#name" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>name</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#no_ack" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>no_<wbr/>ack</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#num_replicas" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>num_<wbr/>replicas</a></li>

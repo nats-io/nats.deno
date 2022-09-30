@@ -19,7 +19,9 @@
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
-<li><span class="target">StreamInfo</span></li></ul></section>
+<li><span class="tsd-signature-type">ApiPaged</span>
+<ul class="tsd-hierarchy">
+<li><span class="target">StreamInfo</span></li></ul></li></ul></section>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -31,63 +33,84 @@
 <a href="StreamInfo.html#cluster" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>cluster</span></a>
 <a href="StreamInfo.html#config" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>config</span></a>
 <a href="StreamInfo.html#created" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>created</span></a>
+<a href="StreamInfo.html#limit" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>limit</span></a>
 <a href="StreamInfo.html#mirror" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>mirror</span></a>
+<a href="StreamInfo.html#offset" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>offset</span></a>
 <a href="StreamInfo.html#sources" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>sources</span></a>
 <a href="StreamInfo.html#state" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>state</span></a>
+<a href="StreamInfo.html#total" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>total</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="alternates" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>alternates</span><a href="#alternates" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" id="icon-anchor-a"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" id="icon-anchor-b"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" id="icon-anchor-c"></path></svg></a></h3>
-<div class="tsd-signature">alternates<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">StreamAlternate</span><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-signature">alternates<span class="tsd-signature-symbol">?:</span> <a href="StreamAlternate.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamAlternate</a><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Alternates for a stream if applicable. Alternates are listed
 in order of TTL. With streams at the start of the Array potentially
 closer and faster to access.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1677</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1709</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="cluster" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>cluster</span><a href="#cluster" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">cluster<span class="tsd-signature-symbol">?:</span> <a href="ClusterInfo.html" class="tsd-signature-type" data-tsd-kind="Interface">ClusterInfo</a></div>
 <div class="tsd-comment tsd-typography"><p>Cluster information for the stream if applicable</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1663</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1695</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="config" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>config</span><a href="#config" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">config<span class="tsd-signature-symbol">:</span> <a href="StreamConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamConfig</a></div>
 <div class="tsd-comment tsd-typography"><p>The active configuration for the Stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1651</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1683</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="created" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>created</span><a href="#created" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">created<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Timestamp when the stream was created</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1655</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1687</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="limit" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>limit</span><a href="#limit" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">limit<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
+<p>Inherited from ApiPaged.limit</p>
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1650</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="mirror" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>mirror</span><a href="#mirror" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror<span class="tsd-signature-symbol">?:</span> <a href="StreamSourceInfo.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSourceInfo</a></div>
 <div class="tsd-comment tsd-typography"><p>Information about an upstream stream source in a mirror</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1667</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1699</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="offset" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>offset</span><a href="#offset" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">offset<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
+<p>Inherited from ApiPaged.offset</p>
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1649</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="sources" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>sources</span><a href="#sources" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sources<span class="tsd-signature-symbol">?:</span> <a href="StreamSourceInfo.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSourceInfo</a><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Sources for the Stream if applicable</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1671</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1703</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="state" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>state</span><a href="#state" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">state<span class="tsd-signature-symbol">:</span> <a href="StreamState.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamState</a></div>
 <div class="tsd-comment tsd-typography"><p>Detail about the current State of the Stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1659</li></ul></aside></section></section></div>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1691</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="total" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>total</span><a href="#total" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">total<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
+<p>Inherited from ApiPaged.total</p>
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:1648</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -117,9 +140,12 @@ closer and faster to access.</p>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#cluster" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>cluster</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#config" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>config</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#created" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>created</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamInfo.html#limit" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>limit</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#mirror" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>mirror</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamInfo.html#offset" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>offset</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#sources" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>sources</a></li>
-<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#state" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>state</a></li></ul></li></ul></nav></div></div>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamInfo.html#state" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>state</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamInfo.html#total" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>total</a></li></ul></li></ul></nav></div></div>
 <div class="container tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
 <div class="overlay"></div><script src="../assets/main.js"></script></body></html>

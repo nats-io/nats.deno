@@ -13,15 +13,20 @@
  * limitations under the License.
  */
 import { NatsError } from "./error.ts";
+export { NatsError } from "./error.ts";
 import type { MsgHdrs } from "./headers.ts";
+export type { MsgHdrs } from "./headers.ts";
 import type { Authenticator } from "./authenticator.ts";
-import { TypedSubscriptionOptions } from "./typedsub.ts";
+export type { Authenticator } from "./authenticator.ts";
+import type { TypedSubscriptionOptions } from "./typedsub.ts";
+export type { TypedSubscriptionOptions } from "./typedsub.ts";
+
 import { QueuedIterator } from "./queued_iterator.ts";
 
 export const Empty = new Uint8Array(0);
 
 /**
- * Events reported by the {@link NatsConnection.status} iterator.
+ * Events reported by the {@link NatsConnection#status} iterator.
  */
 export enum Events {
   /** Client disconnected */
@@ -43,7 +48,7 @@ export interface Status {
 }
 
 /**
- * Other events that can be reported by the {@link NatsConnection.status} iterator.
+ * Other events that can be reported by the {@link NatsConnection#status} iterator.
  * These can usually be safely ignored, as higher-order functionality of the client
  * will handle them.
  */
@@ -101,7 +106,7 @@ export interface NatsConnection {
 
   /**
    * Subscribe expresses interest in the specified subject. The subject may
-   * have wildcards. Messages are delivered to the {@link SubscriptionOptions.callback}
+   * have wildcards. Messages are delivered to the {@link SubOpts#callback |SubscriptionOptions callback}
    * if specified. Otherwise, the subscription is an async iterator for {@link Msg}.
    *
    * @param subject
@@ -111,7 +116,7 @@ export interface NatsConnection {
 
   /**
    * Publishes a request with specified data in the specified subject expecting a
-   * response before {@link RequestOptions.timeout} milliseconds. The api returns a
+   * response before {@link RequestOptions#timeout} milliseconds. The api returns a
    * Promise that resolves when the first response to the request is received. If
    * there are no responders (a subscription) listening on the request subject,
    * the request will fail as soon as the server processes it.
@@ -214,8 +219,8 @@ export interface ConnectionOptions {
   debug?: boolean;
   /**
    * Sets the maximum count of ping commands that can be awaiting a response
-   * before rasing a stale connection status {@link DebugEvents.StaleConnection }
-   * notification {@link NatsConnection.status} and initiating a reconnect.
+   * before rasing a stale connection status {@link DebugEvents#StaleConnection }
+   * notification {@link NatsConnection#status} and initiating a reconnect.
    *
    * @see pingInterval
    */
@@ -405,6 +410,9 @@ export interface Msg {
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
 }
 
+/**
+ * Subscription Options
+ */
 export interface SubOpts<T> {
   /**
    * Optional queue name (subscriptions on the same subject that use queues
@@ -433,7 +441,7 @@ export interface SubOpts<T> {
 }
 
 /**
- * Type alias for a SubOpts<Msg>
+ * Subscription Options
  */
 export type SubscriptionOptions = SubOpts<Msg>;
 
@@ -982,8 +990,8 @@ export interface JetStreamClient {
   /**
    * Creates a push subscription. The JetStream server feeds messages to this subscription
    * without the client having to request them. The rate at which messages are provided can
-   * be tuned by the consumer by specifying {@link ConsumerOpts.rate_limit_bps} and/or
-   * {@link ConsumerOpts.maxAckPending}.
+   * be tuned by the consumer by specifying {@link ConsumerConfig#rate_limit_bps | ConsumerConfig.rate_limit_bps} and/or
+   * {@link ConsumerOpts | maxAckPending}.
    *
    * It is recommended that a consumer be created first using JetStreamManager APIs and then
    * use the bind option to simply attach to the created consumer.
@@ -1768,7 +1776,7 @@ export interface StreamUpdateConfig {
    */
   discard: DiscardPolicy;
   /**
-   * Sets the context of the on a per subject basis. Requires {@link DiscardPolicy.New} as the
+   * Sets the context of the on a per subject basis. Requires {@link DiscardPolicy#New} as the
    * {@link discard} policy.
    */
   discard_new_per_subject: boolean;
@@ -1778,7 +1786,7 @@ export interface StreamUpdateConfig {
   "no_ack"?: boolean;
   /**
    * The time window to track duplicate messages for, expressed in nanoseconds. 0 for default
-   * Set {@link JetStreamPublishOptions.msgID} to enable duplicate detection.
+   * Set {@link JetStreamPublishOptions#msgID} to enable duplicate detection.
    */
   "duplicate_window": Nanos;
   /**
@@ -1786,7 +1794,7 @@ export interface StreamUpdateConfig {
    */
   sources?: StreamSource[];
   /**
-   * Allows the use of the {@link JsHeaders.RollupHdr} header to replace all contents of a stream,
+   * Allows the use of the {@link JsHeaders#RollupHdr} header to replace all contents of a stream,
    * or subject in a stream, with a single new message
    */
   "allow_rollup_hdrs": boolean;
@@ -1994,7 +2002,7 @@ export interface StreamState {
   "num_deleted": number;
   /**
    * IDs of messages that were deleted using the Message Delete API or Interest based streams removing messages out of order
-   * {@link StreamInfoRequestOptions.deleted_details} is specified on
+   * {@link StreamInfoRequestOptions | deleted_details} is specified on
    * the request.
    */
   deleted: number[];
@@ -2011,7 +2019,7 @@ export interface StreamState {
    */
   num_subjects?: number;
   /**
-   * Subjects and their message counts when a {@link StreamInfoRequestOptions.subjects_filter} was set
+   * Subjects and their message counts when a {@link StreamInfoRequestOptions | subjects_filter} was set
    */
   subjects?: Record<string, number>;
 }
@@ -2339,7 +2347,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
   "deliver_group"?: string;
   /**
    * A unique name for a durable consumer
-   * Set {@link ConsumerConfig.name} - for ephemeral consumers, also set {@link ConsumerConfig.idle_heartbeat}
+   * Set {@link name} - for ephemeral consumers, also set {@link idle_heartbeat}
    */
   "durable_name"?: string;
   /**
@@ -2363,12 +2371,12 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
   "idle_heartbeat"?: Nanos;
   /**
    * The sequence from which to start delivery messages.
-   * Requires {@link DeliverPolicy.StartSequence}
+   * Requires {@link DeliverPolicy#StartSequence}
    */
   "opt_start_seq"?: number;
   /**
    * The date time from which to start delivering messages
-   * Requires {@link DeliverPolicy.StartTime}
+   * Requires {@link DeliverPolicy#StartTime}
    */
   "opt_start_time"?: string;
   /**
@@ -2410,7 +2418,7 @@ export interface ConsumerUpdateConfig {
   "max_waiting"?: number;
   /**
    * Delivers only the headers of messages in the stream and not the bodies. Additionally
-   * adds Nats-Msg-Size {@link JsHeaders.MessageSizeHdr} header to indicate the size of
+   * adds Nats-Msg-Size {@link JsHeaders#MessageSizeHdr} header to indicate the size of
    * the removed payload
    */
   "headers_only"?: boolean;
@@ -2889,7 +2897,7 @@ export enum RepublishHeaders {
    */
   LastSequence = "Nats-Last-Sequence",
   /**
-   * The size in bytes of the message's body - Only if {@link Republish.headers_only} is set.
+   * The size in bytes of the message's body - Only if {@link Republish#headers_only} is set.
    */
   Size = "Nats-Msg-Size",
 }

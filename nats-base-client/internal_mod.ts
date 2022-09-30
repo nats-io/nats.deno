@@ -4,14 +4,23 @@ export { ErrorCode, isNatsError, NatsError } from "./error.ts";
 
 export type {
   AccountLimits,
+  Advisory,
+  ApiError,
+  ApiPagedRequest,
+  callbackFn,
+  Closed,
   ClusterInfo,
   ConnectionOptions,
   Consumer,
+  ConsumerAPI,
   ConsumerConfig,
   ConsumerInfo,
+  ConsumerInfoable,
   ConsumerOpts,
   ConsumerOptsBuilder,
+  ConsumerUpdateConfig,
   DeliveryInfo,
+  Destroyable,
   JetStreamAccountStats,
   JetStreamApiStats,
   JetStreamClient,
@@ -21,16 +30,19 @@ export type {
   JetStreamPullSubscription,
   JetStreamSubscription,
   JetStreamSubscriptionOptions,
+  JetStreamUsageAccountLimits,
   JsMsg,
   JsMsgCallback,
   KV,
   KvCodec,
   KvCodecs,
   KvEntry,
+  KvLimits,
   KvOptions,
   KvPutOptions,
   KvRemove,
   KvStatus,
+  KvWatchOptions,
   LastForMsgRequest,
   Lister,
   LostStreamData,
@@ -39,14 +51,28 @@ export type {
   MsgRequest,
   Nanos,
   NatsConnection,
+  ObjectInfo,
+  ObjectResult,
+  ObjectStore,
+  ObjectStoreLink,
+  ObjectStoreMeta,
+  ObjectStoreMetaOptions,
+  ObjectStoreOptions,
+  ObjectStoreStatus,
   PeerInfo,
   Placement,
   PubAck,
   PublishOptions,
+  Pullable,
   PullOptions,
+  PurgeBySeq,
+  PurgeBySubject,
   PurgeOpts,
   PurgeResponse,
+  PurgeTrimOpts,
+  Republish,
   RequestOptions,
+  RoKV,
   SeqMsgRequest,
   SequenceInfo,
   Server,
@@ -55,24 +81,33 @@ export type {
   Stats,
   Status,
   StoredMsg,
+  StreamAlternate,
+  StreamAPI,
   StreamConfig,
   StreamInfo,
+  StreamInfoRequestOptions,
   StreamNames,
   StreamSource,
   StreamSourceInfo,
   StreamState,
+  StreamUpdateConfig,
   Sub,
   SubOpts,
   Subscription,
   SubscriptionOptions,
+  TlsOptions,
+  TypedSubscriptionOptions,
+  Views,
 } from "./types.ts";
 
 export {
   AckPolicy,
   AdvisoryKind,
   DeliverPolicy,
+  DirectMsgHeaders,
   DiscardPolicy,
   ReplayPolicy,
+  RepublishHeaders,
   RetentionPolicy,
   StorageType,
 } from "./types.ts";
@@ -88,7 +123,7 @@ export { Subscriptions } from "./subscriptions.ts";
 export { setTransportFactory } from "./transport.ts";
 export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, createInbox, INFO, ProtocolHandler } from "./protocol.ts";
-export type { Deferred, Timeout } from "./util.ts";
+export type { Deferred, Perf, Timeout } from "./util.ts";
 export {
   collect,
   deferred,
@@ -133,7 +168,12 @@ export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
 export type { DispatchedFn, Dispatcher } from "./queued_iterator.ts";
 export { QueuedIteratorImpl } from "./queued_iterator.ts";
-export type { QueuedIterator } from "./queued_iterator.ts";
+export type {
+  IngestionFilterFn,
+  IngestionFilterFnResult,
+  ProtocolFilterFn,
+  QueuedIterator,
+} from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
@@ -141,8 +181,7 @@ export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
-export { TypedSubscription } from "./typedsub.ts";
-export type { TypedSubscriptionOptions } from "./typedsub.ts";
+export { MsgAdapter, TypedCallback, TypedSubscription } from "./typedsub.ts";
 export {
   checkJsError,
   isFlowControlMsg,
