@@ -16,7 +16,7 @@
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
-<li><span class="tsd-signature-type">ConsumerUpdateConfig</span>
+<li><a href="ConsumerUpdateConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">ConsumerUpdateConfig</a>
 <ul class="tsd-hierarchy">
 <li><span class="target">ConsumerConfig</span></li></ul></li></ul></section>
 <section class="tsd-panel-group tsd-index-group">
@@ -46,6 +46,7 @@
 <a href="ConsumerConfig.html#max_expires" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>expires</span></a>
 <a href="ConsumerConfig.html#max_waiting" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>waiting</span></a>
 <a href="ConsumerConfig.html#mem_storage" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>mem_<wbr/>storage</span></a>
+<a href="ConsumerConfig.html#name" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>name</span></a>
 <a href="ConsumerConfig.html#num_replicas" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>num_<wbr/>replicas</span></a>
 <a href="ConsumerConfig.html#opt_start_seq" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>opt_<wbr/>start_<wbr/>seq</span></a>
 <a href="ConsumerConfig.html#opt_start_time" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>opt_<wbr/>start_<wbr/>time</span></a>
@@ -60,68 +61,69 @@
 <div class="tsd-comment tsd-typography"><p>The type of acknowledgment required by the Consumer</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2298</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2339</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="ack_wait" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>ack_<wbr/>wait</span><a href="#ack_wait" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">ack_<wbr/>wait<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How long (in nanoseconds) to allow messages to remain un-acknowledged before attempting redelivery</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.ack_wait</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#ack_wait">ack_wait</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2354</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2400</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="backoff" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>backoff</span><a href="#backoff" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">backoff<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>List of durations in nanoseconds format that represents a retry time scale for
 NaK&#39;d messages or those being normally retried</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.backoff</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#backoff">backoff</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2399</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2445</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="deliver_group" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>deliver_<wbr/>group</span><a href="#deliver_group" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deliver_<wbr/>group<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>Allows push consumers to form a queue group</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2306</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2347</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="deliver_policy" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deliver_<wbr/>policy</span><a href="#deliver_policy" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deliver_<wbr/>policy<span class="tsd-signature-symbol">:</span> <a href="../enums/DeliverPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">DeliverPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>Where to start consuming messages on the stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2302</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2343</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="deliver_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>deliver_<wbr/>subject</span><a href="#deliver_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deliver_<wbr/>subject<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>The subject where the push consumer should be sent the messages</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.deliver_subject</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#deliver_subject">deliver_subject</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2382</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2428</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="description" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>description</span><a href="#description" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">description<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>A short description of the purpose of this consume</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.description</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#description">description</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2350</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2396</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="durable_name" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>durable_<wbr/>name</span><a href="#durable_name" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">durable_<wbr/>name<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
-<div class="tsd-comment tsd-typography"><p>A unique name for a durable consumer</p>
+<div class="tsd-comment tsd-typography"><p>A unique name for a durable consumer
+Set <a href="ConsumerConfig.html#name">name</a> - for ephemeral consumers, also set <a href="ConsumerConfig.html#idle_heartbeat">idle_heartbeat</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2310</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2352</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="filter_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>filter_<wbr/>subject</span><a href="#filter_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">filter_<wbr/>subject<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>Deliver only messages that match the subject filter</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2314</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2360</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="flow_control" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>flow_<wbr/>control</span><a href="#flow_control" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">flow_<wbr/>control<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -130,7 +132,7 @@ and a reply subject, consumers must reply to these messages to control
 the rate of message delivery.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2320</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2366</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="headers_only" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>headers_<wbr/>only</span><a href="#headers_only" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">headers_<wbr/>only<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -138,9 +140,9 @@ the rate of message delivery.</p>
 adds Nats-Msg-Size <a href="../enums/JsHeaders.html#MessageSizeHdr">MessageSizeHdr</a> header to indicate the size of
 the removed payload</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.headers_only</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#headers_only">headers_only</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2378</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2424</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="idle_heartbeat" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>idle_<wbr/>heartbeat</span><a href="#idle_heartbeat" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">idle_<wbr/>heartbeat<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -148,81 +150,88 @@ the removed payload</p>
 Status header 100 will be sent indicating the consumer is still alive</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2325</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2371</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="inactive_threshold" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>inactive_<wbr/>threshold</span><a href="#inactive_threshold" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">inactive_<wbr/>threshold<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Duration that instructs the server to cleanup ephemeral consumers that are inactive for that long</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.inactive_threshold</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#inactive_threshold">inactive_threshold</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2394</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2440</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_ack_pending" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>ack_<wbr/>pending</span><a href="#max_ack_pending" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>ack_<wbr/>pending<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The maximum number of messages without acknowledgement that can be outstanding,
 once this limit is reached message delivery will be suspended</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_ack_pending</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_ack_pending">max_ack_pending</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2367</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2413</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_batch" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>batch</span><a href="#max_batch" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>batch<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The largest batch property that may be specified when doing a pull on a Pull Consumer</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_batch</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_batch">max_batch</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2386</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2432</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The maximum bytes value that maybe set when dong a pull on a Pull Consumer</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_bytes</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_bytes">max_bytes</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2403</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2449</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_deliver" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>deliver</span><a href="#max_deliver" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>deliver<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The number of times a message will be redelivered to consumers if not acknowledged in time</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_deliver</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_deliver">max_deliver</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2358</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2404</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_expires" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>expires</span><a href="#max_expires" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>expires<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The maximum expires value that may be set when doing a pull on a Pull Consumer</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_expires</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_expires">max_expires</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2390</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2436</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_waiting" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>max_<wbr/>waiting</span><a href="#max_waiting" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>waiting<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The number of pulls that can be outstanding on a pull consumer,
 pulls received after this is reached are ignored</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.max_waiting</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#max_waiting">max_waiting</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2372</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2418</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="mem_storage" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>mem_<wbr/>storage</span><a href="#mem_storage" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mem_<wbr/>storage<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Force the consumer state to be kept in memory rather than inherit the setting from the stream</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.mem_storage</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#mem_storage">mem_storage</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2411</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2457</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="name" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">name<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
+<div class="tsd-comment tsd-typography"><p>The consumer name</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2356</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="num_replicas" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>num_<wbr/>replicas</span><a href="#num_replicas" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">num_<wbr/>replicas<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>When set do not inherit the replica count from the stream but specifically set it to this amount.</p>
 </div><aside class="tsd-sources">
-<p>Inherited from ConsumerUpdateConfig.num_replicas</p>
+<p>Inherited from <a href="ConsumerUpdateConfig.html">ConsumerUpdateConfig</a>.<a href="ConsumerUpdateConfig.html#num_replicas">num_replicas</a></p>
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2407</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2453</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="opt_start_seq" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>opt_<wbr/>start_<wbr/>seq</span><a href="#opt_start_seq" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">opt_<wbr/>start_<wbr/>seq<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -230,7 +239,7 @@ pulls received after this is reached are ignored</p>
 Requires <a href="../enums/DeliverPolicy.html#StartSequence">StartSequence</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2330</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2376</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="opt_start_time" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>opt_<wbr/>start_<wbr/>time</span><a href="#opt_start_time" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">opt_<wbr/>start_<wbr/>time<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
@@ -238,21 +247,21 @@ Requires <a href="../enums/DeliverPolicy.html#StartSequence">StartSequence</a></
 Requires <a href="../enums/DeliverPolicy.html#StartTime">StartTime</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2335</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2381</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="rate_limit_bps" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>rate_<wbr/>limit_<wbr/>bps</span><a href="#rate_limit_bps" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">rate_<wbr/>limit_<wbr/>bps<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The rate at which messages will be delivered to clients, expressed in bit per second</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2339</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2385</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="replay_policy" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>replay_<wbr/>policy</span><a href="#replay_policy" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">replay_<wbr/>policy<span class="tsd-signature-symbol">:</span> <a href="../enums/ReplayPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">ReplayPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>How messages are played back to the Consumer</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2343</li></ul></aside></section></section></div>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:2389</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -298,6 +307,7 @@ Requires <a href="../enums/DeliverPolicy.html#StartTime">StartTime</a></p>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="ConsumerConfig.html#max_expires" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>expires</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="ConsumerConfig.html#max_waiting" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>waiting</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="ConsumerConfig.html#mem_storage" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>mem_<wbr/>storage</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="ConsumerConfig.html#name" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>name</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="ConsumerConfig.html#num_replicas" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>num_<wbr/>replicas</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="ConsumerConfig.html#opt_start_seq" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>opt_<wbr/>start_<wbr/>seq</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="ConsumerConfig.html#opt_start_time" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>opt_<wbr/>start_<wbr/>time</a></li>

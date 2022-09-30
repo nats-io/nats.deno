@@ -31,6 +31,7 @@ that the server could return.</p>
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="PullOptions.html#batch" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="#FF984D" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="12" id="icon-1024-path"></rect><path d="M9.354 16V7.24H12.174C12.99 7.24 13.638 7.476 14.118 7.948C14.606 8.412 14.85 9.036 14.85 9.82C14.85 10.604 14.606 11.232 14.118 11.704C13.638 12.168 12.99 12.4 12.174 12.4H10.434V16H9.354ZM10.434 11.428H12.174C12.646 11.428 13.022 11.284 13.302 10.996C13.59 10.7 13.734 10.308 13.734 9.82C13.734 9.324 13.59 8.932 13.302 8.644C13.022 8.356 12.646 8.212 12.174 8.212H10.434V11.428Z" fill="var(--color-text)" id="icon-1024-text"></path></svg><span>batch</span></a>
 <a href="PullOptions.html#expires" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>expires</span></a>
+<a href="PullOptions.html#idle_heartbeat" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>idle_<wbr/>heartbeat</span></a>
 <a href="PullOptions.html#max_bytes" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>bytes</span></a>
 <a href="PullOptions.html#no_wait" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>no_<wbr/>wait</span></a>
 </div></section></div></details></section></section>
@@ -42,7 +43,7 @@ that the server could return.</p>
 <div class="tsd-comment tsd-typography"><p>Max number of messages to retrieve in a pull.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:760</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:770</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="expires" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>expires</span><a href="#expires" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">expires<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -50,7 +51,12 @@ that the server could return.</p>
 specified in <a href="PullOptions.html#batch">batch</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:769</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:779</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="idle_heartbeat" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>idle_<wbr/>heartbeat</span><a href="#idle_heartbeat" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">idle_<wbr/>heartbeat<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
+<ul>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:785</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -58,14 +64,14 @@ specified in <a href="PullOptions.html#batch">batch</a></p>
 number of messages in the batch to fit within this setting.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:774</li></ul></aside></section>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:784</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="no_wait" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>no_<wbr/>wait</span><a href="#no_wait" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">no_<wbr/>wait<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>If true, the request for messages will end when received by the server</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:764</li></ul></aside></section></section></div>
+<li>Defined in Dropbox/code/src/github.com/nats-io/nbc-doc/cjs_src/types.ts:774</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -93,6 +99,7 @@ number of messages in the batch to fit within this setting.</p>
 <ul>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="PullOptions.html#batch" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>batch</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="PullOptions.html#expires" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>expires</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="PullOptions.html#idle_heartbeat" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>idle_<wbr/>heartbeat</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="PullOptions.html#max_bytes" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>bytes</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="PullOptions.html#no_wait" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>no_<wbr/>wait</a></li></ul></li></ul></nav></div></div>
 <div class="container tsd-generator">
