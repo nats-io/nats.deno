@@ -181,7 +181,8 @@ export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
-export { MsgAdapter, TypedCallback, TypedSubscription } from "./typedsub.ts";
+export { TypedSubscription } from "./typedsub.ts";
+export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
 export {
   checkJsError,
   isFlowControlMsg,
