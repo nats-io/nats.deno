@@ -49,6 +49,7 @@ import { SHA256 } from "./sha256.js";
 import { Feature } from "./semver.ts";
 
 export const osPrefix = "OBJ_";
+export const digestType = "SHA-256=";
 
 export function objectStoreStreamName(bucket: string): string {
   validateBucket(bucket);
@@ -356,7 +357,7 @@ export class ObjectStoreImpl implements ObjectStore {
           const digest = sha.digest("base64");
           const pad = digest.length % 3;
           const padding = pad > 0 ? "=".repeat(pad) : "";
-          info.digest = `sha-256=${digest}${padding}`;
+          info.digest = `${digestType}${digest}${padding}`;
           info.deleted = false;
 
           // trailing md for the object
@@ -466,7 +467,7 @@ export class ObjectStoreImpl implements ObjectStore {
           // go pads the hash - which should be multiple of 3 - otherwise pads with '='
           const pad = hash.length % 3;
           const padding = pad > 0 ? "=".repeat(pad) : "";
-          const digest = `sha-256=${hash}${padding}`;
+          const digest = `${digestType}${hash}${padding}`;
           if (digest !== info.digest) {
             controller!.error(
               new Error(
