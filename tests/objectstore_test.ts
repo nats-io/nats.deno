@@ -34,6 +34,7 @@ import { equals } from "https://deno.land/std@0.152.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
 import { Base64UrlCodec } from "../nats-base-client/base64.ts";
+import { digestType } from "../nats-base-client/objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -84,7 +85,7 @@ function digest(data: Uint8Array): string {
   const digest = sha.digest("base64");
   const pad = digest.length % 3;
   const padding = pad > 0 ? "=".repeat(pad) : "";
-  return `sha-256=${digest}${padding}`;
+  return `${digestType}${digest}${padding}`;
 }
 
 Deno.test("objectstore - basics", async () => {
@@ -844,7 +845,7 @@ Deno.test("objectstore - hashtests", async () => {
       { name: t.hash, options: { max_chunk_size: 9 } },
       rs.stream(),
     );
-    assertEquals(oi.digest, `sha-256=${t.hash}`);
+    assertEquals(oi.digest, `${digestType}${t.hash}`);
   }
 
   await cleanup(ns, nc);
