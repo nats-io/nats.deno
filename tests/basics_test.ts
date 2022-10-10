@@ -1178,3 +1178,9 @@ Deno.test("basics - server version", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("basics - info", async () => {
+  const { ns, nc } = await setup({});
+  console.log(nc.info);
+  await cleanup(ns, nc);
+})

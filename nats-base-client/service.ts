@@ -15,7 +15,7 @@
 import { Deferred, deferred } from "./util.ts";
 import {
   Consumer,
-  JetStreamReader,
+  // JetStreamReader,
   JsMsg,
   Msg,
   NatsConnection,
@@ -180,41 +180,41 @@ export class SrvImpl implements Srv {
     }, this._heartbeatInterval);
   }
 
-  async setupJetStream(h: JetStreamSrvHandler): Promise<void> {
-    const sv = h as SrvHandlerSub;
-    const status: SrvStatusEntry = {
-      requests: 0,
-      errors: 0,
-    };
-    try {
-      const c = await h.consumer.read({
-        callback: (jsmsg) => {
-          status.requests++;
-          h.handler(null, jsmsg);
-        },
-      }) as JetStreamReader;
-
-      c.closed
-        .then(() => {
-          this.close(
-            new Error(`required consumer for handler ${h.name} stopped`),
-          ).catch();
-        })
-        .catch((err) => {
-          status.errors++;
-          status.lastError = err;
-          this.close(
-            new Error(
-              `required consumer for handler ${h.name} errored: ${err.message}`,
-            ),
-          ).catch();
-        });
-
-      this.statuses.set(h, status);
-    } catch (err) {
-      this.close(err);
-    }
-  }
+  // async setupJetStream(h: JetStreamSrvHandler): Promise<void> {
+  //   const sv = h as SrvHandlerSub;
+  //   const status: SrvStatusEntry = {
+  //     requests: 0,
+  //     errors: 0,
+  //   };
+  //   try {
+  //     const c = await h.consumer.read({
+  //       callback: (jsmsg) => {
+  //         status.requests++;
+  //         h.handler(null, jsmsg);
+  //       },
+  //     }) as JetStreamReader;
+  //
+  //     c.closed
+  //       .then(() => {
+  //         this.close(
+  //           new Error(`required consumer for handler ${h.name} stopped`),
+  //         ).catch();
+  //       })
+  //       .catch((err) => {
+  //         status.errors++;
+  //         status.lastError = err;
+  //         this.close(
+  //           new Error(
+  //             `required consumer for handler ${h.name} errored: ${err.message}`,
+  //           ),
+  //         ).catch();
+  //       });
+  //
+  //     this.statuses.set(h, status);
+  //   } catch (err) {
+  //     this.close(err);
+  //   }
+  // }
 
   setupNATS(h: MsgSrvHandler, internal = false) {
     const { subject, handler, queueGroup: queue } = h as MsgSrvHandler;
@@ -377,7 +377,7 @@ export class SrvImpl implements Srv {
         // this is a nats service
         return;
       }
-      this.setupJetStream(h as unknown as JetStreamSrvHandler);
+      // this.setupJetStream(h as unknown as JetStreamSrvHandler);
     });
 
     return Promise.resolve(this);
