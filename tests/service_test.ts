@@ -1,8 +1,6 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
-  Endpoint,
-  ServiceConfig,
   ServiceImpl,
   ServiceStatus,
   SrvVerb,
