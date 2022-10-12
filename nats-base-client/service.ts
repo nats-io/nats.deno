@@ -39,64 +39,71 @@ export enum SrvVerb {
   HEARTBEAT = "HEARTBEAT",
 }
 
-export type Srv = {
-  handlers: MsgSrvHandler[];
-  status(internal: boolean): SrvStatus[];
+export type Service = {
+  handlers: Endpoint[];
+  status(internal: boolean): ServiceStatus[];
   stop(): Promise<null | Error>;
   done: Promise<null | Error>;
   stopped: boolean;
   heartbeatInterval: number;
 };
 
-export type SrvStatusEntry = {
+export type ServiceStatusEntry = {
   requests: number;
   errors: number;
   lastError?: Error;
   data?: unknown;
 };
 
-export type SrvHandler = {
-  name: string;
+export type ServiceConfig = {
+  kind: string;
+  id: string;
   description?: string;
   schema?: {
     request: string;
     response: string;
   };
-  statusHandler?: (srv: SrvHandler) => Promise<unknown | null>;
+  endpoints:
+    | Endpoint
+    | JetStreamEndpoint
+    | (Endpoint | JetStreamEndpoint)[];
+  statusHandler?: (
+    endpoint: Endpoint | JetStreamEndpoint,
+  ) => Promise<unknown | null>;
 };
 
-export type MsgSrvHandler = {
+export type Endpoint = {
+  name: string;
   subject: string;
   handler: (err: Error | null, msg: Msg) => void;
   queueGroup?: string;
-} & SrvHandler;
-
-export type JetStreamSrvHandler = {
-  consumer: Consumer;
-  handler: (err: Error | null, msg: JsMsg) => void;
-} & SrvHandler;
-
-type SrvHandlerSub<T = unknown> = MsgSrvHandler & JetStreamSrvHandler & {
-  internal: boolean;
-  sub: Sub<T>;
 };
 
-export type SrvStatus = {
+export type JetStreamEndpoint = {
   name: string;
-  status: SrvStatusEntry | null;
+  consumer: Consumer;
+  handler: (err: Error | null, msg: JsMsg) => void;
+};
+
+type ServiceSubscription<T = unknown> =
+  & Endpoint
+  & JetStreamEndpoint
+  & {
+    internal: boolean;
+    sub: Sub<T>;
+  };
+
+export type ServiceStatus = {
+  name: string;
+  status: ServiceStatusEntry | null;
   error: Error | null;
 };
 
 export function addService(
   nc: NatsConnection,
-  kind: string,
-  id: string,
-  handler:
-    | MsgSrvHandler
-    | JetStreamSrvHandler
-    | (MsgSrvHandler | JetStreamSrvHandler)[],
-): Promise<Srv> {
-  const s = new SrvImpl(nc, kind, id, handler);
+  config: ServiceConfig,
+): Promise<Service> {
+  const s = new ServiceImpl(nc, config);
   try {
     return s.start();
   } catch (err) {
@@ -106,17 +113,16 @@ export function addService(
 
 const jc = JSONCodec();
 
-export class SrvImpl implements Srv {
+export class ServiceImpl implements Service {
   nc: NatsConnection;
-  kind: string;
-  id: string;
+  config: ServiceConfig;
   _done: Deferred<Error | null>;
-  handlers: SrvHandlerSub[];
-  internal: SrvHandlerSub[];
+  handlers: ServiceSubscription[];
+  internal: ServiceSubscription[];
   _heartbeatInterval: number;
   stopped: boolean;
   watched: Promise<void>[];
-  statuses: Map<SrvHandler, SrvStatusEntry>;
+  statuses: Map<Endpoint | JetStreamEndpoint, ServiceStatusEntry>;
   interval!: number;
 
   static controlSubject(verb: SrvVerb, kind = "", id = "") {
@@ -132,22 +138,21 @@ export class SrvImpl implements Srv {
 
   constructor(
     nc: NatsConnection,
-    kind: string,
-    id: string,
-    handler:
-      | MsgSrvHandler
-      | JetStreamSrvHandler
-      | (MsgSrvHandler | JetStreamSrvHandler)[],
+    config: ServiceConfig,
   ) {
     this.nc = nc;
-    this.kind = kind.toUpperCase();
-    this.id = id.toUpperCase();
-    this.handlers = [handler] as SrvHandlerSub[];
-    this.internal = [] as SrvHandlerSub[];
+    this.config = config;
+    this.config.id = this.config.id.toUpperCase();
+    this.config.kind = this.config.kind.toUpperCase();
+
+    this.handlers = Array.isArray(config.endpoints)
+      ? config.endpoints as ServiceSubscription[]
+      : [config.endpoints] as ServiceSubscription[];
+    this.internal = [] as ServiceSubscription[];
     this.watched = [];
     this._done = deferred();
     this.stopped = false;
-    this.statuses = new Map<SrvHandlerSub, SrvStatusEntry>();
+    this.statuses = new Map<ServiceSubscription, ServiceStatusEntry>();
     this._heartbeatInterval = 15 * 1000;
 
     this.nc.closed()
@@ -174,7 +179,11 @@ export class SrvImpl implements Srv {
       }
       const d = this.status(true);
       this.nc.publish(
-        `${SrvPrefix}.${SrvVerb.HEARTBEAT}.${this.kind}.${this.id}`,
+        ServiceImpl.controlSubject(
+          SrvVerb.HEARTBEAT,
+          this.config.kind,
+          this.config.id,
+        ),
         jc.encode(d),
       );
     }, this._heartbeatInterval);
@@ -216,11 +225,11 @@ export class SrvImpl implements Srv {
   //   }
   // }
 
-  setupNATS(h: MsgSrvHandler, internal = false) {
-    const { subject, handler, queueGroup: queue } = h as MsgSrvHandler;
-    const sv = h as SrvHandlerSub;
+  setupNATS(h: Endpoint, internal = false) {
+    const { subject, handler, queueGroup: queue } = h as Endpoint;
+    const sv = h as ServiceSubscription;
     sv.internal = internal;
-    const status: SrvStatusEntry = {
+    const status: ServiceStatusEntry = {
       requests: 0,
       errors: 0,
     };
@@ -257,8 +266,8 @@ export class SrvImpl implements Srv {
       });
   }
 
-  status(internal = false): SrvStatus[] {
-    const statuses: SrvStatus[] = [];
+  status(internal = false): ServiceStatus[] {
+    const statuses: ServiceStatus[] = [];
 
     const handlers = internal
       ? this.handlers.concat(this.internal)
@@ -267,14 +276,14 @@ export class SrvImpl implements Srv {
       const h = handlers[i];
       const status = this.statuses.get(h);
       let re;
-      if (typeof h.statusHandler === "function") {
+      if (typeof this.config.statusHandler === "function") {
         try {
-          status!.data = h.statusHandler(h as MsgSrvHandler);
+          status!.data = this.config.statusHandler(h as Endpoint);
         } catch (err) {
           re = err;
         }
       }
-      const ss: SrvStatus = {
+      const ss: ServiceStatus = {
         name: h.name,
         status: status ? status : null,
         error: re,
@@ -284,11 +293,15 @@ export class SrvImpl implements Srv {
     return statuses;
   }
 
-  start(): Promise<Srv> {
+  start(): Promise<Service> {
     const internal = [
       {
         name: "ping",
-        subject: `${SrvPrefix}.${SrvVerb.PING}.${this.kind}.${this.id}`,
+        subject: ServiceImpl.controlSubject(
+          SrvVerb.PING,
+          this.config.kind,
+          this.config.id,
+        ),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -299,7 +312,7 @@ export class SrvImpl implements Srv {
       },
       {
         name: "ping-kind",
-        subject: `${SrvPrefix}.${SrvVerb.PING}.${this.kind}`,
+        subject: ServiceImpl.controlSubject(SrvVerb.PING, this.config.kind),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -310,7 +323,7 @@ export class SrvImpl implements Srv {
       },
       {
         name: "ping-all",
-        subject: `${SrvPrefix}.${SrvVerb.PING}`,
+        subject: ServiceImpl.controlSubject(SrvVerb.PING),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -321,7 +334,11 @@ export class SrvImpl implements Srv {
       },
       {
         name: "status",
-        subject: `${SrvPrefix}.${SrvVerb.STATUS}.${this.kind}.${this.id}`,
+        subject: ServiceImpl.controlSubject(
+          SrvVerb.STATUS,
+          this.config.kind,
+          this.config.id,
+        ),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -333,7 +350,7 @@ export class SrvImpl implements Srv {
       },
       {
         name: "status-kind",
-        subject: `${SrvPrefix}.${SrvVerb.STATUS}.${this.kind}`,
+        subject: ServiceImpl.controlSubject(SrvVerb.STATUS, this.config.kind),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -345,7 +362,7 @@ export class SrvImpl implements Srv {
       },
       {
         name: "status-all",
-        subject: `${SrvPrefix}.${SrvVerb.STATUS}`,
+        subject: ServiceImpl.controlSubject(SrvVerb.STATUS),
         handler: (err, msg) => {
           if (err) {
             this.close(err);
@@ -355,24 +372,25 @@ export class SrvImpl implements Srv {
           msg?.respond(jc.encode(status));
         },
       },
-    ] as MsgSrvHandler[];
+    ] as Endpoint[];
 
     internal.forEach((e) => {
       this.setupNATS(e, true);
     });
 
-    this.internal = internal as unknown as SrvHandlerSub[];
+    this.internal = internal as unknown as ServiceSubscription[];
     this.handlers.forEach((h) => {
-      const { subject } = h as MsgSrvHandler;
+      const { subject } = h as Endpoint;
+      console.log(subject);
       if (typeof subject !== "string") {
         // this is a jetstream service
         return;
       }
-      this.setupNATS(h as unknown as MsgSrvHandler);
+      this.setupNATS(h as unknown as Endpoint);
     });
 
     this.handlers.forEach((h) => {
-      const { consumer } = h as JetStreamSrvHandler;
+      const { consumer } = h as JetStreamEndpoint;
       if (!consumer) {
         // this is a nats service
         return;

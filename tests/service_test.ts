@@ -1,22 +1,23 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
-  MsgSrvHandler,
-  SrvImpl,
-  SrvStatus,
+  Endpoint,
+  ServiceConfig,
+  ServiceImpl,
+  ServiceStatus,
   SrvVerb,
 } from "../nats-base-client/service.ts";
 import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { deferred, JSONCodec, Msg } from "../nats-base-client/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
-Deno.test("svc - basics", async () => {
-  const { ns, nc } = await setup();
+Deno.test("service - basics", async () => {
+  const { ns, nc } = await setup({}, { debug: true });
   const jc = JSONCodec();
 
   const hb = deferred<Msg>();
   nc.subscribe(
-    SrvImpl.controlSubject(SrvVerb.HEARTBEAT, "test", "a"),
+    ServiceImpl.controlSubject(SrvVerb.HEARTBEAT, "test", "a"),
     {
       callback: (_err, msg) => {
         hb.resolve(msg);
@@ -25,30 +26,34 @@ Deno.test("svc - basics", async () => {
     },
   );
 
-  const srv = await addService(nc, "test", "a", {
-    name: "x",
-    subject: "foo",
-    handler: (_err, msg) => {
-      msg?.respond();
+  const srv = await addService(nc, {
+    kind: "test",
+    id: "a",
+    endpoints: {
+      name: "x",
+      subject: "foo",
+      handler: (_err: Error | null, msg: Msg) => {
+        msg?.respond();
+      },
     },
-  } as MsgSrvHandler);
+  });
   srv.heartbeatInterval = 3000;
 
-  await nc.request(SrvImpl.controlSubject(SrvVerb.PING, "test"));
-  await nc.request(SrvImpl.controlSubject(SrvVerb.PING, "test", "a"));
+  await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test"));
+  await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test", "a"));
   await assertRejects(async () => {
-    await nc.request(SrvImpl.controlSubject(SrvVerb.PING, "test", "b"));
+    await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test", "b"));
   });
   await nc.request("foo");
 
   const r = await nc.request(
-    SrvImpl.controlSubject(SrvVerb.STATUS, "test", "a"),
+    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", "a"),
   );
-  let status = jc.decode(r.data) as SrvStatus[];
+  let status = jc.decode(r.data) as ServiceStatus[];
   assertEquals(status.length, 7);
 
   const m = await hb;
-  status = jc.decode(m.data) as SrvStatus[];
+  status = jc.decode(m.data) as ServiceStatus[];
   assertEquals(status.length, 7);
 
   await cleanup(ns, nc);
