@@ -40,15 +40,15 @@ export enum SrvVerb {
 }
 
 export type Service = {
-  handlers: Endpoint[];
-  status(internal: boolean): ServiceStatus[];
+  status(internal: boolean): ServiceStatus;
   stop(): Promise<null | Error>;
   done: Promise<null | Error>;
   stopped: boolean;
   heartbeatInterval: number;
 };
 
-export type ServiceStatusEntry = {
+export type EndpointStatus = {
+  name: string;
   requests: number;
   errors: number;
   lastError?: Error;
@@ -56,30 +56,68 @@ export type ServiceStatusEntry = {
 };
 
 export type ServiceConfig = {
+  /**
+   * A type for a service
+   */
   kind: string;
+  /**
+   * Unique ID for a service of a particular kind
+   */
   id: string;
+  /**
+   * Description for the service
+   */
   description?: string;
+  /**
+   * Schema for the service
+   */
   schema?: {
     request: string;
     response: string;
   };
+  /**
+   * A list of endpoints, typically one, but some services may
+   * want more than one endpoint
+   */
   endpoints:
     | Endpoint
     | JetStreamEndpoint
     | (Endpoint | JetStreamEndpoint)[];
+  /**
+   * A customized handler for the status of an endpoint. The
+   * data returned by the endpoint will be serialized as is
+   * @param endpoint
+   */
   statusHandler?: (
     endpoint: Endpoint | JetStreamEndpoint,
   ) => Promise<unknown | null>;
 };
 
+/**
+ * A service Endpoint
+ */
 export type Endpoint = {
+  /**
+   * Name for the endpoint
+   */
   name: string;
+  /**
+   * Subject where the endpoint is listening
+   */
   subject: string;
+  /**
+   * Handler for the endpoint
+   * @param err
+   * @param msg
+   */
   handler: (err: Error | null, msg: Msg) => void;
+  /**
+   * Queue group for the endpoint
+   */
   queueGroup?: string;
 };
 
-export type JetStreamEndpoint = {
+type JetStreamEndpoint = {
   name: string;
   consumer: Consumer;
   handler: (err: Error | null, msg: JsMsg) => void;
@@ -93,12 +131,29 @@ type ServiceSubscription<T = unknown> =
     sub: Sub<T>;
   };
 
+/**
+ * The status of a service
+ */
 export type ServiceStatus = {
-  name: string;
-  status: ServiceStatusEntry | null;
-  error: Error | null;
+  /**
+   * The kind of the service reporting the status
+   */
+  kind: string;
+  /**
+   * The unique ID of the service reporting the status
+   */
+  id: string;
+  /**
+   * An EndpointStatus per each endpoint on the service
+   */
+  endpoints: EndpointStatus[];
 };
 
+/**
+ * Creates a service that uses the specied connection
+ * @param nc
+ * @param config
+ */
 export function addService(
   nc: NatsConnection,
   config: ServiceConfig,
@@ -122,7 +177,7 @@ export class ServiceImpl implements Service {
   _heartbeatInterval: number;
   stopped: boolean;
   watched: Promise<void>[];
-  statuses: Map<Endpoint | JetStreamEndpoint, ServiceStatusEntry>;
+  statuses: Map<Endpoint | JetStreamEndpoint, EndpointStatus>;
   interval!: number;
 
   static controlSubject(verb: SrvVerb, kind = "", id = "") {
@@ -152,7 +207,7 @@ export class ServiceImpl implements Service {
     this.watched = [];
     this._done = deferred();
     this.stopped = false;
-    this.statuses = new Map<ServiceSubscription, ServiceStatusEntry>();
+    this.statuses = new Map<ServiceSubscription, EndpointStatus>();
     this._heartbeatInterval = 15 * 1000;
 
     this.nc.closed()
@@ -229,7 +284,8 @@ export class ServiceImpl implements Service {
     const { subject, handler, queueGroup: queue } = h as Endpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
-    const status: ServiceStatusEntry = {
+    const status: EndpointStatus = {
+      name: sv.name,
       requests: 0,
       errors: 0,
     };
@@ -266,8 +322,13 @@ export class ServiceImpl implements Service {
       });
   }
 
-  status(internal = false): ServiceStatus[] {
-    const statuses: ServiceStatus[] = [];
+  status(internal = false): ServiceStatus {
+    const ss: ServiceStatus = {
+      // status: status ? status : null,
+      kind: this.config.kind,
+      id: this.config.id,
+      endpoints: [],
+    };
 
     const handlers = internal
       ? this.handlers.concat(this.internal)
@@ -275,25 +336,48 @@ export class ServiceImpl implements Service {
     for (let i = 0; i < handlers.length; i++) {
       const h = handlers[i];
       const status = this.statuses.get(h);
-      let re;
-      if (typeof this.config.statusHandler === "function") {
-        try {
-          status!.data = this.config.statusHandler(h as Endpoint);
-        } catch (err) {
-          re = err;
+      if (status) {
+        if (typeof this.config.statusHandler === "function") {
+          try {
+            status.data = this.config.statusHandler(h as Endpoint);
+          } catch (err) {
+            status.lastError = err;
+          }
         }
+        ss.endpoints.push(status);
       }
-      const ss: ServiceStatus = {
-        name: h.name,
-        status: status ? status : null,
-        error: re,
-      };
-      statuses.push(ss);
     }
-    return statuses;
+    return ss;
   }
 
   start(): Promise<Service> {
+    const statusHandler = (err: Error | null, msg: Msg): void => {
+      if (err) {
+        this.close(err);
+        return;
+      }
+      let internal = true;
+      try {
+        if (msg.data) {
+          const arg = jc.decode(msg.data) as { internal: boolean };
+          internal = arg?.internal;
+        }
+      } catch (err) {
+        // ignored
+      }
+
+      const status = this.status(internal);
+      msg?.respond(jc.encode(status));
+    };
+
+    const pingHandler = (err: Error | null, msg: Msg): void => {
+      if (err) {
+        this.close(err);
+        return;
+      }
+      msg?.respond();
+    };
+
     const internal = [
       {
         name: "ping",
@@ -302,35 +386,17 @@ export class ServiceImpl implements Service {
           this.config.kind,
           this.config.id,
         ),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          msg?.respond();
-        },
+        handler: pingHandler,
       },
       {
         name: "ping-kind",
         subject: ServiceImpl.controlSubject(SrvVerb.PING, this.config.kind),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          msg?.respond();
-        },
+        handler: pingHandler,
       },
       {
         name: "ping-all",
         subject: ServiceImpl.controlSubject(SrvVerb.PING),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          msg?.respond();
-        },
+        handler: pingHandler,
       },
       {
         name: "status",
@@ -339,38 +405,17 @@ export class ServiceImpl implements Service {
           this.config.kind,
           this.config.id,
         ),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          const status = this.status(true);
-          msg?.respond(jc.encode(status));
-        },
+        handler: statusHandler,
       },
       {
         name: "status-kind",
         subject: ServiceImpl.controlSubject(SrvVerb.STATUS, this.config.kind),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          const status = this.status(true);
-          msg?.respond(jc.encode(status));
-        },
+        handler: statusHandler,
       },
       {
         name: "status-all",
         subject: ServiceImpl.controlSubject(SrvVerb.STATUS),
-        handler: (err, msg) => {
-          if (err) {
-            this.close(err);
-            return;
-          }
-          const status = this.status(true);
-          msg?.respond(jc.encode(status));
-        },
+        handler: statusHandler,
       },
     ] as Endpoint[];
 
@@ -381,7 +426,6 @@ export class ServiceImpl implements Service {
     this.internal = internal as unknown as ServiceSubscription[];
     this.handlers.forEach((h) => {
       const { subject } = h as Endpoint;
-      console.log(subject);
       if (typeof subject !== "string") {
         // this is a jetstream service
         return;
