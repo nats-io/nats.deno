@@ -365,7 +365,7 @@ Deno.test("jetstream - durable", async () => {
   opts.deliverTo(createInbox());
 
   let sub = await js.subscribe(subj, opts);
-  const done = (async () => {
+  const done = await (async () => {
     for await (const m of sub) {
       m.ack();
     }

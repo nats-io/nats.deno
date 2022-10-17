@@ -3,65 +3,46 @@ import {
   addService,
   EndpointStatus,
   ServiceImpl,
+  ServiceInfo,
   ServiceStatus,
   SrvVerb,
 } from "../nats-base-client/service.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import {
-  deferred,
+  assertEquals,
+  assertExists,
+  assertRejects,
+} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import {
   Empty,
   JSONCodec,
   Msg,
   QueuedIterator,
 } from "../nats-base-client/mod.ts";
-import {
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
   const jc = JSONCodec();
 
-  const hb = deferred<Msg>();
-  nc.subscribe(
-    ServiceImpl.controlSubject(SrvVerb.HEARTBEAT, "test", "a"),
-    {
-      callback: (_err, msg) => {
-        hb.resolve(msg);
-      },
-      max: 1,
-    },
-  );
-
   const srvA = await addService(nc, {
-    kind: "test",
-    id: "a",
+    name: "test",
     endpoints: {
-      name: "x",
       subject: "foo",
-      queueGroup: "x",
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
       },
     },
   });
-  srvA.heartbeatInterval = 3000;
 
   const srvB = await addService(nc, {
-    kind: "test",
-    id: "b",
+    name: "test",
     endpoints: {
-      name: "x",
       subject: "foo",
-      queueGroup: "x",
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
       },
     },
   });
-  srvB.heartbeatInterval = 3000;
 
   const nci = nc as NatsConnectionImpl;
 
@@ -93,14 +74,20 @@ Deno.test("service - basics", async () => {
   );
   assertEquals(msgs.length, 2);
 
-  await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test", "a"));
+  const pingr = await nc.request(
+    ServiceImpl.controlSubject(SrvVerb.PING, "test", srvA.id),
+  );
+  const info = jc.decode(pingr.data) as ServiceInfo;
+  assertEquals(info.name, "test");
+  assertEquals(info.id, srvA.id);
+
   await assertRejects(async () => {
     await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test", "c"));
   });
   await nc.request("foo");
 
   let r = await nc.request(
-    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", "a"),
+    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", srvA.id),
   );
   let status = jc.decode(r.data) as ServiceStatus;
 
@@ -141,9 +128,6 @@ Deno.test("service - basics", async () => {
   assertEquals(pEntry?.requests, 1);
   assertEquals(pEntry?.errors, 0);
 
-  const m = await hb;
-  status = jc.decode(m.data) as ServiceStatus;
-
   msgs = await collect(nci.requestMany(
     ServiceImpl.controlSubject(SrvVerb.STATUS),
     Empty,
@@ -155,23 +139,26 @@ Deno.test("service - basics", async () => {
   });
 
   const statusA = statuses.find((a) => {
-    return a.id === "A" && a.kind === "TEST";
+    return a.id === srvA.id && a.name === "test";
   });
   assertExists(statusA);
   const statusB = statuses.find((a) => {
-    return a.id === "B" && a.kind === "TEST";
+    return a.id === srvB.id && a.name === "test";
   });
   assertExists(statusB);
 
   r = await nc.request(
-    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", "a"),
+    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", srvA.id),
     jc.encode({ internal: false }),
   );
   status = jc.decode(r.data) as ServiceStatus;
-  assertEquals(status.kind, "TEST");
-  assertEquals(status.id, "A");
+  assertEquals(status.name, "test");
+  assertEquals(status.id, srvA.id);
   assertEquals(status.endpoints.length, 1);
-  assertEquals(status.endpoints[0].name, "x");
+  assertEquals(status.endpoints[0].name, "test");
+
+  await srvA.stop();
+  await srvB.stop();
 
   await cleanup(ns, nc);
 });
