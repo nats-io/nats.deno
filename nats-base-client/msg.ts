@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,15 +20,11 @@ import { TD } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
-  // to consider an error from the server we expect no payload
-  if (msg && msg.data.length === 0 && msg.headers) {
-    const headers = msg.headers as MsgHdrsImpl;
-    if (headers.hasError) {
-      // only 503s are expected from core NATS (404/408/409s are JetStream)
-      if (headers.code === 503) {
-        return NatsError.errorForCode(ErrorCode.NoResponders);
-      }
-    }
+  // NATS core only considers errors 503s on messages that have no payload
+  // everything else simply forwarded as part of the message and is considered
+  // application level information
+  if (msg && msg.data.length === 0 && msg.headers?.code === 503) {
+    return NatsError.errorForCode(ErrorCode.NoResponders);
   }
   return null;
 }

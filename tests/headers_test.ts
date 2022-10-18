@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,6 +28,7 @@ import { NatsServer } from "./helpers/launcher.ts";
 import {
   assert,
   assertEquals,
+  assertRejects,
   assertThrows,
 } from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import {
@@ -37,6 +38,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { Publisher } from "../nats-base-client/protocol.ts";
 import { TestDispatcher } from "./parser_test.ts";
+import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();
@@ -320,4 +322,39 @@ Deno.test("headers - error headers may have other entries", () => {
   assert(m.headers);
   assertEquals(m.headers.get(JsHeaders.LastConsumerSeqHdr), "1");
   assertEquals(m.headers.get(JsHeaders.LastStreamSeqHdr), "1");
+});
+
+Deno.test("headers - code/description", () => {
+  assertThrows(
+    () => {
+      headers(500);
+    },
+    Error,
+    "setting status requires both code and description",
+  );
+
+  assertThrows(
+    () => {
+      headers(0, "some message");
+    },
+    Error,
+    "setting status requires both code and description",
+  );
+});
+
+Deno.test("headers - codec", async () => {
+  const { ns, nc } = await setup({}, {});
+
+  nc.subscribe("foo", {
+    callback: (err, msg) => {
+      const h = headers(500, "custom status from client");
+      msg.respond(Empty, { headers: h });
+    },
+  });
+
+  const r = await nc.request("foo", Empty);
+  assertEquals(r.headers?.code, 500);
+  assertEquals(r.headers?.description, "custom status from client");
+
+  await cleanup(ns, nc);
 });
