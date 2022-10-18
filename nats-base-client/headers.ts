@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -77,8 +77,11 @@ export function canonicalMIMEHeaderKey(k: string): string {
   return String.fromCharCode(...buf);
 }
 
-export function headers(): MsgHdrs {
-  return new MsgHdrsImpl();
+export function headers(code = 0, description = ""): MsgHdrs {
+  if ((code === 0 && description !== "") || (code > 0 && description === "")) {
+    throw new Error("setting status requires both code and description");
+  }
+  return new MsgHdrsImpl(code, description);
 }
 
 const HEADER = "NATS/1.0";
@@ -93,14 +96,14 @@ export enum Match {
 }
 
 export class MsgHdrsImpl implements MsgHdrs {
-  code: number;
+  _code: number;
   headers: Map<string, string[]>;
-  description: string;
+  _description: string;
 
-  constructor() {
-    this.code = 0;
+  constructor(code = 0, description = "") {
+    this._code = code;
+    this._description = description;
     this.headers = new Map();
-    this.description = "";
   }
 
   [Symbol.iterator]() {
@@ -114,7 +117,7 @@ export class MsgHdrsImpl implements MsgHdrs {
   equals(mh: MsgHdrsImpl): boolean {
     if (
       mh && this.headers.size === mh.headers.size &&
-      this.code === mh.code
+      this._code === mh._code
     ) {
       for (const [k, v] of this.headers) {
         const a = mh.values(k);
@@ -141,10 +144,10 @@ export class MsgHdrsImpl implements MsgHdrs {
     const h = lines[0];
     if (h !== HEADER) {
       let str = h.replace(HEADER, "");
-      mh.code = parseInt(str, 10);
-      const scode = mh.code.toString();
+      mh._code = parseInt(str, 10);
+      const scode = mh._code.toString();
       str = str.replace(scode, "");
-      mh.description = str.trim();
+      mh._description = str.trim();
     }
     if (lines.length >= 1) {
       lines.slice(1).map((s) => {
@@ -162,10 +165,13 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   toString(): string {
-    if (this.headers.size === 0) {
+    if (this.headers.size === 0 && this._code === 0) {
       return "";
     }
     let s = HEADER;
+    if (this._code > 0 && this._description !== "") {
+      s += ` ${this._code} ${this._description}`;
+    }
     for (const [k, v] of this.headers) {
       for (let i = 0; i < v.length; i++) {
         s = `${s}\r\n${k}: ${v[i]}`;
@@ -278,11 +284,11 @@ export class MsgHdrsImpl implements MsgHdrs {
   }
 
   get hasError() {
-    return this.code >= 300;
+    return this._code >= 300;
   }
 
   get status(): string {
-    return `${this.code} ${this.description}`.trim();
+    return `${this._code} ${this._description}`.trim();
   }
 
   toRecord(): Record<string, string[]> {
@@ -291,6 +297,14 @@ export class MsgHdrsImpl implements MsgHdrs {
       data[v] = this.values(v);
     });
     return data;
+  }
+
+  get code(): number {
+    return this._code;
+  }
+
+  get description(): string {
+    return this._description;
   }
 
   static fromRecord(r: Record<string, string[]>): MsgHdrs {

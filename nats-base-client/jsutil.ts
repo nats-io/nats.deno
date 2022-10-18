@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2022 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -116,9 +116,7 @@ export function newJsErrorMsg(
   description: string,
   subject: string,
 ): Msg {
-  const h = headers() as MsgHdrsImpl;
-  h.code = code;
-  h.description = description;
+  const h = headers(code, description) as MsgHdrsImpl;
 
   const arg = { hdr: 1, sid: 0, size: 0 } as MsgArg;
   const msg = new MsgImpl(arg, Empty, {} as Publisher);
