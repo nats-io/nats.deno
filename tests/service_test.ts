@@ -26,7 +26,7 @@ Deno.test("service - basics", async () => {
 
   const srvA = await addService(nc, {
     name: "test",
-    endpoints: {
+    endpoint: {
       subject: "foo",
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
@@ -36,7 +36,7 @@ Deno.test("service - basics", async () => {
 
   const srvB = await addService(nc, {
     name: "test",
-    endpoints: {
+    endpoint: {
       subject: "foo",
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
@@ -159,6 +159,32 @@ Deno.test("service - basics", async () => {
 
   await srvA.stop();
   await srvB.stop();
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - handler error", async () => {
+  const { ns, nc } = await setup({}, { debug: true });
+
+  console.log("connected");
+
+  await addService(nc, {
+    name: "test",
+    endpoint: {
+      subject: "fail",
+      handler: (_err: Error | null, msg: Msg) => {
+        throw new Error("cb error");
+      },
+    },
+  });
+
+  await assertRejects(
+    async () => {
+      await nc.request("fail");
+    },
+    Error,
+    "cb error",
+  );
 
   await cleanup(ns, nc);
 });

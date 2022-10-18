@@ -15,13 +15,14 @@
 import { Deferred, deferred } from "./util.ts";
 import {
   Consumer,
+  Empty,
   JsMsg,
   Msg,
   NatsConnection,
   NatsError,
   Sub,
 } from "./types.ts";
-import { JSONCodec, nuid } from "./mod.ts";
+import { headers, JSONCodec, nuid } from "./mod.ts";
 import { validName } from "./jsutil.ts";
 
 /**
@@ -54,6 +55,8 @@ export type EndpointStatus = {
   errors: number;
   lastError?: Error;
   data?: unknown;
+  totalLatency: number;
+  averageLatency: number;
 };
 
 export type ServiceSchema = {
@@ -97,7 +100,7 @@ export type ServiceConfig = {
    * A list of endpoints, typically one, but some services may
    * want more than one endpoint
    */
-  endpoints:
+  endpoint:
     | Endpoint
     | JetStreamEndpoint;
   /**
@@ -219,8 +222,7 @@ export class ServiceImpl implements Service {
     }
 
     this._id = nuid.next();
-    this.config.name = this.config.name;
-    this.handler = config.endpoints as ServiceSubscription;
+    this.handler = config.endpoint as ServiceSubscription;
     this.internal = [] as ServiceSubscription[];
     this.watched = [];
     this._done = deferred();
@@ -277,32 +279,42 @@ export class ServiceImpl implements Service {
   // }
 
   setupNATS(h: Endpoint, internal = false) {
-    const queue = internal ? "" : "x";
+    // internals don't use a queue
+    const queue = internal ? "" : "q";
     const { subject, handler } = h as Endpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
       this.internal.push(sv);
     }
-    let { name } = h as InternalEndpoint;
+    const { name } = h as InternalEndpoint;
     const status: EndpointStatus = {
       name: name ? name : this.config.name,
       requests: 0,
       errors: 0,
+      totalLatency: 0,
+      averageLatency: 0,
     };
 
-    const sub = this.nc.subscribe(subject, {
+    sv.sub = this.nc.subscribe(subject, {
       callback: (err, msg) => {
         if (err) {
           status.errors++;
           status.lastError = err;
         }
+        const start = Date.now();
         status.requests++;
-        handler(err, msg);
+        try {
+          handler(err, msg);
+        } catch (err) {
+          const h = headers(500, err.message);
+          msg?.respond(Empty, { headers: h });
+        }
+        status.totalLatency += Date.now() - start;
+        status.averageLatency = status.totalLatency / status.requests;
       },
       queue,
     });
-    sv.sub = sub;
     this.statuses.set(h, status);
 
     sv.sub.closed
@@ -399,7 +411,7 @@ export class ServiceImpl implements Service {
           const arg = jc.decode(msg.data) as { internal: boolean };
           internal = arg?.internal;
         }
-      } catch (err) {
+      } catch (_err) {
         // ignored
       }
 
@@ -477,24 +489,21 @@ export class ServiceImpl implements Service {
 
   close(err?: Error): Promise<null | Error> {
     if (this.stopped) {
-      return Promise.resolve(null);
+      return this._done;
     }
     this.stopped = true;
+    const buf: Promise<void>[] = [];
     clearInterval(this.interval);
     if (!this.nc.isClosed()) {
-      const user = this.handler.sub.drain();
-      const internal = this.internal.map((serviceSub) => {
-        return serviceSub.sub.drain();
+      buf.push(this.handler.sub.drain());
+      this.internal.forEach((serviceSub) => {
+        buf.push(serviceSub.sub.drain());
       });
-
-      Promise.all([user].concat(internal))
-        .then(() => {
-          this._done.resolve(err ? err : null);
-        });
-    } else {
-      this._done.resolve(null);
     }
-
+    Promise.allSettled(buf)
+      .then(() => {
+        this._done.resolve(err ? err : null);
+      });
     return this._done;
   }
 
