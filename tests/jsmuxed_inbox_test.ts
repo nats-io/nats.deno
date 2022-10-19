@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { cleanup, setup } from "./jstest_util.ts";
-import { JsMuxedInbox } from "../nats-base-client/jsmuxedInbox.ts";
+import { JsMuxedInbox } from "../nats-base-client/jsmuxed_inbox.ts";
 import { deferred, Empty } from "../nats-base-client/mod.ts";
 import { assert, fail } from "https://deno.land/std@0.152.0/testing/asserts.ts";
 
