@@ -80,7 +80,12 @@ export type ServiceInfo = {
   /**
    * Description for the service
    */
-  description?: string;
+  description: string;
+
+  /**
+   * Version of the service
+   */
+  version: string;
 };
 
 export type ServiceConfig = {
@@ -130,7 +135,7 @@ export type Endpoint = {
    * @param err
    * @param msg
    */
-  handler: (err: NatsError | null, msg: Msg) => void;
+  handler: (err: NatsError | null, msg: Msg) => Error|void;
 };
 
 type InternalEndpoint = {
@@ -139,7 +144,7 @@ type InternalEndpoint = {
 
 type JetStreamEndpoint = {
   consumer: Consumer;
-  handler: (err: Error | null, msg: JsMsg) => void;
+  handler: (err: Error | null, msg: JsMsg) => Error|void;
 };
 
 type ServiceSubscription<T = unknown> =
@@ -321,7 +326,10 @@ export class ServiceImpl implements Service {
         const start = Date.now();
         status.requests++;
         try {
-          handler(err, msg);
+          const v = handler(err, msg);
+          if (v) {
+            throw v;
+          }
         } catch (err) {
           const h = headers(400, err.message);
           msg?.respond(Empty, { headers: h });
@@ -435,20 +443,6 @@ export class ServiceImpl implements Service {
       msg?.respond(jc.encode(status));
     };
 
-    const pingHandler = (err: Error | null, msg: Msg): void => {
-      if (err) {
-        this.close(err);
-        return;
-      }
-      msg?.respond(
-        jc.encode({
-          name: this.name,
-          id: this.id,
-          description: this.description,
-        }),
-      );
-    };
-
     const infoHandler = (err: Error | null, msg: Msg): void => {
       if (err) {
         this.close(err);
@@ -458,8 +452,13 @@ export class ServiceImpl implements Service {
         name: this.name,
         id: this.id,
         version: this.version,
+        description: this.description
       } as ServiceInfo;
       msg?.respond(jc.encode(info));
+    };
+
+    const pingHandler = (err: Error | null, msg: Msg): void => {
+      infoHandler(err, msg);
     };
 
     const schemaHandler = (err: Error | null, msg: Msg): void => {
