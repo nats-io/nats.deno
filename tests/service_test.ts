@@ -1,10 +1,10 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
-  ServiceEndpointStatus,
+  EndpointStats,
   ServiceImpl,
   ServiceInfo,
-  ServiceStatus,
+  ServiceStats,
   ServiceVerb,
 } from "../nats-base-client/service.ts";
 import {
@@ -22,6 +22,8 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
+  const nci = nc as NatsConnectionImpl;
+
   const jc = JSONCodec();
 
   const srvA = await addService(nc, {
@@ -43,8 +45,6 @@ Deno.test("service - basics", async () => {
       },
     },
   });
-
-  const nci = nc as NatsConnectionImpl;
 
   async function collect(
     p: Promise<QueuedIterator<Msg | Error>>,
@@ -93,13 +93,13 @@ Deno.test("service - basics", async () => {
   let r = await nc.request(
     ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
   );
-  let status = jc.decode(r.data) as ServiceStatus;
+  let status = jc.decode(r.data) as ServiceStats;
 
-  function findStatus(n: string): ServiceEndpointStatus | null {
+  function findStatus(n: string): EndpointStats | null {
     const found = status.endpoints.find((se) => {
       return se.name === n;
     });
-    return found as ServiceEndpointStatus || null;
+    return found as EndpointStats || null;
   }
 
   const paEntry = findStatus("ping-all");
@@ -139,7 +139,7 @@ Deno.test("service - basics", async () => {
   ));
   assertEquals(msgs.length, 2);
   const statuses = msgs.map((m) => {
-    return jc.decode(m.data) as ServiceStatus;
+    return jc.decode(m.data) as ServiceStats;
   });
 
   const statusA = statuses.find((a) => {
@@ -155,7 +155,7 @@ Deno.test("service - basics", async () => {
     ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
     jc.encode({ internal: false }),
   );
-  status = jc.decode(r.data) as ServiceStatus;
+  status = jc.decode(r.data) as ServiceStats;
   assertEquals(status.name, "test");
   assertEquals(status.id, srvA.id);
   assertEquals(status.endpoints.length, 1);
@@ -168,9 +168,7 @@ Deno.test("service - basics", async () => {
 });
 
 Deno.test("service - handler error", async () => {
-  const { ns, nc } = await setup({}, { debug: true });
-
-  console.log("connected");
+  const { ns, nc } = await setup();
 
   await addService(nc, {
     name: "test",
@@ -182,13 +180,9 @@ Deno.test("service - handler error", async () => {
     },
   });
 
-  await assertRejects(
-    async () => {
-      await nc.request("fail");
-    },
-    Error,
-    "cb error",
-  );
+  const r = await nc.request("fail");
+  assertEquals(r.headers?.code, 400);
+  assertEquals(r.headers?.description, "cb error");
 
   await cleanup(ns, nc);
 });

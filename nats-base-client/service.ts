@@ -32,7 +32,7 @@ import { validName } from "./jsutil.ts";
  * `$SRV.PING|STATUS|INFO|SCHEMA.<kind>` - pings or retrieves status for all services having the specified kind
  * `$SRV.PING|STATUS|INFO|SCHEMA.<kind>.<id>` - pings or retrieves status of a particular service
  */
-export const ServiceAPIPrefix = "$SRV";
+export const ServiceApiPrefix = "$SRV";
 
 export enum ServiceVerb {
   PING = "PING",
@@ -43,13 +43,17 @@ export enum ServiceVerb {
 
 export type Service = {
   id: string;
-  status(internal: boolean): ServiceStatus;
-  stop(): Promise<null | Error>;
+  name: string;
+  description: string;
+  version: string;
   done: Promise<null | Error>;
   stopped: boolean;
+  stats(internal: boolean): ServiceStats;
+  reset(): void;
+  stop(): Promise<null | Error>;
 };
 
-export type ServiceEndpointStatus = {
+export type EndpointStats = {
   name: string;
   requests: number;
   errors: number;
@@ -149,7 +153,7 @@ type ServiceSubscription<T = unknown> =
 /**
  * The status of a service
  */
-export type ServiceStatus = {
+export type ServiceStats = {
   /**
    * Name for the endpoint
    */
@@ -165,7 +169,7 @@ export type ServiceStatus = {
   /**
    * An EndpointStatus per each endpoint on the service
    */
-  endpoints: ServiceEndpointStatus[];
+  endpoints: EndpointStats[];
 };
 
 /**
@@ -196,18 +200,18 @@ export class ServiceImpl implements Service {
   internal: ServiceSubscription[];
   stopped: boolean;
   watched: Promise<void>[];
-  statuses: Map<Endpoint | JetStreamEndpoint, ServiceEndpointStatus>;
+  statuses: Map<Endpoint | JetStreamEndpoint, EndpointStats>;
   interval!: number;
 
   static controlSubject(verb: ServiceVerb, name = "", id = "") {
     if (name === "" && id === "") {
-      return `${ServiceAPIPrefix}.${verb}`;
+      return `${ServiceApiPrefix}.${verb}`;
     }
     name = name.toUpperCase();
     id = id.toUpperCase();
     return id !== ""
-      ? `${ServiceAPIPrefix}.${verb}.${name}.${id}`
-      : `${ServiceAPIPrefix}.${verb}.${name}`;
+      ? `${ServiceApiPrefix}.${verb}.${name}.${id}`
+      : `${ServiceApiPrefix}.${verb}.${name}`;
   }
 
   constructor(
@@ -216,7 +220,7 @@ export class ServiceImpl implements Service {
   ) {
     this.nc = nc;
     this.config = config;
-    const n = validName(this.config.name);
+    const n = validName(this.name);
     if (n !== "") {
       throw new Error(`name ${n}`);
     }
@@ -227,7 +231,7 @@ export class ServiceImpl implements Service {
     this.watched = [];
     this._done = deferred();
     this.stopped = false;
-    this.statuses = new Map<ServiceSubscription, ServiceEndpointStatus>();
+    this.statuses = new Map<ServiceSubscription, EndpointStats>();
 
     this.nc.closed()
       .then(() => {
@@ -240,6 +244,18 @@ export class ServiceImpl implements Service {
 
   get id(): string {
     return this._id;
+  }
+
+  get name(): string {
+    return this.config.name;
+  }
+
+  get description(): string {
+    return this.config.description ?? "";
+  }
+
+  get version(): string {
+    return this.config.version ?? "0.0.0";
   }
 
   // async setupJetStream(h: JetStreamSrvHandler): Promise<void> {
@@ -288,8 +304,8 @@ export class ServiceImpl implements Service {
       this.internal.push(sv);
     }
     const { name } = h as InternalEndpoint;
-    const status: ServiceEndpointStatus = {
-      name: name ? name : this.config.name,
+    const status: EndpointStats = {
+      name: name ? name : this.name,
       requests: 0,
       errors: 0,
       totalLatency: 0,
@@ -307,7 +323,7 @@ export class ServiceImpl implements Service {
         try {
           handler(err, msg);
         } catch (err) {
-          const h = headers(500, err.message);
+          const h = headers(400, err.message);
           msg?.respond(Empty, { headers: h });
         }
         status.totalLatency += Date.now() - start;
@@ -335,12 +351,12 @@ export class ServiceImpl implements Service {
       });
   }
 
-  status(internal = false): ServiceStatus {
-    const ss: ServiceStatus = {
+  stats(internal = false): ServiceStats {
+    const ss: ServiceStats = {
       // status: status ? status : null,
-      name: this.config.name,
+      name: this.name,
       id: this.id,
-      version: this.config.version,
+      version: this.version,
       endpoints: [],
     };
 
@@ -375,12 +391,12 @@ export class ServiceImpl implements Service {
   ) {
     const v = `${verb}`.toLowerCase();
     this._doAddInternalHandler(`${v}-all`, verb, handler);
-    this._doAddInternalHandler(`${v}-kind`, verb, handler, this.config.name);
+    this._doAddInternalHandler(`${v}-kind`, verb, handler, this.name);
     this._doAddInternalHandler(
       `${v}`,
       verb,
       handler,
-      this.config.name,
+      this.name,
       this.id,
     );
   }
@@ -415,7 +431,7 @@ export class ServiceImpl implements Service {
         // ignored
       }
 
-      const status = this.status(internal);
+      const status = this.stats(internal);
       msg?.respond(jc.encode(status));
     };
 
@@ -426,9 +442,9 @@ export class ServiceImpl implements Service {
       }
       msg?.respond(
         jc.encode({
-          name: this.config.name,
+          name: this.name,
           id: this.id,
-          description: this.config.description,
+          description: this.description,
         }),
       );
     };
@@ -439,9 +455,9 @@ export class ServiceImpl implements Service {
         return;
       }
       const info = {
-        name: this.config.name,
+        name: this.name,
         id: this.id,
-        version: this.config.version,
+        version: this.version,
       } as ServiceInfo;
       msg?.respond(jc.encode(info));
     };
@@ -513,5 +529,16 @@ export class ServiceImpl implements Service {
 
   stop(): Promise<null | Error> {
     return this.close();
+  }
+
+  reset(): void {
+    const iter = this.statuses.values();
+    for (const s of iter) {
+      s.averageLatency = 0;
+      s.errors = 0;
+      s.requests = 0;
+      s.totalLatency = 0;
+      s.data = undefined;
+    }
   }
 }
