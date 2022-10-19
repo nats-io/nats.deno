@@ -32,9 +32,9 @@ import { validName } from "./jsutil.ts";
  * `$SRV.PING|STATUS|INFO|SCHEMA.<kind>` - pings or retrieves status for all services having the specified kind
  * `$SRV.PING|STATUS|INFO|SCHEMA.<kind>.<id>` - pings or retrieves status of a particular service
  */
-export const SrvPrefix = "$SRV";
+export const ServiceAPIPrefix = "$SRV";
 
-export enum SrvVerb {
+export enum ServiceVerb {
   PING = "PING",
   STATUS = "STATUS",
   INFO = "INFO",
@@ -49,7 +49,7 @@ export type Service = {
   stopped: boolean;
 };
 
-export type EndpointStatus = {
+export type ServiceEndpointStatus = {
   name: string;
   requests: number;
   errors: number;
@@ -165,7 +165,7 @@ export type ServiceStatus = {
   /**
    * An EndpointStatus per each endpoint on the service
    */
-  endpoints: EndpointStatus[];
+  endpoints: ServiceEndpointStatus[];
 };
 
 /**
@@ -196,18 +196,18 @@ export class ServiceImpl implements Service {
   internal: ServiceSubscription[];
   stopped: boolean;
   watched: Promise<void>[];
-  statuses: Map<Endpoint | JetStreamEndpoint, EndpointStatus>;
+  statuses: Map<Endpoint | JetStreamEndpoint, ServiceEndpointStatus>;
   interval!: number;
 
-  static controlSubject(verb: SrvVerb, name = "", id = "") {
+  static controlSubject(verb: ServiceVerb, name = "", id = "") {
     if (name === "" && id === "") {
-      return `${SrvPrefix}.${verb}`;
+      return `${ServiceAPIPrefix}.${verb}`;
     }
     name = name.toUpperCase();
     id = id.toUpperCase();
     return id !== ""
-      ? `${SrvPrefix}.${verb}.${name}.${id}`
-      : `${SrvPrefix}.${verb}.${name}`;
+      ? `${ServiceAPIPrefix}.${verb}.${name}.${id}`
+      : `${ServiceAPIPrefix}.${verb}.${name}`;
   }
 
   constructor(
@@ -227,7 +227,7 @@ export class ServiceImpl implements Service {
     this.watched = [];
     this._done = deferred();
     this.stopped = false;
-    this.statuses = new Map<ServiceSubscription, EndpointStatus>();
+    this.statuses = new Map<ServiceSubscription, ServiceEndpointStatus>();
 
     this.nc.closed()
       .then(() => {
@@ -288,7 +288,7 @@ export class ServiceImpl implements Service {
       this.internal.push(sv);
     }
     const { name } = h as InternalEndpoint;
-    const status: EndpointStatus = {
+    const status: ServiceEndpointStatus = {
       name: name ? name : this.config.name,
       requests: 0,
       errors: 0,
@@ -370,7 +370,7 @@ export class ServiceImpl implements Service {
   }
 
   addInternalHandler(
-    verb: SrvVerb,
+    verb: ServiceVerb,
     handler: (err: NatsError | null, msg: Msg) => void,
   ) {
     const v = `${verb}`.toLowerCase();
@@ -387,7 +387,7 @@ export class ServiceImpl implements Service {
 
   _doAddInternalHandler(
     name: string,
-    verb: SrvVerb,
+    verb: ServiceVerb,
     handler: (err: NatsError | null, msg: Msg) => void,
     kind = "",
     id = "",
@@ -455,13 +455,13 @@ export class ServiceImpl implements Service {
       msg?.respond(jc.encode(this.config.schema));
     };
 
-    this.addInternalHandler(SrvVerb.PING, pingHandler);
-    this.addInternalHandler(SrvVerb.STATUS, statusHandler);
-    this.addInternalHandler(SrvVerb.INFO, infoHandler);
+    this.addInternalHandler(ServiceVerb.PING, pingHandler);
+    this.addInternalHandler(ServiceVerb.STATUS, statusHandler);
+    this.addInternalHandler(ServiceVerb.INFO, infoHandler);
     if (
       this.config.schema?.request !== "" || this.config.schema?.response !== ""
     ) {
-      this.addInternalHandler(SrvVerb.SCHEMA, schemaHandler);
+      this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
     }
 
     // now the actual service

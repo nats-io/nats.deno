@@ -1,11 +1,11 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
-  EndpointStatus,
+  ServiceEndpointStatus,
   ServiceImpl,
   ServiceInfo,
   ServiceStatus,
-  SrvVerb,
+  ServiceVerb,
 } from "../nats-base-client/service.ts";
 import {
   assertEquals,
@@ -61,41 +61,45 @@ Deno.test("service - basics", async () => {
   }
 
   let msgs = await collect(
-    nci.requestMany(ServiceImpl.controlSubject(SrvVerb.PING), Empty, {
+    nci.requestMany(ServiceImpl.controlSubject(ServiceVerb.PING), Empty, {
       maxMessages: 2,
     }),
   );
   assertEquals(msgs.length, 2);
 
   msgs = await collect(
-    nci.requestMany(ServiceImpl.controlSubject(SrvVerb.PING, "test"), Empty, {
-      maxMessages: 2,
-    }),
+    nci.requestMany(
+      ServiceImpl.controlSubject(ServiceVerb.PING, "test"),
+      Empty,
+      {
+        maxMessages: 2,
+      },
+    ),
   );
   assertEquals(msgs.length, 2);
 
   const pingr = await nc.request(
-    ServiceImpl.controlSubject(SrvVerb.PING, "test", srvA.id),
+    ServiceImpl.controlSubject(ServiceVerb.PING, "test", srvA.id),
   );
   const info = jc.decode(pingr.data) as ServiceInfo;
   assertEquals(info.name, "test");
   assertEquals(info.id, srvA.id);
 
   await assertRejects(async () => {
-    await nc.request(ServiceImpl.controlSubject(SrvVerb.PING, "test", "c"));
+    await nc.request(ServiceImpl.controlSubject(ServiceVerb.PING, "test", "c"));
   });
   await nc.request("foo");
 
   let r = await nc.request(
-    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", srvA.id),
+    ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
   );
   let status = jc.decode(r.data) as ServiceStatus;
 
-  function findStatus(n: string): EndpointStatus | null {
+  function findStatus(n: string): ServiceEndpointStatus | null {
     const found = status.endpoints.find((se) => {
       return se.name === n;
     });
-    return found as EndpointStatus || null;
+    return found as ServiceEndpointStatus || null;
   }
 
   const paEntry = findStatus("ping-all");
@@ -129,7 +133,7 @@ Deno.test("service - basics", async () => {
   assertEquals(pEntry?.errors, 0);
 
   msgs = await collect(nci.requestMany(
-    ServiceImpl.controlSubject(SrvVerb.STATUS),
+    ServiceImpl.controlSubject(ServiceVerb.STATUS),
     Empty,
     { maxMessages: 2 },
   ));
@@ -148,7 +152,7 @@ Deno.test("service - basics", async () => {
   assertExists(statusB);
 
   r = await nc.request(
-    ServiceImpl.controlSubject(SrvVerb.STATUS, "test", srvA.id),
+    ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
     jc.encode({ internal: false }),
   );
   status = jc.decode(r.data) as ServiceStatus;
@@ -172,7 +176,7 @@ Deno.test("service - handler error", async () => {
     name: "test",
     endpoint: {
       subject: "fail",
-      handler: (_err: Error | null, msg: Msg) => {
+      handler: () => {
         throw new Error("cb error");
       },
     },
