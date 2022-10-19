@@ -135,7 +135,7 @@ export type Endpoint = {
    * @param err
    * @param msg
    */
-  handler: (err: NatsError | null, msg: Msg) => Error|void;
+  handler: (err: NatsError | null, msg: Msg) => Error | void;
 };
 
 type InternalEndpoint = {
@@ -144,7 +144,7 @@ type InternalEndpoint = {
 
 type JetStreamEndpoint = {
   consumer: Consumer;
-  handler: (err: Error | null, msg: JsMsg) => Error|void;
+  handler: (err: Error | null, msg: JsMsg) => Error | void;
 };
 
 type ServiceSubscription<T = unknown> =
@@ -452,7 +452,7 @@ export class ServiceImpl implements Service {
         name: this.name,
         id: this.id,
         version: this.version,
-        description: this.description
+        description: this.description,
       } as ServiceInfo;
       msg?.respond(jc.encode(info));
     };
