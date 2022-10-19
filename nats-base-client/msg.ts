@@ -91,4 +91,11 @@ export class MsgImpl implements Msg {
     }
     return false;
   }
+
+  size(): number {
+    const subj = this._msg.subject.length;
+    const reply = this._msg.reply?.length || 0;
+    const payloadAndHeaders = this._msg.size === -1 ? 0 : this._msg.size;
+    return subj + reply + payloadAndHeaders;
+  }
 }
