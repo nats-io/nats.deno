@@ -81,11 +81,15 @@ export type ServiceInfo = {
    * Description for the service
    */
   description: string;
-
   /**
    * Version of the service
    */
   version: string;
+
+  /**
+   * Subject where the service can be invoked
+   */
+  subject: string;
 };
 
 export type ServiceConfig = {
@@ -245,6 +249,19 @@ export class ServiceImpl implements Service {
       .catch((err) => {
         this.close(err);
       });
+  }
+
+  get subject(): string {
+    const { subject } = <Endpoint> this.config.endpoint;
+    if (subject !== "") {
+      return subject;
+    }
+    const { consumer } = <JetStreamEndpoint> this.config.endpoint;
+    if (consumer) {
+      // FIXME: we have no context here on the js prefix etc.
+      return `$JS.API.CONSUMER.MSG.NEXT.${consumer.stream_name}.${consumer.config.name}`;
+    }
+    return "";
   }
 
   get id(): string {
@@ -453,6 +470,7 @@ export class ServiceImpl implements Service {
         id: this.id,
         version: this.version,
         description: this.description,
+        subject: (this.config.endpoint as Endpoint).subject,
       } as ServiceInfo;
       msg?.respond(jc.encode(info));
     };

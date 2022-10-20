@@ -151,6 +151,18 @@ Deno.test("service - basics", async () => {
   });
   assertExists(statusB);
 
+  msgs = await collect(
+    nci.requestMany(ServiceImpl.controlSubject(ServiceVerb.INFO), Empty, {
+      maxMessages: 2,
+    }),
+  );
+  const infos = msgs.map((m) => {
+    return jc.decode(m.data) as ServiceInfo;
+  });
+  assertEquals(infos.length, 2);
+  assertEquals(infos[0].subject, "foo");
+  assertEquals(infos[1].subject, "foo");
+
   r = await nc.request(
     ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
     jc.encode({ internal: false }),
