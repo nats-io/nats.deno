@@ -217,6 +217,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.resetOutbound();
 
     const pong = deferred<void>();
+    pong.catch(() => {
+      // provide at least one catch - as pong rejection can happen before it is expected
+    });
     this.pongs.unshift(pong);
 
     this.connectError = (err?: Error) => {
