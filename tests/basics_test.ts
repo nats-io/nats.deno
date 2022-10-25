@@ -787,7 +787,7 @@ Deno.test("basics - subs pending count", async () => {
     for await (const _m of sub) {
       count++;
       assertEquals(count, sub.getProcessed());
-      assertEquals(sub.getProcessed() + sub.getPending(), 11);
+      assertEquals(sub.getProcessed() + sub.getPending(), 12);
     }
   })();
 

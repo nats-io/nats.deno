@@ -120,15 +120,24 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
   close(): void {
     if (!this.isClosed()) {
       this.cancelTimeout();
-      this.stop();
-      if (this.cleanupFn) {
-        try {
-          this.cleanupFn(this, this.info);
-        } catch (_err) {
-          // ignoring
+      const fn = () => {
+        this.stop();
+        if (this.cleanupFn) {
+          try {
+            this.cleanupFn(this, this.info);
+          } catch (_err) {
+            // ignoring
+          }
         }
+        this.closed.resolve();
+      };
+
+      if (this.noIterator) {
+        fn();
+      } else {
+        //@ts-ignore: schedule the close once all messages are processed
+        this.push(fn);
       }
-      this.closed.resolve();
     }
   }
 

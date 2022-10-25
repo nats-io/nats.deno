@@ -214,10 +214,23 @@ Deno.test("drain - reject subscribe on draining", async () => {
   await ns.stop();
 });
 
-Deno.test("drain - reject subscription drain on closed sub", async () => {
+Deno.test("drain - reject subscription drain on closed sub callback", async () => {
+  const { ns, nc } = await setup();
+  const sub = nc.subscribe("foo", { callback: () => {} });
+  sub.unsubscribe();
+  await assertThrowsAsyncErrorCode(() => {
+    return sub.drain();
+  }, ErrorCode.SubClosed);
+  await nc.close();
+  await ns.stop();
+});
+
+Deno.test("drain - reject subscription drain on closed sub iter", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("foo");
   sub.unsubscribe();
+  for await (const m of sub) {
+  }
   await assertThrowsAsyncErrorCode(() => {
     return sub.drain();
   }, ErrorCode.SubClosed);
