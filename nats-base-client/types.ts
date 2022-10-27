@@ -2537,8 +2537,19 @@ export interface ExportedConsumer {
    * Retrieve the next message for the consumer
    * @param opts - how long to keep the request open and wait for a response
    * @return a Promise that resolves to a JsMsg or null if no messages available
+   * @deprecated - use fetch with a batch of 1
    */
   next(opts?: Partial<{ expires: number }>): Promise<JsMsg>;
+
+  /**
+   * Retrieve at most the next count number of messages from the consumer. Specifying optional
+   * batching semantics, the fetch will end if the operation expires or the number of messages/data
+   * requested is fulfilled.
+   * @param opts
+   */
+  fetch(
+    opts?: Partial<{ count: number, expires?: number; batch?: number; max_bytes?: number }>,
+  ): Promise<QueuedIterator<JsMsg>>;
 
   /**
    * Read messages available to the Consumer
