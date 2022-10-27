@@ -14,16 +14,14 @@
  */
 import { Deferred, deferred } from "./util.ts";
 import {
-  Consumer,
   Empty,
-  JsMsg,
   Msg,
   NatsConnection,
   NatsError,
   Sub,
 } from "./types.ts";
 import { headers, JSONCodec, nuid } from "./mod.ts";
-import { validName } from "./jsutil.ts";
+import { validName, nanos } from "./jsutil.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -55,12 +53,12 @@ export type Service = {
 
 export type EndpointStats = {
   name: string;
-  requests: number;
-  errors: number;
-  lastError?: Error;
+  num_requests: number;
+  num_errors: number;
+  last_error?: Error;
   data?: unknown;
-  totalLatency: number;
-  averageLatency: number;
+  total_latency: number;
+  average_latency: number;
 };
 
 export type ServiceSchema = {
@@ -113,16 +111,14 @@ export type ServiceConfig = {
    * A list of endpoints, typically one, but some services may
    * want more than one endpoint
    */
-  endpoint:
-    | Endpoint
-    | JetStreamEndpoint;
+  endpoint:Endpoint;
   /**
    * A customized handler for the status of an endpoint. The
    * data returned by the endpoint will be serialized as is
    * @param endpoint
    */
   statusHandler?: (
-    endpoint: Endpoint | JetStreamEndpoint,
+    endpoint: Endpoint,
   ) => Promise<unknown | null>;
 };
 
@@ -146,14 +142,8 @@ type InternalEndpoint = {
   name: string;
 } & Endpoint;
 
-type JetStreamEndpoint = {
-  consumer: Consumer;
-  handler: (err: Error | null, msg: JsMsg) => Error | void;
-};
-
 type ServiceSubscription<T = unknown> =
   & Endpoint
-  & JetStreamEndpoint
   & {
     internal: boolean;
     sub: Sub<T>;
@@ -178,7 +168,7 @@ export type ServiceStats = {
   /**
    * An EndpointStatus per each endpoint on the service
    */
-  endpoints: EndpointStats[];
+  stats: EndpointStats[];
 };
 
 /**
@@ -209,7 +199,7 @@ export class ServiceImpl implements Service {
   internal: ServiceSubscription[];
   stopped: boolean;
   watched: Promise<void>[];
-  statuses: Map<Endpoint | JetStreamEndpoint, EndpointStats>;
+  statuses: Map<Endpoint, EndpointStats>;
   interval!: number;
 
   static controlSubject(verb: ServiceVerb, name = "", id = "") {
@@ -256,11 +246,6 @@ export class ServiceImpl implements Service {
     if (subject !== "") {
       return subject;
     }
-    const { consumer } = <JetStreamEndpoint> this.config.endpoint;
-    if (consumer) {
-      // FIXME: we have no context here on the js prefix etc.
-      return `$JS.API.CONSUMER.MSG.NEXT.${consumer.stream_name}.${consumer.config.name}`;
-    }
     return "";
   }
 
@@ -280,42 +265,6 @@ export class ServiceImpl implements Service {
     return this.config.version ?? "0.0.0";
   }
 
-  // async setupJetStream(h: JetStreamSrvHandler): Promise<void> {
-  //   const sv = h as SrvHandlerSub;
-  //   const status: SrvStatusEntry = {
-  //     requests: 0,
-  //     errors: 0,
-  //   };
-  //   try {
-  //     const c = await h.consumer.read({
-  //       callback: (jsmsg) => {
-  //         status.requests++;
-  //         h.handler(null, jsmsg);
-  //       },
-  //     }) as JetStreamReader;
-  //
-  //     c.closed
-  //       .then(() => {
-  //         this.close(
-  //           new Error(`required consumer for handler ${h.name} stopped`),
-  //         ).catch();
-  //       })
-  //       .catch((err) => {
-  //         status.errors++;
-  //         status.lastError = err;
-  //         this.close(
-  //           new Error(
-  //             `required consumer for handler ${h.name} errored: ${err.message}`,
-  //           ),
-  //         ).catch();
-  //       });
-  //
-  //     this.statuses.set(h, status);
-  //   } catch (err) {
-  //     this.close(err);
-  //   }
-  // }
-
   setupNATS(h: Endpoint, internal = false) {
     // internals don't use a queue
     const queue = internal ? "" : "q";
@@ -328,20 +277,20 @@ export class ServiceImpl implements Service {
     const { name } = h as InternalEndpoint;
     const status: EndpointStats = {
       name: name ? name : this.name,
-      requests: 0,
-      errors: 0,
-      totalLatency: 0,
-      averageLatency: 0,
+      num_requests: 0,
+      num_errors: 0,
+      total_latency: 0,
+      average_latency: 0,
     };
 
     sv.sub = this.nc.subscribe(subject, {
       callback: (err, msg) => {
         if (err) {
-          status.errors++;
-          status.lastError = err;
+          status.num_errors++;
+          status.last_error = err;
         }
         const start = Date.now();
-        status.requests++;
+        status.num_requests++;
         try {
           const v = handler(err, msg);
           if (v) {
@@ -351,8 +300,8 @@ export class ServiceImpl implements Service {
           const h = headers(400, err.message);
           msg?.respond(Empty, { headers: h });
         }
-        status.totalLatency += Date.now() - start;
-        status.averageLatency = status.totalLatency / status.requests;
+        status.total_latency += nanos(Date.now()) - nanos(start);
+        status.average_latency = Math.round(status.total_latency / status.num_requests);
       },
       queue,
     });
@@ -382,7 +331,7 @@ export class ServiceImpl implements Service {
       name: this.name,
       id: this.id,
       version: this.version,
-      endpoints: [],
+      stats: [],
     };
 
     // the status for the service handler
@@ -392,17 +341,17 @@ export class ServiceImpl implements Service {
         try {
           status.data = this.config.statusHandler(this.handler as Endpoint);
         } catch (err) {
-          status.lastError = err;
+          status.last_error = err;
         }
       }
-      ss.endpoints.push(status);
+      ss.stats.push(status);
     }
 
     if (internal) {
       this.internal.forEach((h) => {
         const status = this.statuses.get(h);
         if (status) {
-          ss.endpoints.push(status);
+          ss.stats.push(status);
         }
       });
     }
@@ -414,7 +363,7 @@ export class ServiceImpl implements Service {
     verb: ServiceVerb,
     handler: (err: NatsError | null, msg: Msg) => void,
   ) {
-    const v = `${verb}`.toLowerCase();
+    const v = `${verb}`.toUpperCase();
     this._doAddInternalHandler(`${v}-all`, verb, handler);
     this._doAddInternalHandler(`${v}-kind`, verb, handler, this.name);
     this._doAddInternalHandler(
@@ -508,17 +457,8 @@ export class ServiceImpl implements Service {
       this.setupNATS(h as unknown as Endpoint);
     });
 
-    handlers.forEach((h) => {
-      const { consumer } = h as JetStreamEndpoint;
-      if (!consumer) {
-        // this is a nats service
-        return;
-      }
-      // this.setupJetStream(h as unknown as JetStreamSrvHandler);
-    });
-
     return Promise.resolve(this);
-  }
+}
 
   close(err?: Error): Promise<null | Error> {
     if (this.stopped) {
@@ -551,10 +491,10 @@ export class ServiceImpl implements Service {
   reset(): void {
     const iter = this.statuses.values();
     for (const s of iter) {
-      s.averageLatency = 0;
-      s.errors = 0;
-      s.requests = 0;
-      s.totalLatency = 0;
+      s.average_latency = 0;
+      s.num_errors = 0;
+      s.num_requests = 0;
+      s.total_latency = 0;
       s.data = undefined;
     }
   }

@@ -19,6 +19,7 @@ import {
   QueuedIterator,
 } from "../nats-base-client/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { connect, StringCodec} from "../src/mod.ts";
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
@@ -96,41 +97,41 @@ Deno.test("service - basics", async () => {
   let status = jc.decode(r.data) as ServiceStats;
 
   function findStatus(n: string): EndpointStats | null {
-    const found = status.endpoints.find((se) => {
+    const found = status.stats.find((se) => {
       return se.name === n;
     });
     return found as EndpointStats || null;
   }
 
-  const paEntry = findStatus("ping-all");
+  const paEntry = findStatus("PING-all");
   assertExists(paEntry);
-  assertEquals(paEntry?.requests, 1);
-  assertEquals(paEntry?.errors, 0);
+  assertEquals(paEntry?.num_requests, 1);
+  assertEquals(paEntry?.num_errors, 0);
 
-  const pkEntry = findStatus("ping-kind");
+  const pkEntry = findStatus("PING-kind");
   assertExists(pkEntry);
-  assertEquals(pkEntry?.requests, 1);
-  assertEquals(pkEntry?.errors, 0);
+  assertEquals(pkEntry?.num_requests, 1);
+  assertEquals(pkEntry?.num_errors, 0);
 
-  const pEntry = findStatus("ping");
+  const pEntry = findStatus("PING");
   assertExists(pEntry);
-  assertEquals(pEntry?.requests, 1);
-  assertEquals(pEntry?.errors, 0);
+  assertEquals(pEntry?.num_requests, 1);
+  assertEquals(pEntry?.num_errors, 0);
 
-  const saEntry = findStatus("status-all");
+  const saEntry = findStatus("STATUS-all");
   assertExists(saEntry);
-  assertEquals(saEntry?.requests, 0);
-  assertEquals(saEntry?.errors, 0);
+  assertEquals(saEntry?.num_requests, 0);
+  assertEquals(saEntry?.num_errors, 0);
 
-  const skEntry = findStatus("status-kind");
+  const skEntry = findStatus("STATUS-kind");
   assertExists(skEntry);
-  assertEquals(skEntry?.requests, 0);
-  assertEquals(skEntry?.errors, 0);
+  assertEquals(skEntry?.num_requests, 0);
+  assertEquals(skEntry?.num_errors, 0);
 
-  const sEntry = findStatus("status");
+  const sEntry = findStatus("STATUS");
   assertExists(sEntry);
-  assertEquals(pEntry?.requests, 1);
-  assertEquals(pEntry?.errors, 0);
+  assertEquals(pEntry?.num_requests, 1);
+  assertEquals(pEntry?.num_errors, 0);
 
   msgs = await collect(nci.requestMany(
     ServiceImpl.controlSubject(ServiceVerb.STATUS),
@@ -170,8 +171,8 @@ Deno.test("service - basics", async () => {
   status = jc.decode(r.data) as ServiceStats;
   assertEquals(status.name, "test");
   assertEquals(status.id, srvA.id);
-  assertEquals(status.endpoints.length, 1);
-  assertEquals(status.endpoints[0].name, "test");
+  assertEquals(status.stats.length, 1);
+  assertEquals(status.stats[0].name, "test");
 
   await srvA.stop();
   await srvB.stop();
