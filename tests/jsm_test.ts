@@ -44,6 +44,7 @@ import {
   StorageType,
   StreamConfig,
   StreamInfo,
+  StreamSource,
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
@@ -72,6 +73,7 @@ import {
   assertExists,
 } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import { Feature } from "../nats-base-client/semver.ts";
+import { convertStreamSourceDomain } from "../nats-base-client/jsmstream_api.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1823,4 +1825,31 @@ Deno.test("jsm - stream names list filtering subject", async () => {
   }
 
   await cleanup(ns, nc);
+});
+
+Deno.test("jsm - remap domain", () => {
+  const sc = {} as Partial<StreamConfig>;
+  assertEquals(convertStreamSourceDomain(sc.mirror), undefined);
+  assertEquals(sc.sources?.map(convertStreamSourceDomain), undefined);
+
+  sc.mirror = {
+    name: "a",
+    domain: "a",
+  };
+
+  assertEquals(convertStreamSourceDomain(sc.mirror), {
+    name: "a",
+    external: { api: `$JS.a.API` },
+  });
+
+  const sources = [
+    { name: "x", domain: "x" },
+    { name: "b", external: { api: `$JS.b.API` } },
+  ] as Partial<StreamSource[]>;
+
+  const processed = sources.map(convertStreamSourceDomain);
+  assertEquals(processed, [
+    { name: "x", external: { api: "$JS.x.API" } },
+    { name: "b", external: { api: "$JS.b.API" } },
+  ]);
 });

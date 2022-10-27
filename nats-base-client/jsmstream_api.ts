@@ -16,6 +16,7 @@
 import {
   ApiPagedRequest,
   Empty,
+  ExternalStream,
   JetStreamOptions,
   KvStatus,
   Lister,
@@ -35,6 +36,7 @@ import {
   StreamListResponse,
   StreamMsgResponse,
   StreamNames,
+  StreamSource,
   StreamUpdateConfig,
   SuccessResponse,
 } from "./types.ts";
@@ -45,6 +47,27 @@ import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { kvPrefix, KvStatusImpl } from "./kv.ts";
 import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
 
+export function convertStreamSourceDomain(s?: StreamSource) {
+  if (s === undefined) {
+    return undefined;
+  }
+  const { domain } = s;
+  if (domain === undefined) {
+    return s;
+  }
+  const copy = Object.assign({}, s) as StreamSource;
+  delete copy.domain;
+
+  if (domain === "") {
+    return copy;
+  }
+  if (copy.external) {
+    throw new Error("domain and external are both set");
+  }
+  copy.external = { api: `$JS.${domain}.API` } as ExternalStream;
+  return copy;
+}
+
 export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
@@ -52,6 +75,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 
   async add(cfg = {} as Partial<StreamConfig>): Promise<StreamInfo> {
     validateStreamName(cfg.name);
+    cfg.mirror = convertStreamSourceDomain(cfg.mirror);
+    //@ts-ignore: the sources are either set or not - so no item should be undefined in the list
+    cfg.sources = cfg.sources?.map(convertStreamSourceDomain);
     const r = await this._request(
       `${this.prefix}.STREAM.CREATE.${cfg.name}`,
       cfg,
@@ -83,6 +109,9 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     validateStreamName(name);
     const old = await this.info(name);
     const update = Object.assign(old.config, cfg);
+    update.mirror = convertStreamSourceDomain(update.mirror);
+    //@ts-ignore: the sources are either set or not - so no item should be undefined in the list
+    update.sources = update.sources?.map(convertStreamSourceDomain);
 
     const r = await this._request(
       `${this.prefix}.STREAM.UPDATE.${name}`,

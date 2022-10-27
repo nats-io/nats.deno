@@ -838,4 +838,6 @@ The relationship between these is:
 
 ## JetStream
 
-JetStream is the NATS persistence engine providing streaming, message, and worker queues with At-Least-Once semantics. [Support for JetStream is built-in](jetstream.md).
+JetStream is the NATS persistence engine providing streaming, message, and
+worker queues with At-Least-Once semantics.
+[Support for JetStream is built-in](jetstream.md).
