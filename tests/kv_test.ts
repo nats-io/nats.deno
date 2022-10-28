@@ -1471,35 +1471,35 @@ Deno.test("kv - direct message", async () => {
   await cleanup(ns, nc);
 });
 
-// Deno.test("kv - republish", async () => {
-//   const { ns, nc } = await setup(jetstreamServerConf({}, true));
-//   if (await notCompatible(ns, nc, "2.9.0")) {
-//     return;
-//   }
-//
-//   const js = nc.jetstream();
-//   const kv = await js.views.kv("test", {
-//     republish: {
-//       src: ">",
-//       dest: "republished-kv.>",
-//     },
-//   }) as Bucket;
-//
-//   const sc = StringCodec();
-//
-//   const sub = nc.subscribe("republished-kv.>", { max: 1 });
-//   (async () => {
-//     for await (const m of sub) {
-//       assertEquals(m.subject, `republished-kv.${kv.subjectForKey("hello")}`);
-//       assertEquals(sc.decode(m.data), "world");
-//       assertEquals(m.headers?.get(DirectMsgHeaders.Stream), kv.bucketName());
-//     }
-//   })().then();
-//
-//   await kv.put("hello", sc.encode("world"));
-//   await sub.closed;
-//   await cleanup(ns, nc);
-// });
+Deno.test("kv - republish", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.9.0")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("test", {
+    republish: {
+      src: ">",
+      dest: "republished-kv.>",
+    },
+  }) as Bucket;
+
+  const sc = StringCodec();
+
+  const sub = nc.subscribe("republished-kv.>", { max: 1 });
+  (async () => {
+    for await (const m of sub) {
+      assertEquals(m.subject, `republished-kv.${kv.subjectForKey("hello")}`);
+      assertEquals(sc.decode(m.data), "world");
+      assertEquals(m.headers?.get(DirectMsgHeaders.Stream), kv.bucketName());
+    }
+  })().then();
+
+  await kv.put("hello", sc.encode("world"));
+  await sub.closed;
+  await cleanup(ns, nc);
+});
 
 Deno.test("kv - ttl is in nanos", async () => {
   const { ns, nc } = await setup(
@@ -1566,6 +1566,8 @@ Deno.test("kv - mirror cross domain", async () => {
   const sc = StringCodec();
   await kv.put("name", sc.encode("derek"));
   await kv.put("age", sc.encode("22"));
+  await kv.put("v", sc.encode("v"));
+  await kv.delete("v");
 
   const ljs = await lnc.jetstream();
   await ljs.views.kv("MIRROR", {
@@ -1578,19 +1580,27 @@ Deno.test("kv - mirror cross domain", async () => {
 
   for (let i = 0; i < 2000; i += 500) {
     si = await ljsm.streams.info("KV_MIRROR");
-    if (si.state.messages === 2) {
+    if (si.state.messages === 3) {
       break;
     }
     await delay(500);
   }
-  assertEquals(si.state.messages, 2);
+  assertEquals(si.state.messages, 3);
 
   const mkv = await ljs.views.kv("MIRROR");
   await mkv.put("name", sc.encode("rip"));
+  await mkv.put("v", sc.encode("v"));
 
   let e = await mkv.get("name");
   assert(e);
   assertEquals(sc.decode(e.value), "rip");
+  e = await mkv.get("v");
+  assert(e);
+  assertEquals(e.operation, "PUT");
+  await mkv.delete("v");
+  e = await mkv.get("v");
+  assert(e);
+  assertEquals(e.operation, "DEL");
 
   // access the origin kv via the leafnode
   const rjs = lnc.jetstream({ domain: "HUB" });
@@ -1599,6 +1609,14 @@ Deno.test("kv - mirror cross domain", async () => {
   e = await rkv.get("name");
   assert(e);
   assertEquals(sc.decode(e.value), "ivan");
+  await rkv.put("v", sc.encode("v"));
+  e = await rkv.get("v");
+  assert(e);
+  assertEquals(e.operation, "PUT");
+  await rkv.delete("v");
+  e = await rkv.get("v");
+  assert(e);
+  assertEquals(e.operation, "DEL");
 
   // shutdown the server
   await cleanup(ns, nc);

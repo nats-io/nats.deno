@@ -164,9 +164,9 @@ export class Bucket implements KV, KvRemove {
   bucket: string;
   direct!: boolean;
   codec!: KvCodecs;
-  pre: string;
-  putPre: string;
-  useJSPfx: boolean;
+  prefix: string;
+  editPrefix: string;
+  useJsPrefix: boolean;
   _prefixLen: number;
 
   constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
@@ -174,16 +174,10 @@ export class Bucket implements KV, KvRemove {
     this.jsm = jsm;
     this.js = js;
     this.bucket = bucket;
-    this.pre = kvSubjectPrefix;
-    this.putPre = "";
-    this.useJSPfx = false;
+    this.prefix = kvSubjectPrefix;
+    this.editPrefix = "";
+    this.useJsPrefix = false;
     this._prefixLen = 0;
-
-    const jsi = js as JetStreamClientImpl;
-    const prefix = jsi.prefix || "$JS.API";
-    if (prefix !== "$JS.API") {
-      this.pre = `${prefix}.${kvSubjectPrefix}`;
-    }
   }
 
   static async create(
@@ -221,7 +215,7 @@ export class Bucket implements KV, KvRemove {
     Object.assign(bucket, info);
     bucket.codec = opts.codec || NoopKvCodecs();
     bucket.direct = info.config.allow_direct ?? false;
-    bucket._mapStreamToKvs(info);
+    bucket.initializePrefixes(info);
 
     return bucket;
   }
@@ -322,13 +316,13 @@ export class Bucket implements KV, KvRemove {
         throw err;
       }
     }
-    this._mapStreamToKvs(info);
+    this.initializePrefixes(info);
   }
 
-  _mapStreamToKvs(info: StreamInfo) {
+  initializePrefixes(info: StreamInfo) {
     this._prefixLen = 0;
-    this.pre = `$KV.${this.bucket}`;
-    this.useJSPfx =
+    this.prefix = `$KV.${this.bucket}`;
+    this.useJsPrefix =
       (this.js as JetStreamClientImpl).opts.apiPrefix !== "$JS.API";
     const { mirror } = info.config;
     if (mirror) {
@@ -338,11 +332,11 @@ export class Bucket implements KV, KvRemove {
       }
       if (mirror.external && mirror.external.api !== "") {
         const mb = mirror.name.substring(kvPrefix.length);
-        this.useJSPfx = false;
-        this.pre = `$KV.${mb}`;
-        this.putPre = `${mirror.external.api}.$KV.${n}`;
+        this.useJsPrefix = false;
+        this.prefix = `$KV.${mb}`;
+        this.editPrefix = `${mirror.external.api}.$KV.${n}`;
       } else {
-        this.putPre = this.pre;
+        this.editPrefix = this.prefix;
       }
     }
   }
@@ -352,20 +346,28 @@ export class Bucket implements KV, KvRemove {
   }
 
   subjectForBucket(): string {
-    return `${this.pre}.${this.bucket}.>`;
+    return `${this.prefix}.${this.bucket}.>`;
   }
 
-  // subjectForKey(k: string, edit = false): string {
-  //   const chunks : string[] = [];
-  //   const jsi = this.js as JetStreamClientImpl;
-  //   if(this.useJSPfx) {
-  //     chunks.push(jsi.prefix || "$JS.API");
-  //   }
-  //   chunks.push()
-  //   return edit && this.putPre
-  //     ? `${this.putPre}.${k}`
-  //     : `${this.pre}.${this.bucket}.${k}`;
-  // }
+  subjectForKey(k: string, edit = false): string {
+    const builder: string[] = [];
+    if (edit) {
+      if (this.useJsPrefix) {
+        builder.push((this.js as JetStreamClientImpl).apiPrefix);
+      }
+      if (this.editPrefix !== "") {
+        builder.push(this.editPrefix);
+      } else {
+        builder.push(this.prefix);
+      }
+    } else {
+      if (this.prefix) {
+        builder.push(this.prefix);
+      }
+    }
+    builder.push(k);
+    return builder.join(".");
+  }
 
   fullKeyName(k: string): string {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
@@ -373,7 +375,7 @@ export class Bucket implements KV, KvRemove {
 
   get prefixLen(): number {
     if (this._prefixLen === 0) {
-      this._prefixLen = this.pre.length + 1;
+      this._prefixLen = this.prefix.length + 1;
     }
     return this._prefixLen;
   }
@@ -481,18 +483,7 @@ export class Bucket implements KV, KvRemove {
       h.set("Nats-Expected-Last-Subject-Sequence", `${opts.previousSeq}`);
     }
     try {
-      const builder: string[] = [];
-      if (this.useJSPfx) {
-        builder.push((this.js as JetStreamClientImpl).apiPrefix);
-      }
-      if (this.putPre !== "") {
-        builder.push(this.putPre);
-      } else {
-        builder.push(this.pre);
-      }
-      builder.push(ek);
-
-      const pa = await this.js.publish(builder.join("."), data, o);
+      const pa = await this.js.publish(this.subjectForKey(ek, true), data, o);
       return pa.seq;
     } catch (err) {
       const ne = err as NatsError;
@@ -512,13 +503,7 @@ export class Bucket implements KV, KvRemove {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
 
-    const c: string[] = [];
-    if (this.pre) {
-      c.push(this.pre);
-    }
-    c.push(ek);
-
-    let arg: MsgRequest = { last_by_subj: c.join(".") };
+    let arg: MsgRequest = { last_by_subj: this.subjectForKey(ek) };
     if (opts && opts.revision > 0) {
       arg = { seq: opts.revision };
     }
@@ -576,11 +561,7 @@ export class Bucket implements KV, KvRemove {
     i.stop();
     const min = Date.now() - olderMillis;
     const proms = buf.map((e) => {
-      const builder: string[] = [];
-      builder.push(this.pre);
-      builder.push(e.key);
-
-      const subj = builder.join(".");
+      const subj = this.subjectForKey(e.key);
       if (e.created.getTime() >= min) {
         return this.jsm.streams.purge(this.stream, { filter: subj, keep: 1 });
       } else {
@@ -621,15 +602,7 @@ export class Bucket implements KV, KvRemove {
     if (op === "PURGE") {
       h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
     }
-
-    const builder: string[] = [];
-    if (this.useJSPfx) {
-      builder.push((this.js as JetStreamClientImpl).apiPrefix || `$JS.API`);
-    }
-    builder.push(this.pre);
-    builder.push(ek);
-
-    await this.js.publish(builder.join("."), Empty, { headers: h });
+    await this.js.publish(this.subjectForKey(ek, true), Empty, { headers: h });
   }
 
   _buildCC(
