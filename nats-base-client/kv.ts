@@ -167,6 +167,7 @@ export class Bucket implements KV, KvRemove {
   pre: string;
   putPre: string;
   useJSPfx: boolean;
+  _prefixLen: number;
 
   constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
     validateBucket(bucket);
@@ -176,6 +177,7 @@ export class Bucket implements KV, KvRemove {
     this.pre = kvSubjectPrefix;
     this.putPre = "";
     this.useJSPfx = false;
+    this._prefixLen = 0;
 
     const jsi = js as JetStreamClientImpl;
     const prefix = jsi.prefix || "$JS.API";
@@ -324,6 +326,7 @@ export class Bucket implements KV, KvRemove {
   }
 
   _mapStreamToKvs(info: StreamInfo) {
+    this._prefixLen = 0;
     this.pre = `$KV.${this.bucket}`;
     this.useJSPfx =
       (this.js as JetStreamClientImpl).opts.apiPrefix !== "$JS.API";
@@ -368,12 +371,12 @@ export class Bucket implements KV, KvRemove {
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
   }
 
-  // get prefixLen(): number {
-  //   if (this._prefixLen === 0) {
-  //     this._prefixLen = `${kvSubjectPrefix}.${this.bucket}.`.length;
-  //   }
-  //   return this._prefixLen;
-  // }
+  get prefixLen(): number {
+    if (this._prefixLen === 0) {
+      this._prefixLen = this.pre.length + 1;
+    }
+    return this._prefixLen;
+  }
 
   encodeKey(key: string): string {
     const chunks: string[] = [];
@@ -428,7 +431,7 @@ export class Bucket implements KV, KvRemove {
   smToEntry(sm: StoredMsg): KvEntry {
     return {
       bucket: this.bucket,
-      key: sm.subject.substring(this.pre.length + 1),
+      key: sm.subject.substring(this.prefixLen),
       value: sm.data,
       delta: 0,
       created: sm.time,
@@ -439,7 +442,7 @@ export class Bucket implements KV, KvRemove {
   }
 
   jmToEntry(jm: JsMsg): KvEntry {
-    const key = this.decodeKey(jm.subject.substring(this.pre.length + 1));
+    const key = this.decodeKey(jm.subject.substring(this.prefixLen));
     return {
       bucket: this.bucket,
       key: key,
@@ -820,7 +823,7 @@ export class Bucket implements KV, KvRemove {
       for await (const jm of sub) {
         const op = jm.headers?.get(kvOperationHdr);
         if (op !== "DEL" && op !== "PURGE") {
-          const key = this.decodeKey(jm.subject.substring(this.pre.length + 1));
+          const key = this.decodeKey(jm.subject.substring(this.prefixLen));
           keys.push(key);
         }
         if (jm.info.pending === 0) {
