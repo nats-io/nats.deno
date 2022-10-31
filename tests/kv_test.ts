@@ -1536,3 +1536,148 @@ Deno.test("kv - size", async () => {
   assertEquals(status.size, status.streamInfo.state.bytes);
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - mirror cross domain", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({
+      server_name: "HUB",
+      jetstream: { domain: "HUB" },
+    }, true),
+  );
+  // the ports file doesn't report leaf node
+  const varz = await ns.varz() as unknown;
+
+  const { ns: lns, nc: lnc } = await setup(
+    jetstreamServerConf({
+      server_name: "LEAF",
+      jetstream: { domain: "LEAF" },
+      leafnodes: {
+        remotes: [
+          //@ts-ignore: direct query
+          { url: `leaf://127.0.0.1:${varz.leaf.port}` },
+        ],
+      },
+    }),
+  );
+
+  // setup a KV
+  const js = nc.jetstream();
+  const kv = await js.views.kv("TEST");
+  const sc = StringCodec();
+  const m = new Map<string, KvEntry[]>();
+
+  // watch notifications on a on "name"
+  async function watch(kv: KV, bucket: string, key: string) {
+    const iter = await kv.watch({ key });
+    const buf: KvEntry[] = [];
+    m.set(bucket, buf);
+
+    const done = (async () => {
+      for await (const e of iter) {
+        buf.push(e);
+      }
+    })().then();
+
+    return done;
+  }
+
+  watch(kv, "test", "name").then();
+
+  await kv.put("name", sc.encode("derek"));
+  await kv.put("age", sc.encode("22"));
+  await kv.put("v", sc.encode("v"));
+  await kv.delete("v");
+  await nc.flush();
+  let a = m.get("test");
+  assert(a);
+  assertEquals(a.length, 1);
+  assertEquals(sc.decode(a[0].value), "derek");
+
+  const ljs = await lnc.jetstream();
+  await ljs.views.kv("MIRROR", {
+    mirror: { name: "TEST", domain: "HUB" },
+  });
+
+  // setup a Mirror
+  const ljsm = await lnc.jetstreamManager();
+  let si = await ljsm.streams.info("KV_MIRROR");
+  assertEquals(si.config.mirror_direct, true);
+
+  for (let i = 0; i < 2000; i += 500) {
+    si = await ljsm.streams.info("KV_MIRROR");
+    if (si.state.messages === 3) {
+      break;
+    }
+    await delay(500);
+  }
+  assertEquals(si.state.messages, 3);
+
+  async function checkEntry(kv: KV, key: string, value: string, op: string) {
+    const e = await kv.get(key);
+    assert(e);
+    assertEquals(e.operation, op);
+    if (value !== "") {
+      assertEquals(sc.decode(e.value), value);
+    }
+  }
+
+  async function t(kv: KV, name: string, old?: string) {
+    const histIter = await kv.history();
+    const hist: string[] = [];
+    for await (const e of histIter) {
+      hist.push(e.key);
+    }
+
+    if (old) {
+      await checkEntry(kv, "name", old, "PUT");
+      assertEquals(hist.length, 3);
+      assertArrayIncludes(hist, ["name", "age", "v"]);
+    } else {
+      assertEquals(hist.length, 0);
+    }
+
+    await kv.put("name", sc.encode(name));
+    await checkEntry(kv, "name", name, "PUT");
+
+    await kv.put("v", sc.encode("v"));
+    await checkEntry(kv, "v", "v", "PUT");
+
+    await kv.delete("v");
+    await checkEntry(kv, "v", "", "DEL");
+
+    const keysIter = await kv.keys();
+    const keys: string[] = [];
+    for await (const k of keysIter) {
+      keys.push(k);
+    }
+    assertEquals(keys.length, 2);
+    assertArrayIncludes(keys, ["name", "age"]);
+  }
+
+  const mkv = await ljs.views.kv("MIRROR");
+
+  watch(mkv, "mirror", "name").then();
+  await t(mkv, "rip", "derek");
+  a = m.get("mirror");
+  assert(a);
+  assertEquals(a.length, 2);
+  assertEquals(sc.decode(a[1].value), "rip");
+
+  // access the origin kv via the leafnode
+  const rjs = lnc.jetstream({ domain: "HUB" });
+  const rkv = await rjs.views.kv("TEST") as Bucket;
+  assertEquals(rkv.prefix, "$KV.TEST");
+  watch(rkv, "origin", "name").then();
+  await t(rkv, "ivan", "rip");
+  await delay(1000);
+  a = m.get("origin");
+  assert(a);
+  assertEquals(a.length, 2);
+  assertEquals(sc.decode(a[1].value), "ivan");
+
+  // shutdown the server
+  await cleanup(ns, nc);
+  await checkEntry(mkv, "name", "ivan", "PUT");
+
+  await cleanup(lns, lnc);
+});
