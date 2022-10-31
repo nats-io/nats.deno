@@ -1228,6 +1228,14 @@ export interface ConsumerOptsBuilder {
    * @param durable
    */
   bind(stream: string, durable: string): this;
+
+  /**
+   * Specify the name of the stream, avoiding a lookup where the stream is located by
+   * searching for a subject.
+   * @param stream
+   */
+  bindStream(stream: string): this;
+
   /**
    * Pull consumer only - Sets the max number of messages that can be pulled in a batch
    * that can be requested by a client during a pull.

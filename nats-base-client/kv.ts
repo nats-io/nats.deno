@@ -370,6 +370,9 @@ export class Bucket implements KV, KvRemove {
   }
 
   fullKeyName(k: string): string {
+    if (this.prefix !== "") {
+      return `${this.prefix}.${k}`;
+    }
     return `${kvSubjectPrefix}.${this.bucket}.${k}`;
   }
 
@@ -645,6 +648,7 @@ export class Bucket implements KV, KvRemove {
     const cc = this._buildCC(k, true, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
+    copts.bindStream(this.stream);
     copts.orderedConsumer();
     copts.callback((err, jm) => {
       if (err) {
@@ -722,6 +726,7 @@ export class Bucket implements KV, KvRemove {
     const cc = this._buildCC(k, false, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
+    copts.bindStream(this.stream);
     copts.orderedConsumer();
     copts.callback((err, jm) => {
       if (err) {
@@ -789,6 +794,7 @@ export class Bucket implements KV, KvRemove {
     const cc = this._buildCC(k, false, { headers_only: true });
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
+    copts.bindStream(this.stream);
     copts.orderedConsumer();
 
     const sub = await this.js.subscribe(subj, copts);

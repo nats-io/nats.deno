@@ -1560,20 +1560,45 @@ Deno.test("kv - mirror cross domain", async () => {
     }),
   );
 
+  // setup a KV
   const js = nc.jetstream();
-
   const kv = await js.views.kv("TEST");
   const sc = StringCodec();
+  const m = new Map<string, KvEntry[]>();
+
+  // watch notifications on a on "name"
+  async function watch(kv: KV, bucket: string, key: string) {
+    const iter = await kv.watch({ key });
+    const buf: KvEntry[] = [];
+    m.set(bucket, buf);
+
+    const done = (async () => {
+      for await (const e of iter) {
+        buf.push(e);
+      }
+    })().then();
+
+    return done;
+  }
+
+  watch(kv, "test", "name").then();
+
   await kv.put("name", sc.encode("derek"));
   await kv.put("age", sc.encode("22"));
   await kv.put("v", sc.encode("v"));
   await kv.delete("v");
+  await nc.flush();
+  let a = m.get("test");
+  assert(a);
+  assertEquals(a.length, 1);
+  assertEquals(sc.decode(a[0].value), "derek");
 
   const ljs = await lnc.jetstream();
   await ljs.views.kv("MIRROR", {
     mirror: { name: "TEST", domain: "HUB" },
   });
 
+  // setup a Mirror
   const ljsm = await lnc.jetstreamManager();
   let si = await ljsm.streams.info("KV_MIRROR");
   assertEquals(si.config.mirror_direct, true);
@@ -1587,43 +1612,72 @@ Deno.test("kv - mirror cross domain", async () => {
   }
   assertEquals(si.state.messages, 3);
 
-  const mkv = await ljs.views.kv("MIRROR");
-  await mkv.put("name", sc.encode("rip"));
-  await mkv.put("v", sc.encode("v"));
+  async function checkEntry(kv: KV, key: string, value: string, op: string) {
+    const e = await kv.get(key);
+    assert(e);
+    assertEquals(e.operation, op);
+    if (value !== "") {
+      assertEquals(sc.decode(e.value), value);
+    }
+  }
 
-  let e = await mkv.get("name");
-  assert(e);
-  assertEquals(sc.decode(e.value), "rip");
-  e = await mkv.get("v");
-  assert(e);
-  assertEquals(e.operation, "PUT");
-  await mkv.delete("v");
-  e = await mkv.get("v");
-  assert(e);
-  assertEquals(e.operation, "DEL");
+  async function t(kv: KV, name: string, old?: string) {
+    const histIter = await kv.history();
+    const hist: string[] = [];
+    for await (const e of histIter) {
+      hist.push(e.key);
+    }
+
+    if (old) {
+      await checkEntry(kv, "name", old, "PUT");
+      assertEquals(hist.length, 3);
+      assertArrayIncludes(hist, ["name", "age", "v"]);
+    } else {
+      assertEquals(hist.length, 0);
+    }
+
+    await kv.put("name", sc.encode(name));
+    await checkEntry(kv, "name", name, "PUT");
+
+    await kv.put("v", sc.encode("v"));
+    await checkEntry(kv, "v", "v", "PUT");
+
+    await kv.delete("v");
+    await checkEntry(kv, "v", "", "DEL");
+
+    const keysIter = await kv.keys();
+    const keys: string[] = [];
+    for await (const k of keysIter) {
+      keys.push(k);
+    }
+    assertEquals(keys.length, 2);
+    assertArrayIncludes(keys, ["name", "age"]);
+  }
+
+  const mkv = await ljs.views.kv("MIRROR");
+
+  watch(mkv, "mirror", "name").then();
+  await t(mkv, "rip", "derek");
+  a = m.get("mirror");
+  assert(a);
+  assertEquals(a.length, 2);
+  assertEquals(sc.decode(a[1].value), "rip");
 
   // access the origin kv via the leafnode
   const rjs = lnc.jetstream({ domain: "HUB" });
-  const rkv = await rjs.views.kv("TEST");
-  await rkv.put("name", sc.encode("ivan"));
-  e = await rkv.get("name");
-  assert(e);
-  assertEquals(sc.decode(e.value), "ivan");
-  await rkv.put("v", sc.encode("v"));
-  e = await rkv.get("v");
-  assert(e);
-  assertEquals(e.operation, "PUT");
-  await rkv.delete("v");
-  e = await rkv.get("v");
-  assert(e);
-  assertEquals(e.operation, "DEL");
+  const rkv = await rjs.views.kv("TEST") as Bucket;
+  assertEquals(rkv.prefix, "$KV.TEST");
+  watch(rkv, "origin", "name").then();
+  await t(rkv, "ivan", "rip");
+  await delay(1000);
+  a = m.get("origin");
+  assert(a);
+  assertEquals(a.length, 2);
+  assertEquals(sc.decode(a[1].value), "ivan");
 
   // shutdown the server
   await cleanup(ns, nc);
-
-  e = await mkv.get("name");
-  assert(e);
-  assertEquals(sc.decode(e.value), "ivan");
+  await checkEntry(mkv, "name", "ivan", "PUT");
 
   await cleanup(lns, lnc);
 });
