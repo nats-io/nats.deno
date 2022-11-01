@@ -244,7 +244,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.transport.disconnect();
   }
 
-  async disconnected(_err?: Error): Promise<void> {
+  async disconnected(err?: Error): Promise<void> {
     this.dispatchStatus(
       {
         type: Events.Disconnect,
@@ -265,7 +265,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
           this._close(err);
         });
     } else {
-      await this._close();
+      await this._close(err);
     }
   }
 
