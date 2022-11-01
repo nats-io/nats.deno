@@ -192,9 +192,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.reset();
     const pongs = this.pongs;
     this.pongs = [];
-    // reject the pongs
+    // reject the pongs - the disconnect from here shouldn't have a trace
+    // because that confuses API consumers
+    const err = NatsError.errorForCode(ErrorCode.Disconnect);
+    err.stack = "";
     pongs.forEach((p) => {
-      p.reject(NatsError.errorForCode(ErrorCode.Disconnect));
+      p.reject(err);
     });
     this.parser = new Parser(this);
     this.infoReceived = false;
