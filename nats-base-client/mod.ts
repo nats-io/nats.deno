@@ -64,6 +64,7 @@ export type {
   Destroyable,
   DirectMsgHeaders,
   DispatchedFn,
+  ExternalStream,
   IngestionFilterFn,
   IngestionFilterFnResult,
   JetStreamAccountStats,

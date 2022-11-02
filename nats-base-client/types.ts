@@ -201,9 +201,6 @@ export interface NatsConnection {
   rtt(): Promise<number>;
 }
 
-/**
- * ConnectionOptions does something
- */
 export interface ConnectionOptions {
   /**
    * When the server requires authentication, set an {@link Authenticator}.
@@ -470,6 +467,9 @@ export interface ServerInfo {
    * The client's IP as seen by the server
    */
   "client_ip"?: string;
+  /**
+   * The name or ID of the cluster
+   */
   cluster?: string;
   /**
    * Other servers available on the connected cluster
@@ -827,7 +827,6 @@ export interface JetStreamPublishOptions {
    * The number of milliseconds to wait for the PubAck
    */
   timeout: number;
-  // ackWait: Nanos;
   /**
    * Headers associated with the message. You can create an instance of
    * MsgHdrs with the headers() function.
@@ -863,9 +862,14 @@ export interface JetStreamPublishOptions {
  * A JetStream interface that allows you to request the ConsumerInfo on the backing object.
  */
 export interface ConsumerInfoable {
+  /** The consumer info for the consumer */
   consumerInfo(): Promise<ConsumerInfo>;
 }
 
+/**
+ * An interface that reports via a promise when an object such as a connection
+ * or subscription closes.
+ */
 export interface Closed {
   /**
    * A promise that when resolves, indicates that the object is closed.
@@ -1862,7 +1866,7 @@ export interface Republish {
 export type ExternalStream = {
   /**
    * API prefix for the remote stream - the API prefix should be something like
-   * `$JS.<domain>.API
+   * `$JS.domain.API where domain is the JetStream domain on the NATS server configuration.
    */
   api: string;
   /**
