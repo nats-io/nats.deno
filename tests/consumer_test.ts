@@ -542,156 +542,156 @@ Deno.test("consumer - ephemeral", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumer - code sample", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
-  // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
-  // IF major version bump, I would change this to return the actual consumer, as consumers have
-  // a direct API to get info() on them, and since we are not doing anything yet, there are no
-  // additional RPC calls.
-  await jsm.consumers.add(stream, { durable_name: "A" });
+// Deno.test("consumer - code sample", async () => {
+//   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+//   const { stream } = await initStream(nc);
+//   const jsm = await nc.jetstreamManager();
+//   // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
+//   // IF major version bump, I would change this to return the actual consumer, as consumers have
+//   // a direct API to get info() on them, and since we are not doing anything yet, there are no
+//   // additional RPC calls.
+//   await jsm.consumers.add(stream, { durable_name: "A" });
+//
+//   // retrieve the consumer
+//   const consumer = await jsm.consumers.get(stream, "A");
+//
+//   // no options - returns an iterator with default buffering settings
+//   const iter = await consumer.read() as QueuedIterator<JsMsg>;
+//   for await (const m of iter) {
+//     // process messages
+//     console.log(m.subject);
+//     // if we are done, we can simply break
+//     break;
+//   }
+//   // some examples on options
+//   await consumer.read({
+//     inflight_limit: {
+//       batch: 1000,
+//       expires: 15000,
+//       idle_heartbeat: 5000,
+//     },
+//   });
+//
+//   // a callback example looks almost exactly the same, except that instead
+//   // of an iterator, you get a JetStreamReader, which gives you stop(), and closed
+//   const reader = await consumer.read({
+//     callback: (m: JsMsg) => {
+//       console.log(m.subject);
+//     },
+//   }) as JetStreamReader;
+//
+//   reader.closed.then((err: NatsError | null) => {
+//     if (err) {
+//       console.error(`Reader was closed with an error: ${err.message}`);
+//     } else {
+//       console.error(`Reader closed`);
+//     }
+//   });
+//
+//   // stop the reader
+//   setTimeout(() => {
+//     reader.stop();
+//   }, 2000);
+//
+//   await cleanup(ns, nc);
+// });
+//
+// Deno.test("consumer - redundant API", async () => {
+//   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+//   const { stream } = await initStream(nc);
+//   const jsm = await nc.jetstreamManager();
+//   // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
+//   // IF major version bump, I would change this to return the actual consumer, as consumers have
+//   // a direct API to get info() on them, and since we are not doing anything yet, there are no
+//   // additional RPC calls.
+//   await jsm.consumers.add(stream, { durable_name: "A" });
+//
+//   // retrieve the consumer
+//   const consumer = await jsm.consumers.get(stream, "A");
+//
+//   // next() WAS a polling API as originally defined - it was intended to return a single message
+//   while (true) {
+//     // wait for a message at most for one minute
+//     const m = await consumer.next({ expires: 60000 });
+//     console.log(m.subject);
+//     break;
+//   }
+//
+//   // if we are asking for multiple messages, the above API is not any different in practice
+//   // to using read(), read() will buffer messages, and as necessary re-fetch additional messages
+//   // with the caveat that at most batch messages / or bytes will be left outstanding if the client
+//   // breaks from the loop - or the consumer could offer a `drain()` where it won't refresh
+//   // pulls, but when all requests close, terminates the iterator.
+//   const iter = await consumer.read({
+//     inflight_limit: { batch: 10 },
+//   }) as QueuedIterator<JsMsg>;
+//   for await (const m of iter) {
+//     console.log(m.subject);
+//     break;
+//   }
+//
+//   await cleanup(ns, nc);
+// });
 
-  // retrieve the consumer
-  const consumer = await jsm.consumers.get(stream, "A");
-
-  // no options - returns an iterator with default buffering settings
-  const iter = await consumer.read() as QueuedIterator<JsMsg>;
-  for await (const m of iter) {
-    // process messages
-    console.log(m.subject);
-    // if we are done, we can simply break
-    break;
-  }
-  // some examples on options
-  await consumer.read({
-    inflight_limit: {
-      batch: 1000,
-      expires: 15000,
-      idle_heartbeat: 5000,
-    },
-  });
-
-  // a callback example looks almost exactly the same, except that instead
-  // of an iterator, you get a JetStreamReader, which gives you stop(), and closed
-  const reader = await consumer.read({
-    callback: (m: JsMsg) => {
-      console.log(m.subject);
-    },
-  }) as JetStreamReader;
-
-  reader.closed.then((err: NatsError | null) => {
-    if (err) {
-      console.error(`Reader was closed with an error: ${err.message}`);
-    } else {
-      console.error(`Reader closed`);
-    }
-  });
-
-  // stop the reader
-  setTimeout(() => {
-    reader.stop();
-  }, 2000);
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("consumer - redundant API", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
-  // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
-  // IF major version bump, I would change this to return the actual consumer, as consumers have
-  // a direct API to get info() on them, and since we are not doing anything yet, there are no
-  // additional RPC calls.
-  await jsm.consumers.add(stream, { durable_name: "A" });
-
-  // retrieve the consumer
-  const consumer = await jsm.consumers.get(stream, "A");
-
-  // next() WAS a polling API as originally defined - it was intended to return a single message
-  while (true) {
-    // wait for a message at most for one minute
-    const m = await consumer.next({ expires: 60000 });
-    console.log(m.subject);
-    break;
-  }
-
-  // if we are asking for multiple messages, the above API is not any different in practice
-  // to using read(), read() will buffer messages, and as necessary re-fetch additional messages
-  // with the caveat that at most batch messages / or bytes will be left outstanding if the client
-  // breaks from the loop - or the consumer could offer a `drain()` where it won't refresh
-  // pulls, but when all requests close, terminates the iterator.
-  const iter = await consumer.read({
-    inflight_limit: { batch: 10 },
-  }) as QueuedIterator<JsMsg>;
-  for await (const m of iter) {
-    console.log(m.subject);
-    break;
-  }
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("consumer - update", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
-  const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
-  // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
-  // IF major version bump, I would change this to return the actual consumer, as consumers have
-  // a direct API to get info() on them, and since we are not doing anything yet, there are no
-  // additional RPC calls.
-  await jsm.consumers.add(stream, { durable_name: "A" });
-
-  // retrieve the consumer
-  const consumer = await jsm.consumers.get(stream, "A");
-  let iter: QueuedIterator<JsMsg>;
-  while (true) {
-    iter = await consumer.fetch({ count: 10 });
-    for await (const _m of iter) {
-      // do something
-    }
-    // stop by not calling fetch after processing messages
-    break;
-  }
-
-  // no options - returns an iterator with default buffering settings
-  iter = await consumer.read() as QueuedIterator<JsMsg>;
-  for await (const m of iter) {
-    // process messages
-    console.log(m.subject);
-    // if we are done, we can simply break
-    break;
-  }
-  // some examples on options
-  await consumer.read({
-    inflight_limit: {
-      batch: 1000,
-      expires: 15000,
-      idle_heartbeat: 5000,
-    },
-  });
-
-  // a callback example looks almost exactly the same, except that instead
-  // of an iterator, you get a JetStreamReader, which gives you stop(), and closed
-  const reader = await consumer.read({
-    callback: (m: JsMsg) => {
-      console.log(m.subject);
-    },
-  }) as JetStreamReader;
-
-  reader.closed.then((err: NatsError | null) => {
-    if (err) {
-      console.error(`Reader was closed with an error: ${err.message}`);
-    } else {
-      console.error(`Reader closed`);
-    }
-  });
-
-  // stop the reader
-  setTimeout(() => {
-    reader.stop();
-  }, 2000);
-
-  await cleanup(ns, nc);
-});
+// Deno.test("consumer - update", async () => {
+//   const { ns, nc } = await setup(jetstreamServerConf({}, true));
+//   const { stream } = await initStream(nc);
+//   const jsm = await nc.jetstreamManager();
+//   // consumers.add() creates a consumer and returns an info - this is the existing API since the epoch
+//   // IF major version bump, I would change this to return the actual consumer, as consumers have
+//   // a direct API to get info() on them, and since we are not doing anything yet, there are no
+//   // additional RPC calls.
+//   await jsm.consumers.add(stream, { durable_name: "A" });
+//
+//   // retrieve the consumer
+//   const consumer = await jsm.consumers.get(stream, "A");
+//   let iter: QueuedIterator<JsMsg>;
+//   while (true) {
+//     iter = await consumer.fetch({ count: 10 });
+//     for await (const _m of iter) {
+//       // do something
+//     }
+//     // stop by not calling fetch after processing messages
+//     break;
+//   }
+//
+//   // no options - returns an iterator with default buffering settings
+//   iter = await consumer.read() as QueuedIterator<JsMsg>;
+//   for await (const m of iter) {
+//     // process messages
+//     console.log(m.subject);
+//     // if we are done, we can simply break
+//     break;
+//   }
+//   // some examples on options
+//   await consumer.read({
+//     inflight_limit: {
+//       batch: 1000,
+//       expires: 15000,
+//       idle_heartbeat: 5000,
+//     },
+//   });
+//
+//   // a callback example looks almost exactly the same, except that instead
+//   // of an iterator, you get a JetStreamReader, which gives you stop(), and closed
+//   const reader = await consumer.read({
+//     callback: (m: JsMsg) => {
+//       console.log(m.subject);
+//     },
+//   }) as JetStreamReader;
+//
+//   reader.closed.then((err: NatsError | null) => {
+//     if (err) {
+//       console.error(`Reader was closed with an error: ${err.message}`);
+//     } else {
+//       console.error(`Reader closed`);
+//     }
+//   });
+//
+//   // stop the reader
+//   setTimeout(() => {
+//     reader.stop();
+//   }, 2000);
+//
+//   await cleanup(ns, nc);
+// });

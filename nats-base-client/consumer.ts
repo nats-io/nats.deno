@@ -168,7 +168,7 @@ export class ExportedConsumerImpl implements ExportedConsumer {
         },
       });
       sub.closed.then(() => {
-        console.log("sub closed");
+        qi.stop();
       });
     } catch (err) {
       qi.stop(err);
