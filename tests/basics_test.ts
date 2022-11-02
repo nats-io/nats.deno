@@ -915,7 +915,7 @@ Deno.test("basics - rtt", async () => {
     reconnectTimeWait: 250,
   });
   const rtt = await nc.rtt();
-  assert(rtt > 0);
+  assert(rtt > 0, `rtt was expected greater than 0: ${rtt}`);
 
   await ns.stop();
   await delay(500);
