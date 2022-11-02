@@ -228,6 +228,9 @@ export function addService(
   nc: NatsConnection,
   config: ServiceConfig,
 ): Promise<Service> {
+  console.log(
+    `\u001B[33m >> service framework is preview functionality \u001B[0m`,
+  );
   const s = new ServiceImpl(nc, config);
   try {
     return s.start();
