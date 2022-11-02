@@ -19,7 +19,6 @@ import {
   QueuedIterator,
 } from "../nats-base-client/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { connect, StringCodec} from "../src/mod.ts";
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});

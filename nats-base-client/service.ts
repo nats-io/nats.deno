@@ -13,15 +13,9 @@
  * limitations under the License.
  */
 import { Deferred, deferred } from "./util.ts";
-import {
-  Empty,
-  Msg,
-  NatsConnection,
-  NatsError,
-  Sub,
-} from "./types.ts";
+import { Empty, Msg, NatsConnection, NatsError, Sub } from "./types.ts";
 import { headers, JSONCodec, nuid } from "./mod.ts";
-import { validName, nanos } from "./jsutil.ts";
+import { nanos, validName } from "./jsutil.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -111,7 +105,7 @@ export type ServiceConfig = {
    * A list of endpoints, typically one, but some services may
    * want more than one endpoint
    */
-  endpoint:Endpoint;
+  endpoint: Endpoint;
   /**
    * A customized handler for the status of an endpoint. The
    * data returned by the endpoint will be serialized as is
@@ -301,7 +295,9 @@ export class ServiceImpl implements Service {
           msg?.respond(Empty, { headers: h });
         }
         status.total_latency += nanos(Date.now()) - nanos(start);
-        status.average_latency = Math.round(status.total_latency / status.num_requests);
+        status.average_latency = Math.round(
+          status.total_latency / status.num_requests,
+        );
       },
       queue,
     });
@@ -458,7 +454,7 @@ export class ServiceImpl implements Service {
     });
 
     return Promise.resolve(this);
-}
+  }
 
   close(err?: Error): Promise<null | Error> {
     if (this.stopped) {
