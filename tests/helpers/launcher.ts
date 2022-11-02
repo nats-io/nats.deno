@@ -473,6 +473,7 @@ export class NatsServer implements PortInfo {
     conf.cluster.name = ns.clusterName;
     conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
     conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
+
     return NatsServer.start(conf, debug);
   }
 
@@ -485,6 +486,8 @@ export class NatsServer implements PortInfo {
     conf.host = conf.host || "127.0.0.1";
     conf.port = conf.port || -1;
     conf.http = conf.http || "127.0.0.1:-1";
+    conf.leafnodes = conf.leafnodes || {};
+    conf.leafnodes.listen = conf.leafnodes.listen || "127.0.0.1:-1";
 
     const confFile = await Deno.makeTempFileSync();
     await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));

@@ -1030,6 +1030,11 @@ export interface JetStreamClient {
   views: Views;
 
   /**
+   * Returns the JS API prefix as processed from the JetStream Options
+   */
+  apiPrefix: string;
+
+  /**
    * Returns the Consumer configured for the specified stream having the specified name.
    * {@link Consumer} present a simplified construct for handling JetStream messages.
    * @param stream
@@ -1256,6 +1261,14 @@ export interface ConsumerOptsBuilder {
    * @param durable
    */
   bind(stream: string, durable: string): this;
+
+  /**
+   * Specify the name of the stream, avoiding a lookup where the stream is located by
+   * searching for a subject.
+   * @param stream
+   */
+  bindStream(stream: string): this;
+
   /**
    * Pull consumer only - Sets the max number of messages that can be pulled in a batch
    * that can be requested by a client during a pull.
@@ -1895,6 +1908,18 @@ export interface Republish {
   "headers_only"?: boolean;
 }
 
+export type ExternalStream = {
+  /**
+   * API prefix for the remote stream - the API prefix should be something like
+   * `$JS.<domain>.API
+   */
+  api: string;
+  /**
+   * Deliver prefix for the remote stream
+   */
+  deliver?: string;
+};
+
 export interface StreamSource {
   /**
    * Name of the stream source
@@ -1913,6 +1938,17 @@ export interface StreamSource {
    * on-boarded.
    */
   "filter_subject"?: string;
+  /**
+   * This value cannot be set if domain is set
+   */
+  external?: ExternalStream;
+  /**
+   * This field is a convenience for setting up an ExternalStream.
+   * If set, the value here is used to calculate the JetStreamAPI prefix.
+   * This field is never serialized to the server. This value cannot be set
+   * if external is set.
+   */
+  domain?: string;
 }
 
 export interface Placement {
@@ -2706,6 +2742,14 @@ export interface KvLimits {
    * Republishes edits to the KV on a NATS core subject.
    */
   republish: Republish;
+  /**
+   * Maintains a 1:1 mirror of another kv stream with name matching this property.
+   */
+  mirror?: StreamSource;
+  /**
+   * List of Stream names to replicate into this KV
+   */
+  sources?: StreamSource[];
   /**
    * @deprecated: use placement
    */

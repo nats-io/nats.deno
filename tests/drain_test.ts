@@ -229,7 +229,8 @@ Deno.test("drain - reject subscription drain on closed sub iter", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("foo");
   sub.unsubscribe();
-  for await (const m of sub) {
+  for await (const _m of sub) {
+    // nothing to do here
   }
   await assertThrowsAsyncErrorCode(() => {
     return sub.drain();

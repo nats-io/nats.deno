@@ -28,7 +28,6 @@ import { NatsServer } from "./helpers/launcher.ts";
 import {
   assert,
   assertEquals,
-  assertRejects,
   assertThrows,
 } from "https://deno.land/std@0.152.0/testing/asserts.ts";
 import {
@@ -346,7 +345,7 @@ Deno.test("headers - codec", async () => {
   const { ns, nc } = await setup({}, {});
 
   nc.subscribe("foo", {
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       const h = headers(500, "custom status from client");
       msg.respond(Empty, { headers: h });
     },

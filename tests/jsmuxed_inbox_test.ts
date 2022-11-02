@@ -25,7 +25,7 @@ Deno.test("jsmuxedinbox - basics", async () => {
   type cookie = { n: number };
 
   nc.subscribe("q", {
-    callback: (err, msg) => {
+    callback: (_err, msg) => {
       msg.respond();
     },
   });
