@@ -33,7 +33,7 @@ await Promise.all(buf);
 const e = await js.consumer(stream);
 
 // read the first message
-let m = await e.next();
+const m = await e.next();
 console.log(m.seq, sc.decode(m.data));
 m.ack();
 
@@ -70,7 +70,7 @@ for await (const m of iter) {
 console.log(await a.info());
 
 // callbacks are possible too
-let d = deferred();
+const d = deferred();
 const b = await js.consumer(stream);
 const sub = await b.read({
   callback: (m) => {

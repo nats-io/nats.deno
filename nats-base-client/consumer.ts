@@ -65,7 +65,7 @@ export class ExportedConsumerImpl implements ExportedConsumer {
   }
 
   fetch(
-    opts?: Partial<
+    _opts?: Partial<
       { count: number; expires?: number; batch?: number; max_bytes?: number }
     >,
   ): Promise<QueuedIterator<JsMsg>> {
@@ -609,7 +609,7 @@ export class ConsumerImpl implements Consumer {
   }
 
   fetch(
-    opts?: Partial<
+    _opts?: Partial<
       { count: number; expires?: number; batch?: number; max_bytes?: number }
     >,
   ): Promise<QueuedIterator<JsMsg>> {

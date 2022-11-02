@@ -556,7 +556,7 @@ Deno.test("consumer - code sample", async () => {
   const consumer = await jsm.consumers.get(stream, "A");
 
   // no options - returns an iterator with default buffering settings
-  let iter = await consumer.read() as QueuedIterator<JsMsg>;
+  const iter = await consumer.read() as QueuedIterator<JsMsg>;
   for await (const m of iter) {
     // process messages
     console.log(m.subject);
@@ -648,7 +648,7 @@ Deno.test("consumer - update", async () => {
   let iter: QueuedIterator<JsMsg>;
   while (true) {
     iter = await consumer.fetch({ count: 10 });
-    for await (const m of iter) {
+    for await (const _m of iter) {
       // do something
     }
     // stop by not calling fetch after processing messages
