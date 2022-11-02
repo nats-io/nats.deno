@@ -34,24 +34,78 @@ export enum ServiceVerb {
 }
 
 export type Service = {
+  /**
+   * ID for the service
+   */
   id: string;
+  /**
+   * The name of the service
+   */
   name: string;
+  /**
+   * The description for the service
+   */
   description: string;
+  /**
+   * A version for the service
+   */
   version: string;
+  /**
+   * A promise that gets resolved to null or Error once the service ends.
+   * If an error, then service exited because of an error.
+   */
   done: Promise<null | Error>;
+  /**
+   * True if the service is stopped
+   */
   stopped: boolean;
+  /**
+   * Returns the stats for the service.
+   * @param internal if true, aggregates status for the generated internal endpoints.
+   */
   stats(internal: boolean): ServiceStats;
+  /**
+   * Resets all the stats
+   */
   reset(): void;
+  /**
+   * Stop the service returning a promise that resolves to null or an error depending
+   * stopping resulted in an error.
+   */
   stop(): Promise<null | Error>;
 };
 
+/**
+ * Statistics for an endpoint
+ */
 export type EndpointStats = {
+  /**
+   * Name of the endpoint
+   */
   name: string;
+  /**
+   * The number of requests received by the endpoint
+   */
   num_requests: number;
+  /**
+   * Number of errors that the endpoint has raised
+   */
   num_errors: number;
+  /**
+   * If set, the last error triggered by the endpoint
+   */
   last_error?: Error;
+  /**
+   * A field that can be customized with any data as returned by status handler see {@link ServiceConfig}
+   */
   data?: unknown;
+  /**
+   * Total latency for the service
+   */
   total_latency: number;
+  /**
+   * Average latency is the total latency divided by the num_requests
+   */
   average_latency: number;
 };
 
@@ -166,7 +220,7 @@ export type ServiceStats = {
 };
 
 /**
- * Creates a service that uses the specied connection
+ * Creates a service that uses the specified connection
  * @param nc
  * @param config
  */
