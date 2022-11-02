@@ -134,7 +134,6 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
         this.inflight = yields.length;
         this.yields = [];
         for (let i = 0; i < yields.length; i++) {
-          // some iterators could inject a callback
           if (typeof yields[i] === "function") {
             const fn = yields[i] as unknown as callbackFn;
             try {

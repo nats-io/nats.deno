@@ -126,6 +126,10 @@ export class JetStreamClientImpl extends BaseApiClient
     this.api = new ConsumerAPIImpl(nc, opts);
   }
 
+  get apiPrefix(): string {
+    return this.prefix;
+  }
+
   get views(): Views {
     return new ViewsImpl(this);
   }

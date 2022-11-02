@@ -192,9 +192,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.reset();
     const pongs = this.pongs;
     this.pongs = [];
-    // reject the pongs
+    // reject the pongs - the disconnect from here shouldn't have a trace
+    // because that confuses API consumers
+    const err = NatsError.errorForCode(ErrorCode.Disconnect);
+    err.stack = "";
     pongs.forEach((p) => {
-      p.reject(NatsError.errorForCode(ErrorCode.Disconnect));
+      p.reject(err);
     });
     this.parser = new Parser(this);
     this.infoReceived = false;
@@ -217,6 +220,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.resetOutbound();
 
     const pong = deferred<void>();
+    pong.catch(() => {
+      // provide at least one catch - as pong rejection can happen before it is expected
+    });
     this.pongs.unshift(pong);
 
     this.connectError = (err?: Error) => {
@@ -241,7 +247,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.transport.disconnect();
   }
 
-  async disconnected(_err?: Error): Promise<void> {
+  async disconnected(err?: Error): Promise<void> {
     this.dispatchStatus(
       {
         type: Events.Disconnect,
@@ -262,7 +268,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
           this._close(err);
         });
     } else {
-      await this._close();
+      await this._close(err);
     }
   }
 

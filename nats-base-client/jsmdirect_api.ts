@@ -48,9 +48,11 @@ export class DirectStreamAPIImpl extends BaseApiClient
     }
 
     const payload = qq ? this.jc.encode(qq) : Empty;
+    const pre = this.opts.apiPrefix || "$JS.API";
     const subj = last_by_subj
-      ? `$JS.API.DIRECT.GET.${stream}.${last_by_subj}`
-      : `$JS.API.DIRECT.GET.${stream}`;
+      ? `${pre}.DIRECT.GET.${stream}.${last_by_subj}`
+      : `${pre}.DIRECT.GET.${stream}`;
+
     const r = await this.nc.request(
       subj,
       payload,

@@ -68,6 +68,7 @@ export type {
   DispatchedFn,
   Endpoint,
   EndpointStats,
+  ExternalStream,
   IngestionFilterFn,
   IngestionFilterFnResult,
   JetStreamAccountStats,

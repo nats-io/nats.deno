@@ -201,9 +201,6 @@ export interface NatsConnection {
   rtt(): Promise<number>;
 }
 
-/**
- * ConnectionOptions does something
- */
 export interface ConnectionOptions {
   /**
    * When the server requires authentication, set an {@link Authenticator}.
@@ -470,6 +467,9 @@ export interface ServerInfo {
    * The client's IP as seen by the server
    */
   "client_ip"?: string;
+  /**
+   * The name or ID of the cluster
+   */
   cluster?: string;
   /**
    * Other servers available on the connected cluster
@@ -827,7 +827,6 @@ export interface JetStreamPublishOptions {
    * The number of milliseconds to wait for the PubAck
    */
   timeout: number;
-  // ackWait: Nanos;
   /**
    * Headers associated with the message. You can create an instance of
    * MsgHdrs with the headers() function.
@@ -863,9 +862,14 @@ export interface JetStreamPublishOptions {
  * A JetStream interface that allows you to request the ConsumerInfo on the backing object.
  */
 export interface ConsumerInfoable {
+  /** The consumer info for the consumer */
   consumerInfo(): Promise<ConsumerInfo>;
 }
 
+/**
+ * An interface that reports via a promise when an object such as a connection
+ * or subscription closes.
+ */
 export interface Closed {
   /**
    * A promise that when resolves, indicates that the object is closed.
@@ -1011,6 +1015,11 @@ export interface JetStreamClient {
    * Accessor for the JetStream materialized views API
    */
   views: Views;
+
+  /**
+   * Returns the JS API prefix as processed from the JetStream Options
+   */
+  apiPrefix: string;
 }
 
 export interface ConsumerOpts {
@@ -1223,6 +1232,14 @@ export interface ConsumerOptsBuilder {
    * @param durable
    */
   bind(stream: string, durable: string): this;
+
+  /**
+   * Specify the name of the stream, avoiding a lookup where the stream is located by
+   * searching for a subject.
+   * @param stream
+   */
+  bindStream(stream: string): this;
+
   /**
    * Pull consumer only - Sets the max number of messages that can be pulled in a batch
    * that can be requested by a client during a pull.
@@ -1846,6 +1863,18 @@ export interface Republish {
   "headers_only"?: boolean;
 }
 
+export type ExternalStream = {
+  /**
+   * API prefix for the remote stream - the API prefix should be something like
+   * `$JS.domain.API where domain is the JetStream domain on the NATS server configuration.
+   */
+  api: string;
+  /**
+   * Deliver prefix for the remote stream
+   */
+  deliver?: string;
+};
+
 export interface StreamSource {
   /**
    * Name of the stream source
@@ -1864,6 +1893,17 @@ export interface StreamSource {
    * on-boarded.
    */
   "filter_subject"?: string;
+  /**
+   * This value cannot be set if domain is set
+   */
+  external?: ExternalStream;
+  /**
+   * This field is a convenience for setting up an ExternalStream.
+   * If set, the value here is used to calculate the JetStreamAPI prefix.
+   * This field is never serialized to the server. This value cannot be set
+   * if external is set.
+   */
+  domain?: string;
 }
 
 export interface Placement {
@@ -2580,6 +2620,14 @@ export interface KvLimits {
    * Republishes edits to the KV on a NATS core subject.
    */
   republish: Republish;
+  /**
+   * Maintains a 1:1 mirror of another kv stream with name matching this property.
+   */
+  mirror?: StreamSource;
+  /**
+   * List of Stream names to replicate into this KV
+   */
+  sources?: StreamSource[];
   /**
    * @deprecated: use placement
    */

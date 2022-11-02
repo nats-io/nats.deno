@@ -52,6 +52,8 @@ import {
 import { cleanup, setup } from "./jstest_util.ts";
 import { RequestStrategy } from "../nats-base-client/types.ts";
 import { Feature } from "../nats-base-client/semver.ts";
+import NetAddr = Deno.NetAddr;
+import { assertArrayIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -509,25 +511,6 @@ Deno.test("basics - request requires a subject", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("basics - close promise resolves", async () => {
-  const lock = Lock();
-  const cs = new TestServer(false, (ca: Connection) => {
-    setTimeout(() => {
-      ca.close();
-    }, 0);
-  });
-  const nc = await connect(
-    { port: cs.getPort(), reconnect: false },
-  );
-  nc.closed().then(() => {
-    lock.unlock();
-  });
-
-  await lock;
-  await cs.stop();
-  await nc.close();
-});
-
 Deno.test("basics - closed returns error", async () => {
   const lock = Lock(1);
   const cs = new TestServer(false, (ca: Connection) => {
@@ -787,7 +770,7 @@ Deno.test("basics - subs pending count", async () => {
     for await (const _m of sub) {
       count++;
       assertEquals(count, sub.getProcessed());
-      assertEquals(sub.getProcessed() + sub.getPending(), 11);
+      assertEquals(sub.getProcessed() + sub.getPending(), 12);
     }
   })();
 
@@ -1184,3 +1167,48 @@ Deno.test("basics - info", async () => {
   console.log(nc.info);
   await cleanup(ns, nc);
 });
+
+Deno.test("basics - initial connect error", async () => {
+  const listener = Deno.listen({ port: 0 });
+  const port = (listener.addr as NetAddr).port;
+  const sc = StringCodec();
+  const INFO = sc.encode(
+    `INFO {"server_id":"FAKE","server_name":"FAKE","version":"2.9.4","proto":1,"go":"go1.19.2","host":"127.0.0.1","port":${port},"headers":true,"max_payload":1048576,"jetstream":true,"client_id":4,"client_ip":"127.0.0.1"}\r\n`,
+  );
+
+  const done = (async () => {
+    for await (const conn of listener) {
+      await conn.write(INFO);
+      setTimeout(() => {
+        conn.close();
+      });
+    }
+  })();
+
+  try {
+    await connect({ port, reconnect: false });
+    fail("shouldn't have connected");
+  } catch (err) {
+    // in node we may get a disconnect which we generated
+    // in deno we get the connection reset - but if running in CI this may turn out to be
+    // a connection refused
+    assertArrayIncludes(["ECONNRESET", "CONNECTION_REFUSED"], [err.code]);
+  }
+  listener.close();
+  await done;
+});
+
+Deno.test("basics - close promise resolves", async () => {
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port, reconnect: false });
+  setTimeout(() => {
+    ns.stop();
+  });
+
+  await nc.closed().then((err) => {
+    assertEquals(err, undefined);
+  }).catch((err) => {
+    fail(err);
+  });
+});
+

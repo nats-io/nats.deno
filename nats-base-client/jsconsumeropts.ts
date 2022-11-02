@@ -241,6 +241,11 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return this;
   }
 
+  bindStream(stream: string) {
+    this.stream = stream;
+    return this;
+  }
+
   inactiveEphemeralThreshold(millis: number) {
     this.config.inactive_threshold = nanos(millis);
     return this;

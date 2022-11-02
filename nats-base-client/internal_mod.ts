@@ -21,6 +21,7 @@ export type {
   ConsumerUpdateConfig,
   DeliveryInfo,
   Destroyable,
+  ExternalStream,
   JetStreamAccountStats,
   JetStreamApiStats,
   JetStreamClient,
