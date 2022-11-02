@@ -246,10 +246,10 @@ export class DenoTransport implements Transport {
       .then().catch();
   }
 
-  private async _closed(err?: Error, internal = true): Promise<void> {
+  async _closed(err?: Error, internal = true): Promise<void> {
     if (this.done) return;
     this.closeError = err;
-    if (!err) {
+    if (!err && internal) {
       try {
         // this is a noop but gives us a place to hang
         // a close and ensure that we sent all before closing
