@@ -53,6 +53,7 @@ import { cleanup, setup } from "./jstest_util.ts";
 import { RequestStrategy } from "../nats-base-client/types.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import NetAddr = Deno.NetAddr;
+import { assertArrayIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1179,12 +1180,13 @@ Deno.test("basics - initial connect error", async () => {
   })();
 
   try {
-    await connect({ port, reconnect: false, debug: true });
+    await connect({ port, reconnect: false });
     fail("shouldn't have connected");
   } catch (err) {
     // in node we may get a disconnect which we generated
-    // in deno we get the connection reset
-    assertEquals(err.code, "ECONNRESET");
+    // in deno we get the connection reset - but if running in CI this may turn out to be
+    // a connection refused
+    assertArrayIncludes(["ECONNRESET", "CONNECTION_REFUSED"], [err.code]);
   }
   listener.close();
   await done;
