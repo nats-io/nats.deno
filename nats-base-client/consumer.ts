@@ -64,7 +64,11 @@ export class ExportedConsumerImpl implements ExportedConsumer {
     return toJsMsg(r);
   }
 
-  fetch(opts?: Partial<{ count: number; expires?: number; batch?: number; max_bytes?: number }>): Promise<QueuedIterator<JsMsg>> {
+  fetch(
+    opts?: Partial<
+      { count: number; expires?: number; batch?: number; max_bytes?: number }
+    >,
+  ): Promise<QueuedIterator<JsMsg>> {
     return Promise.reject(new Error("not implemented"));
   }
 
@@ -604,7 +608,11 @@ export class ConsumerImpl implements Consumer {
     });
   }
 
-  fetch(opts?: Partial<{ count: number; expires?: number; batch?: number; max_bytes?: number }>): Promise<QueuedIterator<JsMsg>> {
+  fetch(
+    opts?: Partial<
+      { count: number; expires?: number; batch?: number; max_bytes?: number }
+    >,
+  ): Promise<QueuedIterator<JsMsg>> {
     return Promise.reject(new Error("not implemented"));
   }
 }

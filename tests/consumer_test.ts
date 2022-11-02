@@ -645,10 +645,10 @@ Deno.test("consumer - update", async () => {
 
   // retrieve the consumer
   const consumer = await jsm.consumers.get(stream, "A");
-  let iter : QueuedIterator<JsMsg>;
-  while(true) {
-    await iter = await consumer.fetch({count: 10});
-    for await(const m of iter) {
+  let iter: QueuedIterator<JsMsg>;
+  while (true) {
+    iter = await consumer.fetch({ count: 10 });
+    for await (const m of iter) {
       // do something
     }
     // stop by not calling fetch after processing messages
@@ -694,4 +694,4 @@ Deno.test("consumer - update", async () => {
   }, 2000);
 
   await cleanup(ns, nc);
-})
+});

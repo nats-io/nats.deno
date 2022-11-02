@@ -2548,7 +2548,9 @@ export interface ExportedConsumer {
    * @param opts
    */
   fetch(
-    opts?: Partial<{ count: number, expires?: number; batch?: number; max_bytes?: number }>,
+    opts?: Partial<
+      { count: number; expires?: number; batch?: number; max_bytes?: number }
+    >,
   ): Promise<QueuedIterator<JsMsg>>;
 
   /**
