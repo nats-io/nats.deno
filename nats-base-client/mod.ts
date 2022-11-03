@@ -32,6 +32,8 @@ export {
   nuid,
   ReplayPolicy,
   RetentionPolicy,
+  ServiceError,
+  ServiceErrorHeader,
   ServiceVerb,
   StorageType,
   StringCodec,

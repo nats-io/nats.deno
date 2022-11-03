@@ -202,7 +202,12 @@ export type { SemVer } from "./semver.ts";
 
 export { compare, parseSemVer } from "./semver.ts";
 
-export { addService, ServiceVerb } from "./service.ts";
+export {
+  addService,
+  ServiceError,
+  ServiceErrorHeader,
+  ServiceVerb,
+} from "./service.ts";
 
 export type {
   Endpoint,
