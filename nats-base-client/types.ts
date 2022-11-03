@@ -132,6 +132,19 @@ export interface NatsConnection {
   ): Promise<Msg>;
 
   /**
+   * Publishes a request expecting multiple responses back. Several strategies
+   * to determine when the request should stop gathering responses.
+   * @param subject
+   * @param data
+   * @param opts
+   */
+  requestMany(
+    subject: string,
+    data: Uint8Array,
+    opts: Partial<RequestManyOptions>,
+  ): Promise<QueuedIterator<Msg | Error>>;
+
+  /**
    * Returns a Promise that resolves when the client receives a reply from
    * the server. Use of this API is not necessary by clients.
    */

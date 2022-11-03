@@ -1162,6 +1162,12 @@ Deno.test("basics - server version", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("basics - info", async () => {
+  const { ns, nc } = await setup({});
+  console.log(nc.info);
+  await cleanup(ns, nc);
+});
+
 Deno.test("basics - initial connect error", async () => {
   const listener = Deno.listen({ port: 0 });
   const port = (listener.addr as NetAddr).port;
