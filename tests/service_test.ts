@@ -2,6 +2,7 @@ import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
   EndpointStats,
+  ServiceErrorHeader,
   ServiceImpl,
   ServiceInfo,
   ServiceStats,
@@ -193,8 +194,7 @@ Deno.test("service - handler error", async () => {
   });
 
   const r = await nc.request("fail");
-  assertEquals(r.headers?.code, 400);
-  assertEquals(r.headers?.description, "cb error");
+  assertEquals(r.headers?.get(ServiceErrorHeader), "400 cb error");
 
   await cleanup(ns, nc);
 });

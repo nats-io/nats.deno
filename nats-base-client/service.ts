@@ -25,6 +25,7 @@ import { nanos, validName } from "./jsutil.ts";
  * `$SRV.PING|STATUS|INFO|SCHEMA.<kind>.<id>` - pings or retrieves status of a particular service
  */
 export const ServiceApiPrefix = "$SRV";
+export const ServiceErrorHeader = "Nats-Service-Error";
 
 export enum ServiceVerb {
   PING = "PING",
@@ -239,6 +240,14 @@ export function addService(
   }
 }
 
+export class ServiceError extends Error {
+  code: number;
+  constructor(code: number, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
 const jc = JSONCodec();
 
 export class ServiceImpl implements Service {
@@ -348,7 +357,13 @@ export class ServiceImpl implements Service {
             throw v;
           }
         } catch (err) {
-          const h = headers(400, err.message);
+          const h = headers();
+          if (err instanceof ServiceError) {
+            const se = err as ServiceError;
+            h.set(ServiceErrorHeader, `${se.code} ${se.message}`);
+          } else {
+            h.set(ServiceErrorHeader, `400 ${err.message}`);
+          }
           msg?.respond(Empty, { headers: h });
         }
         status.total_latency += nanos(Date.now()) - nanos(start);
