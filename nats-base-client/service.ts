@@ -78,8 +78,8 @@ export type Service = {
    */
   reset(): void;
   /**
-   * Stop the service returning a promise that resolves to null or an error depending
-   * stopping resulted in an error.
+   * Stop the service returning a promise that resolves to null or an error
+   * depending on whether stopping resulted in an error.
    */
   stop(): Promise<null | Error>;
 };
@@ -362,30 +362,37 @@ export class ServiceImpl implements Service {
       average_latency: 0,
     };
 
+    const countLatency = function (start: number) {
+      status.total_latency = nanos(Date.now() - start);
+      status.average_latency = Math.round(
+        status.total_latency / status.num_requests,
+      );
+    };
+    const countError = function (err: Error) {
+      status.num_errors++;
+      status.last_error = err;
+    };
+
     sv.sub = this.nc.subscribe(subject, {
       callback: (err, msg) => {
         if (err) {
-          status.num_errors++;
-          status.last_error = err;
+          this.close(err);
+          return;
         }
         const start = Date.now();
         status.num_requests++;
         try {
           handler(err, msg)
             .catch((err) => {
+              countError(err);
               msg?.respond(Empty, { headers: this.errorToHeader(err) });
             }).finally(() => {
-              status.total_latency = nanos(Date.now() - start);
-              status.average_latency = Math.round(
-                status.total_latency / status.num_requests,
-              );
+              countLatency(start);
             });
         } catch (err) {
           msg?.respond(Empty, { headers: this.errorToHeader(err) });
-          status.total_latency = nanos(Date.now() - start);
-          status.average_latency = Math.round(
-            status.total_latency / status.num_requests,
-          );
+          countError(err);
+          countLatency(start);
         }
       },
       queue,
@@ -539,7 +546,6 @@ export class ServiceImpl implements Service {
     handlers.forEach((h) => {
       const { subject } = h as Endpoint;
       if (typeof subject !== "string") {
-        // this is a jetstream service
         return;
       }
       this.setupNATS(h as unknown as Endpoint);
