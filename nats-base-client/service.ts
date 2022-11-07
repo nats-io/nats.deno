@@ -184,7 +184,7 @@ export type Endpoint = {
    * @param err
    * @param msg
    */
-  handler: (err: NatsError | null, msg: Msg) => Error | void;
+  handler: (err: NatsError | null, msg: Msg) => Promise<void>;
 };
 
 type InternalEndpoint = {
@@ -352,11 +352,25 @@ export class ServiceImpl implements Service {
         const start = Date.now();
         status.num_requests++;
         try {
-          const v = handler(err, msg);
-          if (v) {
-            throw v;
-          }
-        } catch (err) {
+
+          handler(err, msg)
+              .catch((err) => {
+                const h = headers();
+                if (err instanceof ServiceError) {
+                  const se = err as ServiceError;
+                  h.set(ServiceErrorHeader, `${se.code} ${se.message}`);
+                } else {
+                  h.set(ServiceErrorHeader, `400 ${err.message}`);
+                }
+                msg?.respond(Empty, {headers: h});
+              })
+              .finally(() => {
+                status.total_latency += nanos(Date.now()) - nanos(start);
+                status.average_latency = Math.round(
+                    status.total_latency / status.num_requests,
+                );
+              });
+        } catch(err) {
           const h = headers();
           if (err instanceof ServiceError) {
             const se = err as ServiceError;
@@ -364,12 +378,13 @@ export class ServiceImpl implements Service {
           } else {
             h.set(ServiceErrorHeader, `400 ${err.message}`);
           }
-          msg?.respond(Empty, { headers: h });
+          msg?.respond(Empty, {headers: h});
+
+          status.total_latency += nanos(Date.now()) - nanos(start);
+          status.average_latency = Math.round(
+              status.total_latency / status.num_requests,
+          );
         }
-        status.total_latency += nanos(Date.now()) - nanos(start);
-        status.average_latency = Math.round(
-          status.total_latency / status.num_requests,
-        );
       },
       queue,
     });
@@ -429,7 +444,7 @@ export class ServiceImpl implements Service {
 
   addInternalHandler(
     verb: ServiceVerb,
-    handler: (err: NatsError | null, msg: Msg) => void,
+    handler: (err: NatsError | null, msg: Msg) => Promise<void>,
   ) {
     const v = `${verb}`.toUpperCase();
     this._doAddInternalHandler(`${v}-all`, verb, handler);
@@ -446,7 +461,7 @@ export class ServiceImpl implements Service {
   _doAddInternalHandler(
     name: string,
     verb: ServiceVerb,
-    handler: (err: NatsError | null, msg: Msg) => void,
+    handler: (err: NatsError | null, msg: Msg) => Promise<void>,
     kind = "",
     id = "",
   ) {
@@ -458,10 +473,10 @@ export class ServiceImpl implements Service {
   }
 
   start(): Promise<Service> {
-    const statusHandler = (err: Error | null, msg: Msg): void => {
+    const statusHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err);
-        return;
+        return Promise.reject(err);
       }
       let internal = true;
       try {
@@ -475,12 +490,13 @@ export class ServiceImpl implements Service {
 
       const status = this.stats(internal);
       msg?.respond(jc.encode(status));
+      return Promise.resolve();
     };
 
-    const infoHandler = (err: Error | null, msg: Msg): void => {
+    const infoHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err);
-        return;
+        return Promise.reject(err);
       }
       const info = {
         name: this.name,
@@ -490,19 +506,21 @@ export class ServiceImpl implements Service {
         subject: (this.config.endpoint as Endpoint).subject,
       } as ServiceInfo;
       msg?.respond(jc.encode(info));
+      return Promise.resolve();
     };
 
-    const pingHandler = (err: Error | null, msg: Msg): void => {
-      infoHandler(err, msg);
+    const pingHandler = (err: Error | null, msg: Msg): Promise<void> => {
+      return infoHandler(err, msg);
     };
 
-    const schemaHandler = (err: Error | null, msg: Msg): void => {
+    const schemaHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err);
-        return;
+        return Promise.reject(err);
       }
 
       msg?.respond(jc.encode(this.config.schema));
+      return Promise.resolve();
     };
 
     this.addInternalHandler(ServiceVerb.PING, pingHandler);

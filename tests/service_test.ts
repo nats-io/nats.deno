@@ -24,15 +24,15 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
   const nci = nc as NatsConnectionImpl;
-
   const jc = JSONCodec();
 
   const srvA = await addService(nc, {
     name: "test",
     endpoint: {
       subject: "foo",
-      handler: (_err: Error | null, msg: Msg) => {
+      handler: (_err: Error | null, msg: Msg): Promise<void> => {
         msg?.respond();
+        return Promise.resolve();
       },
     },
   });
@@ -41,8 +41,9 @@ Deno.test("service - basics", async () => {
     name: "test",
     endpoint: {
       subject: "foo",
-      handler: (_err: Error | null, msg: Msg) => {
+      handler: (_err: Error | null, msg: Msg): Promise<void> => {
         msg?.respond();
+        return Promise.resolve();
       },
     },
   });
