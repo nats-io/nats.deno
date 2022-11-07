@@ -74,7 +74,6 @@ export type {
   Republish,
   RequestManyOptions,
   RequestOptions,
-  RequestStrategy,
   RoKV,
   SeqMsgRequest,
   SequenceInfo,
@@ -111,6 +110,7 @@ export {
   DiscardPolicy,
   ReplayPolicy,
   RepublishHeaders,
+  RequestStrategy,
   RetentionPolicy,
   StorageType,
 } from "./types.ts";
