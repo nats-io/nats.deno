@@ -13,7 +13,15 @@
  * limitations under the License.
  */
 import { Deferred, deferred } from "./util.ts";
-import { Empty, Msg, NatsConnection, NatsError, Sub } from "./types.ts";
+import {
+  Empty,
+  Msg,
+  MsgHdrs,
+  Nanos,
+  NatsConnection,
+  NatsError,
+  Sub,
+} from "./types.ts";
 import { headers, JSONCodec, nuid } from "./mod.ts";
 import { nanos, validName } from "./jsutil.ts";
 
@@ -103,11 +111,11 @@ export type EndpointStats = {
   /**
    * Total latency for the service
    */
-  total_latency: number;
+  total_latency: Nanos;
   /**
    * Average latency is the total latency divided by the num_requests
    */
-  average_latency: number;
+  average_latency: Nanos;
 };
 
 export type ServiceSchema = {
@@ -325,6 +333,17 @@ export class ServiceImpl implements Service {
     return this.config.version ?? "0.0.0";
   }
 
+  errorToHeader(err: Error): MsgHdrs {
+    const h = headers();
+    if (err instanceof ServiceError) {
+      const se = err as ServiceError;
+      h.set(ServiceErrorHeader, `${se.code} ${se.message}`);
+    } else {
+      h.set(ServiceErrorHeader, `400 ${err.message}`);
+    }
+    return h;
+  }
+
   setupNATS(h: Endpoint, internal = false) {
     // internals don't use a queue
     const queue = internal ? "" : "q";
@@ -352,37 +371,20 @@ export class ServiceImpl implements Service {
         const start = Date.now();
         status.num_requests++;
         try {
-
           handler(err, msg)
-              .catch((err) => {
-                const h = headers();
-                if (err instanceof ServiceError) {
-                  const se = err as ServiceError;
-                  h.set(ServiceErrorHeader, `${se.code} ${se.message}`);
-                } else {
-                  h.set(ServiceErrorHeader, `400 ${err.message}`);
-                }
-                msg?.respond(Empty, {headers: h});
-              })
-              .finally(() => {
-                status.total_latency += nanos(Date.now()) - nanos(start);
-                status.average_latency = Math.round(
-                    status.total_latency / status.num_requests,
-                );
-              });
-        } catch(err) {
-          const h = headers();
-          if (err instanceof ServiceError) {
-            const se = err as ServiceError;
-            h.set(ServiceErrorHeader, `${se.code} ${se.message}`);
-          } else {
-            h.set(ServiceErrorHeader, `400 ${err.message}`);
-          }
-          msg?.respond(Empty, {headers: h});
-
-          status.total_latency += nanos(Date.now()) - nanos(start);
+            .catch((err) => {
+              msg?.respond(Empty, { headers: this.errorToHeader(err) });
+            }).finally(() => {
+              status.total_latency = nanos(Date.now() - start);
+              status.average_latency = Math.round(
+                status.total_latency / status.num_requests,
+              );
+            });
+        } catch (err) {
+          msg?.respond(Empty, { headers: this.errorToHeader(err) });
+          status.total_latency = nanos(Date.now() - start);
           status.average_latency = Math.round(
-              status.total_latency / status.num_requests,
+            status.total_latency / status.num_requests,
           );
         }
       },
