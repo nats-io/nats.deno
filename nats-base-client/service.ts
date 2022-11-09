@@ -78,10 +78,11 @@ export type Service = {
    */
   reset(): void;
   /**
-   * Stop the service returning a promise that resolves to null or an error
-   * depending on whether stopping resulted in an error.
+   * Stop the service returning a promise once the service completes.
+   * If the service was stopped due to an error, that promise resolves to
+   * the specified error
    */
-  stop(): Promise<null | Error>;
+  stop(err?: Error): Promise<null | Error>;
 };
 
 /**
@@ -578,8 +579,8 @@ export class ServiceImpl implements Service {
     return this._done;
   }
 
-  stop(): Promise<null | Error> {
-    return this.close();
+  stop(err?: Error): Promise<null | Error> {
+    return this.close(err);
   }
 
   reset(): void {
