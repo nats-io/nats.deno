@@ -12,11 +12,14 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
+  fail,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import {
   Empty,
+  ErrorCode,
   JSONCodec,
   Msg,
+  NatsError,
   QueuedIterator,
 } from "../nats-base-client/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
@@ -196,6 +199,45 @@ Deno.test("service - handler error", async () => {
 
   const r = await nc.request("fail");
   assertEquals(r.headers?.get(ServiceErrorHeader), "400 cb error");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - stop error", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permissions: {
+          subscribe: {
+            deny: "fail",
+          },
+        },
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  const service = await addService(nc, {
+    name: "test",
+    endpoint: {
+      subject: "fail",
+      handler: (err): Promise<void> => {
+        if (err) {
+          service.stop(err);
+          return Promise.reject(err);
+        }
+        fail("shouldn't have subscribed");
+        return Promise.resolve();
+      },
+    },
+  });
+
+  const err = await service.done as NatsError;
+  assertEquals(
+    err.code,
+    ErrorCode.PermissionsViolation,
+  );
 
   await cleanup(ns, nc);
 });
