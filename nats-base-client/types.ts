@@ -683,6 +683,7 @@ export interface RequestManyOptions {
   headers?: MsgHdrs;
   maxMessages?: number;
   noMux?: boolean;
+  jitter?: number;
 }
 
 export interface PublishOptions {
