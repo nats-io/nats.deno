@@ -317,6 +317,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async _doDial(srv: Server): Promise<void> {
     const alts = await srv.resolve({
       fn: getResolveFn(),
+      debug: this.options.debug,
       randomize: !this.options.noRandomize,
     });
 
