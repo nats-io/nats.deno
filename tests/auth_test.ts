@@ -1021,3 +1021,48 @@ Deno.test("auth - ignore auth error abort", async () => {
   assertEquals(await t(true), DEFAULT_MAX_RECONNECT_ATTEMPTS);
   await ns.stop();
 });
+
+Deno.test("auth - sub with permission error discards", async () => {
+  const { ns, nc } = await setup({
+    debug: true,
+    trace: true,
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permission: {
+          subscribe: {
+            deny: "q",
+          },
+        },
+      }],
+    },
+  }, { user: "a", pass: "a", debug: true });
+
+  const nci = nc as NatsConnectionImpl;
+
+  let count = 0;
+  async function q() {
+    count++;
+    const d = deferred();
+    const sub = nc.subscribe("q", {
+      callback: (err, msg) => {
+        console.log("resolving");
+        d.resolve(err);
+      },
+    });
+
+    const err = await d;
+    assert(err);
+    assertEquals(nc.isClosed(), false);
+    await sub.closed;
+
+    const s = nci.protocol.subscriptions.get(count);
+    assertEquals(s, undefined);
+  }
+
+  await q();
+  await q();
+
+  await cleanup(ns, nc);
+});

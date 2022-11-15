@@ -89,6 +89,7 @@ export class Subscriptions {
       if (sub) {
         sub.callback(err, {} as Msg);
         sub.close();
+        this.subs.delete(sub.sid);
         return sub !== this.mux;
       }
     }
