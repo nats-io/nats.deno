@@ -36,7 +36,11 @@ import {
   UserPass,
 } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
-import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
+import {
+  deferred,
+  NatsConnectionImpl,
+  nkeys,
+} from "../nats-base-client/internal_mod.ts";
 import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
@@ -965,6 +969,51 @@ Deno.test("auth - perm sub iterator error", async () => {
   assertEquals(i.code, ErrorCode.PermissionsViolation);
   assertEquals(i.permissionContext?.operation, "subscription");
   assertEquals(i.permissionContext?.subject, "q");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("auth - sub with permission error discards", async () => {
+  const { ns, nc } = await setup({
+    debug: true,
+    trace: true,
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permission: {
+          subscribe: {
+            deny: "q",
+          },
+        },
+      }],
+    },
+  }, { user: "a", pass: "a", debug: true });
+
+  const nci = nc as NatsConnectionImpl;
+
+  let count = 0;
+  async function q() {
+    count++;
+    const d = deferred();
+    const sub = nc.subscribe("q", {
+      callback: (err, msg) => {
+        console.log("resolving");
+        d.resolve(err);
+      },
+    });
+
+    const err = await d;
+    assert(err);
+    assertEquals(nc.isClosed(), false);
+    await sub.closed;
+
+    const s = nci.protocol.subscriptions.get(count);
+    assertEquals(s, undefined);
+  }
+
+  await q();
+  await q();
 
   await cleanup(ns, nc);
 });
