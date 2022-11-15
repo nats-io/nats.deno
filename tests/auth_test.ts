@@ -36,7 +36,11 @@ import {
   UserPass,
 } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
-import { deferred, nkeys } from "../nats-base-client/internal_mod.ts";
+import {
+  deferred,
+  NatsConnectionImpl,
+  nkeys,
+} from "../nats-base-client/internal_mod.ts";
 import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
@@ -965,6 +969,39 @@ Deno.test("auth - perm sub iterator error", async () => {
   assertEquals(i.code, ErrorCode.PermissionsViolation);
   assertEquals(i.permissionContext?.operation, "subscription");
   assertEquals(i.permissionContext?.subject, "q");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("auth - perm error is not in lastError", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permission: {
+          subscribe: {
+            deny: "q",
+          },
+        },
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.lastError, undefined);
+
+  const d = deferred<NatsError | null>();
+  nc.subscribe("q", {
+    callback: (err, msg) => {
+      d.resolve(err);
+    },
+  });
+
+  const err = await d;
+  assert(err !== null);
+  assertEquals(err?.isPermissionError(), true);
+  assert(nci.protocol.lastError === undefined);
 
   await cleanup(ns, nc);
 });
