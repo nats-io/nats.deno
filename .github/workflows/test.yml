@@ -33,9 +33,9 @@ jobs:
         run: echo "NATS_VERSION=v2.9.5" >> $GITHUB_ENV
 
       # this here because dns seems to be wedged on gha
-      - name: Add hosts to /etc/hosts
-        run: |
-          sudo echo "145.40.102.131 demo.nats.io" | sudo tee -a /etc/hosts
+#      - name: Add hosts to /etc/hosts
+#        run: |
+#          sudo echo "145.40.102.131 demo.nats.io" | sudo tee -a /etc/hosts
 
       - name: Get nats-server
         run: |
