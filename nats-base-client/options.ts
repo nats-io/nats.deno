@@ -44,6 +44,7 @@ export function defaultOptions(): ConnectionOptions {
     tls: undefined,
     verbose: false,
     waitOnFirstConnect: false,
+    ignoreAuthErrorAbort: false,
   } as ConnectionOptions;
 }
 

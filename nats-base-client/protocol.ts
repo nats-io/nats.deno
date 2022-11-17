@@ -466,7 +466,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   handleAuthError(err: NatsError) {
-    if (this.lastError && err.code === this.lastError.code) {
+    if (
+      (this.lastError && err.code === this.lastError.code) &&
+      this.options.ignoreAuthErrorAbort === false
+    ) {
       this.abortReconnect = true;
     }
     if (this.connectError) {
