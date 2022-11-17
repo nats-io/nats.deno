@@ -979,6 +979,39 @@ Deno.test("auth - perm sub iterator error", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("auth - perm error is not in lastError", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permission: {
+          subscribe: {
+            deny: "q",
+          },
+        },
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.lastError, undefined);
+
+  const d = deferred<NatsError | null>();
+  nc.subscribe("q", {
+    callback: (err, msg) => {
+      d.resolve(err);
+    },
+  });
+
+  const err = await d;
+  assert(err !== null);
+  assertEquals(err?.isPermissionError(), true);
+  assert(nci.protocol.lastError === undefined);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("auth - ignore auth error abort", async () => {
   const ns = await NatsServer.start({
     authorization: {
@@ -1020,39 +1053,6 @@ Deno.test("auth - ignore auth error abort", async () => {
   assertEquals(await t(), 2);
   assertEquals(await t(true), DEFAULT_MAX_RECONNECT_ATTEMPTS);
   await ns.stop();
-});
-
-Deno.test("auth - perm error is not in lastError", async () => {
-  const { ns, nc } = await setup({
-    authorization: {
-      users: [{
-        user: "a",
-        password: "a",
-        permission: {
-          subscribe: {
-            deny: "q",
-          },
-        },
-      }],
-    },
-  }, { user: "a", pass: "a" });
-
-  const nci = nc as NatsConnectionImpl;
-  assertEquals(nci.protocol.lastError, undefined);
-
-  const d = deferred<NatsError | null>();
-  nc.subscribe("q", {
-    callback: (err, msg) => {
-      d.resolve(err);
-    },
-  });
-
-  const err = await d;
-  assert(err !== null);
-  assertEquals(err?.isPermissionError(), true);
-  assert(nci.protocol.lastError === undefined);
-
-  await cleanup(ns, nc);
 });
 
 Deno.test("auth - sub with permission error discards", async () => {
