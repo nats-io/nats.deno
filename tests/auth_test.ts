@@ -38,10 +38,14 @@ import {
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
+  delay,
   NatsConnectionImpl,
   nkeys,
 } from "../nats-base-client/internal_mod.ts";
-import { NKeyAuth } from "../nats-base-client/authenticator.ts";
+import {
+  buildAuthenticator,
+  NKeyAuth,
+} from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 import {
@@ -49,6 +53,8 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+import { Msg } from "https://deno.land/x/nats@v1.0.4/nats-base-client/types.ts";
+import { DEFAULT_MAX_RECONNECT_ATTEMPTS } from "../nats-base-client/types.ts";
 
 const conf = {
   authorization: {
@@ -971,6 +977,49 @@ Deno.test("auth - perm sub iterator error", async () => {
   assertEquals(i.permissionContext?.subject, "q");
 
   await cleanup(ns, nc);
+});
+
+Deno.test("auth - ignore auth error abort", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+      }],
+    },
+  });
+  async function t(ignoreAuthErrorAbort = false): Promise<number> {
+    let pass = "a";
+    const authenticator = (): UserPass => {
+      return { user: "a", pass };
+    };
+    const nc = await connect({
+      port: ns.port,
+      authenticator,
+      ignoreAuthErrorAbort,
+      reconnectTimeWait: 150,
+    });
+
+    let count = 0;
+    (async () => {
+      for await (const s of nc.status()) {
+        if (s.type === "error" && s.data === "AUTHORIZATION_VIOLATION") {
+          count++;
+        }
+      }
+    })().then();
+
+    const nci = nc as NatsConnectionImpl;
+    pass = "b";
+    nci.protocol.transport.disconnect();
+
+    await nc.closed();
+    return count;
+  }
+
+  assertEquals(await t(), 2);
+  assertEquals(await t(true), DEFAULT_MAX_RECONNECT_ATTEMPTS);
+  await ns.stop();
 });
 
 Deno.test("auth - perm error is not in lastError", async () => {

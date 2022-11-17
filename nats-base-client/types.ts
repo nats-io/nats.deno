@@ -365,6 +365,13 @@ export interface ConnectionOptions {
    * to specify a subject where requests can deliver responses.
    */
   inboxPrefix?: string;
+
+  /**
+   * By default, NATS clients will abort reconnect if they fail authentication
+   * twice in a row with the same error, regardless of the reconnect policy.
+   * This option should be used with care as it will disable this behaviour when true
+   */
+  ignoreAuthErrorAbort?: boolean;
 }
 
 /**
