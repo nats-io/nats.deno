@@ -477,17 +477,41 @@ export class NatsServer implements PortInfo {
     return NatsServer.start(conf, debug);
   }
 
-  static async start(conf?: any, debug = false): Promise<NatsServer> {
-    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
-    const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
-
+  static confDefaults(conf?: any): any {
     conf = conf || {};
-    conf.ports_file_dir = tmp;
     conf.host = conf.host || "127.0.0.1";
     conf.port = conf.port || -1;
     conf.http = conf.http || "127.0.0.1:-1";
     conf.leafnodes = conf.leafnodes || {};
     conf.leafnodes.listen = conf.leafnodes.listen || "127.0.0.1:-1";
+
+    return conf;
+  }
+
+  /**
+   * this is only expecting authentication type changes
+   * @param conf
+   * @param debug
+   */
+  async reload(conf?: any): Promise<void> {
+    conf = NatsServer.confDefaults(conf);
+    conf.host = this.config.host;
+    conf.port = this.config.port;
+    conf.http = this.config.http;
+    conf.leafnodes = this.config.leafnodes;
+    conf = Object.assign(this.config, conf);
+    await Deno.writeFile(
+      this.configFile,
+      new TextEncoder().encode(toConf(conf)),
+    );
+    return this.signal("SIGHUP");
+  }
+
+  static async start(conf?: any, debug = false): Promise<NatsServer> {
+    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
+    const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
+    conf = NatsServer.confDefaults(conf);
+    conf.ports_file_dir = tmp;
 
     const confFile = await Deno.makeTempFileSync();
     await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
