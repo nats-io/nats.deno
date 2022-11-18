@@ -38,14 +38,10 @@ import {
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
-  delay,
   NatsConnectionImpl,
   nkeys,
 } from "../nats-base-client/internal_mod.ts";
-import {
-  buildAuthenticator,
-  NKeyAuth,
-} from "../nats-base-client/authenticator.ts";
+import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 import {
@@ -53,7 +49,6 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { Msg } from "https://deno.land/x/nats@v1.0.4/nats-base-client/types.ts";
 import { DEFAULT_MAX_RECONNECT_ATTEMPTS } from "../nats-base-client/types.ts";
 
 const conf = {
@@ -999,7 +994,7 @@ Deno.test("auth - perm error is not in lastError", async () => {
 
   const d = deferred<NatsError | null>();
   nc.subscribe("q", {
-    callback: (err, msg) => {
+    callback: (err) => {
       d.resolve(err);
     },
   });
@@ -1079,8 +1074,7 @@ Deno.test("auth - sub with permission error discards", async () => {
     count++;
     const d = deferred();
     const sub = nc.subscribe("q", {
-      callback: (err, msg) => {
-        console.log("resolving");
+      callback: (err) => {
         d.resolve(err);
       },
     });

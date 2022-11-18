@@ -99,27 +99,32 @@ export function noAuthFn(): Authenticator {
 
 /**
  * Returns a user/pass authenticator for the specified user and optional password
- * @param { string }user
- * @param {string } pass
+ * @param { string | () => string } user
+ * @param {string | () => string } pass
  * @return {UserPass}
  */
 export function usernamePasswordAuthenticator(
-  user: string,
-  pass?: string,
+  user: string | (() => string),
+  pass?: string | (() => string),
 ): Authenticator {
   return (): UserPass => {
-    return { user, pass };
+    const u = typeof user === "function" ? user() : user;
+    const p = typeof pass === "function" ? pass() : pass;
+    return { user: u, pass: p };
   };
 }
 
 /**
  * Returns a token authenticator for the specified token
- * @param { string } token
+ * @param { string | () => string } token
  * @return {TokenAuth}
  */
-export function tokenAuthenticator(token: string): Authenticator {
+export function tokenAuthenticator(
+  token: string | (() => string),
+): Authenticator {
   return (): TokenAuth => {
-    return { auth_token: token };
+    const auth_token = typeof token === "function" ? token() : token;
+    return { auth_token };
   };
 }
 
@@ -133,8 +138,8 @@ export function nkeyAuthenticator(
   seed?: Uint8Array | (() => Uint8Array),
 ): Authenticator {
   return (nonce?: string): NKeyAuth => {
-    seed = typeof seed === "function" ? seed() : seed;
-    const kp = seed ? nkeys.fromSeed(seed) : undefined;
+    const s = typeof seed === "function" ? seed() : seed;
+    const kp = s ? nkeys.fromSeed(s) : undefined;
     const nkey = kp ? kp.getPublicKey() : "";
     const challenge = TE.encode(nonce || "");
     const sigBytes = kp !== undefined && nonce ? kp.sign(challenge) : undefined;
@@ -170,24 +175,44 @@ export function jwtAuthenticator(
  * Returns an Authenticator function that returns a JwtAuth.
  * This is a convenience Authenticator that parses the
  * specifid creds and delegates to the jwtAuthenticator.
- * @param {Uint8Array} creds - the contents of a creds file
+ * @param {Uint8Array | () => Uint8Array } creds - the contents of a creds file or a function that returns the creds
  * @returns {JwtAuth}
  */
-export function credsAuthenticator(creds: Uint8Array): Authenticator {
-  const CREDS =
-    /\s*(?:(?:[-]{3,}[^\n]*[-]{3,}\n)(.+)(?:\n\s*[-]{3,}[^\n]*[-]{3,}\n))/ig;
-  const s = TD.decode(creds);
-  // get the JWT
-  let m = CREDS.exec(s);
-  if (!m) {
-    throw NatsError.errorForCode(ErrorCode.BadCreds);
-  }
-  const jwt = m[1].trim();
-  // get the nkey
-  m = CREDS.exec(s);
-  if (!m) {
-    throw NatsError.errorForCode(ErrorCode.BadCreds);
-  }
-  const seed = TE.encode(m[1].trim());
-  return jwtAuthenticator(jwt, seed);
+export function credsAuthenticator(
+  creds: Uint8Array | (() => Uint8Array),
+): Authenticator {
+  const fn = typeof creds !== "function" ? () => creds : creds;
+  const parse = () => {
+    const CREDS =
+      /\s*(?:(?:[-]{3,}[^\n]*[-]{3,}\n)(.+)(?:\n\s*[-]{3,}[^\n]*[-]{3,}\n))/ig;
+    const s = TD.decode(fn());
+    // get the JWT
+    let m = CREDS.exec(s);
+    if (!m) {
+      throw NatsError.errorForCode(ErrorCode.BadCreds);
+    }
+    const jwt = m[1].trim();
+    // get the nkey
+    m = CREDS.exec(s);
+    if (!m) {
+      throw NatsError.errorForCode(ErrorCode.BadCreds);
+    }
+    if (!m) {
+      throw NatsError.errorForCode(ErrorCode.BadCreds);
+    }
+    const seed = TE.encode(m[1].trim());
+
+    return { jwt, seed };
+  };
+
+  const jwtFn = () => {
+    const { jwt } = parse();
+    return jwt;
+  };
+  const nkeyFn = () => {
+    const { seed } = parse();
+    return seed;
+  };
+
+  return jwtAuthenticator(jwtFn, nkeyFn);
 }
