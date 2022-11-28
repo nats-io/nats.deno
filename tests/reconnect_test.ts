@@ -32,6 +32,8 @@ import {
   delay,
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
+import { setup } from "./jstest_util.ts";
+import { deadline } from "https://deno.land/std@0.114.0/async/deadline.ts";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
@@ -299,4 +301,34 @@ Deno.test("reconnect - wait on first connect off", async () => {
     const nerr = err as NatsError;
     assertEquals(nerr.code, ErrorCode.ConnectionRefused);
   }
+});
+
+Deno.test("reconnect - close stops reconnects", async () => {
+  const { ns, nc } = await setup({}, {
+    maxReconnectAttempts: -1,
+    reconnectTimeWait: 500,
+  });
+  const reconnects = deferred();
+  (async () => {
+    let c = 0;
+    for await (const s of nc.status()) {
+      if (s.type === DebugEvents.Reconnecting) {
+        c++;
+        if (c === 5) {
+          reconnects.resolve();
+        }
+      }
+    }
+  })().then();
+
+  setTimeout(() => {
+    ns.stop();
+  }, 1000);
+
+  await reconnects;
+  await deadline(nc.close(), 5000)
+    .catch((err) => {
+      // the promise will reject if deadline exceeds
+      fail(err);
+    });
 });
