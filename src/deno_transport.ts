@@ -263,7 +263,7 @@ export class DenoTransport implements Transport {
     }
     this.done = true;
     try {
-      this.conn.close();
+      this.conn?.close();
     } catch (_err) {
       // ignored
     }
