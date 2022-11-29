@@ -30,11 +30,13 @@ import {
   ConsumerOpts,
   consumerOpts,
   createInbox,
+  DebugEvents,
   deferred,
   delay,
   DeliverPolicy,
   Empty,
   ErrorCode,
+  Events,
   headers,
   JsHeaders,
   JsMsg,
@@ -3829,5 +3831,185 @@ Deno.test("jetstream - ordered consumer reset", async () => {
   await c.closed;
 
   assertEquals((await d).seq, ack.seq);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch on stopped server doesn't close client", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+    debug: true,
+  });
+  (async () => {
+    let reconnects = 0;
+    for await (const s of nc.status()) {
+      console.log(s);
+      switch (s.type) {
+        case DebugEvents.Reconnecting:
+          reconnects++;
+          if (reconnects === 2) {
+            ns.restart().then((s) => {
+              ns = s;
+            });
+          }
+          break;
+        case Events.Reconnect:
+          setTimeout(() => {
+            loop = false;
+          });
+          break;
+        default:
+          // nothing
+      }
+    }
+  })().then();
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({ name: nuid.next(), subjects: ["test"] });
+  const { name: stream } = si.config;
+  await jsm.consumers.add(stream, {
+    durable_name: "dur",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+
+  setTimeout(() => {
+    ns.stop();
+  }, 2000);
+
+  let loop = true;
+  while (true) {
+    try {
+      const iter = js.fetch(stream, "dur", { batch: 1, expires: 500 });
+      for await (const m of iter) {
+        m.ack();
+      }
+      if (!loop) {
+        break;
+      }
+    } catch (err) {
+      fail(`shouldn't have errored: ${err.message}`);
+    }
+  }
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull on stopped server doesn't close client", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+  (async () => {
+    let reconnects = 0;
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case DebugEvents.Reconnecting:
+          reconnects++;
+          if (reconnects === 2) {
+            ns.restart().then((s) => {
+              ns = s;
+            });
+          }
+          break;
+        case Events.Reconnect:
+          setTimeout(() => {
+            loop = false;
+          });
+          break;
+        default:
+          // nothing
+      }
+    }
+  })().then();
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({ name: nuid.next(), subjects: ["test"] });
+  const { name: stream } = si.config;
+  await jsm.consumers.add(stream, {
+    durable_name: "dur",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  setTimeout(() => {
+    ns.stop();
+  }, 2000);
+
+  let loop = true;
+  let requestTimeouts = 0;
+  while (true) {
+    try {
+      await js.pull(stream, "dur", 500);
+    } catch (err) {
+      switch (err.code) {
+        case ErrorCode.Timeout:
+          // js is not ready
+          continue;
+        case ErrorCode.JetStream408RequestTimeout:
+          requestTimeouts++;
+          break;
+        default:
+          fail(`unexpected error: ${err.message}`);
+          break;
+      }
+    }
+    if (!loop) {
+      break;
+    }
+  }
+  assert(requestTimeouts > 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push on stopped server doesn't close client", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+  const reconnected = deferred<void>();
+  (async () => {
+    let reconnects = 0;
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case DebugEvents.Reconnecting:
+          reconnects++;
+          if (reconnects === 2) {
+            ns.restart().then((s) => {
+              ns = s;
+            });
+          }
+          break;
+        case Events.Reconnect:
+          setTimeout(() => {
+            reconnected.resolve();
+          }, 1000);
+          break;
+        default:
+          // nothing
+      }
+    }
+  })().then();
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({ name: nuid.next(), subjects: ["test"] });
+  const { name: stream } = si.config;
+
+  const js = nc.jetstream();
+
+  await jsm.consumers.add(stream, {
+    durable_name: "dur",
+    ack_policy: AckPolicy.Explicit,
+    deliver_subject: "bar",
+  });
+
+  const opts = consumerOpts().manualAck().deliverTo(nuid.next());
+  const sub = await js.subscribe("test", opts);
+  (async () => {
+    for await (const m of sub) {
+      m.ack();
+    }
+  })().then();
+
+  setTimeout(() => {
+    ns.stop();
+  }, 2000);
+
+  await reconnected;
+  assertEquals(nc.isClosed(), false);
   await cleanup(ns, nc);
 });
