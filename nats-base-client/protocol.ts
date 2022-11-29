@@ -342,6 +342,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async dialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
+      if (this._closed) {
+        // if we are disconnected, and close is called, the client
+        // still tries to reconnect - to match the reconnect policy
+        // in the case of close, want to stop.
+        this.servers.clear();
+      }
       const wait = this.options.reconnectDelayHandler
         ? this.options.reconnectDelayHandler()
         : DEFAULT_RECONNECT_TIME_WAIT;

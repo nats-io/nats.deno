@@ -193,6 +193,10 @@ export class Servers {
     this.currentServer = this.servers[0];
   }
 
+  clear(): void {
+    this.servers.length = 0;
+  }
+
   updateTLSName(): void {
     const cs = this.getCurrentServer();
     if (!isIP(cs.hostname)) {
