@@ -530,9 +530,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         );
         this.transport.send(PING_CMD);
       } catch (err) {
-        this._close(
-          NatsError.errorForCode(ErrorCode.BadAuthentication, err),
-        );
+        // if we are dying here, this is likely some an authenticator blowing up
+        this._close(err);
       }
     }
     if (updates) {

@@ -38,7 +38,6 @@ import {
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
-  delay,
   NatsConnectionImpl,
   nkeys,
 } from "../nats-base-client/internal_mod.ts";
@@ -444,7 +443,7 @@ Deno.test("auth - custom error", async () => {
   ).then(() => {
     fail("shouldn't have connected");
   }).catch((err) => {
-    assertErrorCode(err, ErrorCode.BadAuthentication);
+    assertEquals(err.message, "user code exploded");
   });
   await ns.stop();
 });
