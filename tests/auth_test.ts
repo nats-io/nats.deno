@@ -443,7 +443,7 @@ Deno.test("auth - custom error", async () => {
   ).then(() => {
     fail("shouldn't have connected");
   }).catch((err) => {
-    assertErrorCode(err, ErrorCode.BadAuthentication);
+    assertEquals(err.message, "user code exploded");
   });
   await ns.stop();
 });
