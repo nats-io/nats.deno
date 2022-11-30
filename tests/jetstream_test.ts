@@ -4013,3 +4013,209 @@ Deno.test("jetstream - push on stopped server doesn't close client", async () =>
   assertEquals(nc.isClosed(), false);
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - fetch heartbeat", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+
+  const d = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        // if we reconnect, close the client
+        d.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
+  const js = nc.jetstream();
+  await ns.stop();
+
+  const iter = js.fetch("my-stream", "dur", {
+    batch: 1,
+    expires: 5000,
+    idle_heartbeat: 500,
+  });
+
+  await assertRejects(
+    async () => {
+      for await (const m of iter) {
+        m.ack();
+      }
+    },
+    Error,
+    "idle heartbeats missed",
+  );
+  ns = await ns.restart();
+  // this here because otherwise get a resource leak error in the test
+  await d;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull heartbeat", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+
+  const reconnected = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        // if we reconnect, close the client
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
+
+  const js = nc.jetstream();
+
+  const d = deferred();
+  const opts = consumerOpts().ackExplicit().callback((err, m) => {
+    if (err?.code === ErrorCode.JetStreamIdleHeartBeat) {
+      d.resolve();
+    }
+    if (m) {
+      m.ack();
+    }
+  });
+  const psub = await js.pullSubscribe("test", opts);
+  await ns.stop();
+
+  psub.pull({ idle_heartbeat: 500, expires: 5000, batch: 1 });
+  await d;
+
+  ns = await ns.restart();
+  // this here because otherwise get a resource leak error in the test
+  await reconnected;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull heartbeat iter", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+
+  const reconnected = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        // if we reconnect, close the client
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
+
+  const js = nc.jetstream();
+
+  const opts = consumerOpts().ackExplicit();
+  const psub = await js.pullSubscribe("test", opts);
+  const done = assertRejects(
+    async () => {
+      for await (const m of psub) {
+        m.ack();
+      }
+    },
+    Error,
+    "idle heartbeats missed",
+  );
+
+  await ns.stop();
+  psub.pull({ idle_heartbeat: 500, expires: 5000, batch: 1 });
+  await done;
+
+  ns = await ns.restart();
+  // this here because otherwise get a resource leak error in the test
+  await reconnected;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push heartbeat iter", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+
+  const reconnected = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        // if we reconnect, close the client
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
+
+  const js = nc.jetstream();
+
+  const opts = consumerOpts({ idle_heartbeat: nanos(500) }).ackExplicit()
+    .deliverTo(nuid.next());
+  const psub = await js.subscribe("test", opts);
+  const done = assertRejects(
+    async () => {
+      for await (const m of psub) {
+        m.ack();
+      }
+    },
+    Error,
+    "idle heartbeats missed",
+  );
+
+  await ns.stop();
+  await done;
+
+  ns = await ns.restart();
+  // this here because otherwise get a resource leak error in the test
+  await reconnected;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push heartbeat callback", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf(), {
+    maxReconnectAttempts: -1,
+  });
+
+  const reconnected = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        // if we reconnect, close the client
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
+
+  const js = nc.jetstream();
+  const d = deferred();
+  const opts = consumerOpts({ idle_heartbeat: nanos(500) }).ackExplicit()
+    .deliverTo(nuid.next())
+    .callback((err, m) => {
+      if (err?.code === ErrorCode.JetStreamIdleHeartBeat) {
+        d.resolve();
+      }
+      if (m) {
+        m.ack();
+      }
+    });
+  await js.subscribe("test", opts);
+  await ns.stop();
+  await d;
+
+  ns = await ns.restart();
+  // this here because otherwise get a resource leak error in the test
+  await reconnected;
+  await cleanup(ns, nc);
+});
