@@ -40,8 +40,9 @@ Deno.test("tls - fail if server doesn't support TLS", async () => {
 });
 
 Deno.test("tls - connects to tls without option", async () => {
-  const nc = await connect({ servers: "demo.nats.io:4443" });
+  const nc = await connect({ servers: "demo.nats.io" }) as NatsConnectionImpl;
   await nc.flush();
+  assertEquals(nc.protocol.transport.isEncrypted(), true);
   await nc.close();
 });
 

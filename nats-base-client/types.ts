@@ -132,6 +132,19 @@ export interface NatsConnection {
   ): Promise<Msg>;
 
   /**
+   * Publishes a request expecting multiple responses back. Several strategies
+   * to determine when the request should stop gathering responses.
+   * @param subject
+   * @param data
+   * @param opts
+   */
+  requestMany(
+    subject: string,
+    data: Uint8Array,
+    opts: Partial<RequestManyOptions>,
+  ): Promise<QueuedIterator<Msg | Error>>;
+
+  /**
    * Returns a Promise that resolves when the client receives a reply from
    * the server. Use of this API is not necessary by clients.
    */
@@ -352,6 +365,13 @@ export interface ConnectionOptions {
    * to specify a subject where requests can deliver responses.
    */
   inboxPrefix?: string;
+
+  /**
+   * By default, NATS clients will abort reconnect if they fail authentication
+   * twice in a row with the same error, regardless of the reconnect policy.
+   * This option should be used with care as it will disable this behaviour when true
+   */
+  ignoreAuthErrorAbort?: boolean;
 }
 
 /**
@@ -549,7 +569,7 @@ export interface Server {
   tlsName: string;
 
   resolve(
-    opts: Partial<{ fn: DnsResolveFn; randomize: boolean }>,
+    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; debug?: boolean }>,
   ): Promise<Server[]>;
 }
 
@@ -670,6 +690,7 @@ export interface RequestManyOptions {
   headers?: MsgHdrs;
   maxMessages?: number;
   noMux?: boolean;
+  jitter?: number;
 }
 
 export interface PublishOptions {

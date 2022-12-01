@@ -72,6 +72,7 @@ export type {
   PurgeResponse,
   PurgeTrimOpts,
   Republish,
+  RequestManyOptions,
   RequestOptions,
   RoKV,
   SeqMsgRequest,
@@ -109,6 +110,7 @@ export {
   DiscardPolicy,
   ReplayPolicy,
   RepublishHeaders,
+  RequestStrategy,
   RetentionPolicy,
   StorageType,
 } from "./types.ts";
@@ -201,3 +203,20 @@ export {
 export type { SemVer } from "./semver.ts";
 
 export { compare, parseSemVer } from "./semver.ts";
+
+export {
+  addService,
+  ServiceError,
+  ServiceErrorHeader,
+  ServiceVerb,
+} from "./service.ts";
+
+export type {
+  Endpoint,
+  EndpointStats,
+  Service,
+  ServiceConfig,
+  ServiceInfo,
+  ServiceSchema,
+  ServiceStats,
+} from "./service.ts";

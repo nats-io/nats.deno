@@ -366,7 +366,8 @@ export class JetStreamClientImpl extends BaseApiClient
       timer = timeout<void>(expires);
       timer.catch(() => {
         if (!sub.isClosed()) {
-          sub.drain();
+          sub.drain()
+            .catch(() => {});
           timer = null;
         }
         if (monitor) {

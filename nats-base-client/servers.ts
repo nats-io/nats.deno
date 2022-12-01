@@ -121,7 +121,14 @@ export class ServerImpl implements Server {
   }
 
   async resolve(
-    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; resolve: boolean }>,
+    opts: Partial<
+      {
+        fn: DnsResolveFn;
+        randomize: boolean;
+        resolve: boolean;
+        debug?: boolean;
+      }
+    >,
   ): Promise<Server[]> {
     if (!opts.fn) {
       // we cannot resolve - transport doesn't support it
@@ -136,6 +143,9 @@ export class ServerImpl implements Server {
     } else {
       // resolve the hostname to ips
       const ips = await opts.fn(this.hostname);
+      if (opts.debug) {
+        console.log(`resolve ${this.hostname} = ${ips.join(",")}`);
+      }
 
       for (const ip of ips) {
         // letting URL handle the details of representing IPV6 ip with a port, etc
@@ -191,6 +201,10 @@ export class Servers {
       this.addServer(`${DEFAULT_HOST}:${defaultPort()}`, false);
     }
     this.currentServer = this.servers[0];
+  }
+
+  clear(): void {
+    this.servers.length = 0;
   }
 
   updateTLSName(): void {

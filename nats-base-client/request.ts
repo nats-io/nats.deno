@@ -114,7 +114,7 @@ export class RequestMany extends BaseRequest implements Request {
         // @ts-ignore: node is not a number
         this.timer = setTimeout(() => {
           this.cancel();
-        }, 300);
+        }, this.opts.jitter || 300);
       }
 
       if (this.opts.strategy === RequestStrategy.SentinelMsg) {

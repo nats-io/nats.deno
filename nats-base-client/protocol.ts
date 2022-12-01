@@ -234,7 +234,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       .then(async (_err?) => {
         this.connected = false;
         if (!this.isClosed()) {
-          await this.disconnected(this.transport.closeError);
+          // if the transport gave an error use that, otherwise
+          // we may have received a protocol error
+          await this.disconnected(this.transport.closeError || this.lastError);
           return;
         }
       });
@@ -317,6 +319,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async _doDial(srv: Server): Promise<void> {
     const alts = await srv.resolve({
       fn: getResolveFn(),
+      debug: this.options.debug,
       randomize: !this.options.noRandomize,
     });
 
@@ -342,6 +345,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async dialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
+      if (this._closed) {
+        // if we are disconnected, and close is called, the client
+        // still tries to reconnect - to match the reconnect policy
+        // in the case of close, want to stop.
+        this.servers.clear();
+      }
       const wait = this.options.reconnectDelayHandler
         ? this.options.reconnectDelayHandler()
         : DEFAULT_RECONNECT_TIME_WAIT;
@@ -438,18 +447,20 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
-    let isMuxPermissionError = false;
     const status: Status = { type: Events.Error, data: err.code };
-    if (err.permissionContext) {
-      status.permissionContext = err.permissionContext;
-      const mux = this.subscriptions.getMux();
-      isMuxPermissionError = mux?.subject === err.permissionContext.subject;
-    }
-    this.subscriptions.handleError(err);
-    this.muxSubscriptions.handleError(isMuxPermissionError, err);
-    if (isMuxPermissionError) {
-      // remove the permission - enable it to be recreated
-      this.subscriptions.setMux(null);
+    if (err.isPermissionError()) {
+      let isMuxPermissionError = false;
+      if (err.permissionContext) {
+        status.permissionContext = err.permissionContext;
+        const mux = this.subscriptions.getMux();
+        isMuxPermissionError = mux?.subject === err.permissionContext.subject;
+      }
+      this.subscriptions.handleError(err);
+      this.muxSubscriptions.handleError(isMuxPermissionError, err);
+      if (isMuxPermissionError) {
+        // remove the permission - enable it to be recreated
+        this.subscriptions.setMux(null);
+      }
     }
     this.dispatchStatus(status);
     await this.handleError(err);
@@ -460,13 +471,18 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       this.handleAuthError(err);
     }
     if (err.isProtocolError()) {
-      await this._close(err);
+      this.lastError = err;
     }
-    this.lastError = err;
+    if (!err.isPermissionError()) {
+      this.lastError = err;
+    }
   }
 
   handleAuthError(err: NatsError) {
-    if (this.lastError && err.code === this.lastError.code) {
+    if (
+      (this.lastError && err.code === this.lastError.code) &&
+      this.options.ignoreAuthErrorAbort === false
+    ) {
       this.abortReconnect = true;
     }
     if (this.connectError) {
@@ -518,9 +534,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         );
         this.transport.send(PING_CMD);
       } catch (err) {
-        this._close(
-          NatsError.errorForCode(ErrorCode.BadAuthentication, err),
-        );
+        // if we are dying here, this is likely some an authenticator blowing up
+        this._close(err);
       }
     }
     if (updates) {

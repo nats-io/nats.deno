@@ -143,6 +143,10 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
               // so they know to fix the callback
               throw err;
             }
+            // fn could have also set an error
+            if (this.err) {
+              throw this.err;
+            }
             continue;
           }
           // only pass messages that pass the filter
