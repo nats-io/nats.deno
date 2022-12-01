@@ -512,23 +512,16 @@ Deno.test("basics - request requires a subject", async () => {
 });
 
 Deno.test("basics - closed returns error", async () => {
-  const lock = Lock(1);
-  const cs = new TestServer(false, (ca: Connection) => {
-    setTimeout(async () => {
-      await ca.write(new TextEncoder().encode("-ERR 'here'\r\n"));
-    }, 500);
-  });
-
-  const nc = await connect(
-    { servers: `127.0.0.1:${cs.getPort()}` },
-  );
+  const { ns, nc } = await setup({}, { reconnect: false });
+  setTimeout(() => {
+    (nc as NatsConnectionImpl).protocol.sendCommand("Y\r\n");
+  }, 1000);
   await nc.closed()
     .then((v) => {
-      assertEquals((v as Error).message, "'here'");
-      lock.unlock();
+      assertEquals((v as NatsError).code, ErrorCode.ProtocolError);
     });
-  assertEquals(nc.isClosed(), true);
-  await cs.stop();
+
+  await cleanup(ns, nc);
 });
 
 Deno.test("basics - subscription with timeout", async () => {

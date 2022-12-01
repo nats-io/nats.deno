@@ -27,13 +27,15 @@ import {
 } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
+  DataBuffer,
   DebugEvents,
   deferred,
   delay,
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./jstest_util.ts";
 import { deadline } from "https://deno.land/std@0.114.0/async/deadline.ts";
+import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
@@ -331,4 +333,129 @@ Deno.test("reconnect - close stops reconnects", async () => {
       // the promise will reject if deadline exceeds
       fail(err);
     });
+});
+
+Deno.test("reconnect - stale connections don't close", async () => {
+  const listener = Deno.listen({ port: 0, transport: "tcp" });
+  const { port } = listener.addr as Deno.NetAddr;
+  const connections: Conn[] = [];
+
+  const TE = new TextEncoder();
+
+  const INFO = TE.encode(
+    "INFO " + JSON.stringify({
+      server_id: "TEST",
+      version: "0.0.0",
+      host: "127.0.0.1",
+      port: port,
+    }) + "\r\n",
+  );
+
+  const PING = { re: /^PING\r\n/im, out: TE.encode("PONG\r\n") };
+  const CONNECT = { re: /^CONNECT\s+([^\r\n]+)\r\n/im, out: TE.encode("") };
+  const CMDS = [PING, CONNECT];
+
+  const startReading = (conn: Conn) => {
+    const buf = new Uint8Array(1024 * 8);
+    let inbound = new DataBuffer();
+    (async () => {
+      while (true) {
+        const count = await conn.read(buf);
+        if (count === null) {
+          break;
+        }
+        if (count) {
+          inbound.fill(DataBuffer.concat(buf.subarray(0, count)));
+          const lines = DataBuffer.toAscii(inbound.peek());
+          for (let i = 0; i < CMDS.length; i++) {
+            const m = CMDS[i].re.exec(lines);
+            if (m) {
+              const len = m[0].length;
+              if (len) {
+                inbound.drain(len);
+                await conn.write(CMDS[i].out);
+              }
+              if (i === 0) {
+                // sent the PONG we are done.
+                return;
+              }
+            }
+          }
+        }
+      }
+    })();
+  };
+
+  (async () => {
+    for await (const conn of listener) {
+      try {
+        connections.push(conn);
+        await conn.write(INFO);
+        startReading(conn);
+      } catch (_err) {
+        console.log(_err);
+        return;
+      }
+    }
+  })().then();
+
+  const nc = await connect({
+    port,
+    maxReconnectAttempts: -1,
+    pingInterval: 2000,
+    reconnectTimeWait: 500,
+    ignoreAuthErrorAbort: true,
+  });
+
+  let stales = 0;
+  (async () => {
+    for await (const s of nc.status()) {
+      console.log(s);
+      if (s.type === DebugEvents.StaleConnection) {
+        stales++;
+        if (stales === 3) {
+          await nc.close();
+        }
+      }
+    }
+  })().then();
+
+  await nc.closed();
+  connections.forEach((c) => {
+    return c.close();
+  });
+  listener.close();
+  assert(stales >= 3, `stales ${stales}`);
+});
+
+Deno.test("reconnect - protocol errors don't close client", async () => {
+  const { ns, nc } = await setup({}, {
+    maxReconnectAttempts: -1,
+    reconnectTimeWait: 500,
+  });
+  const nci = nc as NatsConnectionImpl;
+
+  let reconnects = 0;
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        reconnects++;
+        if (reconnects < 3) {
+          setTimeout(() => {
+            nci.protocol.sendCommand(`X\r\n`);
+          });
+        }
+        if (reconnects === 3) {
+          await nc.close();
+        }
+      }
+    }
+  })().then();
+
+  nci.protocol.sendCommand(`X\r\n`);
+
+  const err = await nc.closed();
+  assertEquals(err, undefined);
+
+  await cleanup(ns, nc);
 });
