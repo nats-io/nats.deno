@@ -444,7 +444,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  async processError(m: Uint8Array) {
+  processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
     const status: Status = { type: Events.Error, data: err.code };
@@ -463,10 +463,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     }
     this.dispatchStatus(status);
-    await this.handleError(err);
+    this.handleError(err);
   }
 
-  async handleError(err: NatsError) {
+  handleError(err: NatsError) {
     if (err.isAuthError()) {
       this.handleAuthError(err);
     }

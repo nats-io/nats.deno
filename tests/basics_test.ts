@@ -33,14 +33,7 @@ import {
   NatsError,
   StringCodec,
 } from "../src/mod.ts";
-import {
-  assertErrorCode,
-  Connection,
-  disabled,
-  Lock,
-  NatsServer,
-  TestServer,
-} from "./helpers/mod.ts";
+import { assertErrorCode, disabled, Lock, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
   delay,
