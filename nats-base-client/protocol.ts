@@ -234,7 +234,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       .then(async (_err?) => {
         this.connected = false;
         if (!this.isClosed()) {
-          await this.disconnected(this.transport.closeError);
+          // if the transport gave an error use that, otherwise
+          // we may have received a protocol error
+          await this.disconnected(this.transport.closeError || this.lastError);
           return;
         }
       });
@@ -445,18 +447,20 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   async processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
-    let isMuxPermissionError = false;
     const status: Status = { type: Events.Error, data: err.code };
-    if (err.permissionContext) {
-      status.permissionContext = err.permissionContext;
-      const mux = this.subscriptions.getMux();
-      isMuxPermissionError = mux?.subject === err.permissionContext.subject;
-    }
-    this.subscriptions.handleError(err);
-    this.muxSubscriptions.handleError(isMuxPermissionError, err);
-    if (isMuxPermissionError) {
-      // remove the permission - enable it to be recreated
-      this.subscriptions.setMux(null);
+    if (err.isPermissionError()) {
+      let isMuxPermissionError = false;
+      if (err.permissionContext) {
+        status.permissionContext = err.permissionContext;
+        const mux = this.subscriptions.getMux();
+        isMuxPermissionError = mux?.subject === err.permissionContext.subject;
+      }
+      this.subscriptions.handleError(err);
+      this.muxSubscriptions.handleError(isMuxPermissionError, err);
+      if (isMuxPermissionError) {
+        // remove the permission - enable it to be recreated
+        this.subscriptions.setMux(null);
+      }
     }
     this.dispatchStatus(status);
     await this.handleError(err);
@@ -467,7 +471,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       this.handleAuthError(err);
     }
     if (err.isProtocolError()) {
-      await this._close(err);
+      this.lastError = err;
     }
     if (!err.isPermissionError()) {
       this.lastError = err;
