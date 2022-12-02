@@ -207,6 +207,7 @@ export { compare, parseSemVer } from "./semver.ts";
 export {
   addService,
   ServiceError,
+  ServiceErrorCodeHeader,
   ServiceErrorHeader,
   ServiceVerb,
 } from "./service.ts";

@@ -59,6 +59,20 @@ export function validName(name = ""): string {
   return "";
 }
 
+export function strictValidName(name = ""): string {
+  if (name === "") {
+    throw Error(`name required`);
+  }
+  const bad = [".", "*", ">", "<", ":", '"', "/", "\\", "|", "?"];
+  for (let i = 0; i < bad.length; i++) {
+    const v = bad[i];
+    if (name.indexOf(v) !== -1) {
+      return `cannot contain '${v}'`;
+    }
+  }
+  return "";
+}
+
 export function defaultConsumer(
   name: string,
   opts: Partial<ConsumerConfig> = {},
