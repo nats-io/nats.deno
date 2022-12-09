@@ -34,6 +34,7 @@ export {
   RequestStrategy,
   RetentionPolicy,
   ServiceError,
+  ServiceErrorCodeHeader,
   ServiceErrorHeader,
   ServiceVerb,
   StorageType,

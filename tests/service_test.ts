@@ -2,6 +2,7 @@ import { cleanup, setup } from "./jstest_util.ts";
 import {
   addService,
   EndpointStats,
+  ServiceErrorCodeHeader,
   ServiceErrorHeader,
   ServiceImpl,
   ServiceInfo,
@@ -23,6 +24,11 @@ import {
   QueuedIterator,
 } from "../nats-base-client/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+
+Deno.test("service - prefix", () => {
+  const s = ServiceImpl.controlSubject(ServiceVerb.PING, "me", "1", "$HELLO");
+  assertEquals(s, "$HELLO.PING.ME.1");
+});
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
@@ -96,7 +102,7 @@ Deno.test("service - basics", async () => {
   await nc.request("foo");
 
   let r = await nc.request(
-    ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
+    ServiceImpl.controlSubject(ServiceVerb.STATS, "test", srvA.id),
   );
   let status = jc.decode(r.data) as ServiceStats;
 
@@ -122,23 +128,23 @@ Deno.test("service - basics", async () => {
   assertEquals(pEntry?.num_requests, 1);
   assertEquals(pEntry?.num_errors, 0);
 
-  const saEntry = findStatus("STATUS-all");
+  const saEntry = findStatus("STATS-all");
   assertExists(saEntry);
   assertEquals(saEntry?.num_requests, 0);
   assertEquals(saEntry?.num_errors, 0);
 
-  const skEntry = findStatus("STATUS-kind");
+  const skEntry = findStatus("STATS-kind");
   assertExists(skEntry);
   assertEquals(skEntry?.num_requests, 0);
   assertEquals(skEntry?.num_errors, 0);
 
-  const sEntry = findStatus("STATUS");
+  const sEntry = findStatus("STATS");
   assertExists(sEntry);
   assertEquals(pEntry?.num_requests, 1);
   assertEquals(pEntry?.num_errors, 0);
 
   msgs = await collect(nci.requestMany(
-    ServiceImpl.controlSubject(ServiceVerb.STATUS),
+    ServiceImpl.controlSubject(ServiceVerb.STATS),
     Empty,
     { maxMessages: 2 },
   ));
@@ -169,7 +175,7 @@ Deno.test("service - basics", async () => {
   assertEquals(infos[1].subject, "foo");
 
   r = await nc.request(
-    ServiceImpl.controlSubject(ServiceVerb.STATUS, "test", srvA.id),
+    ServiceImpl.controlSubject(ServiceVerb.STATS, "test", srvA.id),
     jc.encode({ internal: false }),
   );
   status = jc.decode(r.data) as ServiceStats;
@@ -198,7 +204,8 @@ Deno.test("service - handler error", async () => {
   });
 
   const r = await nc.request("fail");
-  assertEquals(r.headers?.get(ServiceErrorHeader), "400 cb error");
+  assertEquals(r.headers?.get(ServiceErrorHeader), "cb error");
+  assertEquals(r.headers?.get(ServiceErrorCodeHeader), "400");
 
   await cleanup(ns, nc);
 });
