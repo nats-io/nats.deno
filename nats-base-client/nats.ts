@@ -161,7 +161,7 @@ export class NatsConnectionImpl implements NatsConnection {
     subject: string,
     data: Uint8Array = Empty,
     opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
-  ): Promise<QueuedIterator<Msg | Error>> {
+  ): Promise<QueuedIterator<Msg>> {
     try {
       this._check(subject, true, true);
     } catch (err) {
@@ -175,11 +175,11 @@ export class NatsConnectionImpl implements NatsConnection {
     }
 
     // the iterator for user results
-    const qi = new QueuedIteratorImpl<Msg | Error>();
-    function stop() {
+    const qi = new QueuedIteratorImpl<Msg>();
+    function stop(err?: Error) {
       //@ts-ignore: stop function
       qi.push(() => {
-        qi.stop();
+        qi.stop(err);
       });
     }
 
@@ -187,11 +187,7 @@ export class NatsConnectionImpl implements NatsConnection {
     // simply pushes errors and messages into the iterator
     function callback(err: Error | null, msg: Msg | null) {
       if (err || msg === null) {
-        // FIXME: the stop function should not require commenting
-        if (err !== null) {
-          qi.push(err);
-        }
-        stop();
+        stop(err === null ? undefined : err);
       } else {
         qi.push(msg);
       }
@@ -208,7 +204,7 @@ export class NatsConnectionImpl implements NatsConnection {
         callback: (err, msg) => {
           // we only expect runtime errors or a no responders
           if (
-            msg.data.length === 0 &&
+            msg?.data?.length === 0 &&
             msg?.headers?.status === ErrorCode.NoResponders
           ) {
             err = NatsError.errorForCode(ErrorCode.NoResponders);
@@ -248,13 +244,15 @@ export class NatsConnectionImpl implements NatsConnection {
           stop();
         })
         .catch((err: Error) => {
-          qi.push(err);
-          stop();
+          qi.stop(err);
         });
 
       const cancel = (err?: Error) => {
         if (err) {
-          qi.push(err);
+          //@ts-ignore: error
+          qi.push(() => {
+            throw err;
+          });
         }
         clearTimers();
         sub.drain()
