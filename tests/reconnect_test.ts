@@ -357,7 +357,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
 
   const startReading = (conn: Conn) => {
     const buf = new Uint8Array(1024 * 8);
-    let inbound = new DataBuffer();
+    const inbound = new DataBuffer();
     (async () => {
       while (true) {
         const count = await conn.read(buf);
