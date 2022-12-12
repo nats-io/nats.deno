@@ -205,7 +205,6 @@ export type { SemVer } from "./semver.ts";
 export { compare, parseSemVer } from "./semver.ts";
 
 export {
-  addService,
   ServiceError,
   ServiceErrorCodeHeader,
   ServiceErrorHeader,
@@ -215,9 +214,9 @@ export {
 export type {
   Endpoint,
   EndpointStats,
+  SchemaInfo,
   Service,
   ServiceConfig,
   ServiceInfo,
-  ServiceSchema,
   ServiceStats,
 } from "./service.ts";

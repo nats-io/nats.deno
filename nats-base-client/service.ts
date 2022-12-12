@@ -22,10 +22,9 @@ import {
   NatsError,
   Sub,
 } from "./types.ts";
-import { headers, JSONCodec, nuid } from "./mod.ts";
-import { nanos, strictValidName } from "./jsutil.ts";
-
-// FIXME: implement service iterator
+import { headers, JSONCodec, nuid, QueuedIterator } from "./mod.ts";
+import { nanos, validName } from "./jsutil.ts";
+import { parseSemVer, QueuedIteratorImpl } from "./internal_mod.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -45,37 +44,41 @@ export enum ServiceVerb {
   SCHEMA = "SCHEMA",
 }
 
-export type Service = {
+export interface ServiceIdentity {
   /**
-   * ID for the service
-   */
-  id: string;
-  /**
-   * The name of the service
+   * The kind of the service reporting the stats
    */
   name: string;
   /**
-   * The description for the service
+   * The unique ID of the service reporting the stats
    */
-  description: string;
+  id: string;
   /**
    * A version for the service
    */
   version: string;
+}
+
+export interface Service extends QueuedIterator<Msg> {
   /**
    * A promise that gets resolved to null or Error once the service ends.
    * If an error, then service exited because of an error.
    */
-  done: Promise<null | Error>;
+  stopped: Promise<null | Error>;
   /**
    * True if the service is stopped
    */
-  stopped: boolean;
+  // FIXME: this would be better as stop - but the queued iterator may be an issue perhaps call it `isStopped`
+  isStopped: boolean;
   /**
    * Returns the stats for the service.
-   * @param internal if true, aggregates stats for the generated internal endpoints.
    */
-  stats(internal: boolean): ServiceStats;
+  stats(): Promise<ServiceStats>;
+
+  /**
+   * Returns a service info for the service
+   */
+  info(): ServiceInfo;
   /**
    * Resets all the stats
    */
@@ -86,16 +89,12 @@ export type Service = {
    * the specified error
    */
   stop(err?: Error): Promise<null | Error>;
-};
+}
 
 /**
  * Statistics for an endpoint
  */
-export type EndpointStats = {
-  /**
-   * Name of the endpoint
-   */
-  name: string;
+export type EndpointStats = ServiceIdentity & {
   /**
    * The number of requests received by the endpoint
    */
@@ -113,38 +112,34 @@ export type EndpointStats = {
    */
   data?: unknown;
   /**
-   * Total latency for the service
+   * Total processing_time for the service
    */
-  total_latency: Nanos;
+  processing_time: Nanos;
   /**
-   * Average latency is the total latency divided by the num_requests
+   * Average processing_time is the total processing_time divided by the num_requests
    */
-  average_latency: Nanos;
+  average_processing_time: Nanos;
+
+  /**
+   * ISO Date string when the service started
+   */
+  started: string;
 };
 
-export type ServiceSchema = {
+export type ServiceSchema = ServiceIdentity & {
+  schema: SchemaInfo;
+};
+
+export type SchemaInfo = {
   request: string;
   response: string;
 };
 
-export type ServiceInfo = {
-  /**
-   * The kind of the service reporting the stats
-   */
-  name: string;
-  /**
-   * The unique ID of the service reporting the stats
-   */
-  id: string;
+export type ServiceInfo = ServiceIdentity & {
   /**
    * Description for the service
    */
   description: string;
-  /**
-   * Version of the service
-   */
-  version: string;
-
   /**
    * Subject where the service can be invoked
    */
@@ -159,7 +154,7 @@ export type ServiceConfig = {
   /**
    * A version identifier for the service
    */
-  version?: string;
+  version: string;
   /**
    * Description for the service
    */
@@ -167,7 +162,7 @@ export type ServiceConfig = {
   /**
    * Schema for the service
    */
-  schema?: ServiceSchema;
+  schema?: SchemaInfo;
   /**
    * A list of endpoints, typically one, but some services may
    * want more than one endpoint
@@ -192,12 +187,17 @@ export type Endpoint = {
    */
   subject: string;
   /**
-   * Handler for the endpoint
+   * Handler for the endpoint - if not set the service is an iterator
    * @param err
    * @param msg
    */
-  handler: (err: NatsError | null, msg: Msg) => Promise<void>;
+  handler?: (err: NatsError | null, msg: Msg) => void;
 };
+
+/**
+ * The stats of a service
+ */
+export type ServiceStats = ServiceIdentity & EndpointStats;
 
 type InternalEndpoint = {
   name: string;
@@ -210,48 +210,7 @@ type ServiceSubscription<T = unknown> =
     sub: Sub<T>;
   };
 
-/**
- * The stats of a service
- */
-export type ServiceStats = {
-  /**
-   * Name for the endpoint
-   */
-  name: string;
-  /**
-   * The unique ID of the service reporting the stats
-   */
-  id: string;
-  /**
-   * The version identifier for the service
-   */
-  version?: string;
-  /**
-   * An EndpointStats per each endpoint on the service
-   */
-  stats: EndpointStats[];
-};
-
-/**
- * Creates a service that uses the specified connection
- * @param nc
- * @param config
- */
-export function addService(
-  nc: NatsConnection,
-  config: ServiceConfig,
-): Promise<Service> {
-  console.log(
-    `\u001B[33m >> service framework is preview functionality \u001B[0m`,
-  );
-  const s = new ServiceImpl(nc, config);
-  try {
-    return s.start();
-  } catch (err) {
-    return Promise.reject(err);
-  }
-}
-
+// FIXME: perhaps the client is presented with a Request = Msg, but adds a respondError(code, description)
 export class ServiceError extends Error {
   code: number;
   constructor(code: number, message: string) {
@@ -262,17 +221,16 @@ export class ServiceError extends Error {
 
 const jc = JSONCodec();
 
-export class ServiceImpl implements Service {
+export class ServiceImpl extends QueuedIteratorImpl<Msg> implements Service {
   nc: NatsConnection;
   _id: string;
   config: ServiceConfig;
-  _done: Deferred<Error | null>;
   handler: ServiceSubscription;
   internal: ServiceSubscription[];
-  stopped: boolean;
-  watched: Promise<void>[];
-  allStats: Map<Endpoint, EndpointStats>;
-  interval!: number;
+  _stopped: boolean;
+  _done: Deferred<Error | null>;
+  _stats!: EndpointStats;
+  _schema?: Uint8Array;
 
   /**
    * @param verb
@@ -286,6 +244,8 @@ export class ServiceImpl implements Service {
     id = "",
     prefix?: string,
   ) {
+    // the prefix is used as is, because it is an
+    // account boundary permission
     const pre = prefix ?? ServiceApiPrefix;
     if (name === "" && id === "") {
       return `${pre}.${verb}`;
@@ -301,28 +261,46 @@ export class ServiceImpl implements Service {
     nc: NatsConnection,
     config: ServiceConfig,
   ) {
+    super();
     this.nc = nc;
     this.config = config;
-    const n = strictValidName(this.name);
+    const n = validName(this.name);
     if (n !== "") {
       throw new Error(`name ${n}`);
     }
+    // this will throw if not semver
+    parseSemVer(this.config.version);
+
+    this.noIterator = typeof config?.endpoint?.handler === "function";
+    if (!this.noIterator) {
+      this.config.endpoint.handler = (err, msg): void => {
+        err ? this.stop(err).catch() : this.push(msg);
+      };
+    }
+    // initialize the stats
+    this.reset();
 
     this._id = nuid.next();
     this.handler = config.endpoint as ServiceSubscription;
     this.internal = [] as ServiceSubscription[];
-    this.watched = [];
     this._done = deferred();
-    this.stopped = false;
-    this.allStats = new Map<ServiceSubscription, EndpointStats>();
+    this._stopped = false;
 
+    // close if the connection closes
     this.nc.closed()
       .then(() => {
-        this.close();
+        this.close().catch();
       })
       .catch((err) => {
-        this.close(err);
+        this.close(err).catch();
       });
+
+    // close the service if the iterator closes
+    if (!this.noIterator) {
+      this.iterClosed.then(() => {
+        this.close().catch();
+      });
+    }
   }
 
   get subject(): string {
@@ -346,7 +324,7 @@ export class ServiceImpl implements Service {
   }
 
   get version(): string {
-    return this.config.version ?? "0.0.0";
+    return this.config.version;
   }
 
   errorToHeader(err: Error): MsgHdrs {
@@ -371,61 +349,52 @@ export class ServiceImpl implements Service {
     if (internal) {
       this.internal.push(sv);
     }
-    const { name } = h as InternalEndpoint;
-    const stats: EndpointStats = {
-      name: name ? name : this.name,
-      num_requests: 0,
-      num_errors: 0,
-      total_latency: 0,
-      average_latency: 0,
-    };
 
-    const countLatency = function (start: number) {
-      stats.total_latency = nanos(Date.now() - start);
-      stats.average_latency = Math.round(
-        stats.total_latency / stats.num_requests,
+    const countLatency = (start: number): void => {
+      if (internal) return;
+      this._stats.num_requests++;
+      this._stats.processing_time = nanos(Date.now() - start);
+      this._stats.average_processing_time = Math.round(
+        this._stats.processing_time / this._stats.num_requests,
       );
     };
-    const countError = function (err: Error) {
-      stats.num_errors++;
-      stats.last_error = err;
+    const countError = (err: Error): void => {
+      this._stats.num_errors++;
+      this._stats.last_error = err;
     };
 
-    sv.sub = this.nc.subscribe(subject, {
-      callback: (err, msg) => {
+    const callback = handler
+      ? (err: Error | null, msg: Msg) => {
         if (err) {
           this.close(err);
           return;
         }
         const start = Date.now();
-        stats.num_requests++;
         try {
-          handler(err, msg)
-            .catch((err) => {
-              countError(err);
-              msg?.respond(Empty, { headers: this.errorToHeader(err) });
-            }).finally(() => {
-              countLatency(start);
-            });
+          handler(err, msg);
         } catch (err) {
-          msg?.respond(Empty, { headers: this.errorToHeader(err) });
           countError(err);
+          msg?.respond(Empty, { headers: this.errorToHeader(err) });
+        } finally {
           countLatency(start);
         }
-      },
+      }
+      : undefined;
+
+    sv.sub = this.nc.subscribe(subject, {
+      callback,
       queue,
     });
-    this.allStats.set(h, stats);
 
     sv.sub.closed
       .then(() => {
-        if (!this.stopped) {
+        if (!this._stopped) {
           this.close(new Error(`required subscription ${h.subject} stopped`))
             .catch();
         }
       })
       .catch((err) => {
-        if (!this.stopped) {
+        if (!this._stopped) {
           const ne = new Error(
             `required subscription ${h.subject} errored: ${err.message}`,
           );
@@ -435,38 +404,48 @@ export class ServiceImpl implements Service {
       });
   }
 
-  stats(internal = false): ServiceStats {
-    const ss: ServiceStats = {
-      // stats: stats ? stats : null,
+  info(): ServiceInfo {
+    return {
       name: this.name,
       id: this.id,
       version: this.version,
-      stats: [],
-    };
+      description: this.description,
+      subject: (this.config.endpoint as Endpoint).subject,
+    } as ServiceInfo;
+  }
 
-    // the stats for the service handler
-    const stats = this.allStats.get(this.handler);
-    if (stats) {
-      if (typeof this.config.statsHandler === "function") {
-        try {
-          stats.data = this.config.statsHandler(this.handler as Endpoint);
-        } catch (err) {
-          stats.last_error = err;
-        }
+  async stats(): Promise<ServiceStats> {
+    if (typeof this.config.statsHandler === "function") {
+      try {
+        this._stats.data = await this.config.statsHandler(
+          this.handler as Endpoint,
+        );
+      } catch (err) {
+        this._stats.last_error = err;
+        this._stats.num_errors++;
       }
-      ss.stats.push(stats);
+    }
+    const last_error = this._stats.last_error?.message;
+
+    if (!this.noIterator) {
+      this._stats.processing_time = this.time;
+      this._stats.num_requests = this.processed;
+
+      this._stats.average_processing_time = this.time > 0 && this.processed > 0
+        ? this.time / this.processed
+        : 0;
     }
 
-    if (internal) {
-      this.internal.forEach((h) => {
-        const stats = this.allStats.get(h);
-        if (stats) {
-          ss.stats.push(stats);
-        }
-      });
-    }
-
-    return ss;
+    return Object.assign(
+      {
+        // stats: stats ? stats : null,
+        name: this.name,
+        id: this.id,
+        version: this.version,
+      },
+      this._stats,
+      { last_error: last_error },
+    );
   }
 
   addInternalHandler(
@@ -505,19 +484,10 @@ export class ServiceImpl implements Service {
         this.close(err);
         return Promise.reject(err);
       }
-      let internal = true;
-      try {
-        if (msg.data) {
-          const arg = jc.decode(msg.data) as { internal: boolean };
-          internal = arg?.internal;
-        }
-      } catch (_err) {
-        // ignored
-      }
-
-      const stats = this.stats(internal);
-      msg?.respond(jc.encode(stats));
-      return Promise.resolve();
+      return this.stats().then((s) => {
+        msg?.respond(jc.encode(s));
+        return Promise.resolve();
+      });
     };
 
     const infoHandler = (err: Error | null, msg: Msg): Promise<void> => {
@@ -525,18 +495,15 @@ export class ServiceImpl implements Service {
         this.close(err);
         return Promise.reject(err);
       }
-      const info = {
-        name: this.name,
-        id: this.id,
-        version: this.version,
-        description: this.description,
-        subject: (this.config.endpoint as Endpoint).subject,
-      } as ServiceInfo;
-      msg?.respond(jc.encode(info));
+      msg?.respond(jc.encode(this.info()));
       return Promise.resolve();
     };
 
-    const ping = jc.encode({ name: this.name, id: this.id });
+    const ping = jc.encode({
+      name: this.name,
+      id: this.id,
+      version: this.version,
+    });
     const pingHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err).then().catch();
@@ -551,19 +518,14 @@ export class ServiceImpl implements Service {
         this.close(err);
         return Promise.reject(err);
       }
-
-      msg?.respond(jc.encode(this.config.schema));
+      msg?.respond(this.schema);
       return Promise.resolve();
     };
 
     this.addInternalHandler(ServiceVerb.PING, pingHandler);
     this.addInternalHandler(ServiceVerb.STATS, statsHandler);
     this.addInternalHandler(ServiceVerb.INFO, infoHandler);
-    if (
-      this.config.schema?.request !== "" || this.config.schema?.response !== ""
-    ) {
-      this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
-    }
+    this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
 
     // now the actual service
     const handlers = [this.handler];
@@ -579,12 +541,11 @@ export class ServiceImpl implements Service {
   }
 
   close(err?: Error): Promise<null | Error> {
-    if (this.stopped) {
+    if (this._stopped) {
       return this._done;
     }
-    this.stopped = true;
+    this._stopped = true;
     const buf: Promise<void>[] = [];
-    clearInterval(this.interval);
     if (!this.nc.isClosed()) {
       buf.push(this.handler.sub.drain());
       this.internal.forEach((serviceSub) => {
@@ -598,22 +559,41 @@ export class ServiceImpl implements Service {
     return this._done;
   }
 
-  get done(): Promise<null | Error> {
+  get stopped(): Promise<null | Error> {
     return this._done;
+  }
+
+  get isStopped(): boolean {
+    return this._stopped;
   }
 
   stop(err?: Error): Promise<null | Error> {
     return this.close(err);
   }
+  get schema(): Uint8Array {
+    if (!this._schema) {
+      this._schema = jc.encode({
+        name: this.name,
+        id: this.id,
+        version: this.version,
+        schema: this.config.schema,
+      });
+    }
+    return this._schema;
+  }
 
   reset(): void {
-    const iter = this.allStats.values();
-    for (const s of iter) {
-      s.average_latency = 0;
-      s.num_errors = 0;
-      s.num_requests = 0;
-      s.total_latency = 0;
-      s.data = undefined;
+    this._stats = {
+      name: this.name,
+      num_requests: 0,
+      num_errors: 0,
+      processing_time: 0,
+      average_processing_time: 0,
+      started: new Date().toISOString(),
+    } as EndpointStats;
+    if (!this.noIterator) {
+      this.processed = 0;
+      this.time = 0;
     }
   }
 }

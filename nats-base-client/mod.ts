@@ -1,6 +1,5 @@
 export {
   AckPolicy,
-  addService,
   AdvisoryKind,
   Bench,
   canonicalMIMEHeaderKey,
@@ -136,6 +135,7 @@ export type {
   RequestManyOptions,
   RequestOptions,
   RoKV,
+  SchemaInfo,
   SeqMsgRequest,
   SequenceInfo,
   ServerInfo,
@@ -143,7 +143,6 @@ export type {
   Service,
   ServiceConfig,
   ServiceInfo,
-  ServiceSchema,
   ServiceStats,
   Stats,
   Status,

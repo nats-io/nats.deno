@@ -9,6 +9,7 @@ import {
   assertEquals,
   assertFalse,
 } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import { assertThrows } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 Deno.test("semver", () => {
   const pt: { a: string; b: string; r: number }[] = [
@@ -57,4 +58,34 @@ Deno.test("semver - feature basics", () => {
 
   f.update(parseSemVer("2.8.2"));
   assertFalse(f.supports(Feature.JS_PULL_MAX_BYTES));
+});
+
+Deno.test("semver - parse", () => {
+  assertThrows(() => parseSemVer(), Error, "'' is not a semver value");
+  assertThrows(() => parseSemVer(" "), Error, "' ' is not a semver value");
+  assertThrows(
+    () => parseSemVer("a.1.2"),
+    Error,
+    "'a.1.2' is not a semver value",
+  );
+  assertThrows(
+    () => parseSemVer("1.a.2"),
+    Error,
+    "'1.a.2' is not a semver value",
+  );
+  assertThrows(
+    () => parseSemVer("1.2.a"),
+    Error,
+    "'1.2.a' is not a semver value",
+  );
+
+  let sv = parseSemVer("v1.2.3");
+  assertEquals(sv.major, 1);
+  assertEquals(sv.minor, 2);
+  assertEquals(sv.micro, 3);
+
+  sv = parseSemVer("1.2.3-this-is-a-tag");
+  assertEquals(sv.major, 1);
+  assertEquals(sv.minor, 2);
+  assertEquals(sv.micro, 3);
 });
