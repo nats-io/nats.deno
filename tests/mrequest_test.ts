@@ -15,7 +15,7 @@
 import { cleanup, setup } from "./jstest_util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { createInbox } from "../nats-base-client/protocol.ts";
-import { Empty, RequestStrategy } from "../nats-base-client/types.ts";
+import { Empty, Events, RequestStrategy } from "../nats-base-client/types.ts";
 
 import {
   assert,
@@ -23,9 +23,8 @@ import {
   fail,
 } from "https://deno.land/std@0.138.0/testing/asserts.ts";
 import { StringCodec } from "../nats-base-client/codec.ts";
-import { assertErrorCode } from "./helpers/mod.ts";
-import { deferred, ErrorCode } from "../nats-base-client/mod.ts";
-import { delay } from "../nats-base-client/util.ts";
+import { deferred, delay } from "../nats-base-client/util.ts";
+import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
 async function requestManyCount(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
@@ -249,14 +248,15 @@ async function requestManyStopsOnError(noMux = false): Promise<void> {
     maxWait: 2000,
     noMux,
   });
-  const d = deferred<Error>();
-  for await (const mer of iter) {
-    if (mer instanceof Error) {
-      d.resolve(mer);
-    }
-  }
-  const err = await d;
-  assertErrorCode(err, ErrorCode.NoResponders);
+  await assertRejects(
+    async () => {
+      for await (const _mer of iter) {
+        // do nothing
+      }
+    },
+    Error,
+    "503",
+  );
   await cleanup(ns, nc);
 }
 
@@ -266,4 +266,151 @@ Deno.test("mreq - request many stops on error", async () => {
 
 Deno.test("mreq - request many stops on error noMux", async () => {
   await requestManyStopsOnError(true);
+});
+
+Deno.test("mreq - pub permission error", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permissions: { publish: { deny: "q" } },
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  const d = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Error, s.permissionContext?.subject === "q") {
+        d.resolve();
+      }
+    }
+  })().then();
+
+  const iter = await nc.requestMany("q", Empty, {
+    strategy: RequestStrategy.Count,
+    maxMessages: 3,
+    maxWait: 2000,
+  });
+
+  await assertRejects(
+    async () => {
+      for await (const _m of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "Permissions Violation for Publish",
+  );
+  await d;
+  await cleanup(ns, nc);
+});
+
+Deno.test("mreq - sub permission error", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permissions: { subscribe: { deny: "_INBOX.>" } },
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  nc.subscribe("q", {
+    callback: (_err, msg) => {
+      msg?.respond();
+    },
+  });
+
+  const d = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.type === Events.Error,
+          s.permissionContext?.operation === "subscription"
+      ) {
+        d.resolve();
+      }
+    }
+  })().then();
+
+  await assertRejects(
+    async () => {
+      const iter = await nc.requestMany("q", Empty, {
+        strategy: RequestStrategy.Count,
+        maxMessages: 3,
+        maxWait: 2000,
+        noMux: true,
+      });
+      for await (const _m of iter) {
+        // nothing;
+      }
+    },
+    Error,
+    "Permissions Violation for Subscription",
+  );
+  await d;
+  await cleanup(ns, nc);
+});
+
+Deno.test("mreq - lost sub permission", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+      }],
+    },
+  }, { user: "a", pass: "a" });
+
+  let reloaded = false;
+  nc.subscribe("q", {
+    callback: (_err, msg) => {
+      msg?.respond();
+      if (!reloaded) {
+        reloaded = true;
+        ns.reload({
+          authorization: {
+            users: [{
+              user: "a",
+              password: "a",
+              permissions: { subscribe: { deny: "_INBOX.>" } },
+            }],
+          },
+        });
+      }
+    },
+  });
+
+  const d = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (
+        s.type === Events.Error,
+          s.permissionContext?.operation === "subscription"
+      ) {
+        d.resolve();
+      }
+    }
+  })().then();
+
+  await assertRejects(
+    async () => {
+      const iter = await nc.requestMany("q", Empty, {
+        strategy: RequestStrategy.Count,
+        maxMessages: 3,
+        maxWait: 5000,
+        noMux: true,
+      });
+      for await (const _m of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "Permissions Violation for Subscription",
+  );
+  await d;
+  await cleanup(ns, nc);
 });

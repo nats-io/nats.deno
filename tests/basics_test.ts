@@ -33,14 +33,7 @@ import {
   NatsError,
   StringCodec,
 } from "../src/mod.ts";
-import {
-  assertErrorCode,
-  Connection,
-  disabled,
-  Lock,
-  NatsServer,
-  TestServer,
-} from "./helpers/mod.ts";
+import { assertErrorCode, disabled, Lock, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
   delay,
@@ -1116,27 +1109,6 @@ Deno.test("basics - request many waits for timer late response", async () => {
   const time = Date.now() - start;
   assert(time >= 2000);
   assertEquals(count, 1);
-  await cleanup(ns, nc);
-});
-
-Deno.test("basics - request many stops on error", async () => {
-  const { ns, nc } = await setup({});
-  const nci = nc as NatsConnectionImpl;
-
-  const subj = createInbox();
-
-  const iter = await nci.requestMany(subj, Empty, {
-    strategy: RequestStrategy.Timer,
-    maxWait: 2000,
-  });
-  const d = deferred<Error>();
-  for await (const mer of iter) {
-    if (mer instanceof Error) {
-      d.resolve(mer);
-    }
-  }
-  const err = await d;
-  assertErrorCode(err, ErrorCode.NoResponders);
   await cleanup(ns, nc);
 });
 

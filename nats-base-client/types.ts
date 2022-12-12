@@ -142,7 +142,7 @@ export interface NatsConnection {
     subject: string,
     data: Uint8Array,
     opts: Partial<RequestManyOptions>,
-  ): Promise<QueuedIterator<Msg | Error>>;
+  ): Promise<QueuedIterator<Msg>>;
 
   /**
    * Returns a Promise that resolves when the client receives a reply from
