@@ -522,7 +522,7 @@ export class ServicesFactory implements ServicesAPI {
   constructor(nc: NatsConnection) {
     this.nc = nc;
     console.log(
-      `\u001B[33m >> service framework is preview functionality \u001B[0m`,
+      `\u001B[33m >> service framework is beta functionality \u001B[0m`,
     );
   }
 
