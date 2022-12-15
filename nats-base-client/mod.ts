@@ -143,6 +143,8 @@ export type {
   Service,
   ServiceConfig,
   ServiceInfo,
+  ServiceMsg,
+  ServiceSchema,
   ServiceStats,
   Stats,
   Status,

@@ -217,6 +217,9 @@ export type {
   SchemaInfo,
   Service,
   ServiceConfig,
+  ServiceIdentity,
   ServiceInfo,
+  ServiceMsg,
+  ServiceSchema,
   ServiceStats,
 } from "./service.ts";

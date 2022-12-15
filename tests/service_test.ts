@@ -693,3 +693,31 @@ Deno.test("service - version must be semver", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("service - service errors", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "test",
+    version: "2.0.0",
+    endpoint: {
+      subject: "q",
+    },
+  });
+
+  (async () => {
+    for await (const m of srv) {
+      m.data.length ? m.respond() : m.respondError(411, "data required");
+    }
+  })().then();
+
+  let r = await nc.request("q");
+  assertEquals(ServiceError.isServiceError(r), true);
+  const serr = ServiceError.toServiceError(r);
+  assertEquals(serr?.code, 411);
+  assertEquals(serr?.message, "request requires some data");
+
+  r = await nc.request("q");
+  assertEquals(ServiceError.isServiceError(r), false);
+  assertEquals(ServiceError.toServiceError(r), null);
+  await cleanup(ns, nc);
+});

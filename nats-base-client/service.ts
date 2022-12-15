@@ -20,6 +20,7 @@ import {
   Nanos,
   NatsConnection,
   NatsError,
+  PublishOptions,
   Sub,
 } from "./types.ts";
 import { headers, JSONCodec, nuid, QueuedIterator } from "./mod.ts";
@@ -59,7 +60,58 @@ export interface ServiceIdentity {
   version: string;
 }
 
-export interface Service extends QueuedIterator<Msg> {
+export interface ServiceMsg extends Msg {
+  respondError(
+    code: number,
+    description: string,
+    data?: Uint8Array,
+    opts?: PublishOptions,
+  ): boolean;
+
+  isErrorResponse(): boolean;
+}
+
+export class ServiceMsgImpl implements ServiceMsg {
+  msg: Msg;
+  constructor(msg: Msg) {
+    this.msg = msg;
+  }
+
+  get data(): Uint8Array {
+    return this.msg.data;
+  }
+
+  get sid(): number {
+    return this.msg.sid;
+  }
+
+  get subject(): string {
+    return this.msg.subject;
+  }
+
+  respond(data?: Uint8Array, opts?: PublishOptions): boolean {
+    return this.msg.respond(data, opts);
+  }
+
+  respondError(
+    code: number,
+    description: string,
+    data?: Uint8Array,
+    opts?: PublishOptions,
+  ): boolean {
+    opts = opts || {};
+    opts.headers = opts.headers || headers();
+    opts.headers?.set(ServiceErrorCodeHeader, `${code}`);
+    opts.headers?.set(ServiceErrorHeader, description);
+    return this.msg.respond(data, opts);
+  }
+
+  isErrorResponse(): boolean {
+    return false;
+  }
+}
+
+export interface Service extends QueuedIterator<ServiceMsg> {
   /**
    * A promise that gets resolved to null or Error once the service ends.
    * If an error, then service exited because of an error.
@@ -191,7 +243,7 @@ export type Endpoint = {
    * @param err
    * @param msg
    */
-  handler?: (err: NatsError | null, msg: Msg) => void;
+  handler?: (err: NatsError | null, msg: ServiceMsg) => void;
 };
 
 /**
@@ -217,11 +269,26 @@ export class ServiceError extends Error {
     super(message);
     this.code = code;
   }
+
+  static isServiceError(msg: Msg): boolean {
+    return ServiceError.toServiceError(msg) !== null;
+  }
+
+  static toServiceError(msg: Msg): ServiceError | null {
+    const scode = msg?.headers?.get(ServiceErrorCodeHeader) || "";
+    if (scode !== "") {
+      let code = parseInt(scode) || 400;
+      const description = msg?.headers?.get(ServiceErrorHeader) || "";
+      return new ServiceError(code, description.length ? description : scode);
+    }
+    return null;
+  }
 }
 
 const jc = JSONCodec();
 
-export class ServiceImpl extends QueuedIteratorImpl<Msg> implements Service {
+export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
+  implements Service {
   nc: NatsConnection;
   _id: string;
   config: ServiceConfig;
@@ -274,7 +341,7 @@ export class ServiceImpl extends QueuedIteratorImpl<Msg> implements Service {
     this.noIterator = typeof config?.endpoint?.handler === "function";
     if (!this.noIterator) {
       this.config.endpoint.handler = (err, msg): void => {
-        err ? this.stop(err).catch() : this.push(msg);
+        err ? this.stop(err).catch() : this.push(new ServiceMsgImpl(msg));
       };
     }
     // initialize the stats
@@ -371,7 +438,7 @@ export class ServiceImpl extends QueuedIteratorImpl<Msg> implements Service {
         }
         const start = Date.now();
         try {
-          handler(err, msg);
+          handler(err, new ServiceMsgImpl(msg));
         } catch (err) {
           countError(err);
           msg?.respond(Empty, { headers: this.errorToHeader(err) });
