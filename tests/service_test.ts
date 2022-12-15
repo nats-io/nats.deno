@@ -8,6 +8,7 @@ import {
   ServiceIdentity,
   ServiceImpl,
   ServiceInfo,
+  ServiceMsg,
   ServiceSchema,
   ServiceStats,
 } from "../nats-base-client/service.ts";
@@ -63,9 +64,8 @@ Deno.test("service - bad name", async () => {
         },
         endpoint: {
           subject: subj,
-          handler: (_err: Error | null, msg: Msg): Promise<void> => {
+          handler: (_err: Error | null, msg: Msg) => {
             msg?.respond();
-            return Promise.resolve();
           },
         },
       }) as ServiceImpl;
@@ -91,9 +91,8 @@ Deno.test("service - client", async () => {
     },
     endpoint: {
       subject: subj,
-      handler: (_err: Error | null, msg: Msg): Promise<void> => {
+      handler: (_err: Error | null, msg: Msg) => {
         msg?.respond(sc.encode("hello"));
-        return Promise.resolve();
       },
     },
   }) as ServiceImpl;
@@ -199,9 +198,8 @@ Deno.test("service - basics", async () => {
     version: "0.0.0",
     endpoint: {
       subject: "foo",
-      handler: (_err: Error | null, msg: Msg): Promise<void> => {
+      handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
-        return Promise.resolve();
       },
     },
   }) as ServiceImpl;
@@ -211,9 +209,8 @@ Deno.test("service - basics", async () => {
     version: "0.0.0",
     endpoint: {
       subject: "foo",
-      handler: (_err: Error | null, msg: Msg): Promise<void> => {
+      handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
-        return Promise.resolve();
       },
     },
   }) as ServiceImpl;
@@ -283,7 +280,7 @@ Deno.test("service - handler error", async () => {
     version: "1.2.3",
     endpoint: {
       subject: "fail",
-      handler: (): Promise<void> => {
+      handler: () => {
         throw new Error("cb error");
       },
     },
@@ -291,7 +288,7 @@ Deno.test("service - handler error", async () => {
 
   const r = await nc.request("fail");
   assertEquals(r.headers?.get(ServiceErrorHeader), "cb error");
-  assertEquals(r.headers?.get(ServiceErrorCodeHeader), "400");
+  assertEquals(r.headers?.get(ServiceErrorCodeHeader), "500");
 
   await cleanup(ns, nc);
 });
@@ -316,13 +313,12 @@ Deno.test("service - stop error", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "fail",
-      handler: (err): Promise<void> => {
+      handler: (err) => {
         if (err) {
           service.stop(err);
-          return Promise.reject(err);
+          return;
         }
         fail("shouldn't have subscribed");
-        return Promise.resolve();
       },
     },
   });
@@ -356,8 +352,8 @@ Deno.test("service - start error", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "fail",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err, msg) => {
+        msg?.respond();
       },
     },
   });
@@ -378,20 +374,17 @@ Deno.test("service - callback error", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "fail",
-      handler: (err): Promise<void> => {
+      handler: (err) => {
         if (err === null) {
           throw new Error("boom");
-        } else {
-          console.log("error here", err);
         }
-        return Promise.resolve();
       },
     },
   });
 
   const m = await nc.request("fail");
   assertEquals(m.headers?.get(ServiceErrorHeader), "boom");
-  assertEquals(m.headers?.get(ServiceErrorCodeHeader), "400");
+  assertEquals(m.headers?.get(ServiceErrorCodeHeader), "500");
 
   await cleanup(ns, nc);
 });
@@ -404,6 +397,7 @@ Deno.test("service -service error is headers", async () => {
     endpoint: {
       subject: "fail",
       handler: (): void => {
+        // tossing service error should have the code/description
         throw new ServiceError(1210, "something");
       },
     },
@@ -424,8 +418,8 @@ Deno.test("service - sub stop", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "q",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err, msg) => {
+        msg?.respond();
       },
     },
   });
@@ -451,8 +445,8 @@ Deno.test("service - monitoring sub stop", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "q",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err, msg) => {
+        msg?.respond();
       },
     },
   });
@@ -478,8 +472,8 @@ Deno.test("service - custom stats handler", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "q",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err, msg) => {
+        msg?.respond();
       },
     },
     statsHandler: (): Promise<unknown> => {
@@ -503,8 +497,8 @@ Deno.test("service - bad stats handler", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "q",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err: Error | null, msg: ServiceMsg) => {
+        msg?.respond();
       },
     },
     // @ts-ignore: test
@@ -527,8 +521,8 @@ Deno.test("service - stats handler error", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "q",
-      handler: (): Promise<void> => {
-        return Promise.resolve();
+      handler: (_err, msg) => {
+        msg?.respond();
       },
     },
     statsHandler: (): Promise<unknown> => {
@@ -714,9 +708,9 @@ Deno.test("service - service errors", async () => {
   assertEquals(ServiceError.isServiceError(r), true);
   const serr = ServiceError.toServiceError(r);
   assertEquals(serr?.code, 411);
-  assertEquals(serr?.message, "request requires some data");
+  assertEquals(serr?.message, "data required");
 
-  r = await nc.request("q");
+  r = await nc.request("q", new Uint8Array(1));
   assertEquals(ServiceError.isServiceError(r), false);
   assertEquals(ServiceError.toServiceError(r), null);
   await cleanup(ns, nc);

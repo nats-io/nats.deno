@@ -271,7 +271,7 @@ export class ServiceError extends Error {
   static toServiceError(msg: Msg): ServiceError | null {
     const scode = msg?.headers?.get(ServiceErrorCodeHeader) || "";
     if (scode !== "") {
-      let code = parseInt(scode) || 400;
+      const code = parseInt(scode) || 400;
       const description = msg?.headers?.get(ServiceErrorHeader) || "";
       return new ServiceError(code, description.length ? description : scode);
     }
@@ -396,7 +396,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       h.set(ServiceErrorCodeHeader, `${se.code}`);
     } else {
       h.set(ServiceErrorHeader, err.message);
-      h.set(ServiceErrorCodeHeader, "400");
+      h.set(ServiceErrorCodeHeader, "500");
     }
     return h;
   }
@@ -499,7 +499,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
     return Object.assign(
       {
-        // stats: stats ? stats : null,
         name: this.name,
         id: this.id,
         version: this.version,
