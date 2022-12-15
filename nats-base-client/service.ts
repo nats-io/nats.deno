@@ -67,8 +67,6 @@ export interface ServiceMsg extends Msg {
     data?: Uint8Array,
     opts?: PublishOptions,
   ): boolean;
-
-  isErrorResponse(): boolean;
 }
 
 export class ServiceMsgImpl implements ServiceMsg {
@@ -104,10 +102,6 @@ export class ServiceMsgImpl implements ServiceMsg {
     opts.headers?.set(ServiceErrorCodeHeader, `${code}`);
     opts.headers?.set(ServiceErrorHeader, description);
     return this.msg.respond(data, opts);
-  }
-
-  isErrorResponse(): boolean {
-    return false;
   }
 }
 
