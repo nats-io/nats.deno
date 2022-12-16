@@ -31,8 +31,10 @@ import { parseSemVer, QueuedIteratorImpl } from "./internal_mod.ts";
  * Services have common backplane subject pattern:
  *
  * `$SRV.PING|STATS|INFO|SCHEMA` - pings or retrieves status for all services
- * `$SRV.PING|STATS|INFO|SCHEMA.<kind>` - pings or retrieves status for all services having the specified kind
- * `$SRV.PING|STATS|INFO|SCHEMA.<kind>.<id>` - pings or retrieves status of a particular service
+ * `$SRV.PING|STATS|INFO|SCHEMA.<name>` - pings or retrieves status for all services having the specified name
+ * `$SRV.PING|STATS|INFO|SCHEMA.<name>.<id>` - pings or retrieves status of a particular service
+ *
+ * Note that <name> and <id> are upper-cased.
  */
 export const ServiceApiPrefix = "$SRV";
 export const ServiceErrorHeader = "Nats-Service-Error";
