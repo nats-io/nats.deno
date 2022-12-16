@@ -14,11 +14,13 @@
  */
 import {
   assert,
+  assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   AckPolicy,
@@ -68,10 +70,6 @@ import {
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 import { StreamUpdateConfig } from "../nats-base-client/types.ts";
 import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
-import {
-  assertArrayIncludes,
-  assertExists,
-} from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { convertStreamSourceDomain } from "../nats-base-client/jsmstream_api.ts";
 
@@ -719,18 +717,16 @@ Deno.test("jsm - get message", async () => {
   assertEquals(sm.seq, 2);
   assertEquals(jc.decode(sm.data), 2);
 
-  await assertRejects(
+  const err = await assertRejects(
     async () => {
       await jsm.streams.getMessage(stream, { seq: 3 });
     },
-    (err: Error) => {
-      if (
-        err.message !== "stream store eof" && err.message !== "no message found"
-      ) {
-        fail(`unexpected error message ${err.message}`);
-      }
-    },
-  );
+  ) as Error;
+  if (
+    err.message !== "stream store eof" && err.message !== "no message found"
+  ) {
+    fail(`unexpected error message ${err.message}`);
+  }
 
   await cleanup(ns, nc);
 });

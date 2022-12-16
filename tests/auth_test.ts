@@ -17,7 +17,7 @@ import {
   assertEquals,
   assertRejects,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -255,15 +255,12 @@ Deno.test("auth - req permissions keep connection", async () => {
     }
   })();
 
-  await assertRejects(
+  const err = await assertRejects(
     async () => {
       await nc.request("bar");
     },
-    (err: Error) => {
-      const ne = err as NatsError;
-      assertEquals(ne.code, ErrorCode.PermissionsViolation);
-    },
-  );
+  ) as NatsError;
+  assertEquals(err.code, ErrorCode.PermissionsViolation);
 
   const v = await errStatus;
   assertEquals(v.data, ErrorCode.PermissionsViolation);

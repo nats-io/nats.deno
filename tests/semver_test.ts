@@ -8,8 +8,8 @@ import {
   assert,
   assertEquals,
   assertFalse,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
-import { assertThrows } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+  assertThrows,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 Deno.test("semver", () => {
   const pt: { a: string; b: string; r: number }[] = [

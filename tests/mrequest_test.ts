@@ -20,11 +20,11 @@ import { Empty, Events, RequestStrategy } from "../nats-base-client/types.ts";
 import {
   assert,
   assertEquals,
+  assertRejects,
   fail,
-} from "https://deno.land/std@0.138.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { StringCodec } from "../nats-base-client/codec.ts";
 import { deferred, delay } from "../nats-base-client/util.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 
 async function requestManyCount(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});

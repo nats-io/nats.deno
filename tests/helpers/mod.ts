@@ -4,7 +4,7 @@ import { cleanup } from "../jstest_util.ts";
 import { compare, parseSemVer } from "../../nats-base-client/semver.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
-import { red, yellow } from "https://deno.land/std@0.152.0/fmt/colors.ts";
+import { red, yellow } from "https://deno.land/std@0.168.0/fmt/colors.ts";
 export { Connection, TestServer } from "./test_server.ts";
 export {
   assertBetween,
