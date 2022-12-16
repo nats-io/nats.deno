@@ -430,7 +430,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     };
 
     const callback = handler
-      ? (err: Error | null, msg: Msg) => {
+      ? (err: NatsError | null, msg: Msg) => {
         if (err) {
           this.close(err);
           return;
