@@ -152,10 +152,10 @@ export class JetStreamClientImpl extends BaseApiClient
       if (opts.expect.streamName) {
         mh.set(PubHeaders.ExpectedStreamHdr, opts.expect.streamName);
       }
-      if (opts.expect.lastSequence) {
+      if (typeof opts.expect.lastSequence === "number") {
         mh.set(PubHeaders.ExpectedLastSeqHdr, `${opts.expect.lastSequence}`);
       }
-      if (opts.expect.lastSubjectSequence) {
+      if (typeof opts.expect.lastSubjectSequence === "number") {
         mh.set(
           PubHeaders.ExpectedLastSubjectSequenceHdr,
           `${opts.expect.lastSubjectSequence}`,
