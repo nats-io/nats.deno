@@ -78,6 +78,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   ctx?: unknown;
   _data?: unknown; //data is for use by extenders in any way they like
   err?: Error;
+  time: number;
 
   constructor() {
     this.inflight = 0;
@@ -90,6 +91,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     this.signal = deferred<void>();
     this.yields = [];
     this.iterClosed = deferred<void>();
+    this.time = 0;
   }
 
   [Symbol.asyncIterator]() {
@@ -155,7 +157,9 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
             : true;
           if (ok) {
             this.processed++;
+            const start = Date.now();
             yield yields[i];
+            this.time = Date.now() - start;
             if (this.dispatchedFn && yields[i]) {
               this.dispatchedFn(yields[i]);
             }

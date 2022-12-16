@@ -137,6 +137,23 @@ export function deferred<T>(): Deferred<T> {
   return Object.assign(p, methods) as Deferred<T>;
 }
 
+export function debugDeferred<T>(): Deferred<T> {
+  let methods = {};
+  const p = new Promise<T>((resolve, reject): void => {
+    methods = {
+      resolve: (v: T) => {
+        console.trace("resolve", v);
+        resolve(v);
+      },
+      reject: (err?: Error) => {
+        console.trace("reject");
+        reject(err);
+      },
+    };
+  });
+  return Object.assign(p, methods) as Deferred<T>;
+}
+
 export function shuffle<T>(a: T[]): T[] {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

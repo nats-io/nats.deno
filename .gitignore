@@ -9,7 +9,7 @@ nats.js.map
 src/version.json
 old_tests/
 examples/certs/
-
+.tsconfig
 debug/
 .idea/
 

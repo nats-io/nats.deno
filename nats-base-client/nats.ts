@@ -30,6 +30,7 @@ import {
   RequestOptions,
   RequestStrategy,
   ServerInfo,
+  ServicesAPI,
   Stats,
   Status,
   Subscription,
@@ -49,12 +50,15 @@ import {
 import { isRequestError } from "./msg.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
+import { Service, ServiceConfig, ServiceImpl } from "./service.ts";
+import { ServiceClient, ServiceClientImpl } from "./serviceclient.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean;
   listeners: QueuedIterator<Status>[];
+  _services!: ServicesAPI;
 
   private constructor(opts: ConnectionOptions) {
     this.draining = false;
@@ -503,5 +507,35 @@ export class NatsConnectionImpl implements NatsConnection {
 
   get features(): Features {
     return this.protocol.features;
+  }
+
+  get services(): ServicesAPI {
+    if (!this._services) {
+      this._services = new ServicesFactory(this);
+    }
+    return this._services;
+  }
+}
+
+export class ServicesFactory implements ServicesAPI {
+  nc: NatsConnection;
+  constructor(nc: NatsConnection) {
+    this.nc = nc;
+    console.log(
+      `\u001B[33m >> service framework is beta functionality \u001B[0m`,
+    );
+  }
+
+  add(config: ServiceConfig): Promise<Service> {
+    try {
+      const s = new ServiceImpl(this.nc, config);
+      return s.start();
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
+    return new ServiceClientImpl(this.nc, opts, prefix);
   }
 }

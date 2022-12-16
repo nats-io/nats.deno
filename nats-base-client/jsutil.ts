@@ -49,25 +49,14 @@ export function validName(name = ""): string {
   if (name === "") {
     throw Error(`name required`);
   }
-  const bad = [".", "*", ">"];
-  for (let i = 0; i < bad.length; i++) {
-    const v = bad[i];
-    if (name.indexOf(v) !== -1) {
-      return `cannot contain '${v}'`;
-    }
-  }
-  return "";
-}
-
-export function strictValidName(name = ""): string {
-  if (name === "") {
-    throw Error(`name required`);
-  }
-  const bad = [".", "*", ">", "<", ":", '"', "/", "\\", "|", "?"];
-  for (let i = 0; i < bad.length; i++) {
-    const v = bad[i];
-    if (name.indexOf(v) !== -1) {
-      return `cannot contain '${v}'`;
+  const RE = /^[-\w]+$/g;
+  const m = name.match(RE);
+  if (m === null) {
+    for (const c of name.split("")) {
+      const mm = c.match(RE);
+      if (mm === null) {
+        return `cannot contain '${c}'`;
+      }
     }
   }
   return "";

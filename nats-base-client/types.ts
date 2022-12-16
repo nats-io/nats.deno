@@ -22,6 +22,8 @@ import type { TypedSubscriptionOptions } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
+import { Service, ServiceConfig } from "./service.ts";
+import { ServiceClient } from "./serviceclient.ts";
 
 export const Empty = new Uint8Array(0);
 
@@ -212,6 +214,7 @@ export interface NatsConnection {
    * @return the number of milliseconds it took for a {@link flush}.
    */
   rtt(): Promise<number>;
+  services: ServicesAPI;
 }
 
 export interface ConnectionOptions {
@@ -2969,4 +2972,20 @@ export enum RepublishHeaders {
    * The size in bytes of the message's body - Only if {@link Republish#headers_only} is set.
    */
   Size = "Nats-Msg-Size",
+}
+
+export interface ServicesAPI {
+  /**
+   * Adds a {@see Service}
+   * @param config
+   */
+  add(config: ServiceConfig): Promise<Service>;
+
+  /**
+   * Returns a {@see ServiceClient} that can be used to interact with the
+   * observability aspects of the service (discovery, monitoring)
+   * @param opts
+   * @param prefix
+   */
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient;
 }

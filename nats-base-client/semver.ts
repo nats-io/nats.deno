@@ -1,6 +1,6 @@
 export type SemVer = { major: number; minor: number; micro: number };
 export function parseSemVer(
-  s: string,
+  s = "",
 ): SemVer {
   const m = s.match(/(\d+).(\d+).(\d+)/);
   if (m) {
@@ -10,7 +10,7 @@ export function parseSemVer(
       micro: parseInt(m[3]),
     };
   }
-  throw new Error(`${s} is not a semver value`);
+  throw new Error(`'${s}' is not a semver value`);
 }
 export function compare(a: SemVer, b: SemVer): number {
   if (a.major < b.major) return -1;
