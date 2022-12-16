@@ -282,12 +282,29 @@ Deno.test("jetstream - get message last by subject", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - publish first sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { debug: true });
+  const { stream, subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await assertRejects(
+    async () => {
+      await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+    },
+    Error,
+    "wrong last sequence",
+  );
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - publish require last sequence", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  await js.publish(subj, Empty);
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
 
   await assertRejects(
     async () => {
