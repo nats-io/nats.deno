@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -34,7 +34,7 @@ import {
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
-import { deadline } from "https://deno.land/std@0.114.0/async/deadline.ts";
+import { deadline } from "https://deno.land/std@0.168.0/async/deadline.ts";
 import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
@@ -355,13 +355,18 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const CONNECT = { re: /^CONNECT\s+([^\r\n]+)\r\n/im, out: TE.encode("") };
   const CMDS = [PING, CONNECT];
 
+  const connClosed: Promise<void>[] = [];
+
   const startReading = (conn: Conn) => {
     const buf = new Uint8Array(1024 * 8);
     const inbound = new DataBuffer();
     (async () => {
+      const closed = deferred<void>();
+      connClosed.push(closed);
       while (true) {
         const count = await conn.read(buf);
         if (count === null) {
+          closed.resolve();
           break;
         }
         if (count) {
@@ -388,8 +393,8 @@ Deno.test("reconnect - stale connections don't close", async () => {
 
   (async () => {
     for await (const conn of listener) {
+      connections.push(conn);
       try {
-        connections.push(conn);
         await conn.write(INFO);
         startReading(conn);
       } catch (_err) {
@@ -425,6 +430,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
     return c.close();
   });
   listener.close();
+  await Promise.all(connClosed);
   assert(stales >= 3, `stales ${stales}`);
 });
 

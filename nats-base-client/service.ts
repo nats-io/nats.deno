@@ -154,7 +154,7 @@ export type EndpointStats = ServiceIdentity & {
   /**
    * If set, the last error triggered by the endpoint
    */
-  last_error?: Error;
+  last_error?: string;
   /**
    * A field that can be customized with any data as returned by stats handler see {@link ServiceConfig}
    */
@@ -293,6 +293,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   _stopped: boolean;
   _done: Deferred<Error | null>;
   _stats!: EndpointStats;
+  _lastException?: Error;
   _schema?: Uint8Array;
 
   /**
@@ -403,6 +404,12 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return h;
   }
 
+  countError(err: Error): void {
+    this._lastException = err;
+    this._stats.num_errors++;
+    this._stats.last_error = err.message;
+  }
+
   setupNATS(h: Endpoint, internal = false) {
     // internals don't use a queue
     const queue = internal ? "" : "q";
@@ -421,10 +428,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         this._stats.processing_time / this._stats.num_requests,
       );
     };
-    const countError = (err: Error): void => {
-      this._stats.num_errors++;
-      this._stats.last_error = err;
-    };
 
     const callback = handler
       ? (err: Error | null, msg: Msg) => {
@@ -436,7 +439,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         try {
           handler(err, new ServiceMsgImpl(msg));
         } catch (err) {
-          countError(err);
+          this.countError(err);
           msg?.respond(Empty, { headers: this.errorToHeader(err) });
         } finally {
           countLatency(start);
@@ -484,11 +487,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
           this.handler as Endpoint,
         );
       } catch (err) {
-        this._stats.last_error = err;
-        this._stats.num_errors++;
+        this.countError(err);
       }
     }
-    const last_error = this._stats.last_error?.message;
 
     if (!this.noIterator) {
       this._stats.processing_time = this.time;
@@ -506,7 +507,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         version: this.version,
       },
       this._stats,
-      { last_error: last_error },
     );
   }
 
@@ -645,6 +645,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   }
 
   reset(): void {
+    this._lastException = undefined;
     this._stats = {
       name: this.name,
       num_requests: 0,

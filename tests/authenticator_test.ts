@@ -9,7 +9,7 @@ import {
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "../nats-base-client/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { nkeys } from "../nats-base-client/nkeys.ts";
 import {
   encodeAccount,

@@ -18,7 +18,7 @@ import {
   assertExists,
   assertRejects,
   fail,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   createInbox,
   ErrorCode,
@@ -556,8 +556,7 @@ Deno.test("service - reset", async () => {
   await nc.request("q");
   await nc.request("q");
 
-  service._stats.num_errors = 1;
-  service._stats.last_error = new Error("hello");
+  service.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());
@@ -599,9 +598,7 @@ Deno.test("service - iter", async () => {
 
   await nc.request("q");
   await nc.request("q");
-
-  service._stats.num_errors = 1;
-  service._stats.last_error = new Error("hello");
+  service.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());

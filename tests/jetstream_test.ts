@@ -53,10 +53,11 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import {
   assertEquals,
+  assertIsError,
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
@@ -74,7 +75,6 @@ import {
   isHeartbeatMsg,
   Js409Errors,
 } from "../nats-base-client/jsutil.ts";
-import { assertIsError } from "https://deno.land/std@0.138.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -284,7 +284,7 @@ Deno.test("jetstream - get message last by subject", async () => {
 
 Deno.test("jetstream - publish first sequence", async () => {
   const { ns, nc } = await setup(jetstreamServerConf(), { debug: true });
-  const { stream, subj } = await initStream(nc);
+  const { subj } = await initStream(nc);
 
   const js = nc.jetstream();
   await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
@@ -3267,26 +3267,25 @@ Deno.test("jetstream - detailed errors", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
 
-  await assertRejects(() => {
+  const ne = await assertRejects(() => {
     return jsm.streams.add({
       name: "test",
       num_replicas: 3,
       subjects: ["foo"],
     });
-  }, (err: Error) => {
-    const ne = err as NatsError;
-    assert(ne.api_error);
-    assertEquals(
-      ne.message,
-      "replicas > 1 not supported in non-clustered mode",
-    );
-    assertEquals(
-      ne.api_error.description,
-      "replicas > 1 not supported in non-clustered mode",
-    );
-    assertEquals(ne.api_error.code, 500);
-    assertEquals(ne.api_error.err_code, 10074);
-  });
+  }) as NatsError;
+
+  assert(ne.api_error);
+  assertEquals(
+    ne.message,
+    "replicas > 1 not supported in non-clustered mode",
+  );
+  assertEquals(
+    ne.api_error.description,
+    "replicas > 1 not supported in non-clustered mode",
+  );
+  assertEquals(ne.api_error.code, 500);
+  assertEquals(ne.api_error.err_code, 10074);
 
   await cleanup(ns, nc);
 });

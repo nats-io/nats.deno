@@ -18,7 +18,7 @@ import {
   assertEquals,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,
@@ -126,15 +126,13 @@ Deno.test("drain - publish after drain fails", async () => {
   nc.subscribe(subj);
   await nc.drain();
 
-  assertThrows(() => {
-    nc.publish(subj);
-  }, (err: Error) => {
-    assertErrorCode(
-      err,
-      ErrorCode.ConnectionClosed,
-      ErrorCode.ConnectionDraining,
-    );
-  });
+  assertThrowsErrorCode(
+    () => {
+      nc.publish(subj);
+    },
+    ErrorCode.ConnectionClosed,
+    ErrorCode.ConnectionDraining,
+  );
   await ns.stop();
 });
 
