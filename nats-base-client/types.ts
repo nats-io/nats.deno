@@ -18,12 +18,14 @@ import type { MsgHdrs } from "./headers.ts";
 export type { MsgHdrs } from "./headers.ts";
 import type { Authenticator } from "./authenticator.ts";
 export type { Authenticator } from "./authenticator.ts";
+import type { ServiceClient } from "./serviceclient.ts";
+export type { ServiceClient } from "./serviceclient.ts";
+
 import type { TypedSubscriptionOptions } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Service, ServiceConfig } from "./service.ts";
-import { ServiceClient } from "./serviceclient.ts";
 
 export const Empty = new Uint8Array(0);
 
@@ -2898,7 +2900,7 @@ export type ObjectStoreStatus = {
 };
 
 /**
- * @deprecated {@see ObjectStoreStatus}
+ * @deprecated {@link ObjectStoreStatus}
  */
 export type ObjectStoreInfo = ObjectStoreStatus;
 
@@ -2976,13 +2978,13 @@ export enum RepublishHeaders {
 
 export interface ServicesAPI {
   /**
-   * Adds a {@see Service}
+   * Adds a {@link Service}
    * @param config
    */
   add(config: ServiceConfig): Promise<Service>;
 
   /**
-   * Returns a {@see ServiceClient} that can be used to interact with the
+   * Returns a {@link ServiceClient} that can be used to interact with the
    * observability aspects of the service (discovery, monitoring)
    * @param opts
    * @param prefix

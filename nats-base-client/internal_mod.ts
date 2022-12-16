@@ -80,6 +80,8 @@ export type {
   Server,
   ServerInfo,
   ServersChanged,
+  ServiceClient,
+  ServicesAPI,
   Stats,
   Status,
   StoredMsg,
