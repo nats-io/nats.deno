@@ -185,7 +185,6 @@ Deno.test("authenticator - nkey fn", async () => {
   let nkey = user.getPublicKey();
 
   const authenticator = nkeyAuthenticator(() => {
-    console.log(`using ${seed}`);
     return seed;
   });
 

@@ -89,6 +89,7 @@ export class DenoTransport implements Transport {
         this.writer = new BufWriter(this.conn);
       }
     } catch (err) {
+      this.conn?.close();
       throw err.name === "ConnectionRefused"
         ? NatsError.errorForCode(ErrorCode.ConnectionRefused)
         : err;
@@ -248,6 +249,7 @@ export class DenoTransport implements Transport {
 
   async _closed(err?: Error, internal = true): Promise<void> {
     if (this.done) return;
+    this.done = true;
     this.closeError = err;
     if (!err && internal) {
       try {
@@ -261,7 +263,6 @@ export class DenoTransport implements Transport {
         }
       }
     }
-    this.done = true;
     try {
       this.conn?.close();
     } catch (_err) {

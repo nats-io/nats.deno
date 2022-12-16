@@ -341,7 +341,6 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const connections: Conn[] = [];
 
   const TE = new TextEncoder();
-
   const INFO = TE.encode(
     "INFO " + JSON.stringify({
       server_id: "TEST",
@@ -355,18 +354,13 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const CONNECT = { re: /^CONNECT\s+([^\r\n]+)\r\n/im, out: TE.encode("") };
   const CMDS = [PING, CONNECT];
 
-  const connClosed: Promise<void>[] = [];
-
   const startReading = (conn: Conn) => {
     const buf = new Uint8Array(1024 * 8);
     const inbound = new DataBuffer();
     (async () => {
-      const closed = deferred<void>();
-      connClosed.push(closed);
       while (true) {
         const count = await conn.read(buf);
         if (count === null) {
-          closed.resolve();
           break;
         }
         if (count) {
@@ -415,7 +409,6 @@ Deno.test("reconnect - stale connections don't close", async () => {
   let stales = 0;
   (async () => {
     for await (const s of nc.status()) {
-      console.log(s);
       if (s.type === DebugEvents.StaleConnection) {
         stales++;
         if (stales === 3) {
@@ -426,11 +419,10 @@ Deno.test("reconnect - stale connections don't close", async () => {
   })().then();
 
   await nc.closed();
+  listener.close();
   connections.forEach((c) => {
     return c.close();
   });
-  listener.close();
-  await Promise.all(connClosed);
   assert(stales >= 3, `stales ${stales}`);
 });
 

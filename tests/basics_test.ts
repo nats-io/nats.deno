@@ -16,6 +16,7 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertRejects,
   assertThrows,
   fail,
@@ -1129,7 +1130,7 @@ Deno.test("basics - server version", async () => {
 
 Deno.test("basics - info", async () => {
   const { ns, nc } = await setup({});
-  console.log(nc.info);
+  assertExists(nc.info);
   await cleanup(ns, nc);
 });
 

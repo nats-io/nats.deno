@@ -283,7 +283,7 @@ Deno.test("jetstream - get message last by subject", async () => {
 });
 
 Deno.test("jetstream - publish first sequence", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf(), { debug: true });
+  const { ns, nc } = await setup(jetstreamServerConf());
   const { subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -3853,7 +3853,6 @@ Deno.test("jetstream - ordered consumer reset", async () => {
 Deno.test("jetstream - fetch on stopped server doesn't close client", async () => {
   let { ns, nc } = await setup(jetstreamServerConf(), {
     maxReconnectAttempts: -1,
-    debug: true,
   });
   (async () => {
     let reconnects = 0;
