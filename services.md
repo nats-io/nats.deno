@@ -74,4 +74,4 @@ await m.stats("max", id);
 ```
 
 For more information, take a look at a
-[simple example here](doc/snippets/services.ts)
+[simple example here](examples/services/01_services.ts)
