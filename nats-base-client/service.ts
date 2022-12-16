@@ -23,9 +23,12 @@ import {
   PublishOptions,
   Sub,
 } from "./types.ts";
-import { headers, JSONCodec, nuid, QueuedIterator } from "./mod.ts";
+import { headers } from "./headers.ts";
+import { JSONCodec } from "./codec.ts";
+import { nuid } from "./nuid.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { nanos, validName } from "./jsutil.ts";
-import { parseSemVer, QueuedIteratorImpl } from "./internal_mod.ts";
+import { parseSemVer } from "./semver.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -281,8 +284,6 @@ export class ServiceError extends Error {
   }
 }
 
-const jc = JSONCodec();
-
 export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   implements Service {
   nc: NatsConnection;
@@ -427,7 +428,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     };
 
     const callback = handler
-      ? (err: Error | null, msg: Msg) => {
+      ? (err: NatsError | null, msg: Msg) => {
         if (err) {
           this.close(err);
           return;
@@ -541,6 +542,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   }
 
   start(): Promise<Service> {
+    const jc = JSONCodec();
     const statsHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err);
@@ -633,6 +635,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return this.close(err);
   }
   get schema(): Uint8Array {
+    const jc = JSONCodec();
     if (!this._schema) {
       this._schema = jc.encode({
         name: this.name,
