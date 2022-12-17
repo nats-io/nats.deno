@@ -194,9 +194,15 @@ export class NatsServer implements PortInfo {
   }
 
   restart(): Promise<NatsServer> {
-    const conf = JSON.parse(JSON.stringify(this.config));
-    conf.port = this.port;
-    return NatsServer.start(conf, this.debug);
+    return this.stop().then(() => {
+      const conf = JSON.parse(JSON.stringify(this.config));
+      conf.port = this.port;
+      return NatsServer.start(conf, this.debug);
+    });
+  }
+
+  pid(): number {
+    return this.process.pid;
   }
 
   getLog(): string {
@@ -206,7 +212,7 @@ export class NatsServer implements PortInfo {
   static stopAll(cluster: NatsServer[]): Promise<void[]> {
     const buf: Promise<void>[] = [];
     cluster.forEach((s) => {
-      buf.push(s.stop());
+      s === null ? buf.push(Promise.resolve()) : buf.push(s?.stop());
     });
 
     return Promise.all(buf);
