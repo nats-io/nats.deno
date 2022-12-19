@@ -19,18 +19,21 @@ import {
   assertRejects,
   fail,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+
+import { collect, delay } from "../nats-base-client/util.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
+  connect,
   createInbox,
   ErrorCode,
+  JSONCodec,
   Msg,
   NatsError,
+  nuid,
   QueuedIterator,
   ServiceVerb,
   StringCodec,
-} from "../nats-base-client/mod.ts";
-import { collect, delay } from "../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { connect, JSONCodec, nuid } from "../src/mod.ts";
+} from "../src/mod.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -716,32 +719,61 @@ Deno.test("service - service errors", async () => {
 
 Deno.test("service - cross platform service test", async () => {
   const nc = await connect({ servers: "demo.nats.io", debug: false });
-  // const name = `echo_${nuid.next()}`;
-  const name = "X";
-  const srv = await nc.services.add({
+  const name = `echo_${nuid.next()}`;
+  const _srv = await nc.services.add({
     name,
     version: "0.0.1",
     endpoint: {
       subject: createInbox(),
+      handler: (_err: NatsError | null, m: ServiceMsg): void => {
+        if (m.data.length === 0) {
+          m.respondError(400, "need a string", JSONCodec().encode(""));
+        } else {
+          if (StringCodec().decode(m.data) === "error") {
+            throw new Error("service asked to throw an error");
+          }
+          m.respond(m.data);
+        }
+      },
     },
-  });
-  (async () => {
-    for await (const m of srv) {
-      if (m.data.length === 0) {
-        m.respondError(400, "need a string", JSONCodec().encode(""));
-      } else {
-        m.respond(m.data);
-      }
-    }
-  })().then();
+    schema: { request: "a", response: "b" },
+    statsHandler: (): Promise<unknown> => {
+      return Promise.resolve("hello world");
+    },
+  }) as ServiceImpl;
 
-  const args =  ["deno", "run", "-A", "./tests/helpers/service_metadata.ts", "--name", name, "--server", "demo.nats.io"];
-  console.log(args.join(" "));
-  await delay(100000);
+  const args = [
+    "deno",
+    "run",
+    "-A",
+    "./tests/helpers/service_metadata.ts",
+    "--name",
+    name,
+    "--server",
+    "demo.nats.io",
+  ];
+
+  const p = Deno.run({ cmd: args, stderr: "piped", stdout: "piped" });
+  const [status, stdout, stderr] = await Promise.all([
+    p.status(),
+    p.output(),
+    p.stderrOutput(),
+  ]);
+
+  if (!status.success) {
+    const sc = StringCodec();
+    // console.log(sc.decode(stdout))
+    console.log(sc.decode(stderr));
+    console.log(sc.decode(stdout));
+    fail(sc.decode(stderr));
+  }
+  p.close();
 
   // const p = Deno.run({cmd: ["deno", "run", "-A", "./tests/helpers/service_metadata.ts", "--name", name, "--server", "demo.nats.io"]});
   // const s = await p.status();
   // console.log(s);
+
+  // await delay(100000);
 
   await nc.close();
 });

@@ -328,6 +328,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   ) {
     super();
     this.nc = nc;
+    config.name = config?.name?.toUpperCase() || "";
     this.config = config;
     const n = validName(this.name);
     if (n !== "") {
