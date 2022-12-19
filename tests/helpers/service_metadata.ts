@@ -240,7 +240,7 @@ async function check(
     await collect(await sc.q<ServiceIdentity>(verb)),
   );
 
-  assert(responses.length >= 1);
+  assert(responses.length >= 1, `expected at least 1 response to ${verb}`);
   fn(responses);
   checkResponse(`${verb}()`, responses, keys);
 
@@ -250,7 +250,10 @@ async function check(
     name,
     await collect(await sc.q<ServiceIdentity>(verb, name)),
   );
-  assert(responses.length >= 1);
+  assert(
+    responses.length >= 1,
+    `expected at least 1 response to ${verb}.${name}`,
+  );
   fn(responses);
   checkResponse(`${verb}(${name})`, responses, keys);
 
@@ -260,7 +263,10 @@ async function check(
     name,
     await collect(await sc.q<ServiceIdentity>(verb, name, responses[0].id)),
   );
-  assert(responses.length === 1);
+  assert(
+    responses.length === 1,
+    `expected at least 1 response to ${verb}.${name}.${responses[0].id}`,
+  );
   fn(responses);
   checkResponse(`${verb}(${name})`, responses, keys);
 }
