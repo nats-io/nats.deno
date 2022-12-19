@@ -16,7 +16,6 @@
 import {
   assert,
   assertEquals,
-  assertThrows,
   fail,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
@@ -28,7 +27,7 @@ import {
   StringCodec,
 } from "../src/mod.ts";
 
-import { assertErrorCode, assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
+import { assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("drain - connection drains when no subs", async () => {
