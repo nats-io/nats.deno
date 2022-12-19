@@ -769,11 +769,5 @@ Deno.test("service - cross platform service test", async () => {
   }
   p.close();
 
-  // const p = Deno.run({cmd: ["deno", "run", "-A", "./tests/helpers/service_metadata.ts", "--name", name, "--server", "demo.nats.io"]});
-  // const s = await p.status();
-  // console.log(s);
-
-  // await delay(100000);
-
   await nc.close();
 });
