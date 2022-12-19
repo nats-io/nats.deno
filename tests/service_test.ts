@@ -30,6 +30,7 @@ import {
 } from "../nats-base-client/mod.ts";
 import { collect, delay } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { connect, JSONCodec, nuid } from "../src/mod.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -711,4 +712,36 @@ Deno.test("service - service errors", async () => {
   assertEquals(ServiceError.isServiceError(r), false);
   assertEquals(ServiceError.toServiceError(r), null);
   await cleanup(ns, nc);
+});
+
+Deno.test("service - cross platform service test", async () => {
+  const nc = await connect({ servers: "demo.nats.io", debug: false });
+  // const name = `echo_${nuid.next()}`;
+  const name = "X";
+  const srv = await nc.services.add({
+    name,
+    version: "0.0.1",
+    endpoint: {
+      subject: createInbox(),
+    },
+  });
+  (async () => {
+    for await (const m of srv) {
+      if (m.data.length === 0) {
+        m.respondError(400, "need a string", JSONCodec().encode(""));
+      } else {
+        m.respond(m.data);
+      }
+    }
+  })().then();
+
+  const args =  ["deno", "run", "-A", "./tests/helpers/service_metadata.ts", "--name", name, "--server", "demo.nats.io"];
+  console.log(args.join(" "));
+  await delay(100000);
+
+  // const p = Deno.run({cmd: ["deno", "run", "-A", "./tests/helpers/service_metadata.ts", "--name", name, "--server", "demo.nats.io"]});
+  // const s = await p.status();
+  // console.log(s);
+
+  await nc.close();
 });
