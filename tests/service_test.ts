@@ -718,7 +718,7 @@ Deno.test("service - service errors", async () => {
 });
 
 Deno.test("service - cross platform service test", async () => {
-  const nc = await connect({ servers: "demo.nats.io", debug: false });
+  const nc = await connect({ servers: "demo.nats.io" });
   const name = `echo_${nuid.next()}`;
   const _srv = await nc.services.add({
     name,
