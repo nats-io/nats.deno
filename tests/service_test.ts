@@ -38,14 +38,14 @@ import {
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
     assertEquals(ServiceImpl.controlSubject(verb), `$SRV.${verb}`);
-    assertEquals(ServiceImpl.controlSubject(verb, "name"), `$SRV.${verb}.NAME`);
+    assertEquals(ServiceImpl.controlSubject(verb, "NamE"), `$SRV.${verb}.NamE`);
     assertEquals(
-      ServiceImpl.controlSubject(verb, "name", "id"),
-      `$SRV.${verb}.NAME.ID`,
+      ServiceImpl.controlSubject(verb, "nAmE", "Id"),
+      `$SRV.${verb}.nAmE.Id`,
     );
     assertEquals(
-      ServiceImpl.controlSubject(verb, "name", "id", "hello.service"),
-      `hello.service.${verb}.NAME.ID`,
+      ServiceImpl.controlSubject(verb, "nAMe", "iD", "hello.service"),
+      `hello.service.${verb}.nAMe.iD`,
     );
   };
   [ServiceVerb.INFO, ServiceVerb.PING, ServiceVerb.SCHEMA, ServiceVerb.STATS]
@@ -761,13 +761,31 @@ Deno.test("service - cross platform service test", async () => {
   ]);
 
   if (!status.success) {
-    const sc = StringCodec();
-    // console.log(sc.decode(stdout))
-    console.log(sc.decode(stderr));
-    console.log(sc.decode(stdout));
-    fail(sc.decode(stderr));
+    fail(StringCodec().decode(stderr));
   }
   p.close();
 
   await nc.close();
+});
+
+Deno.test("service - stats name respects assigned name", async () => {
+  const { ns, nc } = await setup();
+  const test = await nc.services.add({
+    name: "tEsT",
+    // @ts-ignore: testing
+    version: "0.0.1",
+    endpoint: {
+      subject: "q",
+      handler: (err, msg) => {
+        msg.respond();
+      },
+    },
+  });
+  const stats = await test.stats();
+  assertEquals(stats.name, "tEsT");
+  const r = await nc.request(`$SRV.PING.tEsT`);
+  const si = JSONCodec<ServiceIdentity>().decode(r.data);
+  assertEquals(si.name, "tEsT");
+
+  await cleanup(ns, nc);
 });
