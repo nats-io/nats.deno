@@ -58,9 +58,8 @@ root.addFlag({
 });
 
 function filter<T extends ServiceIdentity>(name: string, responses: T[]): T[] {
-  const n = name.toUpperCase();
   return responses.filter((r) => {
-    return r.name === n;
+    return r.name === name;
   });
 }
 function filterExpectingOnly<T extends ServiceIdentity>(

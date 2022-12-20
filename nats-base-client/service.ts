@@ -315,11 +315,12 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     if (name === "" && id === "") {
       return `${pre}.${verb}`;
     }
-    name = name.toUpperCase();
-    id = id.toUpperCase();
-    return id !== ""
-      ? `${pre}.${verb}.${name}.${id}`
-      : `${pre}.${verb}.${name}`;
+    validName(name);
+    if (id !== "") {
+      validName(id);
+      return `${pre}.${verb}.${name}.${id}`;
+    }
+    return `${pre}.${verb}.${name}`;
   }
 
   constructor(
@@ -328,7 +329,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   ) {
     super();
     this.nc = nc;
-    config.name = config?.name?.toUpperCase() || "";
+    config.name = config?.name || "";
     this.config = config;
     const n = validName(this.name);
     if (n !== "") {

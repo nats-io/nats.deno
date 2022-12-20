@@ -30,7 +30,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 const nc = await connect({ servers: ["demo.nats.io"] });
 
 // this is a pseudo JSON schema - current requirements is that it is a string
-// so more conviniently return an URL to your schemas.
+// so more conveniently return an URL to your schemas.
 const schema: SchemaInfo = {
   request: JSON.stringify({
     type: "array",
@@ -42,7 +42,7 @@ const schema: SchemaInfo = {
 
 // All services have some basic stats that are collected like the
 // number of requests processed, etc. Your service can accumulate
-// other stats, and agregate them to the stats report that you
+// other stats, and aggregate them to the stats report that you
 // can retrieve via the monitoring stats() api.
 // In this example, the service keeps track of the largest number
 // it has seen and defines a custom statsHandler that aggregates
@@ -206,14 +206,15 @@ await collect(m.stats("max", found[0].id));
 // addressed to a specific service instance.
 
 // All monitoring subjects have the format:
-// $SRV.<VERB>.<NAME>.<ID>
+// $SRV.<VERB>.<name>.<id>
 // where the verb can be 'PING', 'INFO', 'STATS' or 'SCHEMA'
-// the name is optional but matches a service name you know in UPPERCASE.
-// the id is also optional, but you must know it (from ping or one of
+// the name is optional but matches a service name.
+// The id is also optional, but you must know it (from ping or one of
 // other requests that allowed you to discover the service) to
 // target the service specifically as we do here:
 const stats = JSONCodec<ServiceStats>().decode(
-  (await nc.request(`$SRV.STATS.MAX.${found[0].id}`)).data,
+  // note the name of the service matches in case what was specified
+  (await nc.request(`$SRV.STATS.max.${found[0].id}`)).data,
 );
 assertEquals(stats.name, "max");
 assertEquals(stats.num_requests, 3);
