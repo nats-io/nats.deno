@@ -746,7 +746,7 @@ Deno.test("service - cross platform service test", async () => {
     "deno",
     "run",
     "-A",
-    "./tests/helpers/service_metadata.ts",
+    "./tests/helpers/service-check.ts",
     "--name",
     name,
     "--server",
