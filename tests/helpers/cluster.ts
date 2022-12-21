@@ -16,10 +16,12 @@
 import { NatsServer } from "./mod.ts";
 import { parse } from "https://deno.land/std@0.168.0/flags/mod.ts";
 import { rgb24 } from "https://deno.land/std@0.168.0/fmt/colors.ts";
+import { setTimeout } from "https://deno.land/std@0.161.0/node/timers.ts";
 
 const defaults = {
   c: 2,
   p: 4222,
+  chaos: false,
 };
 
 const argv = parse(
@@ -38,31 +40,68 @@ const argv = parse(
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 2] [--port 4222] [--debug] [--jetstream]\n",
+    "usage: cluster [--count 2] [--port 4222] [--debug] [--jetstream] [--chaos millis]\n",
   );
   Deno.exit(0);
 }
 
 try {
+  const port = typeof argv.port === "number" ? argv.port : parseInt(argv.port);
   const cluster = argv.jetstream
     ? await NatsServer.jetstreamCluster(
       argv.count,
-      { port: argv.port },
+      { port },
       argv.debug,
     )
     : await NatsServer.cluster(
       argv.count,
-      { port: argv.port },
+      { port },
       argv.debug,
     );
 
   cluster.forEach((s) => {
     const pid = `[${s.process.pid}]`;
-    const cpid = rgb24(pid, s.rgb);
-    console.log(
-      `${cpid} ${s.configFile} at nats://${s.hostname}:${s.port} cluster://${s.hostname}:${s.cluster} http://127.0.0.1:${s.monitoring} - store: ${s.config?.jetstream?.store_dir}`,
-    );
+    console.log(rgb24(
+      `${pid} ${s.configFile} at nats://${s.hostname}:${s.port}\n\tcluster://${s.hostname}:${s.cluster}\n\thttp://127.0.0.1:${s.monitoring}\n\tstore: ${s.config?.jetstream?.store_dir}`,
+      s.rgb,
+    ));
   });
+
+  function chaos() {
+    function randomBetween(min: number, max: number): number {
+      return Math.floor(Math.random() * (max - min) + min);
+    }
+    function worker() {
+      const millis = randomBetween(0, 10000);
+      const idx = randomBetween(0, cluster.length);
+      if (cluster[idx] === null) {
+        // try again
+        setTimeout(worker);
+        return;
+      }
+      const old = cluster[idx];
+      // @ts-ignore: test
+      cluster[idx] = null;
+      setTimeout(() => {
+        const oldPid = old.pid();
+        console.log(
+          rgb24(`[${oldPid}] chaos is restarting server at port ${old.port}`, old.rgb),
+        );
+        const p = old.restart();
+        p.then((s) => {
+          s.rgb = old.rgb;
+          cluster[idx] = s;
+          console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
+        });
+      }, millis);
+    }
+
+    setInterval(worker, 3000);
+  }
+
+  if (argv.chaos) {
+    setTimeout(chaos, parseInt(argv.chaos));
+  }
 
   waitForStop();
 } catch (err) {
