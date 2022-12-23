@@ -426,47 +426,49 @@ By creating a consumer that enables heartbeats, you can request JetStream to
 send you heartbeat messages every so often. This way your client can reconcile
 if the lack of messages means that you should be restarting your consumer.
 
-Currently, the library doesn't provide a notification for missed heartbeats, but
-this is not too difficult to do:
-
 ```typescript
-let missed = 0;
-// this is a plain nats subscription
-const sub = nc.subscribe("my.messages", {
-  callback: (err, msg) => {
-    // if we got a message, we simply reset
-    missed = 0;
-    // simply checking if has headers and code === 100 and a description === "Idle Heartbeat"
-    if (isHeartbeatMsg(msg)) {
-      // the heartbeat has additional information:
-      const lastSeq = msg.headers.get(JsHeaders.LastStreamSeqHdr);
-      const consSeq = msg.headers.get(JsHeaders.LastConsumerSeqHdr);
-      console.log(
-        `alive - last stream seq: ${lastSeq} - last consumer seq: ${consSeq}`,
-      );
-      return;
-    }
-    // do something with the message
-    const m = toJsMsg(msg);
+const stream = nuid.next();
+const subj = nuid.next();
+await jsm.streams.add({ name: stream, subjects: [`${subj}.>`] });
+
+const js = nc.jetstream();
+let opts = consumerOpts()
+  .deliverTo("push")
+  .manualAck()
+  .ackExplicit()
+  .idleHeartbeat(500)
+  .durable("iter-dur");
+const iter = await js.subscribe(`${subj}.>`, opts);
+// if 2 heartbeats are missed, the iterator will end with an error
+// simply re-do the js.subscribe() and attempt again
+const done = (async () => {
+  for await (const m of iter) {
     m.ack();
-  },
-});
-
-setInterval(() => {
-  missed++;
-  if (missed > 3) {
-    console.error("JetStream stopped sending heartbeats!");
   }
-}, 30000);
-
-// create a consumer that delivers to the subscription
-await jsm.consumers.add(stream, {
-  ack_policy: AckPolicy.Explicit,
-  deliver_subject: "my.messages",
-  idle_heartbeat: nanos(10000),
+})();
+done.catch((err) => {
+  console.log(`iterator closed: ${err}`);
 });
 
-await sub.closed;
+opts = consumerOpts()
+  .deliverTo("push")
+  .manualAck()
+  .ackExplicit()
+  .idleHeartbeat(500)
+  .durable("callback-dur")
+  .callback((err, m) => {
+    if (err) {
+      // the callback will also report a heartbeat error, however because the
+      // callback can receive errors, it continues active. If the server returns
+      // the client will automatically resume receiving messages
+      console.log(err);
+    } else {
+      m?.ack();
+    }
+  });
+
+const sub = await js.subscribe(`${subj}.>`, opts);
+await sub.closed.then(() => console.log("sub closed"));
 ```
 
 #### JetStream Ordered Consumers
