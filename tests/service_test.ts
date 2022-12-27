@@ -753,7 +753,7 @@ Deno.test("service - cross platform service test", async () => {
     "demo.nats.io",
   ];
 
-  const p = Deno.run({ cmd: args, stderr: "piped", stdout: "piped" });
+  const p = Deno.run({ cmd: args, stderr: "piped" });
   const [status, stderr] = await Promise.all([
     p.status(),
     p.stderrOutput(),
