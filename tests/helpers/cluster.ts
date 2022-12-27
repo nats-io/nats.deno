@@ -62,50 +62,63 @@ try {
   cluster.forEach((s) => {
     const pid = `[${s.process.pid}]`;
     console.log(rgb24(
-      `${pid} ${s.configFile} at nats://${s.hostname}:${s.port}\n\tcluster://${s.hostname}:${s.cluster}\n\thttp://127.0.0.1:${s.monitoring}\n\tstore: ${s.config?.jetstream?.store_dir}`,
+      `${pid} ${s.configFile} at nats://${s.hostname}:${s.port}
+\tcluster://${s.hostname}:${s.cluster}
+\thttp://127.0.0.1:${s.monitoring}
+\tstore: ${s.config?.jetstream?.store_dir}`,
       s.rgb,
     ));
   });
 
-  function chaos() {
-    function randomBetween(min: number, max: number): number {
-      return Math.floor(Math.random() * (max - min) + min);
-    }
-    function worker() {
-      const millis = randomBetween(0, 10000);
-      const idx = randomBetween(0, cluster.length);
-      if (cluster[idx] === null) {
-        // try again
-        setTimeout(worker);
-        return;
-      }
-      const old = cluster[idx];
-      // @ts-ignore: test
-      cluster[idx] = null;
-      setTimeout(() => {
-        const oldPid = old.pid();
-        console.log(
-          rgb24(`[${oldPid}] chaos is restarting server at port ${old.port}`, old.rgb),
-        );
-        const p = old.restart();
-        p.then((s) => {
-          s.rgb = old.rgb;
-          cluster[idx] = s;
-          console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
-        });
-      }, millis);
-    }
-
-    setInterval(worker, 3000);
-  }
-
   if (argv.chaos) {
-    setTimeout(chaos, parseInt(argv.chaos));
+    chaos(cluster, parseInt(argv.chaos));
   }
 
   waitForStop();
 } catch (err) {
   console.error(err);
+}
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min) + min);
+}
+
+function chaos(cluster: NatsServer[], delay: number) {
+  setTimeout(() => {
+    setInterval(() => {
+      restart(cluster);
+    }, 3000);
+  }, delay);
+}
+
+function restart(cluster: NatsServer[]) {
+  const millis = randomBetween(0, 10000);
+  const idx = randomBetween(0, cluster.length);
+  if (cluster[idx] === null) {
+    // try again
+    setTimeout(() => {
+      restart(cluster);
+    });
+    return;
+  }
+  const old = cluster[idx];
+  // @ts-ignore: test
+  cluster[idx] = null;
+  setTimeout(() => {
+    const oldPid = old.pid();
+    console.log(
+      rgb24(
+        `[${oldPid}] chaos is restarting server at port ${old.port}`,
+        old.rgb,
+      ),
+    );
+    const p = old.restart();
+    p.then((s) => {
+      s.rgb = old.rgb;
+      cluster[idx] = s;
+      console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
+    });
+  }, millis);
 }
 
 function waitForStop(): void {
