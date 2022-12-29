@@ -51,7 +51,7 @@ export enum ServiceVerb {
 }
 
 export enum ServiceResponseType {
-  STATS = "io.nats.micro.v1.stats",
+  STATS = "io.nats.micro.v1.stats_response",
   INFO = "io.nats.micro.v1.info_response",
   PING = "io.nats.micro.v1.ping_response",
   SCHEMA = "io.nats.micro.v1.schema_response",
