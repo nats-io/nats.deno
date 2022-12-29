@@ -9,6 +9,7 @@ import {
   ServiceImpl,
   ServiceInfo,
   ServiceMsg,
+  ServiceResponseType,
   ServiceSchema,
   ServiceStats,
 } from "../nats-base-client/service.ts";
@@ -113,13 +114,16 @@ Deno.test("service - client", async () => {
     assertEquals(e.name, srv.name);
     assertEquals(e.version, srv.version);
   }
+
   function verifyPing(pings: ServiceIdentity[]) {
     verifyIdentity(pings);
     const ping = pings[0];
+    assertEquals(ping.type, ServiceResponseType.PING);
     const r = ping as unknown as Record<string, unknown>;
     delete r.version;
     delete r.name;
     delete r.id;
+    delete r.type;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
   verifyPing(await collect(await m.ping()));
@@ -129,9 +133,11 @@ Deno.test("service - client", async () => {
   function verifyInfo(infos: ServiceInfo[]) {
     verifyIdentity(infos);
     const info = infos[0];
+    assertEquals(info.type, ServiceResponseType.INFO);
     assertEquals(info.description, srv.description);
     assertEquals(info.subject, srv.subject);
     const r = info as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
@@ -148,6 +154,7 @@ Deno.test("service - client", async () => {
   function verifyStats(stats: ServiceStats[]) {
     verifyIdentity(stats);
     const stat = stats[0];
+    assertEquals(stat.type, ServiceResponseType.STATS);
     assertEquals(stat.num_requests, 2);
     assertEquals(stat.num_errors, 0);
     assertEquals(typeof stat.processing_time, "number");
@@ -157,6 +164,7 @@ Deno.test("service - client", async () => {
     // assert(Date.parse(stat.started) - Date.now() > 0, JSON.stringify(stat));
 
     const r = stat as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
@@ -176,10 +184,12 @@ Deno.test("service - client", async () => {
     verifyIdentity(schemas);
     const schema = schemas[0];
     assertExists(schema.schema);
+    assertEquals(schema.type, ServiceResponseType.SCHEMA);
     assertEquals(schema.schema?.request, srv.config.schema?.request);
     assertEquals(schema.schema?.response, srv.config.schema?.response);
 
     const r = schema as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;

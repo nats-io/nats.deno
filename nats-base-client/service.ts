@@ -50,7 +50,21 @@ export enum ServiceVerb {
   SCHEMA = "SCHEMA",
 }
 
-export interface ServiceIdentity {
+export enum ServiceResponseType {
+  STATS = "io.nats.micro.v1.stats",
+  INFO = "io.nats.micro.v1.info_response",
+  PING = "io.nats.micro.v1.ping_response",
+  SCHEMA = "io.nats.micro.v1.schema_response",
+}
+
+export interface ServiceResponse {
+  /**
+   * Response type schema
+   */
+  type: ServiceResponseType;
+}
+
+export interface ServiceIdentity extends ServiceResponse {
   /**
    * The kind of the service reporting the stats
    */
@@ -475,6 +489,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   info(): ServiceInfo {
     return {
+      type: ServiceResponseType.INFO,
       name: this.name,
       id: this.id,
       version: this.version,
@@ -505,6 +520,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
     return Object.assign(
       {
+        type: ServiceResponseType.STATS,
         name: this.name,
         id: this.id,
         version: this.version,
@@ -566,6 +582,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     };
 
     const ping = jc.encode({
+      type: ServiceResponseType.PING,
       name: this.name,
       id: this.id,
       version: this.version,
@@ -640,6 +657,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     const jc = JSONCodec();
     if (!this._schema) {
       this._schema = jc.encode({
+        type: ServiceResponseType.SCHEMA,
         name: this.name,
         id: this.id,
         version: this.version,
@@ -652,6 +670,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   reset(): void {
     this._lastException = undefined;
     this._stats = {
+      type: ServiceResponseType.STATS,
       name: this.name,
       num_requests: 0,
       num_errors: 0,
