@@ -586,6 +586,76 @@ Deno.test("auth - expiration is notified", async () => {
   await cleanup(ns);
 });
 
+Deno.test("auth - expiration is notified and recovered", async () => {
+  const O = nkeys.createOperator();
+  const A = nkeys.createAccount();
+
+  const resolver: Record<string, string> = {};
+  resolver[A.getPublicKey()] = await encodeAccount("A", A, {
+    limits: {
+      conn: -1,
+      subs: -1,
+    },
+  }, { signer: O });
+  const conf = {
+    operator: await encodeOperator("O", O),
+    resolver: "MEMORY",
+    "resolver_preload": resolver,
+  };
+
+  const ns = await NatsServer.start(conf);
+
+  const U = nkeys.createUser();
+  let ujwt = await encodeUser("U", U, A, { bearer_token: true }, {
+    exp: Math.round(Date.now() / 1000) + 3,
+  });
+
+  const timer = setInterval(() => {
+    encodeUser("U", U, A, { bearer_token: true }, {
+      exp: Math.round(Date.now() / 1000) + 3,
+    }).then((token) => {
+      ujwt = token;
+    });
+  });
+
+  const nc = await connect({
+    port: ns.port,
+    maxReconnectAttempts: -1,
+    authenticator: jwtAuthenticator(() => {
+      return ujwt;
+    }),
+  });
+
+  const d = deferred();
+  let reconnects = 0;
+  let authErrors = 0;
+  (async () => {
+    for await (const s of nc.status()) {
+      switch (s.type) {
+        case Events.Reconnect:
+          reconnects++;
+          if (reconnects === 4) {
+            d.resolve();
+          }
+          break;
+        case Events.Error:
+          if (s.data === ErrorCode.AuthenticationExpired) {
+            authErrors++;
+          }
+          break;
+        default:
+          // ignored
+      }
+    }
+  })().then();
+
+  await d;
+  clearInterval(timer);
+  assert(authErrors >= 1);
+  assert(reconnects >= 4);
+  await cleanup(ns, nc);
+});
+
 Deno.test("auth - bad auth is notified", async () => {
   let ns = await NatsServer.start(conf);
 

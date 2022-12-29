@@ -265,6 +265,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
               data: this.servers.getCurrentServer().toString(),
             },
           );
+          // if we are here we reconnected, but we have an authentication
+          // that expired, we need to clean it up, otherwise we'll queue up
+          // two of these, and the default for the client will be to
+          // close, rather than attempt again - possibly they have an
+          // authenticator that dynamically updates
+          if (this.lastError?.code === ErrorCode.AuthenticationExpired) {
+            this.lastError = undefined;
+          }
         })
         .catch((err) => {
           this._close(err);
