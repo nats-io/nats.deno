@@ -1,18 +1,24 @@
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
 import {
   connect,
-  EndpointStats,
   NatsConnection,
   ServiceError,
   ServiceIdentity,
   ServiceInfo,
   ServiceSchema,
+  ServiceStats,
   ServiceVerb,
   StringCodec,
 } from "../../src/mod.ts";
 
 import { collect } from "../../nats-base-client/util.ts";
 import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
+import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
+
+import { parseSemVer } from "../../nats-base-client/semver.ts";
+import { ServiceResponseType } from "../../nats-base-client/service.ts";
+
+const ajv = new Ajv();
 
 const root = cli({
   use: "service-check [--name name] [--server host:port]",
@@ -79,96 +85,48 @@ function filterExpectingOnly<T extends ServiceIdentity>(
 function checkResponse<T extends ServiceIdentity>(
   tag: string,
   responses: T[],
-  requiredKeys: string[],
+  validator: ValidateFunction<T>,
 ) {
   assert(responses.length > 0, `expected responses for ${tag}`);
-  requiredKeys.forEach((k) => {
-    responses.forEach((r) => {
-      assert(
-        (r as Record<string, unknown>)[k] !== "undefined",
-        `expected ${tag} responses to have field ${k}`,
-      );
-      delete (r as Record<string, unknown>)[k];
-    });
-  });
+
   responses.forEach((r) => {
-    assert(
-      Object.keys(r).length === 0,
-      `expected ${tag} to not contain other properties ${JSON.stringify(r)}`,
-    );
+    const valid = validator(r);
+    if (!valid) {
+      console.log(validator.errors);
+      throw new Error(validator.errors[0].message);
+    }
   });
 }
-
+//
 async function checkStats(nc: NatsConnection, name: string) {
-  await check(nc, ServiceVerb.STATS, name, [
-    "name",
-    "id",
-    "version",
-    "num_requests",
-    "num_errors",
-    "last_error",
-    "data",
-    "processing_time",
-    "average_processing_time",
-    "started",
-  ], (v) => {
-    const stats = v as EndpointStats;
-    assertEquals(typeof stats.name, "string", "name");
-    assertEquals(typeof stats.id, "string", "id");
-    assertEquals(typeof stats.version, "string", "version");
-    assertEquals(typeof stats.num_requests, "number", "num_requests");
-    assertEquals(typeof stats.num_errors, "number", "num_errors");
-    assertEquals(typeof stats.last_error, "string", "last_error");
-    assertEquals(typeof stats.data, "string", "data");
-    assertEquals(typeof stats.processing_time, "number", "processing_time");
-    assertEquals(
-      typeof stats.average_processing_time,
-      "number",
-      "average_processing_time",
-    );
-    assertEquals(typeof stats.started, "string", "started");
+  const validateFn = ajv.compile(StatsSchema);
+  await check(nc, ServiceVerb.STATS, name, validateFn, (v) => {
+    assertEquals(v.type, ServiceResponseType.STATS);
+    parseSemVer(v.version);
   });
 }
 
 async function checkSchema(nc: NatsConnection, name: string) {
-  await check(nc, ServiceVerb.SCHEMA, name, [
-    "name",
-    "id",
-    "version",
-    "schema",
-  ], (v) => {
-    const o = v as ServiceSchema;
-    assertEquals(typeof o.name, "string", "name");
-    assertEquals(typeof o.id, "string", "id");
-    assertEquals(typeof o.version, "string", "version");
-    assertEquals(typeof o.schema, "object", "schema");
-    assertEquals(typeof o.schema.request, "string", "schema.request");
-    assertEquals(typeof o.schema.response, "string", "schema.response");
+  const validateFn = ajv.compile(ServiceSchema);
+  await check(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
+    assertEquals(v.type, ServiceResponseType.SCHEMA);
+    parseSemVer(v.version);
   });
 }
 
 async function checkInfo(nc: NatsConnection, name: string) {
-  await check(nc, ServiceVerb.INFO, name, [
-    "name",
-    "id",
-    "version",
-    "description",
-    "subject",
-  ], (v) => {
-    const info = v as ServiceInfo;
-    assertEquals(typeof v.name, "string", "name");
-    assertEquals(typeof v.id, "string", "id");
-    assertEquals(typeof v.version, "string", "version");
-    assertEquals(typeof info.description, "string", "description");
-    assertEquals(typeof info.subject, "string", "subject");
+  const validateFn = ajv.compile(InfoSchema);
+  await check(nc, ServiceVerb.INFO, name, validateFn, (v) => {
+    assertEquals(v.type, ServiceResponseType.INFO);
+    parseSemVer(v.version);
   });
 }
 
 async function checkPing(nc: NatsConnection, name: string) {
-  await check(nc, ServiceVerb.PING, name, ["name", "id", "version"], (v) => {
-    assertEquals(typeof v.name, "string", "name");
-    assertEquals(typeof v.id, "string", "id");
-    assertEquals(typeof v.version, "string", "version");
+  const validateFn = ajv.compile(PingSchema);
+  await check(nc, ServiceVerb.PING, name, validateFn, (v) => {
+    assertEquals(v.type, ServiceResponseType.PING);
+    parseSemVer(v.version);
   });
 }
 
@@ -219,7 +177,7 @@ async function check(
   nc: NatsConnection,
   verb: ServiceVerb,
   name: string,
-  keys: string[],
+  validateFn: ValidateFunction,
   check?: (v: ServiceIdentity) => void,
 ) {
   const fn = (d: ServiceIdentity[]): void => {
@@ -241,7 +199,7 @@ async function check(
 
   assert(responses.length >= 1, `expected at least 1 response to ${verb}`);
   fn(responses);
-  checkResponse(`${verb}()`, responses, keys);
+  checkResponse(`${verb}()`, responses, validateFn);
 
   // just matching name
   responses = filterExpectingOnly(
@@ -254,7 +212,7 @@ async function check(
     `expected at least 1 response to ${verb}.${name}`,
   );
   fn(responses);
-  checkResponse(`${verb}(${name})`, responses, keys);
+  checkResponse(`${verb}(${name})`, responses, validateFn);
 
   // specific service
   responses = filterExpectingOnly(
@@ -267,7 +225,7 @@ async function check(
     `expected at least 1 response to ${verb}.${name}.${responses[0].id}`,
   );
   fn(responses);
-  checkResponse(`${verb}(${name})`, responses, keys);
+  checkResponse(`${verb}(${name})`, responses, validateFn);
 }
 
 function assert(v: unknown, msg?: string) {
@@ -281,5 +239,82 @@ function assertEquals(v: unknown, expected: unknown, msg?: string) {
     throw new Error(msg || `expected ${v} === ${expected}`);
   }
 }
+
+export const StatsSchema: JSONSchemaType<ServiceStats> = {
+  type: "object",
+  properties: {
+    type: { type: "string" },
+    name: { type: "string" },
+    id: { type: "string" },
+    version: { type: "string" },
+    num_requests: { type: "number" },
+    num_errors: { type: "number" },
+    last_error: { type: "string" },
+    processing_time: { type: "number" },
+    average_processing_time: { type: "number" },
+    started: { type: "string" },
+    data: { type: "string" },
+  },
+  required: [
+    "type",
+    "name",
+    "id",
+    "version",
+    "num_requests",
+    "num_errors",
+    "last_error",
+    "processing_time",
+    "average_processing_time",
+    "started",
+    "data",
+  ],
+  additionalProperties: false,
+};
+
+export const ServiceSchema: JSONSchemaType<ServiceSchema> = {
+  type: "object",
+  properties: {
+    type: { type: "string" },
+    name: { type: "string" },
+    id: { type: "string" },
+    version: { type: "string" },
+    schema: {
+      type: "object",
+      properties: {
+        request: { type: "string" },
+        response: { type: "string" },
+      },
+      required: ["request", "response"],
+    },
+  },
+  required: ["type", "name", "id", "version", "schema"],
+  additionalProperties: false,
+};
+
+const InfoSchema: JSONSchemaType<ServiceInfo> = {
+  type: "object",
+  properties: {
+    type: { type: "string" },
+    name: { type: "string" },
+    id: { type: "string" },
+    version: { type: "string" },
+    description: { type: "string" },
+    subject: { type: "string" },
+  },
+  required: ["type", "name", "id", "version", "subject"],
+  additionalProperties: false,
+};
+
+export const PingSchema: JSONSchemaType<ServiceIdentity> = {
+  type: "object",
+  properties: {
+    type: { type: "string" },
+    name: { type: "string" },
+    id: { type: "string" },
+    version: { type: "string" },
+  },
+  required: ["type", "name", "id", "version"],
+  additionalProperties: false,
+};
 
 Deno.exit(await root.execute(Deno.args));
