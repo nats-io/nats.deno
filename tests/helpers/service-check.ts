@@ -135,7 +135,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   const infos = await collect(await sc.info(name));
 
   let proms = infos.map((v) => {
-    return nc.request(v.subject);
+    return nc.request(v.subjects);
   });
   let responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -148,7 +148,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
 
   // the service should throw/register an error if "error" is specified as payload
   proms = infos.map((v) => {
-    return nc.request(v.subject, StringCodec().encode("error"));
+    return nc.request(v.subjects, StringCodec().encode("error"));
   });
   responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -160,7 +160,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   });
 
   proms = infos.map((v, idx) => {
-    return nc.request(v.subject, StringCodec().encode(`hello ${idx}`));
+    return nc.request(v.subjects, StringCodec().encode(`hello ${idx}`));
   });
   responses = await Promise.all(proms);
   responses.forEach((m, idx) => {
@@ -247,26 +247,36 @@ export const StatsSchema: JSONSchemaType<ServiceStats> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
-    num_requests: { type: "number" },
-    num_errors: { type: "number" },
-    last_error: { type: "string" },
-    processing_time: { type: "number" },
-    average_processing_time: { type: "number" },
     started: { type: "string" },
-    data: { type: "string" },
+    endpoints: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          num_requests: { type: "number" },
+          num_errors: { type: "number" },
+          last_error: { type: "string" },
+          processing_time: { type: "number" },
+          average_processing_time: { type: "number" },
+          data: { type: "string" },
+        },
+        required: [
+          "num_requests",
+          "num_errors",
+          "last_error",
+          "processing_time",
+          "average_processing_time",
+          "data",
+        ],
+      },
+    },
   },
   required: [
     "type",
     "name",
     "id",
     "version",
-    "num_requests",
-    "num_errors",
-    "last_error",
-    "processing_time",
-    "average_processing_time",
     "started",
-    "data",
   ],
   additionalProperties: false,
 };
@@ -299,9 +309,9 @@ const InfoSchema: JSONSchemaType<ServiceInfo> = {
     id: { type: "string" },
     version: { type: "string" },
     description: { type: "string" },
-    subject: { type: "string" },
+    subjects: { type: "array", items: { type: "string" } },
   },
-  required: ["type", "name", "id", "version", "subject"],
+  required: ["type", "name", "id", "version", "subjects"],
   additionalProperties: false,
 };
 
