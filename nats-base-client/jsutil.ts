@@ -49,7 +49,7 @@ export function validName(name = ""): string {
   if (name === "") {
     throw Error(`name required`);
   }
-  const RE = /^[-\w]+$/g;
+  const RE = /^[-\w,#]+$/g;
   const m = name.match(RE);
   if (m === null) {
     for (const c of name.split("")) {
