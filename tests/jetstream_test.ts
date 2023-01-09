@@ -3857,7 +3857,6 @@ Deno.test("jetstream - fetch on stopped server doesn't close client", async () =
   (async () => {
     let reconnects = 0;
     for await (const s of nc.status()) {
-      console.log(s);
       switch (s.type) {
         case DebugEvents.Reconnecting:
           reconnects++;
