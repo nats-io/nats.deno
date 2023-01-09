@@ -444,14 +444,13 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   constructor(
     nc: NatsConnection,
-    config: ServiceConfig,
+    config: ServiceConfig = { name: "", version: "" },
   ) {
     super();
     this.nc = nc;
-    config = config || {};
-    config.name = config.name || "";
     this.config = config;
-    validateName("name", this.name);
+    // this will throw if no name
+    validateName("name", this.config.name);
     // this will throw if not semver
     parseSemVer(this.config.version);
     this._id = nuid.next();
