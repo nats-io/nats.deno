@@ -3322,7 +3322,7 @@ Deno.test("jetstream - ephemeral pull consumer", async () => {
   await nc.flush();
 
   const jsm = await nc.jetstreamManager();
-  await delay(1000);
+  await delay(1500);
   await assertRejects(
     async () => {
       await jsm.consumers.info(stream, old.name);
