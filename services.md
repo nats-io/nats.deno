@@ -19,11 +19,15 @@ const service = await nc.services.add({
   description: "returns max number in a request",
   endpoint: {
     subject: "max",
+    handler: (err, msg) => {
+      msg?.respond();
+    },
   },
 });
 ```
 
-To process messages incoming to the service:
+If you omit the handler, the service is actually an iterator for service
+messages. To process messages incoming to the service:
 
 ```typescript
 for await (const r of service) {
@@ -73,5 +77,12 @@ await m.stats("max");
 await m.stats("max", id);
 ```
 
-For more information, take a look at a
+For a more elaborate first example see:
 [simple example here](examples/services/01_services.ts)
+
+## Multiple Endpoints
+
+More complex services will have more than one endpoint. For example a calculator
+service may have endpoints for `sum`, `average`, `max`, etc. This type of
+service is also possible with the service api, see
+[multiple endpoints](examples/services/02_multiple_endpoints.ts)
