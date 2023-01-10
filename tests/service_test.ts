@@ -1,3 +1,17 @@
+/*
+ * Copyright 2022-2023 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   Service,
@@ -536,7 +550,7 @@ Deno.test("service - reset", async () => {
   await nc.request("q");
   await nc.request("q");
 
-  service.countError(new Error("hello"), "q", "q");
+  service.handlers[0].stats.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());
@@ -579,7 +593,7 @@ Deno.test("service - iter", async () => {
 
   await nc.request("q");
   await nc.request("q");
-  service.countError(new Error("hello"), "q", "q");
+  service.handlers[0].stats.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());

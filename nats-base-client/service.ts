@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -381,9 +381,9 @@ type ServiceSubscription<T = unknown> =
     internal: boolean;
     sub: Sub<T>;
     qi?: QueuedIterator<T>;
+    stats: NamedEndpointStatsImpl;
   };
 
-// FIXME: perhaps the client is presented with a Request = Msg, but adds a respondError(code, description)
 export class ServiceError extends Error {
   code: number;
   constructor(code: number, message: string) {
@@ -413,8 +413,8 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   internal: ServiceSubscription[];
   _stopped: boolean;
   _done: Deferred<Error | null>;
-  _stats!: EndpointStats;
   _schema?: Uint8Array;
+  started: string;
 
   /**
    * @param verb
@@ -459,6 +459,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     this._stopped = false;
     this.handlers = [];
     this.noIterator = true;
+    this.started = new Date().toISOString();
     // initialize the stats
     this.reset();
     if (this.config.endpoint) {
@@ -517,16 +518,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return h;
   }
 
-  countError(err: Error, name: string, subject: string): void {
-    const ns = this._stats.endpoints?.find((e) => {
-      return e.name === name && e.subject === subject;
-    });
-    if (ns) {
-      ns.num_errors++;
-      ns.last_error = err.message;
-    }
-  }
-
   setupHandler(
     h: NamedEndpoint,
     internal = false,
@@ -539,23 +530,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     if (internal) {
       this.internal.push(sv);
     }
-
-    const countLatency = (start: number): void => {
-      if (internal) return;
-      let s: NamedEndpointStats | undefined;
-      if (name) {
-        s = this._stats.endpoints?.find((v) => {
-          return v.name === name && v.subject === subject;
-        });
-      }
-      if (s) {
-        s.num_requests++;
-        s.processing_time = nanos(Date.now() - start);
-        s.average_processing_time = Math.round(
-          s.processing_time / s.num_requests,
-        );
-      }
-    };
+    sv.stats = new NamedEndpointStatsImpl(name, subject);
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -567,10 +542,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         try {
           handler(err, new ServiceMsgImpl(msg));
         } catch (err) {
-          this.countError(err, h.name, h.subject);
+          sv.stats.countError(err);
           msg?.respond(Empty, { headers: this.errorToHeader(err) });
         } finally {
-          countLatency(start);
+          sv.stats.countLatency(start);
         }
       }
       : undefined;
@@ -610,49 +585,26 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     } as ServiceInfo;
   }
 
-  getNamedStats(name: string, subject: string): NamedEndpointStats {
-    return this._stats.endpoints?.find((s) => {
-      return s.name === name && s.subject === subject;
-    })!;
-  }
-
   async stats(): Promise<ServiceStats> {
-    if (typeof this.config.statsHandler === "function") {
-      for (const h of this.handlers) {
+    const endpoints: NamedEndpointStats[] = [];
+    for (const h of this.handlers) {
+      if (typeof this.config.statsHandler === "function") {
         try {
-          if (h.handler === null) {
-            continue;
-          }
-          const stats = this.getNamedStats(h.name, h.subject);
-          stats.data = await this.config.statsHandler(h);
-
-          const qi = h.qi as QueuedIteratorImpl<ServiceMsg>;
-          if (qi) {
-            if (!qi.noIterator) {
-              // grab stats in the iterator
-              stats.processing_time = qi.time;
-              stats.num_requests = qi.processed;
-              stats.average_processing_time =
-                stats.processing_time > 0 && stats.num_requests > 0
-                  ? stats.processing_time / stats.num_requests
-                  : 0;
-            }
-          }
+          h.stats.data = await this.config.statsHandler(h);
         } catch (err) {
-          this.countError(err, h.name, h.subject);
+          h.stats.countError(err);
         }
       }
+      endpoints.push(h.stats.stats(h.qi));
     }
-    const stats = Object.assign(
-      {
-        type: ServiceResponseType.STATS,
-        name: this.name,
-        id: this.id,
-        version: this.version,
-      },
-      this._stats,
-    );
-    return stats;
+    return {
+      type: ServiceResponseType.STATS,
+      name: this.name,
+      id: this.id,
+      version: this.version,
+      started: this.started,
+      endpoints,
+    };
   }
 
   addInternalHandler(
@@ -799,29 +751,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   reset(): void {
     // pretend we restarted
-    this._stats = this._stats ? this._stats : {} as EndpointStats;
-    this._stats.started = new Date().toISOString();
-
+    this.started = new Date().toISOString();
     if (this.handlers) {
       for (const h of this.handlers) {
-        if (h.handler === null) {
-          continue;
-        }
-        const stats = this.getNamedStats(h.name, h.subject);
-        stats.subject = h.subject;
-        stats.num_requests = 0;
-        stats.num_errors = 0, stats.processing_time = 0;
-        stats.average_processing_time = 0;
-        stats.num_errors = 0;
-        stats.last_error = undefined;
-        const qi = h.qi as QueuedIteratorImpl<ServiceMsg>;
-        if (qi) {
-          if (!qi.noIterator) {
-            // grab stats in the iterator
-            qi.time = 0;
-            qi.processed = 0;
-          }
-        }
+        h.stats.reset(h.qi);
       }
     }
   }
@@ -859,19 +792,87 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     const ss = this.setupHandler({ name, subject, handler }, false);
     ss.qi = qi;
     this.handlers.push(ss);
-    this._stats.endpoints = !this._stats.endpoints ? [] : this._stats.endpoints;
-    this._stats.endpoints.push(newEndpointStats(name, subject));
     return qi;
   }
 }
 
-function newEndpointStats(name: string, subject: string): NamedEndpointStats {
-  return {
-    name,
-    subject,
-    num_requests: 0,
-    num_errors: 0,
-    processing_time: 0,
-    average_processing_time: 0,
-  };
+class NamedEndpointStatsImpl implements NamedEndpointStats {
+  name: string;
+  subject: string;
+  average_processing_time: Nanos;
+  num_requests: number;
+  processing_time: Nanos;
+  num_errors: number;
+  last_error?: string;
+  data?: unknown;
+
+  constructor(name: string, subject: string) {
+    this.name = name;
+    this.subject = subject;
+    this.average_processing_time = 0;
+    this.num_errors = 0;
+    this.num_requests = 0;
+    this.processing_time = 0;
+  }
+  reset(qi?: QueuedIterator<unknown>) {
+    this.num_requests = 0;
+    this.processing_time = 0;
+    this.average_processing_time = 0;
+    this.num_errors = 0;
+    this.last_error = undefined;
+    this.data = undefined;
+    const qii = qi as QueuedIteratorImpl<unknown>;
+    if (qii) {
+      qii.time = 0;
+      qii.processed = 0;
+    }
+  }
+  countLatency(start: number) {
+    this.num_requests++;
+    this.processing_time += nanos(Date.now() - start);
+    this.average_processing_time = Math.round(
+      this.processing_time / this.num_requests,
+    );
+  }
+  countError(err: Error): void {
+    this.num_errors++;
+    this.last_error = err.message;
+  }
+
+  _stats(): NamedEndpointStats {
+    const {
+      name,
+      subject,
+      average_processing_time,
+      num_errors,
+      num_requests,
+      processing_time,
+      last_error,
+      data,
+    } = this;
+    return {
+      name,
+      subject,
+      average_processing_time,
+      num_errors,
+      num_requests,
+      processing_time,
+      last_error,
+      data,
+    };
+  }
+
+  stats(qi?: QueuedIterator<unknown>): NamedEndpointStats {
+    const qii = qi as QueuedIteratorImpl<unknown>;
+    if (qii?.noIterator === false) {
+      // grab stats in the iterator
+      this.processing_time = qii.time;
+      this.num_requests = qii.processed;
+      this.average_processing_time =
+        this.processing_time > 0 && this.num_requests > 0
+          ? this.processing_time / this.num_requests
+          : 0;
+    }
+    return this._stats();
+  }
 }
