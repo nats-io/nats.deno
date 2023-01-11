@@ -42,7 +42,7 @@ const calc = await nc.services.add({
   name: "calc",
   version: "0.0.1",
   description: "example calculator service",
-  schema,
+  apiURL: "http://somesite.com",
 });
 
 // For this example the thing we want to showcase is how you can
@@ -56,13 +56,17 @@ const calc = await nc.services.add({
 // introduce a prefix for the calculator's endpoints. The group name
 // can be any valid subject that can be prefixed into another.
 const g = calc.addGroup("calc");
-
 // We can now add endpoints under this which will augment the subject
 // space, adding an endpoint. Endpoints can only have a simple name
 // and can specify an optional callback:
+
+// this is the simplest endpoint - returns an iterator
+// additional options such as a handler, subject, or schema can be
+// specified.
+// this endpoint is accessible as `calc.sum`
+const sums = g.addEndpoint("sum");
 (async () => {
-  // this endpoint is accessible as `calc.sum`
-  for await (const m of g.addEndpoint("sum")) {
+  for await (const m of sums) {
     const numbers = decode(m);
     const s = numbers.reduce((sum, v) => {
       return sum + v;
@@ -84,16 +88,20 @@ g.addEndpoint("average", (err, m) => {
   m.respond(jc.encode(sum / numbers.length));
 });
 
-g.addEndpoint("min", (err, m) => {
-  if (err) {
-    calc.stop(err);
-    return;
-  }
-  const numbers = decode(m);
-  const min = numbers.reduce((n, v) => {
-    return Math.min(n, v);
-  });
-  m.respond(jc.encode(min));
+// and another using a callback, and specifying our schema:
+g.addEndpoint("min", {
+  schema,
+  handler: (err, m) => {
+    if (err) {
+      calc.stop(err);
+      return;
+    }
+    const numbers = decode(m);
+    const min = numbers.reduce((n, v) => {
+      return Math.min(n, v);
+    });
+    m.respond(jc.encode(min));
+  },
 });
 
 g.addEndpoint("max", (err, m) => {

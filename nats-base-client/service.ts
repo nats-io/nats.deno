@@ -64,7 +64,7 @@ export interface ServiceResponse {
   type: ServiceResponseType;
 }
 
-export interface ServiceIdentity extends ServiceResponse {
+export type ServiceIdentity = ServiceResponse & {
   /**
    * The kind of the service reporting the stats
    */
@@ -77,7 +77,7 @@ export interface ServiceIdentity extends ServiceResponse {
    * A version for the service
    */
   version: string;
-}
+};
 
 export interface ServiceMsg extends Msg {
   respondError(
@@ -126,14 +126,14 @@ export class ServiceMsgImpl implements ServiceMsg {
 
 export interface ServiceGroup {
   /**
-   * The name or {name, subject} for configuring the endpoint.
    * The name of the endpoint must be a simple subject token with no wildcards
    * @param name
-   * @param handler
+   * @param opts is either a handler or a more complex options which allows a
+   *  subject, handler, and/or schema
    */
   addEndpoint(
-    name: string | { name: string; subject: string },
-    handler?: ServiceHandler,
+    name: string,
+    opts?: ServiceHandler | EndpointOptions,
   ): QueuedIterator<ServiceMsg>;
 
   /**
@@ -173,20 +173,20 @@ export class ServiceGroupImpl implements ServiceGroup {
     return root !== "" ? `${root}.${name}` : name;
   }
   addEndpoint(
-    name: string | { name: string; subject: string } = "",
-    handler?: ServiceHandler,
+    name = "",
+    opts?: ServiceHandler | EndpointOptions,
   ): QueuedIterator<ServiceMsg> {
-    if (typeof name === "string") {
-      name = { name, subject: name };
-    }
-    const ns = typeof name === "string"
-      ? { name, subject: name }
-      : name as { name: string; subject: string };
-    validateName("endpoint", name.name);
-    ns.subject = ns.subject || ns.name;
-    validSubjectName("endpoint subject", ns.subject);
-    const subj = this.calcSubject(this.subject, ns.subject);
-    return this.srv._addEndpoint(ns.name, subj, handler);
+    opts = opts || { subject: name } as EndpointOptions;
+    const args: EndpointOptions = typeof opts === "function"
+      ? { handler: opts, subject: name }
+      : opts;
+    validateName("endpoint", name);
+    let { subject, handler, schema } = args;
+    subject = subject || name;
+    validSubjectName("endpoint subject", subject);
+    subject = this.calcSubject(this.subject, subject);
+    const ne = { name, subject, handler, schema };
+    return this.srv._addEndpoint(ne);
   }
 
   addGroup(name = ""): ServiceGroup {
@@ -297,12 +297,28 @@ export type EndpointStats = ServiceIdentity & {
 };
 
 export type ServiceSchema = ServiceIdentity & {
-  schema: SchemaInfo;
+  apiURL?: string;
+  endpoints: EndpointSchema[];
 };
 
 export type SchemaInfo = {
   request: string;
   response: string;
+};
+
+export type EndpointSchema = {
+  /**
+   * Endpoint Name
+   */
+  name: string;
+  /**
+   * Subject the endpoint receiving requests on
+   */
+  subject: string;
+  /**
+   * Optional schema if defined
+   */
+  schema?: SchemaInfo;
 };
 
 export type ServiceInfo = ServiceIdentity & {
@@ -332,7 +348,7 @@ export type ServiceConfig = {
   /**
    * Schema for the service
    */
-  schema?: SchemaInfo;
+  apiURL?: string;
   /**
    * An optional endpoint mapping a handler to a subject.
    * More complex multi-endpoint services can be achieved by
@@ -356,16 +372,23 @@ export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
  */
 export type Endpoint = {
   /**
-   * Subject where the endpoint is listening
+   * Subject where the endpoint listens
    */
   subject: string;
   /**
-   * Handler for the endpoint - if not set the service is an iterator
+   * An optional handler - if not set the service is an iterator
    * @param err
    * @param msg
    */
   handler?: ServiceHandler;
+  /**
+   * An optional schema
+   */
+  schema?: SchemaInfo;
 };
+
+export type EndpointOptions = Partial<Endpoint>;
+
 /**
  * The stats of a service
  */
@@ -382,6 +405,7 @@ type ServiceSubscription<T = unknown> =
     sub: Sub<T>;
     qi?: QueuedIterator<T>;
     stats: NamedEndpointStatsImpl;
+    schema?: SchemaInfo;
   };
 
 export class ServiceError extends Error {
@@ -463,12 +487,12 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     // initialize the stats
     this.reset();
     if (this.config.endpoint) {
-      this._addEndpoint(
-        "default",
-        this.config.endpoint?.subject,
-        this.config.endpoint?.handler,
-        true,
-      );
+      this._addEndpoint({
+        name: "default",
+        subject: this.config.endpoint?.subject,
+        handler: this.config.endpoint?.handler,
+        schema: this.config.endpoint?.schema,
+      }, true);
     }
 
     // close if the connection closes
@@ -524,13 +548,14 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   ): ServiceSubscription {
     // internals don't use a queue
     const queue = internal ? "" : "q";
-    const { name, subject, handler } = h as NamedEndpoint;
+    const { name, subject, handler, schema } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
+    sv.schema = schema;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -679,7 +704,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         this.close(err);
         return Promise.reject(err);
       }
-      msg?.respond(this.schema);
+      msg?.respond(JSONCodec().encode(this.schema()));
       return Promise.resolve();
     };
 
@@ -735,18 +760,20 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   stop(err?: Error): Promise<null | Error> {
     return this.close(err);
   }
-  get schema(): Uint8Array {
-    const jc = JSONCodec();
-    if (!this._schema) {
-      this._schema = jc.encode({
-        type: ServiceResponseType.SCHEMA,
-        name: this.name,
-        id: this.id,
-        version: this.version,
-        schema: this.config.schema,
-      });
-    }
-    return this._schema;
+  schema(): ServiceSchema {
+    const v: ServiceSchema = {
+      type: ServiceResponseType.SCHEMA,
+      name: this.name,
+      id: this.id,
+      version: this.version,
+      apiURL: this.config.apiURL,
+      endpoints: [],
+    };
+    v.endpoints = this.handlers.map((h) => {
+      const { schema, subject, name } = h;
+      return { schema, subject, name };
+    });
+    return v;
   }
 
   reset(): void {
@@ -765,22 +792,20 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   addEndpoint(
     name: string,
-    handler?: ServiceHandler,
+    handler?: ServiceHandler | EndpointOptions,
   ): QueuedIterator<ServiceMsg> {
     const sg = new ServiceGroupImpl(this);
     return sg.addEndpoint(name, handler);
   }
 
   _addEndpoint(
-    name: string,
-    subject: string,
-    handler?: ServiceHandler,
+    e: NamedEndpoint,
     main = false,
   ): QueuedIterator<ServiceMsg> {
     const qi = main ? this : new QueuedIteratorImpl<ServiceMsg>();
-    qi.noIterator = typeof handler === "function";
+    qi.noIterator = typeof e.handler === "function";
     if (!qi.noIterator) {
-      handler = (err, msg): void => {
+      e.handler = (err, msg): void => {
         err ? this.stop(err).catch() : qi.push(new ServiceMsgImpl(msg));
       };
       // close the service if the iterator closes
@@ -789,7 +814,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       });
     }
     // track the iterator for stats
-    const ss = this.setupHandler({ name, subject, handler }, false);
+    const ss = this.setupHandler(e, false);
     ss.qi = qi;
     this.handlers.push(ss);
     return qi;

@@ -1,22 +1,20 @@
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
-import {
-  connect,
-  NatsConnection,
-  ServiceError,
-  ServiceIdentity,
-  ServiceInfo,
-  ServiceSchema,
-  ServiceStats,
-  ServiceVerb,
-  StringCodec,
-} from "../../src/mod.ts";
+import { connect, NatsConnection, StringCodec } from "../../src/mod.ts";
 
 import { collect } from "../../nats-base-client/util.ts";
 import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
 import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
 
 import { parseSemVer } from "../../nats-base-client/semver.ts";
-import { ServiceResponseType } from "../../nats-base-client/service.ts";
+import {
+  ServiceError,
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceResponseType,
+  ServiceSchema,
+  ServiceStats,
+  ServiceVerb,
+} from "../../nats-base-client/service.ts";
 
 const ajv = new Ajv();
 
@@ -93,38 +91,38 @@ function checkResponse<T extends ServiceIdentity>(
     const valid = validator(r);
     if (!valid) {
       console.log(validator.errors);
-      throw new Error(validator.errors[0].message);
+      throw new Error(validator.errors?.[0].message);
     }
   });
 }
 //
 async function checkStats(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(StatsSchema);
-  await check(nc, ServiceVerb.STATS, name, validateFn, (v) => {
+  const validateFn = ajv.compile(statsSchema);
+  await check<ServiceStats>(nc, ServiceVerb.STATS, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.STATS);
     parseSemVer(v.version);
   });
 }
 
 async function checkSchema(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(ServiceSchema);
-  await check(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
+  const validateFn = ajv.compile(serviceSchema);
+  await check<ServiceSchema>(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.SCHEMA);
     parseSemVer(v.version);
   });
 }
 
 async function checkInfo(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(InfoSchema);
-  await check(nc, ServiceVerb.INFO, name, validateFn, (v) => {
+  const validateFn = ajv.compile(infoSchema);
+  await check<ServiceInfo>(nc, ServiceVerb.INFO, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.INFO);
     parseSemVer(v.version);
   });
 }
 
 async function checkPing(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(PingSchema);
-  await check(nc, ServiceVerb.PING, name, validateFn, (v) => {
+  const validateFn = ajv.compile(pingSchema);
+  await check<ServiceIdentity>(nc, ServiceVerb.PING, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.PING);
     parseSemVer(v.version);
   });
@@ -135,7 +133,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   const infos = await collect(await sc.info(name));
 
   let proms = infos.map((v) => {
-    return nc.request(v.subjects);
+    return nc.request(v.subjects[0]);
   });
   let responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -148,7 +146,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
 
   // the service should throw/register an error if "error" is specified as payload
   proms = infos.map((v) => {
-    return nc.request(v.subjects, StringCodec().encode("error"));
+    return nc.request(v.subjects[0], StringCodec().encode("error"));
   });
   responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -160,7 +158,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   });
 
   proms = infos.map((v, idx) => {
-    return nc.request(v.subjects, StringCodec().encode(`hello ${idx}`));
+    return nc.request(v.subjects[0], StringCodec().encode(`hello ${idx}`));
   });
   responses = await Promise.all(proms);
   responses.forEach((m, idx) => {
@@ -173,14 +171,14 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   });
 }
 
-async function check(
+async function check<T extends ServiceIdentity>(
   nc: NatsConnection,
   verb: ServiceVerb,
   name: string,
-  validateFn: ValidateFunction,
-  check?: (v: ServiceIdentity) => void,
+  validateFn: ValidateFunction<T>,
+  check?: (v: T) => void,
 ) {
-  const fn = (d: ServiceIdentity[]): void => {
+  const fn = (d: T[]): void => {
     if (check) {
       try {
         d.forEach(check);
@@ -194,7 +192,7 @@ async function check(
   // all
   let responses = filter(
     name,
-    await collect(await sc.q<ServiceIdentity>(verb)),
+    await collect(await sc.q<T>(verb)),
   );
 
   assert(responses.length >= 1, `expected at least 1 response to ${verb}`);
@@ -240,7 +238,7 @@ function assertEquals(v: unknown, expected: unknown, msg?: string) {
   }
 }
 
-export const StatsSchema: JSONSchemaType<ServiceStats> = {
+const statsSchema: JSONSchemaType<ServiceStats> = {
   type: "object",
   properties: {
     type: { type: "string" },
@@ -281,27 +279,39 @@ export const StatsSchema: JSONSchemaType<ServiceStats> = {
   additionalProperties: false,
 };
 
-export const ServiceSchema: JSONSchemaType<ServiceSchema> = {
+const serviceSchema: JSONSchemaType<ServiceSchema> = {
   type: "object",
   properties: {
     type: { type: "string" },
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
-    schema: {
-      type: "object",
-      properties: {
-        request: { type: "string" },
-        response: { type: "string" },
+    apiURL: { type: "string" },
+    endpoints: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          subject: { type: "string" },
+          schema: {
+            type: "object",
+            properties: {
+              request: { type: "string" },
+              response: { type: "string" },
+            },
+            required: ["request", "response"],
+          },
+        },
+        additionalProperties: false,
       },
-      required: ["request", "response"],
     },
   },
-  required: ["type", "name", "id", "version", "schema"],
+  required: ["type", "name", "id", "version"],
   additionalProperties: false,
 };
 
-const InfoSchema: JSONSchemaType<ServiceInfo> = {
+const infoSchema: JSONSchemaType<ServiceInfo> = {
   type: "object",
   properties: {
     type: { type: "string" },
@@ -315,7 +325,7 @@ const InfoSchema: JSONSchemaType<ServiceInfo> = {
   additionalProperties: false,
 };
 
-export const PingSchema: JSONSchemaType<ServiceIdentity> = {
+const pingSchema: JSONSchemaType<ServiceIdentity> = {
   type: "object",
   properties: {
     type: { type: "string" },

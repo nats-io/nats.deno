@@ -57,9 +57,10 @@ const service = await nc.services.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
-  schema,
+  apiURL: "http://someurl.com",
   endpoint: {
     subject: "max",
+    schema,
   },
   statsHandler,
 });
