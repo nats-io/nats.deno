@@ -59,6 +59,7 @@ export type {
   ObjectStoreMeta,
   ObjectStoreMetaOptions,
   ObjectStoreOptions,
+  ObjectStorePutOpts,
   ObjectStoreStatus,
   PeerInfo,
   Placement,
