@@ -253,7 +253,15 @@ export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
   stop(err?: Error): Promise<null | Error>;
 }
 
-type Stats = {
+export type NamedEndpointStats = {
+  /**
+   * The name of the endpoint
+   */
+  name: string;
+  /**
+   * The subject the endpoint is listening on
+   */
+  subject: string;
   /**
    * The number of requests received by the endpoint
    */
@@ -278,11 +286,6 @@ type Stats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
-};
-
-export type NamedEndpointStats = Stats & {
-  name: string;
-  subject: string;
 };
 
 /**

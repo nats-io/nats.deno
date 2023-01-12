@@ -270,6 +270,7 @@ Deno.test("authenticator - jwt bearer fn", async () => {
   }, 2000);
 
   await cycle;
+  await nc.flush();
   assertEquals(nc.isClosed(), false);
   await cleanup(ns, nc);
 });
@@ -327,6 +328,7 @@ Deno.test("authenticator - jwt fn", async () => {
   }, 2000);
 
   await cycle;
+  await nc.flush();
   assertEquals(nc.isClosed(), false);
   await cleanup(ns, nc);
 });
