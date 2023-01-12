@@ -384,6 +384,8 @@ Deno.test("authenticator - creds fn", async () => {
   }, 2000);
 
   await cycle;
+  await nc.flush();
+
   assertEquals(nc.isClosed(), false);
   await cleanup(ns, nc);
 });

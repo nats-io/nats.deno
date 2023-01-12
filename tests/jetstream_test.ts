@@ -2289,7 +2289,7 @@ Deno.test("jetstream - source", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jestream - nak delay", async () => {
+Deno.test("jetstream - nak delay", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.7.1")) {
     return;
@@ -2873,12 +2873,9 @@ Deno.test("jetstream - bind", async () => {
     `unable to bind - durable consumer hello doesn't exist in ${stream}`,
     undefined,
   );
-
-  nc.subscribe("$JS.API.CONSUMER.DURABLE.CREATE.>", {
-    callback: (_err, _msg) => {
-      // this will count
-    },
-  });
+  // the rejection happens and the unsub is scheduled, but it is possible that
+  // the server didn't process it yet - flush to make sure the unsub was seen
+  await nc.flush();
 
   opts.bind(stream, "me");
   const sub = await js.subscribe(subj, opts);
@@ -3857,7 +3854,6 @@ Deno.test("jetstream - fetch on stopped server doesn't close client", async () =
   (async () => {
     let reconnects = 0;
     for await (const s of nc.status()) {
-      console.log(s);
       switch (s.type) {
         case DebugEvents.Reconnecting:
           reconnects++;

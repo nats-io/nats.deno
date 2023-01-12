@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -2919,6 +2919,13 @@ export type ObjectResult = {
   error: Promise<Error | null>;
 };
 
+export type ObjectStorePutOpts = {
+  /**
+   * maximum number of millis for the put requests to succeed
+   */
+  timeout: number;
+};
+
 export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
   list(): Promise<ObjectInfo[]>;
@@ -2926,6 +2933,7 @@ export interface ObjectStore {
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo>;
   delete(name: string): Promise<PurgeResponse>;
   link(name: string, meta: ObjectInfo): Promise<ObjectInfo>;

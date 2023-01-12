@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import {
   ObjectStoreMeta,
   ObjectStoreMetaOptions,
   ObjectStoreOptions,
+  ObjectStorePutOpts,
   ObjectStoreStatus,
   PubAck,
   PurgeResponse,
@@ -306,8 +307,12 @@ export class ObjectStoreImpl implements ObjectStore {
   async _put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo> {
     const jsi = this.js as JetStreamClientImpl;
+    opts = opts || { timeout: jsi.timeout };
+    opts.timeout = opts.timeout || 1000;
+    const { timeout } = opts;
     const maxPayload = jsi.nc.info?.max_payload || 1024;
     meta = meta || {} as ObjectStoreMeta;
     meta.options = meta.options || {};
@@ -351,7 +356,7 @@ export class ObjectStoreImpl implements ObjectStore {
             sha.update(payload);
             info.chunks!++;
             info.size! += payload.length;
-            proms.push(this.js.publish(chunkSubj, payload));
+            proms.push(this.js.publish(chunkSubj, payload, { timeout }));
           }
           info.mtime = new Date().toISOString();
           const digest = sha.digest("base64");
@@ -364,7 +369,10 @@ export class ObjectStoreImpl implements ObjectStore {
           const h = headers();
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
           proms.push(
-            this.js.publish(metaSubj, JSONCodec().encode(info), { headers: h }),
+            this.js.publish(metaSubj, JSONCodec().encode(info), {
+              headers: h,
+              timeout,
+            }),
           );
 
           // if we had this object trim it out
@@ -389,7 +397,7 @@ export class ObjectStoreImpl implements ObjectStore {
             const payload = db.drain(meta.options.max_chunk_size);
             sha.update(payload);
             proms.push(
-              this.js.publish(chunkSubj, payload),
+              this.js.publish(chunkSubj, payload, { timeout }),
             );
           }
         }
@@ -406,13 +414,14 @@ export class ObjectStoreImpl implements ObjectStore {
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo> {
     if (meta?.options?.link) {
       return Promise.reject(
         new Error("link cannot be set when putting the object in bucket"),
       );
     }
-    return this._put(meta, rs);
+    return this._put(meta, rs, opts);
   }
 
   async get(name: string): Promise<ObjectResult | null> {

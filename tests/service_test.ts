@@ -731,8 +731,8 @@ Deno.test("service - cross platform service test", async () => {
     "demo.nats.io",
   ];
 
-  const p = Deno.run({ cmd: args, stderr: "piped" });
-  const [status, stderr] = await Promise.all([
+  const p = Deno.run({ cmd: args, stderr: "piped", stdout: "piped" });
+  const [status, _stdout, stderr] = await Promise.all([
     p.status(),
     p.stderrOutput(),
   ]);
@@ -751,9 +751,12 @@ Deno.test("service - stats name respects assigned name", async () => {
     name: "tEsT",
     // @ts-ignore: testing
     version: "0.0.1",
-  });
-  test.addEndpoint("q", (_err, msg) => {
-    msg.respond();
+    endpoint: {
+      subject: "q",
+      handler: (_err, msg) => {
+        msg?.respond();
+      },
+    },
   });
   const stats = await test.stats();
   assertEquals(stats.name, "tEsT");
