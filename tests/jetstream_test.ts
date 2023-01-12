@@ -2873,12 +2873,9 @@ Deno.test("jetstream - bind", async () => {
     `unable to bind - durable consumer hello doesn't exist in ${stream}`,
     undefined,
   );
-
-  nc.subscribe("$JS.API.CONSUMER.DURABLE.CREATE.>", {
-    callback: (_err, _msg) => {
-      // this will count
-    },
-  });
+  // the rejection happens and the unsub is scheduled, but it is possible that
+  // the server didn't process it yet - flush to make sure the unsub was seen
+  await nc.flush();
 
   opts.bind(stream, "me");
   const sub = await js.subscribe(subj, opts);
@@ -3322,7 +3319,7 @@ Deno.test("jetstream - ephemeral pull consumer", async () => {
   await nc.flush();
 
   const jsm = await nc.jetstreamManager();
-  await delay(1000);
+  await delay(1500);
   await assertRejects(
     async () => {
       await jsm.consumers.info(stream, old.name);
@@ -3857,7 +3854,6 @@ Deno.test("jetstream - fetch on stopped server doesn't close client", async () =
   (async () => {
     let reconnects = 0;
     for await (const s of nc.status()) {
-      console.log(s);
       switch (s.type) {
         case DebugEvents.Reconnecting:
           reconnects++;

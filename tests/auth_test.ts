@@ -1119,8 +1119,6 @@ Deno.test("auth - ignore auth error abort", async () => {
 
 Deno.test("auth - sub with permission error discards", async () => {
   const { ns, nc } = await setup({
-    debug: true,
-    trace: true,
     authorization: {
       users: [{
         user: "a",
@@ -1132,7 +1130,7 @@ Deno.test("auth - sub with permission error discards", async () => {
         },
       }],
     },
-  }, { user: "a", pass: "a", debug: true });
+  }, { user: "a", pass: "a" });
 
   const nci = nc as NatsConnectionImpl;
 
