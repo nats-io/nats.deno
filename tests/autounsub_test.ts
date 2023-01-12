@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
 
 import { createInbox, Empty, ErrorCode, Subscription } from "../src/mod.ts";
 import { Lock } from "./helpers/mod.ts";
@@ -93,11 +93,11 @@ Deno.test("autounsub - request receives expected count with multiple helpers", a
   const { ns, nc } = await setup();
   const subj = createInbox();
 
-  const fn = (async (sub: Subscription) => {
+  const fn = async (sub: Subscription) => {
     for await (const m of sub) {
       m.respond();
     }
-  });
+  };
   const subs: Subscription[] = [];
   for (let i = 0; i < 5; i++) {
     const sub = nc.subscribe(subj);
@@ -121,12 +121,12 @@ Deno.test("autounsub - manual request receives expected count with multiple help
   const subj = createInbox();
   const lock = Lock(5);
 
-  const fn = (async (sub: Subscription) => {
+  const fn = async (sub: Subscription) => {
     for await (const m of sub) {
       m.respond();
       lock.unlock();
     }
-  });
+  };
   for (let i = 0; i < 5; i++) {
     const sub = nc.subscribe(subj);
     fn(sub).then();

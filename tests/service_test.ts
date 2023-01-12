@@ -34,7 +34,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+} from "https://deno.land/std@0.171.0/testing/asserts.ts";
 
 import { collect, delay } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";

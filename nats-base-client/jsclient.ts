@@ -232,14 +232,14 @@ export class JetStreamClientImpl extends BaseApiClient
   }
 
   /*
-  * Returns available messages upto specified batch count.
-  * If expires is set the iterator will wait for the specified
-  * amount of millis before closing the subscription.
-  * If no_wait is specified, the iterator will return no messages.
-  * @param stream
-  * @param durable
-  * @param opts
-  */
+   * Returns available messages upto specified batch count.
+   * If expires is set the iterator will wait for the specified
+   * amount of millis before closing the subscription.
+   * If no_wait is specified, the iterator will return no messages.
+   * @param stream
+   * @param durable
+   * @param opts
+   */
   fetch(
     stream: string,
     durable: string,
@@ -900,7 +900,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
         }
       }
 
-      const api = (this.info.api as BaseApiClient);
+      const api = this.info.api as BaseApiClient;
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;
 

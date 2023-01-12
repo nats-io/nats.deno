@@ -11,13 +11,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+} from "https://deno.land/std@0.171.0/testing/asserts.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,

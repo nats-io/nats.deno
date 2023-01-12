@@ -1,7 +1,7 @@
-import * as path from "https://deno.land/std@0.168.0/path/mod.ts";
+import * as path from "https://deno.land/std@0.171.0/path/mod.ts";
 import { NatsServer } from "../tests/helpers/mod.ts";
 import { connect } from "../src/mod.ts";
-import { assert } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.171.0/testing/asserts.ts";
 import {
   ConnectionOptions,
   extend,

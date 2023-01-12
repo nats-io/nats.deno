@@ -11,10 +11,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 import { isIPV4OrHostname, Servers } from "../nats-base-client/servers.ts";
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
 import type { ServerInfo } from "../nats-base-client/types.ts";
 import { setTransportFactory } from "../nats-base-client/internal_mod.ts";
 
