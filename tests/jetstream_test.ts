@@ -2289,7 +2289,7 @@ Deno.test("jetstream - source", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jestream - nak delay", async () => {
+Deno.test("jetstream - nak delay", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.7.1")) {
     return;
