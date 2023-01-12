@@ -17,7 +17,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+} from "https://deno.land/std@0.171.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -34,7 +34,7 @@ import {
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
-import { deadline } from "https://deno.land/std@0.168.0/async/deadline.ts";
+import { deadline } from "https://deno.land/std@0.171.0/async/deadline.ts";
 import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {

@@ -17,7 +17,7 @@ import {
   assertEquals,
   assertRejects,
   fail,
-} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+} from "https://deno.land/std@0.171.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
