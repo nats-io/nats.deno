@@ -92,7 +92,7 @@ export class ServiceClientImpl implements ServiceClient {
     name = "",
     id = "",
   ): Promise<QueuedIterator<ServiceSchema>> {
-    return this.q<ServiceIdentity & { schema: SchemaInfo }>(
+    return this.q<ServiceSchema>(
       ServiceVerb.SCHEMA,
       name,
       id,

@@ -216,6 +216,8 @@ export {
 
 export type {
   Endpoint,
+  EndpointOptions,
+  EndpointSchema,
   EndpointStats,
   SchemaInfo,
   Service,
@@ -223,6 +225,7 @@ export type {
   ServiceIdentity,
   ServiceInfo,
   ServiceMsg,
+  ServiceResponse,
   ServiceSchema,
   ServiceStats,
 } from "./service.ts";

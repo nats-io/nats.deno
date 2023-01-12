@@ -78,10 +78,6 @@ Deno.test("service - bad name", async () => {
         await nc.services.add({
           name: name,
           version: "1.0.0",
-          schema: {
-            request: "a",
-            response: "b",
-          },
         });
       },
       Error,
@@ -104,14 +100,15 @@ Deno.test("service - client", async () => {
     name: "test",
     version: "1.0.0",
     description: "responds with hello",
-    schema: {
-      request: "a",
-      response: "b",
-    },
+    apiURL: "http://www.myapi.com",
     endpoint: {
       subject: subj,
       handler: (_err, msg) => {
         msg?.respond(sc.encode("hello"));
+      },
+      schema: {
+        request: "a",
+        response: "b",
       },
     },
   }) as ServiceImpl;
@@ -196,17 +193,28 @@ Deno.test("service - client", async () => {
   function verifySchema(schemas: ServiceSchema[]) {
     verifyIdentity(schemas);
     const schema = schemas[0];
-    assertExists(schema.schema);
     assertEquals(schema.type, ServiceResponseType.SCHEMA);
-    assertEquals(schema.schema?.request, srv.config.schema?.request);
-    assertEquals(schema.schema?.response, srv.config.schema?.response);
+    assertEquals(schema.apiURL, srv.config.apiURL);
+    assertExists(schema.endpoints);
+    assert(Array.isArray(schema.endpoints));
+    assertEquals(schema.endpoints?.[0].name, srv.handlers[0]?.name);
+    assertEquals(schema.endpoints?.[0].subject, srv.handlers[0].subject);
+    assertEquals(
+      schema.endpoints?.[0].schema?.request,
+      srv.handlers[0].schema?.request,
+    );
+    assertEquals(
+      schema.endpoints?.[0].schema?.response,
+      srv.handlers[0].schema?.response,
+    );
 
     const r = schema as unknown as Record<string, unknown>;
     delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
-    delete r.schema;
+    delete r.apiURL;
+    delete r.endpoints;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
 
@@ -220,7 +228,7 @@ Deno.test("service - client", async () => {
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
-  const srvA = await nc.services.add({
+  const conf: ServiceConfig = {
     name: "test",
     version: "0.0.0",
     endpoint: {
@@ -228,19 +236,14 @@ Deno.test("service - basics", async () => {
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
       },
-    },
-  }) as ServiceImpl;
-
-  const srvB = await nc.services.add({
-    name: "test",
-    version: "0.0.0",
-    endpoint: {
-      subject: "foo",
-      handler: (_err: Error | null, msg: Msg) => {
-        msg?.respond();
+      schema: {
+        request: "a",
+        response: "b",
       },
     },
-  }) as ServiceImpl;
+  };
+  const srvA = await nc.services.add(conf) as ServiceImpl;
+  const srvB = await nc.services.add(conf) as ServiceImpl;
 
   const m = nc.services.client();
   const count = async (
@@ -698,15 +701,17 @@ Deno.test("service - service errors", async () => {
 Deno.test("service - cross platform service test", async () => {
   const nc = await connect({ servers: "demo.nats.io" });
   const name = `echo_${nuid.next()}`;
-  await nc.services.add({
+
+  const conf: ServiceConfig = {
     name,
     version: "0.0.1",
-    schema: { request: "a", response: "b" },
+    apiURL: "http://www.myapi.com",
     statsHandler: (): Promise<unknown> => {
       return Promise.resolve("hello world");
     },
     endpoint: {
       subject: createInbox(),
+      schema: { request: "a", response: "b" },
       handler: (_err, m): void => {
         if (m.data.length === 0) {
           m.respondError(400, "need a string", JSONCodec().encode(""));
@@ -718,7 +723,9 @@ Deno.test("service - cross platform service test", async () => {
         }
       },
     },
-  }) as ServiceImpl;
+  };
+
+  await nc.services.add(conf);
 
   const args = [
     "deno",
@@ -879,10 +886,7 @@ Deno.test("service - group subs", async () => {
   t("b.add");
   srv.addGroup("one.*.three").addEndpoint("add");
   t("one.*.three.add");
-  srv.addGroup("$SYS.SOMETHING.OR.OTHER").addEndpoint({
-    name: "wild",
-    subject: "*",
-  });
+  srv.addGroup("$SYS.SOMETHING.OR.OTHER").addEndpoint("wild", { subject: "*" });
   t("$SYS.SOMETHING.OR.OTHER.*");
   await cleanup(ns, nc);
 });
