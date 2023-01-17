@@ -286,7 +286,7 @@ const serviceSchema: JSONSchemaType<ServiceSchema> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
-    apiURL: { type: "string" },
+    api_url: { type: "string" },
     endpoints: {
       type: "array",
       items: {

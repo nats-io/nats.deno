@@ -194,7 +194,7 @@ Deno.test("service - client", async () => {
     verifyIdentity(schemas);
     const schema = schemas[0];
     assertEquals(schema.type, ServiceResponseType.SCHEMA);
-    assertEquals(schema.apiURL, srv.config.apiURL);
+    assertEquals(schema.api_url, srv.config.apiURL);
     assertExists(schema.endpoints);
     assert(Array.isArray(schema.endpoints));
     assertEquals(schema.endpoints?.[0].name, srv.handlers[0]?.name);
@@ -213,7 +213,7 @@ Deno.test("service - client", async () => {
     delete r.version;
     delete r.name;
     delete r.id;
-    delete r.apiURL;
+    delete r.api_url;
     delete r.endpoints;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }

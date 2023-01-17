@@ -300,7 +300,7 @@ export type EndpointStats = ServiceIdentity & {
 };
 
 export type ServiceSchema = ServiceIdentity & {
-  apiURL?: string;
+  api_url?: string;
   endpoints: EndpointSchema[];
 };
 
@@ -769,7 +769,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       name: this.name,
       id: this.id,
       version: this.version,
-      apiURL: this.config.apiURL,
+      api_url: this.config.apiURL,
       endpoints: [],
     };
     v.endpoints = this.handlers.map((h) => {
