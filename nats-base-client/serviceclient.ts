@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,13 +19,7 @@ import {
   RequestStrategy,
 } from "./types.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import {
-  JSONCodec,
-  SchemaInfo,
-  ServiceInfo,
-  ServiceStats,
-  ServiceVerb,
-} from "./mod.ts";
+import { JSONCodec, ServiceInfo, ServiceStats, ServiceVerb } from "./mod.ts";
 import { ServiceIdentity, ServiceImpl, ServiceSchema } from "./service.ts";
 
 export interface ServiceClient {
@@ -92,7 +86,7 @@ export class ServiceClientImpl implements ServiceClient {
     name = "",
     id = "",
   ): Promise<QueuedIterator<ServiceSchema>> {
-    return this.q<ServiceIdentity & { schema: SchemaInfo }>(
+    return this.q<ServiceSchema>(
       ServiceVerb.SCHEMA,
       name,
       id,

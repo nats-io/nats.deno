@@ -1,3 +1,17 @@
+/*
+ * Copyright 2022-2023 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import { cleanup, setup } from "./jstest_util.ts";
 import {
   Service,
@@ -8,15 +22,17 @@ import {
   ServiceIdentity,
   ServiceImpl,
   ServiceInfo,
-  ServiceMsg,
+  ServiceResponseType,
   ServiceSchema,
   ServiceStats,
 } from "../nats-base-client/service.ts";
 import {
   assert,
+  assertArrayIncludes,
   assertEquals,
   assertExists,
   assertRejects,
+  assertThrows,
   fail,
 } from "https://deno.land/std@0.171.0/testing/asserts.ts";
 
@@ -56,28 +72,23 @@ Deno.test("service - control subject", () => {
 
 Deno.test("service - bad name", async () => {
   const { ns, nc } = await setup({}, {});
-  const subj = createInbox();
-  await assertRejects(
-    async () => {
-      const _s = await nc.services.add({
-        name: "/hello.world",
-        version: "1.0.0",
-        schema: {
-          request: "a",
-          response: "b",
-        },
-        endpoint: {
-          subject: subj,
-          handler: (_err: Error | null, msg: Msg) => {
-            msg?.respond();
-          },
-        },
-      }) as ServiceImpl;
-    },
-    Error,
-    "name cannot contain '/'",
-  );
+  const t = async (name: string, msg: string) => {
+    await assertRejects(
+      async () => {
+        await nc.services.add({
+          name: name,
+          version: "1.0.0",
+        });
+      },
+      Error,
+      msg,
+    );
+  };
 
+  await t("/", "name cannot contain '/'");
+  await t(" ", "name cannot contain ' '");
+  await t(">", "name cannot contain '>'");
+  await t("", "name required");
   await cleanup(ns, nc);
 });
 
@@ -89,14 +100,15 @@ Deno.test("service - client", async () => {
     name: "test",
     version: "1.0.0",
     description: "responds with hello",
-    schema: {
-      request: "a",
-      response: "b",
-    },
+    apiURL: "http://www.myapi.com",
     endpoint: {
       subject: subj,
-      handler: (_err: Error | null, msg: Msg) => {
+      handler: (_err, msg) => {
         msg?.respond(sc.encode("hello"));
+      },
+      schema: {
+        request: "a",
+        response: "b",
       },
     },
   }) as ServiceImpl;
@@ -113,13 +125,16 @@ Deno.test("service - client", async () => {
     assertEquals(e.name, srv.name);
     assertEquals(e.version, srv.version);
   }
+
   function verifyPing(pings: ServiceIdentity[]) {
     verifyIdentity(pings);
     const ping = pings[0];
+    assertEquals(ping.type, ServiceResponseType.PING);
     const r = ping as unknown as Record<string, unknown>;
     delete r.version;
     delete r.name;
     delete r.id;
+    delete r.type;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
   verifyPing(await collect(await m.ping()));
@@ -129,14 +144,17 @@ Deno.test("service - client", async () => {
   function verifyInfo(infos: ServiceInfo[]) {
     verifyIdentity(infos);
     const info = infos[0];
+    assertEquals(info.type, ServiceResponseType.INFO);
     assertEquals(info.description, srv.description);
-    assertEquals(info.subject, srv.subject);
+    assertEquals(info.subjects.length, srv.subjects.length);
+    assertArrayIncludes(info.subjects, srv.subjects);
     const r = info as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
     delete r.description;
-    delete r.subject;
+    delete r.subjects;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
 
@@ -148,23 +166,23 @@ Deno.test("service - client", async () => {
   function verifyStats(stats: ServiceStats[]) {
     verifyIdentity(stats);
     const stat = stats[0];
-    assertEquals(stat.num_requests, 2);
-    assertEquals(stat.num_errors, 0);
-    assertEquals(typeof stat.processing_time, "number");
-    assertEquals(typeof stat.average_processing_time, "number");
+    assertEquals(stat.type, ServiceResponseType.STATS);
     assert(Date.parse(stat.started) > 0);
+    const s = stat.endpoints?.[0]!;
+    assertEquals(s.num_requests, 2);
+    assertEquals(s.num_errors, 0);
+    assertEquals(typeof s.processing_time, "number");
+    assertEquals(typeof s.average_processing_time, "number");
 
     // assert(Date.parse(stat.started) - Date.now() > 0, JSON.stringify(stat));
 
     const r = stat as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
-    delete r.num_requests;
-    delete r.num_errors;
-    delete r.processing_time;
-    delete r.average_processing_time;
     delete r.started;
+    delete r.endpoints;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
 
@@ -175,15 +193,28 @@ Deno.test("service - client", async () => {
   function verifySchema(schemas: ServiceSchema[]) {
     verifyIdentity(schemas);
     const schema = schemas[0];
-    assertExists(schema.schema);
-    assertEquals(schema.schema?.request, srv.config.schema?.request);
-    assertEquals(schema.schema?.response, srv.config.schema?.response);
+    assertEquals(schema.type, ServiceResponseType.SCHEMA);
+    assertEquals(schema.api_url, srv.config.apiURL);
+    assertExists(schema.endpoints);
+    assert(Array.isArray(schema.endpoints));
+    assertEquals(schema.endpoints?.[0].name, srv.handlers[0]?.name);
+    assertEquals(schema.endpoints?.[0].subject, srv.handlers[0].subject);
+    assertEquals(
+      schema.endpoints?.[0].schema?.request,
+      srv.handlers[0].schema?.request,
+    );
+    assertEquals(
+      schema.endpoints?.[0].schema?.response,
+      srv.handlers[0].schema?.response,
+    );
 
     const r = schema as unknown as Record<string, unknown>;
+    delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
-    delete r.schema;
+    delete r.api_url;
+    delete r.endpoints;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
 
@@ -197,7 +228,7 @@ Deno.test("service - client", async () => {
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
-  const srvA = await nc.services.add({
+  const conf: ServiceConfig = {
     name: "test",
     version: "0.0.0",
     endpoint: {
@@ -205,19 +236,14 @@ Deno.test("service - basics", async () => {
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
       },
-    },
-  }) as ServiceImpl;
-
-  const srvB = await nc.services.add({
-    name: "test",
-    version: "0.0.0",
-    endpoint: {
-      subject: "foo",
-      handler: (_err: Error | null, msg: Msg) => {
-        msg?.respond();
+      schema: {
+        request: "a",
+        response: "b",
       },
     },
-  }) as ServiceImpl;
+  };
+  const srvA = await nc.services.add(conf) as ServiceImpl;
+  const srvB = await nc.services.add(conf) as ServiceImpl;
 
   const m = nc.services.client();
   const count = async (
@@ -276,27 +302,6 @@ Deno.test("service - basics", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("service - handler error", async () => {
-  const { ns, nc } = await setup();
-
-  await nc.services.add({
-    name: "test",
-    version: "1.2.3",
-    endpoint: {
-      subject: "fail",
-      handler: () => {
-        throw new Error("cb error");
-      },
-    },
-  });
-
-  const r = await nc.request("fail");
-  assertEquals(r.headers?.get(ServiceErrorHeader), "cb error");
-  assertEquals(r.headers?.get(ServiceErrorCodeHeader), "500");
-
-  await cleanup(ns, nc);
-});
-
 Deno.test("service - stop error", async () => {
   const { ns, nc } = await setup({
     authorization: {
@@ -317,7 +322,7 @@ Deno.test("service - stop error", async () => {
     version: "2.0.0",
     endpoint: {
       subject: "fail",
-      handler: (err) => {
+      handler: () => {
         if (err) {
           service.stop(err);
           return;
@@ -395,16 +400,13 @@ Deno.test("service - callback error", async () => {
 
 Deno.test("service -service error is headers", async () => {
   const { ns, nc } = await setup();
-  await nc.services.add({
+  const srv = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "fail",
-      handler: (): void => {
-        // tossing service error should have the code/description
-        throw new ServiceError(1210, "something");
-      },
-    },
+  });
+  srv.addEndpoint("fail", (): void => {
+    // tossing service error should have the code/description
+    throw new ServiceError(1210, "something");
   });
 
   const m = await nc.request("fail");
@@ -420,12 +422,9 @@ Deno.test("service - sub stop", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
+  });
+  service.addEndpoint("q", (_err, m) => {
+    m.respond();
   });
 
   const nci = nc as NatsConnectionImpl;
@@ -447,12 +446,9 @@ Deno.test("service - monitoring sub stop", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
+  });
+  service.addEndpoint("q", (_err, m) => {
+    m.respond();
   });
 
   const nci = nc as NatsConnectionImpl;
@@ -471,24 +467,24 @@ Deno.test("service - monitoring sub stop", async () => {
 Deno.test("service - custom stats handler", async () => {
   const { ns, nc } = await setup();
 
-  await nc.services.add({
+  const srv = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
     statsHandler: (): Promise<unknown> => {
       return Promise.resolve({ hello: "world" });
     },
+  });
+  srv.addEndpoint("q", (_err, m) => {
+    m.respond();
   });
 
   const m = nc.services.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assertEquals(((stats[0].data) as Record<string, string>).hello, "world");
+  assertEquals(
+    (stats[0].endpoints?.[0].data as Record<string, unknown>).hello,
+    "world",
+  );
 
   await cleanup(ns, nc);
 });
@@ -499,20 +495,19 @@ Deno.test("service - bad stats handler", async () => {
   const config = {
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err: Error | null, msg: ServiceMsg) => {
-        msg?.respond();
-      },
-    },
     // @ts-ignore: test
     statsHandler: "hello world",
   };
-  await nc.services.add(config as unknown as ServiceConfig);
+
+  const srv = await nc.services.add(config as unknown as ServiceConfig);
+  srv.addEndpoint("q", (_err, m) => {
+    m.respond();
+  });
+
   const m = nc.services.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assertEquals(stats[0].data, undefined);
+  assertEquals(stats[0].endpoints?.[0].data, undefined);
 
   await cleanup(ns, nc);
 });
@@ -520,25 +515,25 @@ Deno.test("service - bad stats handler", async () => {
 Deno.test("service - stats handler error", async () => {
   const { ns, nc } = await setup();
 
-  await nc.services.add({
+  const srv = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
     statsHandler: (): Promise<unknown> => {
       throw new Error("bad stats handler");
     },
   });
+  srv.addEndpoint("q", (_err, m) => {
+    m.respond();
+  });
+
   const m = nc.services.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assertEquals(stats[0].data, undefined);
-  assertEquals(stats[0].last_error, "bad stats handler");
-  assertEquals(stats[0].num_errors, 1);
+  assertEquals(stats[0].endpoints?.length, 1);
+  const s = stats[0].endpoints?.[0]!;
+  assertEquals(s.data, undefined);
+  assertEquals(s.last_error, "bad stats handler");
+  assertEquals(s.num_errors, 1);
 
   await cleanup(ns, nc);
 });
@@ -549,35 +544,37 @@ Deno.test("service - reset", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg): void => {
-        msg.respond();
-      },
-    },
   }) as ServiceImpl;
 
+  service.addEndpoint("q", (_err, m) => {
+    m.respond();
+  });
+
   await nc.request("q");
   await nc.request("q");
 
-  service.countError(new Error("hello"));
+  service.handlers[0].stats.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());
+  assertEquals(stats[0].endpoints?.length, 1);
   assertEquals(stats.length, 1);
-  assert(stats[0].processing_time >= 0);
-  assert(stats[0].average_processing_time >= 0);
-  assertEquals(stats[0].num_errors, 1);
-  assertEquals(stats[0].last_error, "hello");
+  let stat = stats[0].endpoints?.[0]!;
+  assert(stat.processing_time >= 0);
+  assert(stat.average_processing_time >= 0);
+  assertEquals(stat.num_errors, 1);
+  assertEquals(stat.last_error, "hello");
 
   service.reset();
   stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assertEquals(stats[0].num_requests, 0);
-  assertEquals(stats[0].processing_time, 0);
-  assertEquals(stats[0].average_processing_time, 0);
-  assertEquals(stats[0].num_errors, 0);
-  assertEquals(stats[0].last_error, undefined);
+  assertEquals(stats[0].endpoints?.length, 1);
+  stat = stats[0].endpoints?.[0]!;
+  assertEquals(stat.num_requests, 0);
+  assertEquals(stat.processing_time, 0);
+  assertEquals(stat.average_processing_time, 0);
+  assertEquals(stat.num_errors, 0);
+  assertEquals(stat.last_error, undefined);
 
   await cleanup(ns, nc);
 });
@@ -588,13 +585,10 @@ Deno.test("service - iter", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-    },
   }) as ServiceImpl;
-
+  const iter = service.addEndpoint("q");
   (async () => {
-    for await (const m of service) {
+    for await (const m of iter) {
       await delay(500);
       m.respond();
     }
@@ -602,25 +596,21 @@ Deno.test("service - iter", async () => {
 
   await nc.request("q");
   await nc.request("q");
-  service.countError(new Error("hello"));
+  service.handlers[0].stats.countError(new Error("hello"));
 
   const m = nc.services.client();
   let stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assert(stats[0].processing_time >= 0);
-  assert(stats[0].average_processing_time > 0);
-  assertEquals(stats[0].num_errors, 1);
-  assertEquals(stats[0].last_error, "hello");
+  assertEquals(stats[0].endpoints?.length, 1);
+  const stat = stats[0].endpoints?.[0]!;
+  assert(stat.processing_time >= 0);
+  assert(stat.average_processing_time >= 0);
+  assertEquals(stat.num_errors, 1);
+  assertEquals(stat.last_error, "hello");
 
   service.reset();
   stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
-  assertEquals(stats[0].num_requests, 0);
-  assertEquals(stats[0].processing_time, 0);
-  assertEquals(stats[0].average_processing_time, 0);
-  assertEquals(stats[0].num_errors, 0);
-  assertEquals(stats[0].last_error, undefined);
-
   await cleanup(ns, nc);
 });
 
@@ -630,13 +620,10 @@ Deno.test("service - iter closed", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-    },
   });
-
+  const iter = service.addEndpoint("q");
   (async () => {
-    for await (const m of service) {
+    for await (const m of iter) {
       m.respond();
       break;
     }
@@ -654,11 +641,7 @@ Deno.test("service - version must be semver", async () => {
   const test = (v?: string): Promise<Service> => {
     return nc.services.add({
       name: "test",
-      // @ts-ignore: testing
-      version: v,
-      endpoint: {
-        subject: "q",
-      },
+      version: v!,
     });
   };
 
@@ -684,7 +667,7 @@ Deno.test("service - version must be semver", async () => {
   assertEquals(info.name, srv.name);
   assertEquals(info.version, "v1.2.3-hello");
   assertEquals(info.description, srv.description);
-  assertEquals(info.subject, "q");
+  assertEquals(info.subjects.length, 0);
 
   await cleanup(ns, nc);
 });
@@ -694,13 +677,11 @@ Deno.test("service - service errors", async () => {
   const srv = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "q",
-    },
   });
 
+  const iter = srv.addEndpoint("q");
   (async () => {
-    for await (const m of srv) {
+    for await (const m of iter) {
       m.data.length ? m.respond() : m.respondError(411, "data required");
     }
   })().then();
@@ -720,12 +701,18 @@ Deno.test("service - service errors", async () => {
 Deno.test("service - cross platform service test", async () => {
   const nc = await connect({ servers: "demo.nats.io" });
   const name = `echo_${nuid.next()}`;
-  const _srv = await nc.services.add({
+
+  const conf: ServiceConfig = {
     name,
     version: "0.0.1",
+    apiURL: "http://www.myapi.com",
+    statsHandler: (): Promise<unknown> => {
+      return Promise.resolve("hello world");
+    },
     endpoint: {
       subject: createInbox(),
-      handler: (_err: NatsError | null, m: ServiceMsg): void => {
+      schema: { request: "a", response: "b" },
+      handler: (_err, m): void => {
         if (m.data.length === 0) {
           m.respondError(400, "need a string", JSONCodec().encode(""));
         } else {
@@ -736,11 +723,9 @@ Deno.test("service - cross platform service test", async () => {
         }
       },
     },
-    schema: { request: "a", response: "b" },
-    statsHandler: (): Promise<unknown> => {
-      return Promise.resolve("hello world");
-    },
-  }) as ServiceImpl;
+  };
+
+  await nc.services.add(conf);
 
   const args = [
     "deno",
@@ -787,5 +772,122 @@ Deno.test("service - stats name respects assigned name", async () => {
   const si = JSONCodec<ServiceIdentity>().decode(r.data);
   assertEquals(si.name, "tEsT");
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - multiple endpoints", async () => {
+  const { ns, nc } = await setup();
+  const ms = await nc.services.add({
+    name: "multi",
+    version: "0.0.1",
+  });
+  const sc = StringCodec();
+  ms.addEndpoint("hey", (_err, m) => {
+    m.respond(sc.encode("hi"));
+  });
+  ms.addGroup("service").addEndpoint("echo", (_err, m) => {
+    m.respond(m.data);
+  });
+
+  let r = await nc.request(`hey`);
+  assertEquals(sc.decode(r.data), "hi");
+  r = await nc.request(`service.echo`, sc.encode("yo!"));
+  assertEquals(sc.decode(r.data), "yo!");
+
+  r = await nc.request(`$SRV.STATS`);
+  const stats = JSONCodec().decode(r.data) as ServiceStats;
+
+  function t(name: string) {
+    const v = stats.endpoints?.find((n) => {
+      return n.name === name;
+    });
+    assertExists(v);
+    assertEquals(v.num_requests, 1);
+  }
+  t("hey");
+  t("echo");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - multi cb/iterator", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+  });
+  srv.addGroup("cb").addGroup("b").addGroup("c").addEndpoint(
+    "test",
+    (_err, msg) => {
+      msg?.respond();
+    },
+  );
+  await nc.request("cb.b.c.test");
+
+  const iter = srv.addGroup("iter.b.c").addEndpoint("test");
+  (async () => {
+    for await (const m of iter) {
+      m.respond();
+    }
+  })().then();
+  await nc.request("iter.b.c.test");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - group and endpoint names", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+  });
+
+  const t = (group: string, endpoint: string, expect: string) => {
+    assertThrows(
+      () => {
+        srv.addGroup(group).addEndpoint(endpoint);
+      },
+      Error,
+      expect,
+    );
+  };
+  t("", "", "endpoint name required");
+  t("", "*", "endpoint name cannot contain '*'");
+  t("", ">", "endpoint name cannot contain '>'");
+  t("", " ", "endpoint name cannot contain ' '");
+  t("", "hello.world", "endpoint name cannot contain '.'");
+  t("a.>", "hello", "service group name cannot contain internal '>'");
+  t(">", "hello", "service group name cannot contain internal '>'");
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - group subs", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    endpoint: {
+      subject: "default.>",
+    },
+  });
+  const t = (subject: string) => {
+    const sub = (nc as NatsConnectionImpl).protocol.subscriptions.all().find(
+      (s) => {
+        return s.subject === subject;
+      },
+    );
+    assertExists(sub);
+  };
+  t("default.>");
+  srv.addGroup("").addEndpoint("root");
+  t("root");
+  srv.addGroup("a").addEndpoint("add");
+  t("a.add");
+  srv.addGroup("b").addEndpoint("add");
+  t("b.add");
+  srv.addGroup("one.*.three").addEndpoint("add");
+  t("one.*.three.add");
+  srv.addGroup("$SYS.SOMETHING.OR.OTHER").addEndpoint("wild", { subject: "*" });
+  t("$SYS.SOMETHING.OR.OTHER.*");
   await cleanup(ns, nc);
 });

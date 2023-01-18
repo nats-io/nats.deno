@@ -12,6 +12,9 @@ examples/certs/
 .tsconfig
 debug/
 .idea/
+.vscode/
+# deno project file
+settings.json
 
 # nyc test coverage
 .nyc_output

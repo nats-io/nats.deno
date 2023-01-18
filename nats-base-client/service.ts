@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,7 +27,7 @@ import { headers } from "./headers.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { nanos, validName } from "./jsutil.ts";
+import { nanos, validateName } from "./jsutil.ts";
 import { parseSemVer } from "./semver.ts";
 
 /**
@@ -50,7 +50,21 @@ export enum ServiceVerb {
   SCHEMA = "SCHEMA",
 }
 
-export interface ServiceIdentity {
+export enum ServiceResponseType {
+  STATS = "io.nats.micro.v1.stats_response",
+  INFO = "io.nats.micro.v1.info_response",
+  PING = "io.nats.micro.v1.ping_response",
+  SCHEMA = "io.nats.micro.v1.schema_response",
+}
+
+export interface ServiceResponse {
+  /**
+   * Response type schema
+   */
+  type: ServiceResponseType;
+}
+
+export type ServiceIdentity = ServiceResponse & {
   /**
    * The kind of the service reporting the stats
    */
@@ -63,7 +77,7 @@ export interface ServiceIdentity {
    * A version for the service
    */
   version: string;
-}
+};
 
 export interface ServiceMsg extends Msg {
   respondError(
@@ -110,7 +124,104 @@ export class ServiceMsgImpl implements ServiceMsg {
   }
 }
 
-export interface Service extends QueuedIterator<ServiceMsg> {
+export interface ServiceGroup {
+  /**
+   * The name of the endpoint must be a simple subject token with no wildcards
+   * @param name
+   * @param opts is either a handler or a more complex options which allows a
+   *  subject, handler, and/or schema
+   */
+  addEndpoint(
+    name: string,
+    opts?: ServiceHandler | EndpointOptions,
+  ): QueuedIterator<ServiceMsg>;
+
+  /**
+   * A group is a subject prefix from which endpoints can be added.
+   * Can be empty to allow for prefixes or tokens that are set at runtime
+   * without requiring editing of the service.
+   * @param subject
+   */
+  addGroup(subject?: string): ServiceGroup;
+}
+
+export class ServiceGroupImpl implements ServiceGroup {
+  subject: string;
+  srv: ServiceImpl;
+  constructor(parent: ServiceGroup, name = "") {
+    if (name !== "") {
+      validInternalToken("service group", name);
+    }
+    let root = "";
+    if (parent instanceof ServiceImpl) {
+      this.srv = parent as ServiceImpl;
+      root = "";
+    } else if (parent instanceof ServiceGroupImpl) {
+      const sg = parent as ServiceGroupImpl;
+      this.srv = sg.srv;
+      root = sg.subject;
+    } else {
+      throw new Error("unknown ServiceGroup type");
+    }
+    this.subject = this.calcSubject(root, name);
+  }
+
+  calcSubject(root: string, name = ""): string {
+    if (name === "") {
+      return root;
+    }
+    return root !== "" ? `${root}.${name}` : name;
+  }
+  addEndpoint(
+    name = "",
+    opts?: ServiceHandler | EndpointOptions,
+  ): QueuedIterator<ServiceMsg> {
+    opts = opts || { subject: name } as EndpointOptions;
+    const args: EndpointOptions = typeof opts === "function"
+      ? { handler: opts, subject: name }
+      : opts;
+    validateName("endpoint", name);
+    let { subject, handler, schema } = args;
+    subject = subject || name;
+    validSubjectName("endpoint subject", subject);
+    subject = this.calcSubject(this.subject, subject);
+    const ne = { name, subject, handler, schema };
+    return this.srv._addEndpoint(ne);
+  }
+
+  addGroup(name = ""): ServiceGroup {
+    return new ServiceGroupImpl(this, name);
+  }
+}
+
+function validSubjectName(context: string, subj: string) {
+  if (subj === "") {
+    throw new Error(`${context} cannot be empty`);
+  }
+  if (subj.indexOf(" ") !== -1) {
+    throw new Error(`${context} cannot contain spaces: '${subj}'`);
+  }
+  const tokens = subj.split(".");
+  tokens.forEach((v, idx) => {
+    if (v === ">" && idx !== tokens.length - 1) {
+      throw new Error(`${context} cannot have internal '>': '${subj}'`);
+    }
+  });
+}
+
+function validInternalToken(context: string, subj: string) {
+  if (subj.indexOf(" ") !== -1) {
+    throw new Error(`${context} cannot contain spaces: '${subj}'`);
+  }
+  const tokens = subj.split(".");
+  tokens.forEach((v) => {
+    if (v === ">") {
+      throw new Error(`${context} name cannot contain internal '>': '${subj}'`);
+    }
+  });
+}
+
+export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
   /**
    * A promise that gets resolved to null or Error once the service ends.
    * If an error, then service exited because of an error.
@@ -142,10 +253,15 @@ export interface Service extends QueuedIterator<ServiceMsg> {
   stop(err?: Error): Promise<null | Error>;
 }
 
-/**
- * Statistics for an endpoint
- */
-export type EndpointStats = ServiceIdentity & {
+export type NamedEndpointStats = {
+  /**
+   * The name of the endpoint
+   */
+  name: string;
+  /**
+   * The subject the endpoint is listening on
+   */
+  subject: string;
   /**
    * The number of requests received by the endpoint
    */
@@ -170,7 +286,13 @@ export type EndpointStats = ServiceIdentity & {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
+};
 
+/**
+ * Statistics for an endpoint
+ */
+export type EndpointStats = ServiceIdentity & {
+  endpoints?: NamedEndpointStats[];
   /**
    * ISO Date string when the service started
    */
@@ -178,12 +300,28 @@ export type EndpointStats = ServiceIdentity & {
 };
 
 export type ServiceSchema = ServiceIdentity & {
-  schema: SchemaInfo;
+  api_url?: string;
+  endpoints: EndpointSchema[];
 };
 
 export type SchemaInfo = {
   request: string;
   response: string;
+};
+
+export type EndpointSchema = {
+  /**
+   * Endpoint Name
+   */
+  name: string;
+  /**
+   * Subject the endpoint receiving requests on
+   */
+  subject: string;
+  /**
+   * Optional schema if defined
+   */
+  schema?: SchemaInfo;
 };
 
 export type ServiceInfo = ServiceIdentity & {
@@ -194,7 +332,7 @@ export type ServiceInfo = ServiceIdentity & {
   /**
    * Subject where the service can be invoked
    */
-  subject: string;
+  subjects: string[];
 };
 
 export type ServiceConfig = {
@@ -213,12 +351,13 @@ export type ServiceConfig = {
   /**
    * Schema for the service
    */
-  schema?: SchemaInfo;
+  apiURL?: string;
   /**
-   * A list of endpoints, typically one, but some services may
-   * want more than one endpoint
+   * An optional endpoint mapping a handler to a subject.
+   * More complex multi-endpoint services can be achieved by
+   * {@link Service}.addEndpoint() and addGroup().
    */
-  endpoint: Endpoint;
+  endpoint?: Endpoint;
   /**
    * A customized handler for the stats of an endpoint. The
    * data returned by the endpoint will be serialized as is
@@ -229,50 +368,58 @@ export type ServiceConfig = {
   ) => Promise<unknown | null>;
 };
 
+export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
+
 /**
  * A service Endpoint
  */
 export type Endpoint = {
   /**
-   * Subject where the endpoint is listening
+   * Subject where the endpoint listens
    */
   subject: string;
   /**
-   * Handler for the endpoint - if not set the service is an iterator
+   * An optional handler - if not set the service is an iterator
    * @param err
    * @param msg
    */
-  handler?: (err: NatsError | null, msg: ServiceMsg) => void;
+  handler?: ServiceHandler;
+  /**
+   * An optional schema
+   */
+  schema?: SchemaInfo;
 };
+
+export type EndpointOptions = Partial<Endpoint>;
 
 /**
  * The stats of a service
  */
 export type ServiceStats = ServiceIdentity & EndpointStats;
 
-type InternalEndpoint = {
+type NamedEndpoint = {
   name: string;
 } & Endpoint;
 
 type ServiceSubscription<T = unknown> =
-  & Endpoint
+  & NamedEndpoint
   & {
     internal: boolean;
     sub: Sub<T>;
+    qi?: QueuedIterator<T>;
+    stats: NamedEndpointStatsImpl;
+    schema?: SchemaInfo;
   };
 
-// FIXME: perhaps the client is presented with a Request = Msg, but adds a respondError(code, description)
 export class ServiceError extends Error {
   code: number;
   constructor(code: number, message: string) {
     super(message);
     this.code = code;
   }
-
   static isServiceError(msg: Msg): boolean {
     return ServiceError.toServiceError(msg) !== null;
   }
-
   static toServiceError(msg: Msg): ServiceError | null {
     const scode = msg?.headers?.get(ServiceErrorCodeHeader) || "";
     if (scode !== "") {
@@ -289,13 +436,12 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   nc: NatsConnection;
   _id: string;
   config: ServiceConfig;
-  handler: ServiceSubscription;
+  handlers: ServiceSubscription[];
   internal: ServiceSubscription[];
   _stopped: boolean;
   _done: Deferred<Error | null>;
-  _stats!: EndpointStats;
-  _lastException?: Error;
   _schema?: Uint8Array;
+  started: string;
 
   /**
    * @param verb
@@ -315,9 +461,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     if (name === "" && id === "") {
       return `${pre}.${verb}`;
     }
-    validName(name);
+    validateName("control subject name", name);
     if (id !== "") {
-      validName(id);
+      validateName("control subject id", id);
       return `${pre}.${verb}.${name}.${id}`;
     }
     return `${pre}.${verb}.${name}`;
@@ -325,33 +471,32 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   constructor(
     nc: NatsConnection,
-    config: ServiceConfig,
+    config: ServiceConfig = { name: "", version: "" },
   ) {
     super();
     this.nc = nc;
-    config.name = config?.name || "";
     this.config = config;
-    const n = validName(this.name);
-    if (n !== "") {
-      throw new Error(`name ${n}`);
-    }
+    // this will throw if no name
+    validateName("name", this.config.name);
     // this will throw if not semver
     parseSemVer(this.config.version);
-
-    this.noIterator = typeof config?.endpoint?.handler === "function";
-    if (!this.noIterator) {
-      this.config.endpoint.handler = (err, msg): void => {
-        err ? this.stop(err).catch() : this.push(new ServiceMsgImpl(msg));
-      };
-    }
-    // initialize the stats
-    this.reset();
-
     this._id = nuid.next();
-    this.handler = config.endpoint as ServiceSubscription;
     this.internal = [] as ServiceSubscription[];
     this._done = deferred();
     this._stopped = false;
+    this.handlers = [];
+    this.noIterator = true;
+    this.started = new Date().toISOString();
+    // initialize the stats
+    this.reset();
+    if (this.config.endpoint) {
+      this._addEndpoint({
+        name: "default",
+        subject: this.config.endpoint?.subject,
+        handler: this.config.endpoint?.handler,
+        schema: this.config.endpoint?.schema,
+      }, true);
+    }
 
     // close if the connection closes
     this.nc.closed()
@@ -361,21 +506,14 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       .catch((err) => {
         this.close(err).catch();
       });
-
-    // close the service if the iterator closes
-    if (!this.noIterator) {
-      this.iterClosed.then(() => {
-        this.close().catch();
-      });
-    }
   }
 
-  get subject(): string {
-    const { subject } = <Endpoint> this.config.endpoint;
-    if (subject !== "") {
-      return subject;
-    }
-    return "";
+  get subjects(): string[] {
+    return this.handlers.filter((s) => {
+      return s.internal === false;
+    }).map((s) => {
+      return s.subject;
+    });
   }
 
   get id(): string {
@@ -407,30 +545,20 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return h;
   }
 
-  countError(err: Error): void {
-    this._lastException = err;
-    this._stats.num_errors++;
-    this._stats.last_error = err.message;
-  }
-
-  setupNATS(h: Endpoint, internal = false) {
+  setupHandler(
+    h: NamedEndpoint,
+    internal = false,
+  ): ServiceSubscription {
     // internals don't use a queue
     const queue = internal ? "" : "q";
-    const { subject, handler } = h as Endpoint;
+    const { name, subject, handler, schema } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
       this.internal.push(sv);
     }
-
-    const countLatency = (start: number): void => {
-      if (internal) return;
-      this._stats.num_requests++;
-      this._stats.processing_time = nanos(Date.now() - start);
-      this._stats.average_processing_time = Math.round(
-        this._stats.processing_time / this._stats.num_requests,
-      );
-    };
+    sv.stats = new NamedEndpointStatsImpl(name, subject);
+    sv.schema = schema;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -442,10 +570,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         try {
           handler(err, new ServiceMsgImpl(msg));
         } catch (err) {
-          this.countError(err);
+          sv.stats.countError(err);
           msg?.respond(Empty, { headers: this.errorToHeader(err) });
         } finally {
-          countLatency(start);
+          sv.stats.countLatency(start);
         }
       }
       : undefined;
@@ -471,46 +599,40 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
           this.close(ne).catch();
         }
       });
+    return sv;
   }
 
   info(): ServiceInfo {
     return {
+      type: ServiceResponseType.INFO,
       name: this.name,
       id: this.id,
       version: this.version,
       description: this.description,
-      subject: (this.config.endpoint as Endpoint).subject,
+      subjects: this.subjects,
     } as ServiceInfo;
   }
 
   async stats(): Promise<ServiceStats> {
-    if (typeof this.config.statsHandler === "function") {
-      try {
-        this._stats.data = await this.config.statsHandler(
-          this.handler as Endpoint,
-        );
-      } catch (err) {
-        this.countError(err);
+    const endpoints: NamedEndpointStats[] = [];
+    for (const h of this.handlers) {
+      if (typeof this.config.statsHandler === "function") {
+        try {
+          h.stats.data = await this.config.statsHandler(h);
+        } catch (err) {
+          h.stats.countError(err);
+        }
       }
+      endpoints.push(h.stats.stats(h.qi));
     }
-
-    if (!this.noIterator) {
-      this._stats.processing_time = this.time;
-      this._stats.num_requests = this.processed;
-
-      this._stats.average_processing_time = this.time > 0 && this.processed > 0
-        ? this.time / this.processed
-        : 0;
-    }
-
-    return Object.assign(
-      {
-        name: this.name,
-        id: this.id,
-        version: this.version,
-      },
-      this._stats,
-    );
+    return {
+      type: ServiceResponseType.STATS,
+      name: this.name,
+      id: this.id,
+      version: this.version,
+      started: this.started,
+      endpoints,
+    };
   }
 
   addInternalHandler(
@@ -536,11 +658,11 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     kind = "",
     id = "",
   ) {
-    const endpoint = {} as InternalEndpoint;
+    const endpoint = {} as NamedEndpoint;
     endpoint.name = name;
     endpoint.subject = ServiceImpl.controlSubject(verb, kind, id);
     endpoint.handler = handler;
-    this.setupNATS(endpoint, true);
+    this.setupHandler(endpoint, true);
   }
 
   start(): Promise<Service> {
@@ -566,6 +688,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     };
 
     const ping = jc.encode({
+      type: ServiceResponseType.PING,
       name: this.name,
       id: this.id,
       version: this.version,
@@ -584,7 +707,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         this.close(err);
         return Promise.reject(err);
       }
-      msg?.respond(this.schema);
+      msg?.respond(JSONCodec().encode(this.schema()));
       return Promise.resolve();
     };
 
@@ -594,13 +717,18 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
 
     // now the actual service
-    const handlers = [this.handler];
-    handlers.forEach((h) => {
+    this.handlers.forEach((h) => {
       const { subject } = h as Endpoint;
       if (typeof subject !== "string") {
         return;
       }
-      this.setupNATS(h as unknown as Endpoint);
+      // this is expected in cases where main subject is just
+      // a root subject for multiple endpoints - user can disable
+      // listening to the root endpoint, by specifying null
+      if (h.handler === null) {
+        return;
+      }
+      this.setupHandler(h as unknown as NamedEndpoint);
     });
 
     return Promise.resolve(this);
@@ -611,11 +739,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       return this._done;
     }
     this._stopped = true;
-    const buf: Promise<void>[] = [];
+    let buf: Promise<void>[] = [];
     if (!this.nc.isClosed()) {
-      buf.push(this.handler.sub.drain());
-      this.internal.forEach((serviceSub) => {
-        buf.push(serviceSub.sub.drain());
+      buf = this.handlers.concat(this.internal).map((h) => {
+        return h.sub.drain();
       });
     }
     Promise.allSettled(buf)
@@ -636,32 +763,144 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   stop(err?: Error): Promise<null | Error> {
     return this.close(err);
   }
-  get schema(): Uint8Array {
-    const jc = JSONCodec();
-    if (!this._schema) {
-      this._schema = jc.encode({
-        name: this.name,
-        id: this.id,
-        version: this.version,
-        schema: this.config.schema,
-      });
-    }
-    return this._schema;
+  schema(): ServiceSchema {
+    const v: ServiceSchema = {
+      type: ServiceResponseType.SCHEMA,
+      name: this.name,
+      id: this.id,
+      version: this.version,
+      api_url: this.config.apiURL,
+      endpoints: [],
+    };
+    v.endpoints = this.handlers.map((h) => {
+      const { schema, subject, name } = h;
+      return { schema, subject, name };
+    });
+    return v;
   }
 
   reset(): void {
-    this._lastException = undefined;
-    this._stats = {
-      name: this.name,
-      num_requests: 0,
-      num_errors: 0,
-      processing_time: 0,
-      average_processing_time: 0,
-      started: new Date().toISOString(),
-    } as EndpointStats;
-    if (!this.noIterator) {
-      this.processed = 0;
-      this.time = 0;
+    // pretend we restarted
+    this.started = new Date().toISOString();
+    if (this.handlers) {
+      for (const h of this.handlers) {
+        h.stats.reset(h.qi);
+      }
     }
+  }
+
+  addGroup(name: string): ServiceGroup {
+    return new ServiceGroupImpl(this, name);
+  }
+
+  addEndpoint(
+    name: string,
+    handler?: ServiceHandler | EndpointOptions,
+  ): QueuedIterator<ServiceMsg> {
+    const sg = new ServiceGroupImpl(this);
+    return sg.addEndpoint(name, handler);
+  }
+
+  _addEndpoint(
+    e: NamedEndpoint,
+    main = false,
+  ): QueuedIterator<ServiceMsg> {
+    const qi = main ? this : new QueuedIteratorImpl<ServiceMsg>();
+    qi.noIterator = typeof e.handler === "function";
+    if (!qi.noIterator) {
+      e.handler = (err, msg): void => {
+        err ? this.stop(err).catch() : qi.push(new ServiceMsgImpl(msg));
+      };
+      // close the service if the iterator closes
+      qi.iterClosed.then(() => {
+        this.close().catch();
+      });
+    }
+    // track the iterator for stats
+    const ss = this.setupHandler(e, false);
+    ss.qi = qi;
+    this.handlers.push(ss);
+    return qi;
+  }
+}
+
+class NamedEndpointStatsImpl implements NamedEndpointStats {
+  name: string;
+  subject: string;
+  average_processing_time: Nanos;
+  num_requests: number;
+  processing_time: Nanos;
+  num_errors: number;
+  last_error?: string;
+  data?: unknown;
+
+  constructor(name: string, subject: string) {
+    this.name = name;
+    this.subject = subject;
+    this.average_processing_time = 0;
+    this.num_errors = 0;
+    this.num_requests = 0;
+    this.processing_time = 0;
+  }
+  reset(qi?: QueuedIterator<unknown>) {
+    this.num_requests = 0;
+    this.processing_time = 0;
+    this.average_processing_time = 0;
+    this.num_errors = 0;
+    this.last_error = undefined;
+    this.data = undefined;
+    const qii = qi as QueuedIteratorImpl<unknown>;
+    if (qii) {
+      qii.time = 0;
+      qii.processed = 0;
+    }
+  }
+  countLatency(start: number) {
+    this.num_requests++;
+    this.processing_time += nanos(Date.now() - start);
+    this.average_processing_time = Math.round(
+      this.processing_time / this.num_requests,
+    );
+  }
+  countError(err: Error): void {
+    this.num_errors++;
+    this.last_error = err.message;
+  }
+
+  _stats(): NamedEndpointStats {
+    const {
+      name,
+      subject,
+      average_processing_time,
+      num_errors,
+      num_requests,
+      processing_time,
+      last_error,
+      data,
+    } = this;
+    return {
+      name,
+      subject,
+      average_processing_time,
+      num_errors,
+      num_requests,
+      processing_time,
+      last_error,
+      data,
+    };
+  }
+
+  stats(qi?: QueuedIterator<unknown>): NamedEndpointStats {
+    const qii = qi as QueuedIteratorImpl<unknown>;
+    if (qii?.noIterator === false) {
+      // grab stats in the iterator
+      this.processing_time = qii.time;
+      this.num_requests = qii.processed;
+      this.average_processing_time =
+        this.processing_time > 0 && this.num_requests > 0
+          ? this.processing_time / this.num_requests
+          : 0;
+    }
+    return this._stats();
   }
 }

@@ -57,9 +57,10 @@ const service = await nc.services.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
-  schema,
+  apiURL: "http://someurl.com",
   endpoint: {
     subject: "max",
+    schema,
   },
   statsHandler,
 });
@@ -86,7 +87,7 @@ service.stopped.then((err: Error | null) => {
         // we were able to parse an array of numbers from the request
         // with at least one entry, we sort in reverse order
         a.sort((a, b) => b - a);
-        // and first entry has the larget number
+        // and first entry has the largest number
         const max = a[0];
         // since our service also tracks the largest number ever seen
         // we update our largest number
@@ -217,8 +218,8 @@ const stats = JSONCodec<ServiceStats>().decode(
   (await nc.request(`$SRV.STATS.max.${found[0].id}`)).data,
 );
 assertEquals(stats.name, "max");
-assertEquals(stats.num_requests, 3);
-assertEquals((stats.data as { max: number }).max, 100);
+assertEquals(stats.endpoints?.[0].num_requests, 3);
+assertEquals((stats.endpoints?.[0].data as { max: number }).max, 100);
 
 // stop the service
 await service.stop();
