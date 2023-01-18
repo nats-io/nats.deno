@@ -36,9 +36,9 @@ for await (const r of service) {
 ```
 
 For those paying attention, this looks suspiciously like a regular subscription.
-And it is. The only difference is that we are collecting additional _metadata_
-that allows the service framework to provide some monitoring and discovery for
-free.
+And it is. The only difference is that the service collects additional
+_metadata_ that allows the service framework to provide some monitoring and
+discovery for free.
 
 To invoke the service, it is a simple NATS request:
 
@@ -48,10 +48,10 @@ const response = await nc.request("max", JSONCodec().encode([1, 2, 3]));
 
 ## Discovery and Monitoring
 
-When we started the service you see above, the framework automatically assigned
-it an unique `ID`. The `name` and `ID` identify particular instance of the
-service. If you start a second instance, that instance will also have the same
-`name` but will sport a different `ID`.
+When the service started, the framework automatically assigned it an unique
+`ID`. The `name` and `ID` identify particular instance of the service. If you
+start a second instance, that instance will also have the same `name` but will
+sport a different `ID`.
 
 To discover services that are running, create a monitoring client:
 
@@ -84,5 +84,54 @@ For a more elaborate first example see:
 
 More complex services will have more than one endpoint. For example a calculator
 service may have endpoints for `sum`, `average`, `max`, etc. This type of
-service is also possible with the service api, see
+service is also possible with the service api.
+
+You can create the service much like before. In this case, you don't need the
+endpoint (yet!):
+
+```typescript
+const calc = await nc.services.add({
+  name: "calc",
+  version: "0.0.1",
+  description: "example calculator service",
+});
+```
+
+One of the simplifications for service it that it helps build consistent subject
+hierarchy for your services. To create a subject hierarchy, you add a _group_.
+
+```typescript
+const g = calc.addGroup("calc");
+```
+
+The group is a _prefix_ subject where you can add endpoints. The name can be
+anything that is a valid subject prefix.
+
+```typescript
+const sums = g.addEndpoint("sum");
+(async () => {
+  for await (const m of sums) {
+    // decode the message payload into an array of numbers
+    const numbers = JSONCodec<number[]>().decode(m.data);
+    // add them together
+    const s = numbers.reduce((sum, v) => {
+      return sum + v;
+    });
+    // return a number
+    m.respond(JSONCodec().encode(s));
+  }
+})();
+```
+
+`addEndpoint()` takes a name, and an optional handler (it can also take a set of
+options). The `name` must be a simple name. This means no dots, wildcards, etc.
+`name` is then appended to the group where it is added, forming the subject
+where the endpoint listens.
+
+In the above case, the `sum` endpoint is listening for requests on `calc.sum`.
+
+For those paying attention, you can specify a callback much like in the first
+example, if you don't, the return value of the add endpoint is an iterator.
+
+For a complete example see:
 [multiple endpoints](examples/services/02_multiple_endpoints.ts)
