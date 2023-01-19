@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -75,6 +75,10 @@ import {
   isHeartbeatMsg,
   Js409Errors,
 } from "../nats-base-client/jsutil.ts";
+import {
+  assertArrayIncludes,
+  assertExists,
+} from "https://deno.land/std@0.173.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -4228,5 +4232,124 @@ Deno.test("jetstream - push heartbeat callback", async () => {
   ns = await ns.restart();
   // this here because otherwise get a resource leak error in the test
   await reconnected;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - consumer opt multi subject filter", () => {
+  let opts = new ConsumerOptsBuilderImpl();
+  opts.filterSubject("foo");
+  let co = opts.getOpts();
+  assertEquals(co.config.filter_subject, "foo");
+
+  opts.filterSubject("bar");
+  co = opts.getOpts();
+  assertEquals(co.config.filter_subject, undefined);
+  assertExists(co.config.filter_subjects);
+  assertArrayIncludes(co.config.filter_subjects, ["foo", "bar"]);
+});
+
+Deno.test("jetstream - push multi-subject filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .filterSubject("a.c")
+    .deliverTo(createInbox())
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.subscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertExists(ci.config.filter_subjects);
+  assertArrayIncludes(ci.config.filter_subjects, ["a.b", "a.c"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull multi-subject filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .filterSubject("a.c")
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.pullSubscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertExists(ci.config.filter_subjects);
+  assertArrayIncludes(ci.config.filter_subjects, ["a.b", "a.c"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push single filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .deliverTo(createInbox())
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.subscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertEquals(ci.config.filter_subject, "a.b");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull single filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.pullSubscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertEquals(ci.config.filter_subject, "a.b");
+
   await cleanup(ns, nc);
 });
