@@ -1849,3 +1849,167 @@ Deno.test("jsm - remap domain", () => {
     { name: "b", external: { api: "$JS.b.API" } },
   ]);
 });
+
+Deno.test("jsm - filter_subjects", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+  const ci = await jsm.consumers.add(name, {
+    durable_name: "dur",
+    filter_subjects: [
+      "a.b",
+      "a.c",
+    ],
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(ci.config.filter_subject, undefined);
+  assert(Array.isArray(ci.config.filter_subjects));
+  assertArrayIncludes(ci.config.filter_subjects, ["a.b", "a.c"]);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - filter_subjects rejects filter_subject", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+  await assertRejects(
+    async () => {
+      await jsm.consumers.add(name, {
+        durable_name: "dur",
+        filter_subject: "a.a",
+        filter_subjects: [
+          "a.b",
+          "a.c",
+        ],
+        ack_policy: AckPolicy.Explicit,
+      });
+    },
+    Error,
+    "consumer cannot have both filtersubject and filtersubjects specified",
+  );
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - update filter_subject", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  let ci = await jsm.consumers.add(name, {
+    durable_name: "dur",
+    filter_subject: "a.x",
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(ci.config.filter_subject, "a.x");
+
+  ci = await jsm.consumers.update(name, "dur", {
+    filter_subject: "a.y",
+  });
+  assertEquals(ci.config.filter_subject, "a.y");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - update filter_subjects", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  let ci = await jsm.consumers.add(name, {
+    durable_name: "dur",
+    filter_subjects: ["a.x"],
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertArrayIncludes(ci.config.filter_subjects!, ["a.x"]);
+
+  ci = await jsm.consumers.update(name, "dur", {
+    filter_subjects: ["a.x", "a.y"],
+  });
+  assertArrayIncludes(ci.config.filter_subjects!, ["a.x", "a.y"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - update from filter_subject to filter_subjects", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  const name = nuid.next();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  let ci = await jsm.consumers.add(name, {
+    durable_name: "dur",
+    filter_subject: "a.x",
+    ack_policy: AckPolicy.Explicit,
+  });
+  assertEquals(ci.config.filter_subject, "a.x");
+
+  // fail if not removing filter_subject
+  await assertRejects(
+    async () => {
+      await jsm.consumers.update(name, "dur", {
+        filter_subjects: ["a.x", "a.y"],
+      });
+    },
+    Error,
+    "consumer cannot have both filtersubject and filtersubjects specified",
+  );
+  // now switch it
+  ci = await jsm.consumers.update(name, "dur", {
+    filter_subject: "",
+    filter_subjects: ["a.x", "a.y"],
+  });
+  assertEquals(ci.config.filter_subject, undefined);
+  assertArrayIncludes(ci.config.filter_subjects!, ["a.x", "a.y"]);
+
+  // fail if not removing filter_subjects
+  await assertRejects(
+    async () => {
+      await jsm.consumers.update(name, "dur", {
+        filter_subject: "a.x",
+      });
+    },
+    Error,
+    "consumer cannot have both filtersubject and filtersubjects specified",
+  );
+
+  // and from filter_subjects back
+  ci = await jsm.consumers.update(name, "dur", {
+    filter_subject: "a.x",
+    filter_subjects: [],
+  });
+  assertEquals(ci.config.filter_subject, "a.x");
+  assertEquals(ci.config.filter_subjects!, undefined);
+
+  await cleanup(ns, nc);
+});

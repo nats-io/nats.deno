@@ -1173,6 +1173,7 @@ export interface ConsumerOptsBuilder {
   maxDeliver(max: number): this;
   /**
    * Consumer should filter the messages to those that match the specified filter.
+   * This api can be called multiple times.
    * @param s
    */
   filterSubject(s: string): this;
@@ -2421,10 +2422,6 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   name?: string;
   /**
-   * Deliver only messages that match the subject filter
-   */
-  "filter_subject"?: string;
-  /**
    * For push consumers this will regularly send an empty mess with Status header 100
    * and a reply subject, consumers must reply to these messages to control
    * the rate of message delivery.
@@ -2521,6 +2518,16 @@ export interface ConsumerUpdateConfig {
    * Force the consumer state to be kept in memory rather than inherit the setting from the stream
    */
   "mem_storage"?: boolean;
+  /**
+   * Deliver only messages that match the subject filter
+   * This is exclusive of {@link filter_subjects}
+   */
+  "filter_subject"?: string;
+  /**
+   * Deliver only messages that match the specified filters.
+   * This is exclusive of {@link filter_subject}.
+   */
+  "filter_subjects"?: string[];
 }
 
 export interface Consumer {

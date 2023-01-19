@@ -65,7 +65,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     }
 
     const nci = this.nc as NatsConnectionImpl;
-    const { min, ok: newAPI } = nci.features.get(
+    let { min, ok: newAPI } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
 
@@ -82,6 +82,16 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
 
     let subj;
     let consumerName = "";
+    // new api doesn't support multiple filter subjects
+    // this delayed until here because the consumer in an update could have
+    // been created with the new API, and have a `name`
+    if (Array.isArray(cfg.filter_subjects)) {
+      const { min, ok } = nci.features.get(Feature.JS_MULTIPLE_CONSUMER_FILTER);
+      if (!ok) {
+        throw new Error(`consumer 'filter_subjects' requires server ${min}`);
+      }
+      newAPI = false;
+    }
     if (newAPI) {
       consumerName = cfg.name ?? cfg.durable_name ?? "";
     }

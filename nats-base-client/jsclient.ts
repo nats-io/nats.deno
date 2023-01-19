@@ -410,9 +410,6 @@ export class JetStreamClientImpl extends BaseApiClient
     if (cso.ordered) {
       throw new Error("pull subscribers cannot be be ordered");
     }
-    if (!cso.attached) {
-      cso.config.filter_subject = subject;
-    }
     if (cso.config.deliver_subject) {
       throw new Error(
         "consumer info specifies deliver_subject - pull consumers cannot have deliver_subject set",
@@ -587,7 +584,11 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     }
 
-    if (!jsi.attached) {
+    if (
+      !jsi.attached && jsi.config.filter_subject === undefined &&
+      jsi.config.filter_subjects === undefined
+    ) {
+      // if no filter specified, we set the subject as the filter
       jsi.config.filter_subject = subject;
     }
 
@@ -642,6 +643,16 @@ export class JetStreamClientImpl extends BaseApiClient
     }, jsi.config);
 
     const ci = await this.api.add(jsi.stream, jsi.config);
+    if (
+      Array.isArray(
+        jsi.config.filter_subjects && !Array.isArray(ci.config.filter_subjects),
+      )
+    ) {
+      // server didn't honor `filter_subjects`
+      throw new Error(
+        `jetstream server doesn't support consumers with multiple filter subjects`,
+      );
+    }
     jsi.name = ci.name;
     jsi.config = ci.config;
     jsi.last = ci;
