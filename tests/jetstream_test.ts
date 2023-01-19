@@ -52,7 +52,9 @@ import {
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
+  assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertIsError,
   assertRejects,
   assertThrows,
@@ -75,10 +77,6 @@ import {
   isHeartbeatMsg,
   Js409Errors,
 } from "../nats-base-client/jsutil.ts";
-import {
-  assertArrayIncludes,
-  assertExists,
-} from "https://deno.land/std@0.173.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
