@@ -54,7 +54,7 @@ import {
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { headers, MsgHdrs } from "./headers.ts";
-import { consumerOpts, deferred, ErrorCode, NatsError } from "./mod.ts";
+import {consumerOpts, deferred, ErrorCode, NatsError, nuid} from "./mod.ts";
 import { compare, Feature, parseSemVer } from "./semver.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 
@@ -798,12 +798,16 @@ export class Bucket implements KV, KvRemove {
     copts.orderedConsumer();
 
     const sub = await this.js.subscribe(subj, copts);
+    console.log(await sub.consumerInfo());
+    const id  = nuid.next();
     (async () => {
+      console.log(`start iterator id ${id}`);
       for await (const jm of sub) {
         const op = jm.headers?.get(kvOperationHdr);
         if (op !== "DEL" && op !== "PURGE") {
           const key = this.decodeKey(jm.subject.substring(this.prefixLen));
           keys.push(key);
+          console.log({pending: jm.info.pending, key, seq: jm.seq});
         }
         if (jm.info.pending === 0) {
           sub.unsubscribe();
@@ -811,10 +815,17 @@ export class Bucket implements KV, KvRemove {
       }
     })()
       .then(() => {
-        keys.stop();
+        //@ts-ignore: push the fn they are consuming
+        keys.push(() => {
+          console.log(`stop iterator id ${id}`);
+          keys.stop()
+        })
       })
       .catch((err) => {
-        keys.stop(err);
+        //@ts-ignore: push the fn they are consuming
+        keys.push(() => {
+          keys.stop(err);
+        })
       });
 
     const si = sub as unknown as JetStreamSubscriptionInfoable;
