@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,7 +65,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     }
 
     const nci = this.nc as NatsConnectionImpl;
-    let { min, ok: newAPI } = nci.features.get(
+    const { min, ok: newAPI } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
 
@@ -82,16 +82,6 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
 
     let subj;
     let consumerName = "";
-    // new api doesn't support multiple filter subjects
-    // this delayed until here because the consumer in an update could have
-    // been created with the new API, and have a `name`
-    if (Array.isArray(cfg.filter_subjects)) {
-      const { min, ok } = nci.features.get(Feature.JS_MULTIPLE_CONSUMER_FILTER);
-      if (!ok) {
-        throw new Error(`consumer 'filter_subjects' requires server ${min}`);
-      }
-      newAPI = false;
-    }
     if (newAPI) {
       consumerName = cfg.name ?? cfg.durable_name ?? "";
     }
