@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,7 +46,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   max?: number;
   qname?: string;
   isBind?: boolean;
-  filters?: string[];
 
   constructor(opts?: Partial<ConsumerConfig>) {
     this.stream = "";
@@ -57,18 +56,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   getOpts(): ConsumerOpts {
     const o = {} as ConsumerOpts;
-    o.config = Object.assign({}, this.config);
-    if (o.config.filter_subject) {
-      this.filterSubject(o.config.filter_subject);
-      o.config.filter_subject = undefined;
-    }
-    if (o.config.filter_subjects) {
-      o.config.filter_subjects?.forEach((v) => {
-        this.filterSubject(v);
-      });
-      o.config.filter_subjects = undefined;
-    }
-
+    o.config = this.config;
     o.mack = this.mack;
     o.stream = this.stream;
     o.callbackFn = this.callbackFn;
@@ -77,18 +65,6 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     o.ordered = this.ordered;
     o.config.ack_policy = o.ordered ? AckPolicy.None : o.config.ack_policy;
     o.isBind = o.isBind || false;
-
-    if (this.filters) {
-      switch (this.filters.length) {
-        case 0:
-          break;
-        case 1:
-          o.config.filter_subject = this.filters[0];
-          break;
-        default:
-          o.config.filter_subjects = this.filters;
-      }
-    }
     return o;
   }
 
@@ -179,8 +155,7 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
   }
 
   filterSubject(s: string) {
-    this.filters = this.filters || [];
-    this.filters.push(s);
+    this.config.filter_subject = s;
     return this;
   }
 
