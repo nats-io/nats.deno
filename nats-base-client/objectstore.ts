@@ -365,6 +365,11 @@ export class ObjectStoreImpl implements ObjectStore {
             info.size! += payload.length;
             proms.push(this.js.publish(chunkSubj, payload, { timeout }));
           }
+          // wait for all the chunks to write
+          await Promise.all(proms);
+          proms.length = 0;
+
+          // prepare the metadata
           info.mtime = new Date().toISOString();
           const digest = sha.digest("base64");
           const pad = digest.length % 3;
@@ -377,27 +382,29 @@ export class ObjectStoreImpl implements ObjectStore {
           if (typeof previousRevision === "number") {
             h.set("Nats-Expected-Last-Subject-Sequence", `${previousRevision}`);
           }
-          const metaIdx = proms.length;
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-          proms.push(
-            this.js.publish(metaSubj, JSONCodec().encode(info), {
-              headers: h,
-              timeout,
-            }),
-          );
 
-          // if we had this object trim it out
+          // try to update the metadata
+          const pa = await this.js.publish(metaSubj, JSONCodec().encode(info), {
+            headers: h,
+            timeout,
+          });
+          // update the revision to point to the sequence where we inserted
+          info.revision = pa.seq;
+
+          // if we are here, the new entry is live
           if (old) {
-            proms.push(
-              this.jsm.streams.purge(this.stream, {
+            try {
+              await this.jsm.streams.purge(this.stream, {
                 filter: `$O.${this.name}.C.${old.nuid}`,
-              }),
-            );
+              });
+            } catch (_err) {
+              // rejecting here, would mean send the wrong signal
+              // the update succeeded, but cleanup of old chunks failed.
+            }
           }
-          // wait for all the sends to complete, we need the puback
-          // to assign a revision that client can use to update safely
-          const results = await Promise.all(proms);
-          info.revision = (results[metaIdx] as PubAck).seq;
+
+          // resolve the ObjectInfo
           d.resolve(new ObjectInfoImpl(info!));
           // stop
           break;
