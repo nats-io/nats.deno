@@ -113,6 +113,7 @@ type ServerObjectInfo = {
   digest: string;
   deleted?: boolean;
   mtime: string;
+  revision: number;
 } & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
@@ -156,6 +157,9 @@ class ObjectInfoImpl implements ObjectInfo {
   }
   get size(): number {
     return this.info.size;
+  }
+  get revision(): number {
+    return this.info.revision;
   }
 }
 
@@ -257,7 +261,9 @@ export class ObjectStoreImpl implements ObjectStore {
         last_by_subj: meta,
       });
       const jc = JSONCodec<ServerObjectInfo>();
-      return jc.decode(m.data) as ServerObjectInfo;
+      const soi = jc.decode(m.data) as ServerObjectInfo;
+      soi.revision = m.seq;
+      return soi;
     } catch (err) {
       if (err.code === "404") {
         return null;
@@ -312,7 +318,8 @@ export class ObjectStoreImpl implements ObjectStore {
     const jsi = this.js as JetStreamClientImpl;
     opts = opts || { timeout: jsi.timeout };
     opts.timeout = opts.timeout || 1000;
-    const { timeout } = opts;
+    opts.previousRevision = opts.previousRevision ?? undefined;
+    const { timeout, previousRevision } = opts;
     const maxPayload = jsi.nc.info?.max_payload || 1024;
     meta = meta || {} as ObjectStoreMeta;
     meta.options = meta.options || {};
@@ -367,6 +374,10 @@ export class ObjectStoreImpl implements ObjectStore {
 
           // trailing md for the object
           const h = headers();
+          if (typeof previousRevision === "number") {
+            h.set("Nats-Expected-Last-Subject-Sequence", `${previousRevision}`);
+          }
+          const metaIdx = proms.length;
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
           proms.push(
             this.js.publish(metaSubj, JSONCodec().encode(info), {
@@ -383,8 +394,10 @@ export class ObjectStoreImpl implements ObjectStore {
               }),
             );
           }
-          // wait for all the sends to complete
-          await Promise.all(proms);
+          // wait for all the sends to complete, we need the puback
+          // to assign a revision that client can use to update safely
+          const results = await Promise.all(proms);
+          info.revision = (results[metaIdx] as PubAck).seq;
           d.resolve(new ObjectInfoImpl(info!));
           // stop
           break;
