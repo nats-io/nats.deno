@@ -226,7 +226,7 @@ export interface ConnectionOptions {
    * authentication configurations
    * if {@link user} and {@link pass} or the {@link token} options are set.
    */
-  authenticator?: Authenticator;
+  authenticator?: Authenticator | Authenticator[];
   /**
    * When set to `true` the client will print protocol messages that it receives
    * or sends to the server.
