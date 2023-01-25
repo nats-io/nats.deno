@@ -4234,7 +4234,7 @@ Deno.test("jetstream - push heartbeat callback", async () => {
 });
 
 Deno.test("jetstream - consumer opt multi subject filter", () => {
-  let opts = new ConsumerOptsBuilderImpl();
+  const opts = new ConsumerOptsBuilderImpl();
   opts.filterSubject("foo");
   let co = opts.getOpts();
   assertEquals(co.config.filter_subject, "foo");
