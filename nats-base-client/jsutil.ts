@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,11 +28,27 @@ import { MsgImpl } from "./msg.ts";
 import { Publisher } from "./protocol.ts";
 
 export function validateDurableName(name?: string) {
-  return validateName("durable", name);
+  return minValidation("durable", name);
 }
 
 export function validateStreamName(name?: string) {
-  return validateName("stream", name);
+  return minValidation("stream", name);
+}
+
+function minValidation(context: string, name = "") {
+  // minimum validation on streams/consumers matches nats cli
+  if (name === "") {
+    throw Error(`${context} name required`);
+  }
+  const bad = [".", "*", ">", "/", "\\"];
+  bad.forEach((v) => {
+    if (name.indexOf(v) !== -1) {
+      throw Error(
+        `invalid ${context} name - ${context} name cannot contain '${v}'`,
+      );
+    }
+  });
+  return "";
 }
 
 export function validateName(context: string, name = "") {
