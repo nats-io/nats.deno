@@ -106,6 +106,14 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.subject;
   }
 
+  get reply(): string {
+    return this.msg.reply || "";
+  }
+
+  get headers(): MsgHdrs | undefined {
+    return this.msg.headers;
+  }
+
   respond(data?: Uint8Array, opts?: PublishOptions): boolean {
     return this.msg.respond(data, opts);
   }

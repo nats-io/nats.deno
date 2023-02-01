@@ -226,7 +226,7 @@ export interface ConnectionOptions {
    * authentication configurations
    * if {@link user} and {@link pass} or the {@link token} options are set.
    */
-  authenticator?: Authenticator;
+  authenticator?: Authenticator | Authenticator[];
   /**
    * When set to `true` the client will print protocol messages that it receives
    * or sends to the server.
@@ -2884,6 +2884,7 @@ export interface ObjectInfo extends ObjectStoreMeta {
   digest: string;
   deleted: boolean;
   mtime: string;
+  revision: number;
 }
 
 export interface ObjectLink {
@@ -2930,7 +2931,13 @@ export type ObjectStorePutOpts = {
   /**
    * maximum number of millis for the put requests to succeed
    */
-  timeout: number;
+  timeout?: number;
+  /**
+   * If set the ObjectStore must be at the current sequence or the
+   * put will fail. Note the sequence accounts where the metadata
+   * for the entry is stored.
+   */
+  previousRevision?: number;
 };
 
 export interface ObjectStore {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -71,19 +71,6 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
   }
   const options = extend(defaultOptions(), opts);
 
-  // tokens don't get users
-  if (opts.user && opts.token) {
-    throw NatsError.errorForCode(ErrorCode.BadAuthentication);
-  }
-
-  // if authenticator, no other options allowed
-  if (
-    opts.authenticator && (
-      opts.token || opts.user || opts.pass
-    )
-  ) {
-    throw NatsError.errorForCode(ErrorCode.BadAuthentication);
-  }
   options.authenticator = buildAuthenticator(options);
 
   ["reconnectDelayHandler", "authenticator"].forEach((n) => {

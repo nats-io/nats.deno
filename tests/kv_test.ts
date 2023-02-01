@@ -1681,3 +1681,23 @@ Deno.test("kv - mirror cross domain", async () => {
 
   await cleanup(lns, lnc);
 });
+
+Deno.test("kv - previous sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+
+  assertEquals(await kv.put("A", Empty, { previousSeq: 0 }), 1);
+  assertEquals(await kv.put("B", Empty, { previousSeq: 0 }), 2);
+  assertEquals(await kv.put("A", Empty, { previousSeq: 1 }), 3);
+  assertEquals(await kv.put("A", Empty, { previousSeq: 3 }), 4);
+  await assertRejects(async () => {
+    await kv.put("A", Empty, { previousSeq: 1 });
+  });
+  assertEquals(await kv.put("B", Empty, { previousSeq: 2 }), 5);
+
+  await cleanup(ns, nc);
+});
