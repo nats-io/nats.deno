@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,6 +46,8 @@ import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
 import { kvPrefix, KvStatusImpl } from "./kv.ts";
 import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
+import { Codec, JSONCodec } from "./codec.ts";
+import { TD } from "./encoders.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -309,6 +311,7 @@ export class StoredMsgImpl implements StoredMsg {
   data: Uint8Array;
   time: Date;
   header: MsgHdrs;
+  static jc?: Codec<unknown>;
 
   constructor(smr: StreamMsgResponse) {
     this.subject = smr.message.subject;
@@ -331,5 +334,16 @@ export class StoredMsgImpl implements StoredMsg {
       bytes[i] = bs.charCodeAt(i);
     }
     return bytes;
+  }
+
+  json<T = unknown>(): T {
+    if (!StoredMsgImpl.jc) {
+      StoredMsgImpl.jc = JSONCodec();
+    }
+    return StoredMsgImpl.jc.decode(this.data) as T;
+  }
+
+  string(): string {
+    return TD.decode(this.data);
   }
 }
