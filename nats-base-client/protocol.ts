@@ -65,6 +65,12 @@ export function createInbox(prefix = ""): string {
   if (typeof prefix !== "string") {
     throw (new Error("prefix must be a string"));
   }
+  prefix.split(".")
+    .forEach((v) => {
+      if (v === "*" || v === ">") {
+        throw new Error(`inbox prefixes cannot have wildcards '${prefix}'`);
+      }
+    });
   return `${prefix}.${nuid.next()}`;
 }
 

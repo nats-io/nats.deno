@@ -1177,3 +1177,21 @@ Deno.test("basics - close promise resolves", async () => {
     fail(err);
   });
 });
+
+Deno.test("basics - inbox prefixes cannot have wildcards", async () => {
+  await assertRejects(
+    async () => {
+      await connect({ inboxPrefix: "_inbox.foo.>" });
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+
+  assertThrows(
+    () => {
+      createInbox("_inbox.foo.*");
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+});
