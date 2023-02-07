@@ -430,6 +430,18 @@ export interface Msg {
    * @param opts
    */
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**
@@ -1547,6 +1559,16 @@ export interface JsMsg {
    * that the acknowledgement was received.
    */
   ackAck(): Promise<boolean>;
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DeliveryInfo {
@@ -1617,6 +1639,18 @@ export interface StoredMsg {
    * The time the message was received
    */
   time: Date;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DirectMsg extends StoredMsg {
@@ -2587,6 +2621,18 @@ export interface KvEntry {
   delta?: number;
   operation: "PUT" | "DEL" | "PURGE";
   length: number;
+
+  /**
+   * Convenience method to parse the entry payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the entry payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**

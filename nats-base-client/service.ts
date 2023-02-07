@@ -130,6 +130,14 @@ export class ServiceMsgImpl implements ServiceMsg {
     opts.headers?.set(ServiceErrorHeader, description);
     return this.msg.respond(data, opts);
   }
+
+  json<T = unknown>(): T {
+    return this.msg.json();
+  }
+
+  string(): string {
+    return this.msg.string();
+  }
 }
 
 export interface ServiceGroup {

@@ -4351,3 +4351,27 @@ Deno.test("jetstream - pull single filter", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - jsmsg decode", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  await jsm.consumers.add(name, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  await js.publish("a.a", StringCodec().encode("hello"));
+  await js.publish("a.a", JSONCodec().encode({ one: "two", a: [1, 2, 3] }));
+
+  assertEquals((await js.pull(name, "me")).string(), "hello");
+  assertEquals((await js.pull(name, "me")).json(), {
+    one: "two",
+    a: [1, 2, 3],
+  });
+
+  await cleanup(ns, nc);
+});
