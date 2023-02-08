@@ -377,9 +377,11 @@ Deno.test("headers - malformed headers", async () => {
   const h = headers(1, "h");
   nc.publish("foo", Empty, { headers: h });
 
-  // these have extra spaces single new line insteaof crlf after the subject and after the status
   const tests: t[] = [
     {
+      // extra spaces after subject, only new line after lengths
+      // trailing space after default status - this resulted in a
+      // NaN for the code but no crash
       proto: "HPUB foo  13 15\nNATS/1.0 \r\n\r\nhi\r\n",
       expected: {
         payload: "hi",
@@ -388,6 +390,8 @@ Deno.test("headers - malformed headers", async () => {
       },
     },
     {
+      // extra spaces and pub lengths not followed by crlf
+      // status line followed by extra spaces etc
       proto: "HPUB foo  17 19\nNATS/1.0  1 H\r\n\r\nhi\r\n",
       expected: {
         payload: "hi",
@@ -403,6 +407,7 @@ Deno.test("headers - malformed headers", async () => {
       },
     },
     {
+      // this was the issue that broke java client
       proto: "HPUB foo 12 12\r\nNATS/1.0\r\n\r\n\r\n",
       expected: {
         payload: "",
