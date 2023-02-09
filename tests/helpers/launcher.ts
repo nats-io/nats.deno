@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 // deno-lint-ignore-file no-explicit-any
-import * as path from "https://deno.land/std@0.171.0/path/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.171.0/fmt/colors.ts";
+import * as path from "https://deno.land/std@0.177.0/path/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.177.0/fmt/colors.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -24,7 +24,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
