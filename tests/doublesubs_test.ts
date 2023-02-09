@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,9 +25,9 @@ import {
 import {
   assertArrayIncludes,
   assertEquals,
-} from "https://deno.land/std@0.171.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { extend } from "../nats-base-client/util.ts";
-import { join, resolve } from "https://deno.land/std@0.171.0/path/mod.ts";
+import { join, resolve } from "https://deno.land/std@0.177.0/path/mod.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();
