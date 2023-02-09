@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 import { NatsServer } from "./helpers/launcher.ts";
 import { createInbox, DataBuffer } from "../nats-base-client/internal_mod.ts";
 import { connect } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.171.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 function makeBuffer(N: number): Uint8Array {
   const buf = new Uint8Array(N);
