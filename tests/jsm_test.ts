@@ -2013,3 +2013,47 @@ Deno.test("jsm - update from filter_subject to filter_subjects", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - direct msg decode", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`], allow_direct: true });
+
+  await js.publish("a.a", StringCodec().encode("hello"));
+  await js.publish("a.a", JSONCodec().encode({ one: "two", a: [1, 2, 3] }));
+
+  assertEquals(
+    (await jsm.direct.getMessage(name, { seq: 1 })).string(),
+    "hello",
+  );
+  assertEquals((await jsm.direct.getMessage(name, { seq: 2 })).json(), {
+    one: "two",
+    a: [1, 2, 3],
+  });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - stored msg decode", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`], allow_direct: false });
+
+  await js.publish("a.a", StringCodec().encode("hello"));
+  await js.publish("a.a", JSONCodec().encode({ one: "two", a: [1, 2, 3] }));
+
+  assertEquals(
+    (await jsm.streams.getMessage(name, { seq: 1 })).string(),
+    "hello",
+  );
+  assertEquals((await jsm.streams.getMessage(name, { seq: 2 })).json(), {
+    one: "two",
+    a: [1, 2, 3],
+  });
+
+  await cleanup(ns, nc);
+});

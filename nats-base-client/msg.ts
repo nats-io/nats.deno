@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import type { Publisher } from "./protocol.ts";
 import type { MsgArg } from "./parser.ts";
 import { TD } from "./encoders.ts";
 import { ErrorCode, NatsError } from "./error.ts";
+import { Codec, JSONCodec } from "./codec.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload
@@ -36,6 +37,7 @@ export class MsgImpl implements Msg {
   _reply!: string;
   _subject!: string;
   publisher: Publisher;
+  static jc: Codec<unknown>;
 
   constructor(msg: MsgArg, data: Uint8Array, publisher: Publisher) {
     this._msg = msg;
@@ -97,5 +99,16 @@ export class MsgImpl implements Msg {
     const reply = this._msg.reply?.length || 0;
     const payloadAndHeaders = this._msg.size === -1 ? 0 : this._msg.size;
     return subj + reply + payloadAndHeaders;
+  }
+
+  json<T = unknown>(): T {
+    if (!MsgImpl.jc) {
+      MsgImpl.jc = JSONCodec();
+    }
+    return MsgImpl.jc.decode(this.data) as T;
+  }
+
+  string(): string {
+    return TD.decode(this.data);
   }
 }

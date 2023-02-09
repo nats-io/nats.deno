@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -1194,4 +1194,62 @@ Deno.test("basics - inbox prefixes cannot have wildcards", async () => {
     Error,
     "inbox prefixes cannot have wildcards",
   );
+});
+
+Deno.test("basics - msg typed payload", async () => {
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port });
+
+  nc.subscribe("echo", {
+    callback: (_err, msg) => {
+      msg.respond(msg.data);
+    },
+  });
+
+  assertEquals((await nc.request("echo", Empty)).string(), "");
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("hello"))).string(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("5"))).string(),
+    "5",
+  );
+
+  await assertRejects(
+    async () => {
+      const r = await nc.request("echo", Empty);
+      r.json<number>();
+    },
+    Error,
+    "Bad JSON",
+  );
+
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(null))).json(),
+    null,
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(undefined))).json(),
+    null,
+  );
+  assertEquals((await nc.request("echo", JSONCodec().encode(5))).json(), 5);
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode("hello"))).json(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(["hello"]))).json(),
+    ["hello"],
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode({ one: "two" }))).json(),
+    { one: "two" },
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode([{ one: "two" }]))).json(),
+    [{ one: "two" }],
+  );
+
+  await cleanup(ns, nc);
 });
