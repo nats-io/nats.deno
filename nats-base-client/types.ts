@@ -1907,6 +1907,12 @@ export interface StreamUpdateConfig {
    * onto new subjects for partitioning and more
    */
   republish?: Republish;
+  /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 export interface Republish {
@@ -2562,6 +2568,12 @@ export interface ConsumerUpdateConfig {
    * This is exclusive of {@link filter_subject}.
    */
   "filter_subjects"?: string[];
+  /**
+   * Metadata field to store additional information about the consumer. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 export interface Consumer {

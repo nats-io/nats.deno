@@ -48,6 +48,8 @@ import { kvPrefix, KvStatusImpl } from "./kv.ts";
 import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
 import { Codec, JSONCodec } from "./codec.ts";
 import { TD } from "./encoders.ts";
+import { Feature } from "./semver.ts";
+import { NatsConnectionImpl } from "./nats.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -76,6 +78,13 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
   }
 
   async add(cfg = {} as Partial<StreamConfig>): Promise<StreamInfo> {
+    const nci = this.nc as NatsConnectionImpl;
+    if (cfg.metadata) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
+      if (!ok) {
+        throw new Error(`stream 'metadata' requires server ${min}`);
+      }
+    }
     validateStreamName(cfg.name);
     cfg.mirror = convertStreamSourceDomain(cfg.mirror);
     //@ts-ignore: the sources are either set or not - so no item should be undefined in the list
@@ -107,6 +116,13 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       console.trace(
         `\u001B[33m >> streams.update(config: StreamConfig) api changed to streams.update(name: string, config: StreamUpdateConfig) - this shim will be removed - update your code.  \u001B[0m`,
       );
+    }
+    const nci = this.nc as NatsConnectionImpl;
+    if (cfg.metadata) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
+      if (!ok) {
+        throw new Error(`stream 'metadata' requires server ${min}`);
+      }
     }
     validateStreamName(name);
     const old = await this.info(name);

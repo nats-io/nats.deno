@@ -92,6 +92,12 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       }
       newAPI = false;
     }
+    if (cfg.metadata) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
+      if (!ok) {
+        throw new Error(`consumer 'metadata' requires server ${min}`);
+      }
+    }
     if (newAPI) {
       consumerName = cfg.name ?? cfg.durable_name ?? "";
     }
