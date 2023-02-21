@@ -460,8 +460,29 @@ export class Bucket implements KV, KvRemove {
     } as KvEntry;
   }
 
-  create(k: string, data: Uint8Array): Promise<number> {
-    return this.put(k, data, { previousSeq: 0 });
+  async create(k: string, data: Uint8Array): Promise<number> {
+    let firstErr;
+    try {
+      const n = await this.put(k, data, { previousSeq: 0 });
+      return Promise.resolve(n);
+    } catch (err) {
+      firstErr = err;
+      if (err?.api_error?.err_code !== 10071) {
+        return Promise.reject(err);
+      }
+    }
+    let rev = 0;
+    try {
+      const e = await this.get(k);
+      if (e?.operation === "DEL" || e?.operation === "PURGE") {
+        rev = e !== null ? e.revision : 0;
+        return this.update(k, data, rev);
+      } else {
+        return Promise.reject(firstErr);
+      }
+    } catch (err) {
+      return Promise.reject(err);
+    }
   }
 
   update(k: string, data: Uint8Array, version: number): Promise<number> {

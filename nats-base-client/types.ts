@@ -2787,7 +2787,8 @@ export interface RoKV {
 
 export interface KV extends RoKV {
   /**
-   * Creates a new entry ensuring that the entry does not exist.
+   * Creates a new entry ensuring that the entry does not exist (or
+   * the current version is deleted or the key is purged)
    * If the entry already exists, this operation fails.
    * @param k
    * @param data
