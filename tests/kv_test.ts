@@ -1720,3 +1720,20 @@ Deno.test("kv - encoded entry", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - create after delete", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+  await kv.create("a", Empty);
+
+  await assertRejects(async () => {
+    await kv.create("a", Empty);
+  });
+  await kv.delete("a");
+  await kv.create("a", Empty);
+  await kv.purge("a");
+  await kv.create("a", Empty);
+  await cleanup(ns, nc);
+});
