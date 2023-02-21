@@ -360,7 +360,7 @@ Deno.test("headers - codec", async () => {
 });
 
 Deno.test("headers - malformed headers", async () => {
-  const { ns, nc } = await setup({ debug: true }, { debug: true });
+  const { ns, nc } = await setup();
   const nci = nc as NatsConnectionImpl;
 
   type t = {

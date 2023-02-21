@@ -93,7 +93,11 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get time(): Date {
-    return new Date(Date.parse(this.header.get(DirectMsgHeaders.TimeStamp)));
+    return new Date(Date.parse(this.timestamp));
+  }
+
+  get timestamp(): string {
+    return this.header.get(DirectMsgHeaders.TimeStamp);
   }
 
   get stream(): string {

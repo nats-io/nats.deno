@@ -322,24 +322,44 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 }
 
 export class StoredMsgImpl implements StoredMsg {
-  subject: string;
-  seq: number;
-  data: Uint8Array;
-  time: Date;
-  header: MsgHdrs;
+  _header?: MsgHdrs;
+  smr: StreamMsgResponse;
   static jc?: Codec<unknown>;
 
   constructor(smr: StreamMsgResponse) {
-    this.subject = smr.message.subject;
-    this.seq = smr.message.seq;
-    this.time = new Date(Date.parse(smr.message.time));
-    this.data = smr.message.data ? this._parse(smr.message.data) : Empty;
-    if (smr.message.hdrs) {
-      const hd = this._parse(smr.message.hdrs);
-      this.header = MsgHdrsImpl.decode(hd);
-    } else {
-      this.header = headers();
+    this.smr = smr;
+  }
+
+  get subject(): string {
+    return this.smr.message.subject;
+  }
+
+  get seq(): number {
+    return this.smr.message.seq;
+  }
+
+  get timestamp(): string {
+    return this.smr.message.time;
+  }
+
+  get time(): Date {
+    return new Date(Date.parse(this.timestamp));
+  }
+
+  get data(): Uint8Array {
+    return this.smr.message.data ? this._parse(this.smr.message.data) : Empty;
+  }
+
+  get header(): MsgHdrs {
+    if (!this._header) {
+      if (this.smr.message.hdrs) {
+        const hd = this._parse(this.smr.message.hdrs);
+        this._header = MsgHdrsImpl.decode(hd);
+      } else {
+        this._header = headers();
+      }
     }
+    return this._header;
   }
 
   _parse(s: string): Uint8Array {
