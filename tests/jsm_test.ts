@@ -2057,3 +2057,95 @@ Deno.test("jsm - stored msg decode", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - stream/consumer metadata", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+
+  async function addStream(name: string, md?: Record<string, string>) {
+    const si = await jsm.streams.add({
+      name,
+      subjects: [name],
+      metadata: md,
+    });
+    assertEquals(si.config.metadata, md);
+  }
+  async function updateStream(name: string, md?: Record<string, string>) {
+    const si = await jsm.streams.update(name, {
+      metadata: md,
+    });
+    assertEquals(si.config.metadata, md);
+  }
+  async function addConsumer(
+    stream: string,
+    name: string,
+    md?: Record<string, string>,
+  ) {
+    const ci = await jsm.consumers.add(stream, {
+      durable_name: name,
+      metadata: md,
+    });
+    assertEquals(ci.config.metadata, md);
+  }
+
+  async function updateConsumer(
+    stream: string,
+    name: string,
+    md?: Record<string, string>,
+  ) {
+    const ci = await jsm.consumers.update(stream, name, { metadata: md });
+    assertEquals(ci.config.metadata, md);
+  }
+  // we should be able to add/update metadata
+  let stream = nuid.next();
+  let consumer = nuid.next();
+  await addStream(stream, { hello: "world" });
+  await updateStream(stream, { one: "two" });
+  await addConsumer(stream, consumer, { test: "true" });
+  await updateConsumer(stream, consumer, { foo: "bar" });
+
+  // fake a server version change
+  (nc as NatsConnectionImpl).features.update("2.9.0");
+  stream = nuid.next();
+  consumer = nuid.next();
+  await assertRejects(
+    async () => {
+      await addStream(stream, { hello: "world" });
+    },
+    Error,
+    "stream 'metadata' requires server 2.10.0",
+  );
+  // add without md
+  await addStream(stream);
+  // should fail update w/ metadata
+  await assertRejects(
+    async () => {
+      await updateStream(stream, { hello: "world" });
+    },
+    Error,
+    "stream 'metadata' requires server 2.10.0",
+  );
+  // should fail adding consumer with md
+  await assertRejects(
+    async () => {
+      await addConsumer(stream, consumer, { hello: "world" });
+    },
+    Error,
+    "consumer 'metadata' requires server 2.10.0",
+  );
+  // add w/o metadata
+  await addConsumer(stream, consumer);
+  // should fail to update consumer with md
+  await assertRejects(
+    async () => {
+      await updateConsumer(stream, consumer, { hello: "world" });
+    },
+    Error,
+    "consumer 'metadata' requires server 2.10.0",
+  );
+
+  await cleanup(ns, nc);
+});
