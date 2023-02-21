@@ -1641,6 +1641,11 @@ export interface StoredMsg {
   time: Date;
 
   /**
+   * The raw ISO formatted date returned by the server
+   */
+  timestamp: string;
+
+  /**
    * Convenience method to parse the message payload as JSON. This method
    * will throw an exception if there's a parsing error;
    */
@@ -1760,9 +1765,9 @@ export interface StreamInfo extends ApiPaged {
    */
   config: StreamConfig;
   /**
-   * Timestamp when the stream was created
+   * The ISO Timestamp when the stream was created
    */
-  created: Nanos;
+  created: string;
   /**
    * Detail about the current State of the Stream
    */
@@ -2092,15 +2097,15 @@ export interface StreamState {
    */
   "first_seq": number;
   /**
-   * The timestamp of the first message in the Stream
+   * The ISO timestamp of the first message in the Stream
    */
-  "first_ts": number;
+  "first_ts": string;
   /**
    * Sequence number of the last message in the Stream
    */
   "last_seq": number;
   /**
-   * The timestamp of the last message in the Stream
+   * The ISO timestamp of the last message in the Stream
    */
   "last_ts": string;
   /**
