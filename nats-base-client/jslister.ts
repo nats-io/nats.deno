@@ -12,7 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ApiPaged, ApiPagedRequest, Lister } from "./types.ts";
+import {
+  ApiPaged,
+  ApiPagedRequest,
+  ApiResponse,
+  ConsumerListResponse,
+  Lister,
+  StreamListResponse,
+} from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 
 export type ListerFieldFilter<T> = (v: unknown) => T[];
@@ -62,13 +69,32 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
         { timeout: this.jsm.timeout },
       );
       this.pageInfo = r as ApiPaged;
+      // offsets are reported in total, so need to count
+      // all the entries returned
+      this.offset += this.countResponse(r as ApiResponse);
       const a = this.filter(r);
-      this.offset += a.length;
       return a;
     } catch (err) {
       this.err = err;
       throw err;
     }
+  }
+
+  countResponse(r?: ApiResponse): number {
+    switch (r?.type) {
+      case "io.nats.jetstream.api.v1.stream_names_response":
+      case "io.nats.jetstream.api.v1.stream_list_response":
+        return (r as StreamListResponse).streams.length;
+      case "io.nats.jetstream.api.v1.consumer_list_response":
+        return (r as ConsumerListResponse).consumers.length;
+      default:
+        console.error(
+          `jslister.ts: unknown API response for paged output: ${r?.type}`,
+        );
+        // has to be a stream...
+        return (r as StreamListResponse).streams?.length || 0;
+    }
+    return 0;
   }
 
   async *[Symbol.asyncIterator]() {
