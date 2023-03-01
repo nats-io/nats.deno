@@ -1170,9 +1170,8 @@ Deno.test("jetstream - fetch one - breaks after expires", async () => {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
-  nc.publish(subj);
-
   const js = nc.jetstream();
+  await js.publish(subj);
 
   const sw = time();
   const batch = js.fetch(stream, "me", {
@@ -1920,7 +1919,8 @@ Deno.test("jetstream - idle heartbeats", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
 
   const { stream, subj } = await initStream(nc);
-  nc.publish(subj);
+  const js = nc.jetstream();
+  await js.publish(subj);
   const jsm = await nc.jetstreamManager();
   const inbox = createInbox();
   await jsm.consumers.add(stream, {
@@ -1947,10 +1947,12 @@ Deno.test("jetstream - flow control", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
   const data = new Uint8Array(1024 * 100);
+  const js = nc.jetstream();
+  const proms = [];
   for (let i = 0; i < 2000; i++) {
-    nc.publish(subj, data);
+    proms.push(js.publish(subj, data));
   }
-  await nc.flush();
+  await Promise.all(proms);
 
   const jsm = await nc.jetstreamManager();
   const inbox = createInbox();
@@ -2666,7 +2668,7 @@ Deno.test("jetstream - rollup subject", async () => {
 
   const h = headers();
   h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-  await js.publish(`${stream}.A`, jc.encode({ value: 42 }), {
+  await js.publish(`${stream}.A`, jc.encode({ value: 0 }), {
     headers: h,
   });
 
