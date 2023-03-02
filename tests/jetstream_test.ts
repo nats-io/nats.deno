@@ -1944,15 +1944,27 @@ Deno.test("jetstream - idle heartbeats", async () => {
 });
 
 Deno.test("jetstream - flow control", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({
+    jetstream: {
+      max_file: -1,
+    },
+  }, true));
   const { stream, subj } = await initStream(nc);
   const data = new Uint8Array(1024 * 100);
   const js = nc.jetstream();
   const proms = [];
   for (let i = 0; i < 2000; i++) {
     proms.push(js.publish(subj, data));
+    nc.publish(subj, data);
+    if (proms.length % 100 === 0) {
+      await Promise.all(proms);
+      proms.length = 0;
+    }
   }
-  await Promise.all(proms);
+  if (proms.length) {
+    await Promise.all(proms);
+  }
+  await nc.flush();
 
   const jsm = await nc.jetstreamManager();
   const inbox = createInbox();
