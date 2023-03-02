@@ -83,7 +83,6 @@ import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
 import { Bucket } from "./kv.ts";
 import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
-import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
 
 export interface JetStreamSubscriptionInfoable {
@@ -110,11 +109,10 @@ class ViewsImpl implements Views {
     return Bucket.create(this.js, name, opts);
   }
   os(
-    name: string,
-    opts: Partial<ObjectStoreOptions> = {},
+    _name: string,
+    _opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
-    jetstreamPreview(this.js.nc);
-    return ObjectStoreImpl.create(this.js, name, opts);
+    return Promise.reject("object store is not supported in react native");
   }
 }
 
