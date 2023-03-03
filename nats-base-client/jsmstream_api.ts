@@ -295,8 +295,8 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     const listerFilter: ListerFieldFilter<string> = (
       v: unknown,
     ): string[] => {
-      const slr = v as StreamNames;
-      return slr.streams;
+      const sr = v as StreamNames;
+      return sr.streams;
     };
     const subj = `${this.prefix}.STREAM.NAMES`;
     return new ListerImpl<string>(subj, listerFilter, this, payload);
