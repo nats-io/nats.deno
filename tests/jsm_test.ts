@@ -1547,6 +1547,7 @@ Deno.test("jsm - list all", async () => {
   assertEquals(obs.length, 1);
   assertEquals(obs[0].bucket, `os`);
 
+  // test names as well
   const names = await (await jsm.streams.names()).next();
   assertEquals(names.length, 3);
   assertArrayIncludes(names, ["A", "KV_kv", "OBJ_os"]);
