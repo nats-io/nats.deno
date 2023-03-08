@@ -39,3 +39,29 @@ export class Base64UrlCodec {
       .replace(/-/g, "+");
   }
 }
+
+export class Base64UrlPaddedCodec {
+  static encode(bytes: string | Uint8Array): string {
+    return Base64UrlPaddedCodec.toB64URLEncoding(Base64Codec.encode(bytes));
+  }
+
+  static decode(s: string, binary = false): Uint8Array | string {
+    return Base64UrlPaddedCodec.decode(
+      Base64UrlPaddedCodec.fromB64URLEncoding(s),
+      binary,
+    );
+  }
+
+  static toB64URLEncoding(b64str: string): string {
+    return b64str
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+  }
+
+  static fromB64URLEncoding(b64str: string): string {
+    // pads are % 4, but not necessary on decoding
+    return b64str
+      .replace(/_/g, "/")
+      .replace(/-/g, "+");
+  }
+}
