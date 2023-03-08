@@ -36,7 +36,7 @@ import {
   StreamInfoRequestOptions,
 } from "./types.ts";
 import { validateBucket, validateKey } from "./kv.ts";
-import { Base64UrlCodec } from "./base64.ts";
+import { Base64UrlCodec, Base64UrlPaddedCodec } from "./base64.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { deferred } from "./util.ts";
@@ -685,7 +685,7 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   _metaSubject(n: string): string {
-    return `$O.${this.name}.M.${Base64UrlCodec.encode(n)}`;
+    return `$O.${this.name}.M.${Base64UrlPaddedCodec.encode(n)}`;
   }
 
   _metaSubjectAll(): string {
