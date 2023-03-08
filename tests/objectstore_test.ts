@@ -26,6 +26,7 @@ import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
 import {
   Empty,
   headers,
+  JSONCodec,
   StorageType,
   StringCodec,
 } from "../nats-base-client/mod.ts";
@@ -33,8 +34,16 @@ import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts"
 import { equals } from "https://deno.land/std@0.177.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
-import { Base64UrlCodec } from "../nats-base-client/base64.ts";
-import { digestType } from "../nats-base-client/objectstore.ts";
+import {
+  Base64UrlCodec,
+  Base64UrlPaddedCodec,
+} from "../nats-base-client/base64.ts";
+import {
+  digestType,
+  ObjectStoreImpl,
+  osPrefix,
+} from "../nats-base-client/objectstore.ts";
+import { connect } from "../src/mod.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -680,36 +689,19 @@ Deno.test("objectstore - sanitize", async () => {
   });
   assertEquals(
     info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlCodec.encode("has_dots_here")}`],
+      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has_dots_here")}`],
     1,
   );
   assertEquals(
     info.streamInfo.state
-      .subjects![`$O.test.M.${Base64UrlCodec.encode("the_spaces_are_here")}`],
+      .subjects![
+        `$O.test.M.${Base64UrlPaddedCodec.encode("the_spaces_are_here")}`
+      ],
     1,
   );
 
   await cleanup(ns, nc);
 });
-
-// Deno.test("objectstore - compat", async () => {
-//   const nc = await connect();
-//   const js = nc.jetstream();
-//   const os = await js.views.os("test");
-//   console.log(await os.status({ subjects_filter: ">" }));
-//
-//   const a = await os.list();
-//   console.log(a);
-//
-//   const rs = await os.get("./main.go");
-//   const data = await fromReadableStream(rs!.data);
-//   const sc = StringCodec();
-//   console.log(sc.decode(data));
-//
-//   await os.put({ name: "hello" }, readableStreamFrom(sc.encode("hello world")));
-//
-//   await nc.close();
-// });
 
 Deno.test("objectstore - partials", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({
