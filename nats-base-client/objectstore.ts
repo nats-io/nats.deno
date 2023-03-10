@@ -36,7 +36,7 @@ import {
   StreamInfoRequestOptions,
 } from "./types.ts";
 import { validateBucket, validateKey } from "./kv.ts";
-import { Base64UrlCodec, Base64UrlPaddedCodec } from "./base64.ts";
+import { Base64UrlPaddedCodec } from "./base64.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { deferred } from "./util.ts";
@@ -431,6 +431,25 @@ export class ObjectStoreImpl implements ObjectStore {
     return d;
   }
 
+  putBlob(
+    meta: ObjectStoreMeta,
+    data: Uint8Array | null,
+    opts?: ObjectStorePutOpts,
+  ): Promise<ObjectInfo> {
+    function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
+      return new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.enqueue(data);
+          controller.close();
+        },
+      });
+    }
+    if (data === null) {
+      data = new Uint8Array(0);
+    }
+    return this.put(meta, readableStreamFrom(data), opts);
+  }
+
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
@@ -442,6 +461,36 @@ export class ObjectStoreImpl implements ObjectStore {
       );
     }
     return this._put(meta, rs, opts);
+  }
+
+  async getBlob(name: string): Promise<Uint8Array | null> {
+    async function fromReadableStream(
+      rs: ReadableStream<Uint8Array>,
+    ): Promise<Uint8Array> {
+      const buf = new DataBuffer();
+      const reader = rs.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          return buf.drain();
+        }
+        if (value && value.length) {
+          buf.fill(value);
+        }
+      }
+    }
+
+    const r = await this.get(name);
+    if (r === null) {
+      return Promise.resolve(null);
+    }
+
+    const vs = await Promise.all([r.error, fromReadableStream(r.data)]);
+    if (vs[0]) {
+      return Promise.reject(vs[0]);
+    } else {
+      return Promise.resolve(vs[1]);
+    }
   }
 
   async get(name: string): Promise<ObjectResult | null> {
