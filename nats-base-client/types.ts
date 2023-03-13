@@ -3008,9 +3008,15 @@ export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
   list(): Promise<ObjectInfo[]>;
   get(name: string): Promise<ObjectResult | null>;
+  getBlob(name: string): Promise<Uint8Array | null>;
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
+    opts?: ObjectStorePutOpts,
+  ): Promise<ObjectInfo>;
+  putBlob(
+    meta: ObjectStoreMeta,
+    data: Uint8Array | null,
     opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo>;
   delete(name: string): Promise<PurgeResponse>;

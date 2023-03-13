@@ -26,7 +26,6 @@ import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
 import {
   Empty,
   headers,
-  JSONCodec,
   StorageType,
   StringCodec,
 } from "../nats-base-client/mod.ts";
@@ -34,16 +33,8 @@ import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts"
 import { equals } from "https://deno.land/std@0.177.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
-import {
-  Base64UrlCodec,
-  Base64UrlPaddedCodec,
-} from "../nats-base-client/base64.ts";
-import {
-  digestType,
-  ObjectStoreImpl,
-  osPrefix,
-} from "../nats-base-client/objectstore.ts";
-import { connect } from "../src/mod.ts";
+import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
+import { digestType } from "../nats-base-client/objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -990,6 +981,39 @@ Deno.test("objectstore - put previous sequences", async () => {
     { previousRevision: 18 },
   );
   assertEquals(oi.revision, 19);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put/get blob", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  const payload = new Uint8Array(9);
+
+  // putting the first
+  await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(payload),
+    { previousRevision: 0 },
+  );
+
+  let bg = await os.getBlob("A");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
+
+  await os.putBlob({ name: "B", options: { max_chunk_size: 1 } }, payload);
+
+  bg = await os.getBlob("B");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
 
   await cleanup(ns, nc);
 });

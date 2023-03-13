@@ -18,7 +18,6 @@ import {
   connect,
   ConnectionOptions,
   credsAuthenticator,
-  JSONCodec,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
 
 const argv = parse(
@@ -96,7 +95,7 @@ let fixes = 0;
 
 for (let i = 0; i < entries.length; i++) {
   const chunks = entries[i].split(".");
-  let key = chunks[3];
+  const key = chunks[3];
   if (key.endsWith("=")) {
     // this is already padded
     continue;
