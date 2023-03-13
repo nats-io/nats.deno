@@ -257,6 +257,10 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           processing_time: { type: "number" },
           average_processing_time: { type: "number" },
           data: { type: "string" },
+          metadata: {
+            type: "object",
+            minProperties: 1,
+          },
         },
         required: [
           "num_requests",
@@ -265,6 +269,7 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           "processing_time",
           "average_processing_time",
           "data",
+          "metadata",
         ],
       },
     },
@@ -320,8 +325,12 @@ const infoSchema: JSONSchemaType<ServiceInfo> = {
     version: { type: "string" },
     description: { type: "string" },
     subjects: { type: "array", items: { type: "string" } },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
   },
-  required: ["type", "name", "id", "version", "subjects"],
+  required: ["type", "name", "id", "version", "subjects", "metadata"],
   additionalProperties: false,
 };
 
