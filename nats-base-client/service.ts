@@ -197,11 +197,11 @@ export class ServiceGroupImpl implements ServiceGroup {
       ? { handler: opts, subject: name }
       : opts;
     validateName("endpoint", name);
-    let { subject, handler, schema } = args;
+    let { subject, handler, schema, metadata } = args;
     subject = subject || name;
     validSubjectName("endpoint subject", subject);
     subject = this.calcSubject(this.subject, subject);
-    const ne = { name, subject, handler, schema };
+    const ne = { name, subject, handler, schema, metadata };
     return this.srv._addEndpoint(ne);
   }
 
@@ -302,6 +302,10 @@ export type NamedEndpointStats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
+  /**
+   * Endpoint Metadata
+   */
+  metadata?: Record<string, string>;
 };
 
 /**
@@ -349,6 +353,10 @@ export type ServiceInfo = ServiceIdentity & {
    * Subject where the service can be invoked
    */
   subjects: string[];
+  /**
+   * Service metadata
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ServiceConfig = {
@@ -382,6 +390,11 @@ export type ServiceConfig = {
   statsHandler?: (
     endpoint: Endpoint,
   ) => Promise<unknown | null>;
+
+  /**
+   * Optional metadata about the service
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
@@ -404,6 +417,10 @@ export type Endpoint = {
    * An optional schema
    */
   schema?: SchemaInfo;
+  /**
+   * Optional metadata about the endpoint
+   */
+  metadata?: Record<string, string>;
 };
 
 export type EndpointOptions = Partial<Endpoint>;
@@ -425,6 +442,7 @@ type ServiceSubscription<T = unknown> =
     qi?: QueuedIterator<T>;
     stats: NamedEndpointStatsImpl;
     schema?: SchemaInfo;
+    metadata?: Record<string, string>;
   };
 
 export class ServiceError extends Error {
@@ -456,7 +474,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   internal: ServiceSubscription[];
   _stopped: boolean;
   _done: Deferred<Error | null>;
-  _schema?: Uint8Array;
   started: string;
 
   /**
@@ -511,6 +528,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         subject: this.config.endpoint?.subject,
         handler: this.config.endpoint?.handler,
         schema: this.config.endpoint?.schema,
+        metadata: this.config.endpoint?.metadata,
       }, true);
     }
 
@@ -548,6 +566,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return this.config.version;
   }
 
+  get metadata(): Record<string, string> | undefined {
+    return this.config.metadata;
+  }
+
   errorToHeader(err: Error): MsgHdrs {
     const h = headers();
     if (err instanceof ServiceError) {
@@ -574,6 +596,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
+    sv.stats.metadata = h.metadata;
     sv.schema = schema;
 
     const callback = handler
@@ -626,6 +649,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       version: this.version,
       description: this.description,
       subjects: this.subjects,
+      metadata: this.metadata,
     } as ServiceInfo;
   }
 
@@ -849,6 +873,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
   num_errors: number;
   last_error?: string;
   data?: unknown;
+  metadata?: Record<string, string>;
 
   constructor(name: string, subject: string) {
     this.name = name;
@@ -893,6 +918,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      metadata,
     } = this;
     return {
       name,
@@ -903,6 +929,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      metadata,
     };
   }
 

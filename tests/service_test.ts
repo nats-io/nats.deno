@@ -50,6 +50,7 @@ import {
   ServiceVerb,
   StringCodec,
 } from "../src/mod.ts";
+import { Empty } from "https://deno.land/x/nats@v1.8.0/nats-base-client/mod.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -712,6 +713,9 @@ Deno.test("service - cross platform service test", async () => {
     endpoint: {
       subject: createInbox(),
       schema: { request: "a", response: "b" },
+      metadata: {
+        endpoint: "a",
+      },
       handler: (_err, m): void => {
         if (m.data.length === 0) {
           m.respondError(400, "need a string", JSONCodec().encode(""));
@@ -722,6 +726,9 @@ Deno.test("service - cross platform service test", async () => {
           m.respond(m.data);
         }
       },
+    },
+    metadata: {
+      service: name,
     },
   };
 
@@ -889,5 +896,40 @@ Deno.test("service - group subs", async () => {
   t("one.*.three.add");
   srv.addGroup("$SYS.SOMETHING.OR.OTHER").addEndpoint("wild", { subject: "*" });
   t("$SYS.SOMETHING.OR.OTHER.*");
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - metadata", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    metadata: { service: "1" },
+    endpoint: {
+      subject: "main",
+      handler: (err, msg) => {
+        msg.respond();
+      },
+      metadata: {
+        main: "main",
+      },
+    },
+  });
+  srv.addGroup("group").addEndpoint("endpoint", {
+    handler: (err, msg) => {
+      msg.respond();
+    },
+    metadata: {
+      endpoint: "endpoint",
+    },
+  });
+
+  const info = srv.info();
+  assertEquals(info.metadata, { service: "1" });
+  const stats = await srv.stats();
+  assertEquals(stats.endpoints?.length, 2);
+  assertEquals(stats.endpoints?.[0].metadata, { main: "main" });
+  assertEquals(stats.endpoints?.[1].metadata, { endpoint: "endpoint" });
+
   await cleanup(ns, nc);
 });
