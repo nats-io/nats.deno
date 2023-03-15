@@ -4389,3 +4389,84 @@ Deno.test("jetstream - jsmsg decode", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("jetstream - input transform", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+
+  const si = await jsm.streams.add({
+    name,
+    subjects: ["foo"],
+    subject_transform: {
+      src: ">",
+      dest: "transformed.>",
+    },
+    storage: StorageType.Memory,
+  });
+
+  assertEquals(si.config.subject_transform, {
+    src: ">",
+    dest: "transformed.>",
+  });
+
+  const js = nc.jetstream();
+  const pa = await js.publish("foo", Empty);
+  assertEquals(pa.seq, 1);
+
+  const m = await jsm.streams.getMessage(si.config.name, { seq: 1 });
+  assertEquals(m.subject, "transformed.foo");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - source transform", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+
+  const proms = ["foo", "bar", "baz"].map((subj) => {
+    return jsm.streams.add({
+      name: subj,
+      subjects: [subj],
+      storage: StorageType.Memory,
+    });
+  });
+  await Promise.all(proms);
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("foo", Empty),
+    js.publish("bar", Empty),
+    js.publish("baz", Empty),
+  ]);
+
+  await jsm.streams.add({
+    name: "sourced",
+    storage: StorageType.Memory,
+    sources: [
+      { name: "foo", subject_transform_dest: "foo2.>" },
+      { name: "bar" },
+      { name: "baz" },
+    ],
+  });
+
+  while (true) {
+    const si = await jsm.streams.info("sourced");
+    if (si.state.messages === 3) {
+      break;
+    }
+    await delay(100);
+  }
+
+  const m = await jsm.streams.getMessage("sourced", { seq: 1 });
+  assertEquals(m.subject, "foo2.foo");
+
+  await cleanup(ns, nc);
+});

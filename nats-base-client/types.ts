@@ -1792,6 +1792,17 @@ export interface StreamInfo extends ApiPaged {
   alternates?: StreamAlternate[];
 }
 
+export interface SubjectTransformConfig {
+  /**
+   * The source pattern
+   */
+  src?: string;
+  /**
+   * The destination pattern
+   */
+  dest: string;
+}
+
 export interface StreamConfig extends StreamUpdateConfig {
   /**
    * A unique name for the Stream
@@ -1918,6 +1929,11 @@ export interface StreamUpdateConfig {
    * 2.10.x and better.
    */
   metadata?: Record<string, string>;
+  /**
+   * Apply a subject transform to incoming messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform?: SubjectTransformConfig;
 }
 
 export interface Republish {
@@ -1976,6 +1992,11 @@ export interface StreamSource {
    * if external is set.
    */
   domain?: string;
+  /**
+   * Apply a subject transform to sourced messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform_dest?: string;
 }
 
 export interface Placement {
