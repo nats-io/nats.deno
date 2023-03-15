@@ -257,6 +257,12 @@ export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
    * Returns a service info for the service
    */
   info(): ServiceInfo;
+
+  /**
+   * Returns the service schema
+   */
+  schema(): ServiceSchema;
+
   /**
    * Resets all the stats
    */
@@ -342,6 +348,10 @@ export type EndpointSchema = {
    * Optional schema if defined
    */
   schema?: SchemaInfo;
+  /*
+   * Service metadata
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ServiceInfo = ServiceIdentity & {
@@ -813,8 +823,8 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       endpoints: [],
     };
     v.endpoints = this.handlers.map((h) => {
-      const { schema, subject, name } = h;
-      return { schema, subject, name };
+      const { metadata, schema, subject, name } = h;
+      return { metadata, schema, subject, name };
     });
     return v;
   }

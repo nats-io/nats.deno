@@ -933,3 +933,52 @@ Deno.test("service - metadata", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("service - schema metadata", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    metadata: { service: "1" },
+    endpoint: {
+      subject: "main",
+      handler: (err, msg) => {
+        msg.respond();
+      },
+      metadata: {
+        main: "main",
+      },
+      schema: {
+        request: "main_request",
+        response: "main_response",
+      },
+    },
+  });
+  srv.addGroup("group").addEndpoint("endpoint", {
+    handler: (err, msg) => {
+      msg.respond();
+    },
+    metadata: {
+      endpoint: "endpoint",
+    },
+    schema: {
+      request: "endpoint_request",
+      response: "endpoint_response",
+    },
+  });
+
+  const schema = srv.schema();
+  assertEquals(schema.endpoints?.length, 2);
+  assertEquals(schema.endpoints?.[0].metadata, { main: "main" });
+  assertEquals(schema.endpoints?.[0].schema, {
+    request: "main_request",
+    response: "main_response",
+  });
+  assertEquals(schema.endpoints?.[1].metadata, { endpoint: "endpoint" });
+  assertEquals(schema.endpoints?.[1].schema, {
+    request: "endpoint_request",
+    response: "endpoint_response",
+  });
+
+  await cleanup(ns, nc);
+});

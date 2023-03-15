@@ -299,6 +299,10 @@ const serviceSchema: JSONSchemaType<ServiceSchema> = {
         properties: {
           name: { type: "string" },
           subject: { type: "string" },
+          metadata: {
+            type: "object",
+            minProperties: 1,
+          },
           schema: {
             type: "object",
             properties: {
