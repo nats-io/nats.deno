@@ -12,16 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "./helpers/launcher.ts";
+import { NatsServer } from './helpers/launcher.ts'
 
-import {
-  cleanup,
-  initStream,
-  jetstreamExportServerConf,
-  jetstreamServerConf,
-  setup,
-  time,
-} from "./jstest_util.ts";
+import { cleanup, initStream, jetstreamExportServerConf, jetstreamServerConf, setup, time, } from './jstest_util.ts'
 import {
   AckPolicy,
   checkJsError,
@@ -50,7 +43,7 @@ import {
   RetentionPolicy,
   StorageType,
   StringCodec,
-} from "../nats-base-client/internal_mod.ts";
+} from '../nats-base-client/internal_mod.ts'
 import {
   assertArrayIncludes,
   assertEquals,
@@ -59,24 +52,20 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from 'https://deno.land/std@0.177.0/testing/asserts.ts'
 
-import { assert } from "../nats-base-client/denobuffer.ts";
-import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
+import { assert } from '../nats-base-client/denobuffer.ts'
+import { PubAck, RepublishHeaders } from '../nats-base-client/types.ts'
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionImpl,
   JetStreamSubscriptionInfoable,
-} from "../nats-base-client/jsclient.ts";
-import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
-import { connect } from "../src/connect.ts";
-import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween, disabled, Lock, notCompatible } from "./helpers/mod.ts";
-import {
-  isFlowControlMsg,
-  isHeartbeatMsg,
-  Js409Errors,
-} from "../nats-base-client/jsutil.ts";
+} from '../nats-base-client/jsclient.ts'
+import { defaultJsOptions } from '../nats-base-client/jsbaseclient_api.ts'
+import { connect } from '../src/connect.ts'
+import { ConsumerOptsBuilderImpl } from '../nats-base-client/jsconsumeropts.ts'
+import { assertBetween, disabled, Lock, notCompatible } from './helpers/mod.ts'
+import { isFlowControlMsg, isHeartbeatMsg, Js409Errors, } from '../nats-base-client/jsutil.ts'
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -4468,5 +4457,46 @@ Deno.test("jetstream - source transform", async () => {
   const m = await jsm.streams.getMessage("sourced", { seq: 1 });
   assertEquals(m.subject, "foo2.foo");
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({name, subjects: ["foo"], storage: StorageType.Memory});
+  await jsm.consumers.add(name, {durable_name: name, ack_policy: AckPolicy.All});
+
+  const js = nc.jetstream();
+  const done = js.pull(name, name, 30*1000)
+    .then((m) => {
+      console.log("got message");
+    })
+    .catch((err) => {
+      console.log(`pull`, err);
+    })
+
+
+  const opts = consumerOpts().durable("x").ackExplicit()
+  const sub = await js.pullSubscribe("foo", opts);
+  const iterDone = (async () => {
+    for await (const m of sub) {
+      console.log(m.subject)
+    }
+  })().then(() => { console.log("iterator done")})
+    .catch((err) => {console.log("iterator", err)});
+
+  const timer = setInterval(() => {
+    sub.pull({expires: 5*1000, batch: 1});
+  }, 2000);
+
+
+  //@ts-ignore: test
+  nc.options.debug = true;
+  await delay(1000);
+  await jsm.consumers.delete(name, name);
+  await done;
+  await delay(10000)
+  clearInterval(timer);
   await cleanup(ns, nc);
 });
