@@ -4428,7 +4428,6 @@ Deno.test("jetstream - source transform", async () => {
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
-  const name = nuid.next();
   const jsm = await nc.jetstreamManager();
 
   const proms = ["foo", "bar", "baz"].map((subj) => {
@@ -4467,6 +4466,208 @@ Deno.test("jetstream - source transform", async () => {
 
   const m = await jsm.streams.getMessage("sourced", { seq: 1 });
   assertEquals(m.subject, "foo2.foo");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: ["foo"],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: "one",
+    ack_policy: AckPolicy.Explicit,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: "two",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  //@ts-ignore: tesT
+  nc.options.debug = true;
+
+  const js = nc.jetstream();
+  js.pull(name, "one", 30 * 5000)
+    .then((_m) => {
+      console.log("one got message");
+    })
+    .catch((err) => {
+      console.log(`one`, err);
+    });
+
+  const opts = consumerOpts().bind(name, "two");
+  const sub = await js.pullSubscribe("foo", opts);
+  (async () => {
+    for await (const m of sub) {
+      console.log(m.subject);
+    }
+  })().then(() => {
+    console.log("two done");
+  })
+    .catch((err) => {
+      console.log("two", err);
+    });
+  sub.pull({ expires: 5 * 1000, batch: 1 });
+
+  setTimeout(async () => {
+    await Promise.all([
+      jsm.consumers.delete(name, "one"),
+      jsm.consumers.delete(name, "two"),
+    ]);
+  }, 2500);
+
+  const timer = setInterval(() => {
+    sub.pull({ expires: 5 * 1000, batch: 1 });
+  }, 5000);
+
+  await delay(30000);
+  clearInterval(timer);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  await js.pull(name, name, 5000)
+    .catch((err) => {
+      d.resolve(err);
+    });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const iter = js.fetch(name, name, { expires: 5000 });
+  await (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub cb consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const opts = consumerOpts().bind(name, name).callback((err, _m) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+  const sub = await js.pullSubscribe(name, opts);
+  sub.pull({ expires: 5000 });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub iter consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const opts = consumerOpts().bind(name, name);
+
+  const sub = await js.pullSubscribe(name, opts);
+  (async () => {
+    for await (const _m of sub) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+  sub.pull({ expires: 5000 });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
 
   await cleanup(ns, nc);
 });

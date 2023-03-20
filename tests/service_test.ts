@@ -50,7 +50,6 @@ import {
   ServiceVerb,
   StringCodec,
 } from "../src/mod.ts";
-import { Empty } from "https://deno.land/x/nats@v1.8.0/nats-base-client/mod.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -907,7 +906,7 @@ Deno.test("service - metadata", async () => {
     metadata: { service: "1" },
     endpoint: {
       subject: "main",
-      handler: (err, msg) => {
+      handler: (_err, msg) => {
         msg.respond();
       },
       metadata: {
@@ -916,7 +915,7 @@ Deno.test("service - metadata", async () => {
     },
   });
   srv.addGroup("group").addEndpoint("endpoint", {
-    handler: (err, msg) => {
+    handler: (_err, msg) => {
       msg.respond();
     },
     metadata: {
@@ -942,7 +941,7 @@ Deno.test("service - schema metadata", async () => {
     metadata: { service: "1" },
     endpoint: {
       subject: "main",
-      handler: (err, msg) => {
+      handler: (_err, msg) => {
         msg.respond();
       },
       metadata: {
@@ -955,7 +954,7 @@ Deno.test("service - schema metadata", async () => {
     },
   });
   srv.addGroup("group").addEndpoint("endpoint", {
-    handler: (err, msg) => {
+    handler: (_err, msg) => {
       msg.respond();
     },
     metadata: {
