@@ -164,7 +164,8 @@ export enum Js409Errors {
   MaxMessageSizeExceeded = "message size exceeds maxbytes",
   PushConsumer = "consumer is push based",
   MaxWaitingExceeded = "exceeded maxwaiting", // not terminal
-  IdleHeartbeatMissed = "`idle heartbeats missed`",
+  IdleHeartbeatMissed = "idle heartbeats missed",
+  ConsumerDeleted = "consumer deleted",
 }
 
 let MAX_WAITING_FAIL = false;
@@ -183,6 +184,7 @@ export function isTerminal409(err: NatsError): boolean {
     Js409Errors.MaxMessageSizeExceeded,
     Js409Errors.PushConsumer,
     Js409Errors.IdleHeartbeatMissed,
+    Js409Errors.ConsumerDeleted,
   ];
   if (MAX_WAITING_FAIL) {
     fatal.push(Js409Errors.MaxWaitingExceeded);

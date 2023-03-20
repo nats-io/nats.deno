@@ -12,9 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from './helpers/launcher.ts'
+import { NatsServer } from "./helpers/launcher.ts";
 
-import { cleanup, initStream, jetstreamExportServerConf, jetstreamServerConf, setup, time, } from './jstest_util.ts'
+import {
+  cleanup,
+  initStream,
+  jetstreamExportServerConf,
+  jetstreamServerConf,
+  setup,
+  time,
+} from "./jstest_util.ts";
 import {
   AckPolicy,
   checkJsError,
@@ -43,7 +50,7 @@ import {
   RetentionPolicy,
   StorageType,
   StringCodec,
-} from '../nats-base-client/internal_mod.ts'
+} from "../nats-base-client/internal_mod.ts";
 import {
   assertArrayIncludes,
   assertEquals,
@@ -52,20 +59,24 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from 'https://deno.land/std@0.177.0/testing/asserts.ts'
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
-import { assert } from '../nats-base-client/denobuffer.ts'
-import { PubAck, RepublishHeaders } from '../nats-base-client/types.ts'
+import { assert } from "../nats-base-client/denobuffer.ts";
+import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
 import {
   JetStreamClientImpl,
   JetStreamSubscriptionImpl,
   JetStreamSubscriptionInfoable,
-} from '../nats-base-client/jsclient.ts'
-import { defaultJsOptions } from '../nats-base-client/jsbaseclient_api.ts'
-import { connect } from '../src/connect.ts'
-import { ConsumerOptsBuilderImpl } from '../nats-base-client/jsconsumeropts.ts'
-import { assertBetween, disabled, Lock, notCompatible } from './helpers/mod.ts'
-import { isFlowControlMsg, isHeartbeatMsg, Js409Errors, } from '../nats-base-client/jsutil.ts'
+} from "../nats-base-client/jsclient.ts";
+import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
+import { connect } from "../src/connect.ts";
+import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
+import { assertBetween, disabled, Lock, notCompatible } from "./helpers/mod.ts";
+import {
+  isFlowControlMsg,
+  isHeartbeatMsg,
+  Js409Errors,
+} from "../nats-base-client/jsutil.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -4417,7 +4428,6 @@ Deno.test("jetstream - source transform", async () => {
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
-  const name = nuid.next();
   const jsm = await nc.jetstreamManager();
 
   const proms = ["foo", "bar", "baz"].map((subj) => {
@@ -4464,39 +4474,200 @@ Deno.test("jetstream - consumer deleted", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const name = nuid.next();
   const jsm = await nc.jetstreamManager();
-  await jsm.streams.add({name, subjects: ["foo"], storage: StorageType.Memory});
-  await jsm.consumers.add(name, {durable_name: name, ack_policy: AckPolicy.All});
+  await jsm.streams.add({
+    name,
+    subjects: ["foo"],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: "one",
+    ack_policy: AckPolicy.Explicit,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: "two",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  //@ts-ignore: tesT
+  nc.options.debug = true;
 
   const js = nc.jetstream();
-  const done = js.pull(name, name, 30*1000)
-    .then((m) => {
-      console.log("got message");
+  js.pull(name, "one", 30 * 5000)
+    .then((_m) => {
+      console.log("one got message");
     })
     .catch((err) => {
-      console.log(`pull`, err);
-    })
+      console.log(`one`, err);
+    });
 
-
-  const opts = consumerOpts().durable("x").ackExplicit()
+  const opts = consumerOpts().bind(name, "two");
   const sub = await js.pullSubscribe("foo", opts);
-  const iterDone = (async () => {
+  (async () => {
     for await (const m of sub) {
-      console.log(m.subject)
+      console.log(m.subject);
     }
-  })().then(() => { console.log("iterator done")})
-    .catch((err) => {console.log("iterator", err)});
+  })().then(() => {
+    console.log("two done");
+  })
+    .catch((err) => {
+      console.log("two", err);
+    });
+  sub.pull({ expires: 5 * 1000, batch: 1 });
+
+  setTimeout(async () => {
+    await Promise.all([
+      jsm.consumers.delete(name, "one"),
+      jsm.consumers.delete(name, "two"),
+    ]);
+  }, 2500);
 
   const timer = setInterval(() => {
-    sub.pull({expires: 5*1000, batch: 1});
-  }, 2000);
+    sub.pull({ expires: 5 * 1000, batch: 1 });
+  }, 5000);
 
-
-  //@ts-ignore: test
-  nc.options.debug = true;
-  await delay(1000);
-  await jsm.consumers.delete(name, name);
-  await done;
-  await delay(10000)
+  await delay(30000);
   clearInterval(timer);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  await js.pull(name, name, 5000)
+    .catch((err) => {
+      d.resolve(err);
+    });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const iter = js.fetch(name, name, { expires: 5000 });
+  await (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub cb consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const opts = consumerOpts().bind(name, name).callback((err, _m) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+  const sub = await js.pullSubscribe(name, opts);
+  sub.pull({ expires: 5000 });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub iter consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  setTimeout(async () => {
+    await jsm.consumers.delete(name, name);
+  }, 1000);
+
+  const opts = consumerOpts().bind(name, name);
+
+  const sub = await js.pullSubscribe(name, opts);
+  (async () => {
+    for await (const _m of sub) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+  sub.pull({ expires: 5000 });
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
   await cleanup(ns, nc);
 });
