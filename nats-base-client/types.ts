@@ -772,6 +772,10 @@ export interface JetStreamManager {
    * JetStream API to interact with Streams
    */
   streams: StreamAPI;
+  /**
+   * JetStream Direct stream API
+   */
+  direct: DirectStreamAPI;
 
   /**
    * Returns JetStreamAccountStats for the current client account.
