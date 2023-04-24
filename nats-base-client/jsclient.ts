@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 import type {
   ConsumerOptsBuilder,
+  Consumers,
   KV,
   KvOptions,
   ObjectStore,
@@ -85,6 +86,7 @@ import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
+import { ConsumersImpl } from "./consumers.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -120,10 +122,12 @@ class ViewsImpl implements Views {
 
 export class JetStreamClientImpl extends BaseApiClient
   implements JetStreamClient {
+  consumers: Consumers;
   api: ConsumerAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
     this.api = new ConsumerAPIImpl(nc, opts);
+    this.consumers = new ConsumersImpl(this.api);
   }
 
   get apiPrefix(): string {
@@ -152,10 +156,10 @@ export class JetStreamClientImpl extends BaseApiClient
       if (opts.expect.streamName) {
         mh.set(PubHeaders.ExpectedStreamHdr, opts.expect.streamName);
       }
-      if (opts.expect.lastSequence) {
+      if (typeof opts.expect.lastSequence === "number") {
         mh.set(PubHeaders.ExpectedLastSeqHdr, `${opts.expect.lastSequence}`);
       }
-      if (opts.expect.lastSubjectSequence) {
+      if (typeof opts.expect.lastSubjectSequence === "number") {
         mh.set(
           PubHeaders.ExpectedLastSubjectSequenceHdr,
           `${opts.expect.lastSubjectSequence}`,
@@ -232,14 +236,14 @@ export class JetStreamClientImpl extends BaseApiClient
   }
 
   /*
-  * Returns available messages upto specified batch count.
-  * If expires is set the iterator will wait for the specified
-  * amount of millis before closing the subscription.
-  * If no_wait is specified, the iterator will return no messages.
-  * @param stream
-  * @param durable
-  * @param opts
-  */
+   * Returns available messages upto specified batch count.
+   * If expires is set the iterator will wait for the specified
+   * amount of millis before closing the subscription.
+   * If no_wait is specified, the iterator will return no messages.
+   * @param stream
+   * @param durable
+   * @param opts
+   */
   fetch(
     stream: string,
     durable: string,
@@ -409,9 +413,6 @@ export class JetStreamClientImpl extends BaseApiClient
     const cso = await this._processOptions(subject, opts);
     if (cso.ordered) {
       throw new Error("pull subscribers cannot be be ordered");
-    }
-    if (!cso.attached) {
-      cso.config.filter_subject = subject;
     }
     if (cso.config.deliver_subject) {
       throw new Error(
@@ -587,7 +588,11 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     }
 
-    if (!jsi.attached) {
+    if (
+      !jsi.attached && jsi.config.filter_subject === undefined &&
+      jsi.config.filter_subjects === undefined
+    ) {
+      // if no filter specified, we set the subject as the filter
       jsi.config.filter_subject = subject;
     }
 
@@ -642,6 +647,16 @@ export class JetStreamClientImpl extends BaseApiClient
     }, jsi.config);
 
     const ci = await this.api.add(jsi.stream, jsi.config);
+    if (
+      Array.isArray(
+        jsi.config.filter_subjects && !Array.isArray(ci.config.filter_subjects),
+      )
+    ) {
+      // server didn't honor `filter_subjects`
+      throw new Error(
+        `jetstream server doesn't support consumers with multiple filter subjects`,
+      );
+    }
     jsi.name = ci.name;
     jsi.config = ci.config;
     jsi.last = ci;
@@ -900,7 +915,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
         }
       }
 
-      const api = (this.info.api as BaseApiClient);
+      const api = this.info.api as BaseApiClient;
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;
 

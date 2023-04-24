@@ -122,7 +122,7 @@ export class IdleHeartbeat {
     // @ts-ignore: in node is not a number - we treat this opaquely
     this.timer = setInterval(() => {
       this.count++;
-      if (Date.now() - this.interval > this.last) {
+      if ((Date.now() - this.last) > this.interval) {
         this.missed++;
       }
       if (this.missed >= this.maxOut) {

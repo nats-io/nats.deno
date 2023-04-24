@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,10 +18,15 @@ import type { MsgHdrs } from "./headers.ts";
 export type { MsgHdrs } from "./headers.ts";
 import type { Authenticator } from "./authenticator.ts";
 export type { Authenticator } from "./authenticator.ts";
+import type { ServiceClient } from "./serviceclient.ts";
+export type { ServiceClient } from "./serviceclient.ts";
+
 import type { TypedSubscriptionOptions } from "./typedsub.ts";
 export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
+import { Service, ServiceConfig } from "./service.ts";
+import { OrderedConsumerOptions } from "./consumer.ts";
 
 export const Empty = new Uint8Array(0);
 
@@ -142,7 +147,7 @@ export interface NatsConnection {
     subject: string,
     data: Uint8Array,
     opts: Partial<RequestManyOptions>,
-  ): Promise<QueuedIterator<Msg | Error>>;
+  ): Promise<QueuedIterator<Msg>>;
 
   /**
    * Returns a Promise that resolves when the client receives a reply from
@@ -212,6 +217,7 @@ export interface NatsConnection {
    * @return the number of milliseconds it took for a {@link flush}.
    */
   rtt(): Promise<number>;
+  services: ServicesAPI;
 }
 
 export interface ConnectionOptions {
@@ -221,7 +227,7 @@ export interface ConnectionOptions {
    * authentication configurations
    * if {@link user} and {@link pass} or the {@link token} options are set.
    */
-  authenticator?: Authenticator;
+  authenticator?: Authenticator | Authenticator[];
   /**
    * When set to `true` the client will print protocol messages that it receives
    * or sends to the server.
@@ -425,6 +431,18 @@ export interface Msg {
    * @param opts
    */
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**
@@ -1041,6 +1059,23 @@ export interface JetStreamClient {
    * Returns the JS API prefix as processed from the JetStream Options
    */
   apiPrefix: string;
+
+  consumers: Consumers;
+}
+
+export interface Consumers {
+  /**
+   * Returns the Consumer configured for the specified stream having the specified name.
+   * {@link Consumer} present a simplified construct for handling JetStream messages.
+   * @param stream
+   * @param name
+   */
+  get(stream: string, name: string): Promise<Consumer>;
+
+  ordered(
+    stream: string,
+    opts?: Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer>;
 }
 
 export interface ConsumerOpts {
@@ -1168,6 +1203,7 @@ export interface ConsumerOptsBuilder {
   maxDeliver(max: number): this;
   /**
    * Consumer should filter the messages to those that match the specified filter.
+   * This api can be called multiple times.
    * @param s
    */
   filterSubject(s: string): this;
@@ -1541,6 +1577,16 @@ export interface JsMsg {
    * that the acknowledgement was received.
    */
   ackAck(): Promise<boolean>;
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DeliveryInfo {
@@ -1611,6 +1657,23 @@ export interface StoredMsg {
    * The time the message was received
    */
   time: Date;
+
+  /**
+   * The raw ISO formatted date returned by the server
+   */
+  timestamp: string;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DirectMsg extends StoredMsg {
@@ -1720,9 +1783,9 @@ export interface StreamInfo extends ApiPaged {
    */
   config: StreamConfig;
   /**
-   * Timestamp when the stream was created
+   * The ISO Timestamp when the stream was created
    */
-  created: Nanos;
+  created: string;
   /**
    * Detail about the current State of the Stream
    */
@@ -1745,6 +1808,17 @@ export interface StreamInfo extends ApiPaged {
    * closer and faster to access.
    */
   alternates?: StreamAlternate[];
+}
+
+export interface SubjectTransformConfig {
+  /**
+   * The source pattern
+   */
+  src?: string;
+  /**
+   * The destination pattern
+   */
+  dest: string;
 }
 
 export interface StreamConfig extends StreamUpdateConfig {
@@ -1867,6 +1941,17 @@ export interface StreamUpdateConfig {
    * onto new subjects for partitioning and more
    */
   republish?: Republish;
+  /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
+  /**
+   * Apply a subject transform to incoming messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform?: SubjectTransformConfig;
 }
 
 export interface Republish {
@@ -1925,6 +2010,11 @@ export interface StreamSource {
    * if external is set.
    */
   domain?: string;
+  /**
+   * Apply a subject transform to sourced messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform_dest?: string;
 }
 
 export interface Placement {
@@ -2046,15 +2136,15 @@ export interface StreamState {
    */
   "first_seq": number;
   /**
-   * The timestamp of the first message in the Stream
+   * The ISO timestamp of the first message in the Stream
    */
-  "first_ts": number;
+  "first_ts": string;
   /**
    * Sequence number of the last message in the Stream
    */
   "last_seq": number;
   /**
-   * The timestamp of the last message in the Stream
+   * The ISO timestamp of the last message in the Stream
    */
   "last_ts": string;
   /**
@@ -2416,10 +2506,6 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   name?: string;
   /**
-   * Deliver only messages that match the subject filter
-   */
-  "filter_subject"?: string;
-  /**
    * For push consumers this will regularly send an empty mess with Status header 100
    * and a reply subject, consumers must reply to these messages to control
    * the rate of message delivery.
@@ -2516,17 +2602,110 @@ export interface ConsumerUpdateConfig {
    * Force the consumer state to be kept in memory rather than inherit the setting from the stream
    */
   "mem_storage"?: boolean;
+  /**
+   * Deliver only messages that match the subject filter
+   * This is exclusive of {@link filter_subjects}
+   */
+  "filter_subject"?: string;
+  /**
+   * Deliver only messages that match the specified filters.
+   * This is exclusive of {@link filter_subject}.
+   */
+  "filter_subjects"?: string[];
+  /**
+   * Metadata field to store additional information about the consumer. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
-export interface Consumer {
-  /**
-   * The name of the Stream the consumer is bound to
-   */
-  "stream_name": string;
-  /**
-   * The consumer configuration
-   */
-  config: ConsumerConfig;
+export type ConsumeBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & ThresholdBytes
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+export type ConsumeMessages =
+  & Partial<MaxMessages>
+  & ThresholdMessages
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+export type FetchBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
+export type FetchMessages = Partial<MaxMessages> & Expires & IdleHeartbeat;
+
+export type FetchOptions = FetchBytes | FetchMessages;
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
+
+export type PullConsumerOptions = FetchOptions | ConsumeOptions;
+
+export type MaxMessages = {
+  max_messages: number;
+};
+
+export type MaxBytes = {
+  max_bytes: number;
+};
+
+export type ThresholdMessages = {
+  threshold_messages?: number;
+};
+
+export type ThresholdBytes = {
+  threshold_bytes?: number;
+};
+
+export type Expires = {
+  expires?: number;
+};
+
+export type IdleHeartbeat = {
+  idle_heartbeat?: number;
+};
+
+export type ConsumerCallbackFn = (r: Result<JsMsg>) => void;
+export type ConsumeCallback = {
+  callback?: ConsumerCallbackFn;
+};
+
+export interface Consumer extends ExportedConsumer {
+  info(cached?: boolean): Promise<ConsumerInfo>;
+  delete(): Promise<boolean>;
+}
+
+export interface Close {
+  close(): Promise<void>;
+}
+
+export type ValueResult<T> = {
+  isError: false;
+  value: T;
+};
+
+export type ErrorResult = {
+  isError: true;
+  error: Error;
+};
+
+export type Result<T> = ValueResult<T> | ErrorResult;
+export interface ConsumerMessages
+  extends QueuedIterator<Result<JsMsg>>, Close {}
+
+export interface ExportedConsumer {
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
 }
 
 export interface StreamNames {
@@ -2575,6 +2754,18 @@ export interface KvEntry {
   delta?: number;
   operation: "PUT" | "DEL" | "PURGE";
   length: number;
+
+  /**
+   * Convenience method to parse the entry payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the entry payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**
@@ -2782,7 +2973,8 @@ export interface RoKV {
 
 export interface KV extends RoKV {
   /**
-   * Creates a new entry ensuring that the entry does not exist.
+   * Creates a new entry ensuring that the entry does not exist (or
+   * the current version is deleted or the key is purged)
    * If the entry already exists, this operation fails.
    * @param k
    * @param data
@@ -2872,6 +3064,7 @@ export interface ObjectInfo extends ObjectStoreMeta {
   digest: string;
   deleted: boolean;
   mtime: string;
+  revision: number;
 }
 
 export interface ObjectLink {
@@ -2895,7 +3088,7 @@ export type ObjectStoreStatus = {
 };
 
 /**
- * @deprecated {@see ObjectStoreStatus}
+ * @deprecated {@link ObjectStoreStatus}
  */
 export type ObjectStoreInfo = ObjectStoreStatus;
 
@@ -2914,13 +3107,33 @@ export type ObjectResult = {
   error: Promise<Error | null>;
 };
 
+export type ObjectStorePutOpts = {
+  /**
+   * maximum number of millis for the put requests to succeed
+   */
+  timeout?: number;
+  /**
+   * If set the ObjectStore must be at the current sequence or the
+   * put will fail. Note the sequence accounts where the metadata
+   * for the entry is stored.
+   */
+  previousRevision?: number;
+};
+
 export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
   list(): Promise<ObjectInfo[]>;
   get(name: string): Promise<ObjectResult | null>;
+  getBlob(name: string): Promise<Uint8Array | null>;
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
+    opts?: ObjectStorePutOpts,
+  ): Promise<ObjectInfo>;
+  putBlob(
+    meta: ObjectStoreMeta,
+    data: Uint8Array | null,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo>;
   delete(name: string): Promise<PurgeResponse>;
   link(name: string, meta: ObjectInfo): Promise<ObjectInfo>;
@@ -2969,4 +3182,20 @@ export enum RepublishHeaders {
    * The size in bytes of the message's body - Only if {@link Republish#headers_only} is set.
    */
   Size = "Nats-Msg-Size",
+}
+
+export interface ServicesAPI {
+  /**
+   * Adds a {@link Service}
+   * @param config
+   */
+  add(config: ServiceConfig): Promise<Service>;
+
+  /**
+   * Returns a {@link ServiceClient} that can be used to interact with the
+   * observability aspects of the service (discovery, monitoring)
+   * @param opts
+   * @param prefix
+   */
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient;
 }

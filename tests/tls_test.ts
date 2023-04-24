@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,14 +15,14 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
-import { join, resolve } from "https://deno.land/std@0.152.0/path/mod.ts";
+import { join, resolve } from "https://deno.land/std@0.177.0/path/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { cleanup } from "./jstest_util.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();

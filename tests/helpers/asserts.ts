@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@ import {
   assert,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { isNatsError, NatsError } from "../../nats-base-client/error.ts";
 
 export function assertErrorCode(err?: Error, ...codes: string[]) {
@@ -42,9 +42,8 @@ export function assertThrowsErrorCode<T = void>(
   fn: () => T,
   ...codes: string[]
 ) {
-  assertThrows(fn, (err: Error) => {
-    assertErrorCode(err, ...codes);
-  });
+  const err = assertThrows(fn);
+  assertErrorCode(err as Error, ...codes);
 }
 
 export async function assertThrowsAsyncErrorCode<T = void>(

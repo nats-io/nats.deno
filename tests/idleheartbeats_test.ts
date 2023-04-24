@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,7 @@ import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.136.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { deferred } from "../nats-base-client/util.ts";
 
 Deno.test("idleheartbeat - basic", async () => {

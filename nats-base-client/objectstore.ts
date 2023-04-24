@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import {
   ObjectStoreMeta,
   ObjectStoreMetaOptions,
   ObjectStoreOptions,
+  ObjectStorePutOpts,
   ObjectStoreStatus,
   PubAck,
   PurgeResponse,
@@ -35,7 +36,7 @@ import {
   StreamInfoRequestOptions,
 } from "./types.ts";
 import { validateBucket, validateKey } from "./kv.ts";
-import { Base64UrlCodec } from "./base64.ts";
+import { Base64UrlPaddedCodec } from "./base64.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { deferred } from "./util.ts";
@@ -112,6 +113,7 @@ type ServerObjectInfo = {
   digest: string;
   deleted?: boolean;
   mtime: string;
+  revision: number;
 } & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
@@ -155,6 +157,9 @@ class ObjectInfoImpl implements ObjectInfo {
   }
   get size(): number {
     return this.info.size;
+  }
+  get revision(): number {
+    return this.info.revision;
   }
 }
 
@@ -256,7 +261,9 @@ export class ObjectStoreImpl implements ObjectStore {
         last_by_subj: meta,
       });
       const jc = JSONCodec<ServerObjectInfo>();
-      return jc.decode(m.data) as ServerObjectInfo;
+      const soi = jc.decode(m.data) as ServerObjectInfo;
+      soi.revision = m.seq;
+      return soi;
     } catch (err) {
       if (err.code === "404") {
         return null;
@@ -306,8 +313,13 @@ export class ObjectStoreImpl implements ObjectStore {
   async _put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo> {
     const jsi = this.js as JetStreamClientImpl;
+    opts = opts || { timeout: jsi.timeout };
+    opts.timeout = opts.timeout || 1000;
+    opts.previousRevision = opts.previousRevision ?? undefined;
+    const { timeout, previousRevision } = opts;
     const maxPayload = jsi.nc.info?.max_payload || 1024;
     meta = meta || {} as ObjectStoreMeta;
     meta.options = meta.options || {};
@@ -351,8 +363,13 @@ export class ObjectStoreImpl implements ObjectStore {
             sha.update(payload);
             info.chunks!++;
             info.size! += payload.length;
-            proms.push(this.js.publish(chunkSubj, payload));
+            proms.push(this.js.publish(chunkSubj, payload, { timeout }));
           }
+          // wait for all the chunks to write
+          await Promise.all(proms);
+          proms.length = 0;
+
+          // prepare the metadata
           info.mtime = new Date().toISOString();
           const digest = sha.digest("base64");
           const pad = digest.length % 3;
@@ -362,21 +379,32 @@ export class ObjectStoreImpl implements ObjectStore {
 
           // trailing md for the object
           const h = headers();
-          h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-          proms.push(
-            this.js.publish(metaSubj, JSONCodec().encode(info), { headers: h }),
-          );
-
-          // if we had this object trim it out
-          if (old) {
-            proms.push(
-              this.jsm.streams.purge(this.stream, {
-                filter: `$O.${this.name}.C.${old.nuid}`,
-              }),
-            );
+          if (typeof previousRevision === "number") {
+            h.set("Nats-Expected-Last-Subject-Sequence", `${previousRevision}`);
           }
-          // wait for all the sends to complete
-          await Promise.all(proms);
+          h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
+
+          // try to update the metadata
+          const pa = await this.js.publish(metaSubj, JSONCodec().encode(info), {
+            headers: h,
+            timeout,
+          });
+          // update the revision to point to the sequence where we inserted
+          info.revision = pa.seq;
+
+          // if we are here, the new entry is live
+          if (old) {
+            try {
+              await this.jsm.streams.purge(this.stream, {
+                filter: `$O.${this.name}.C.${old.nuid}`,
+              });
+            } catch (_err) {
+              // rejecting here, would mean send the wrong signal
+              // the update succeeded, but cleanup of old chunks failed.
+            }
+          }
+
+          // resolve the ObjectInfo
           d.resolve(new ObjectInfoImpl(info!));
           // stop
           break;
@@ -389,7 +417,7 @@ export class ObjectStoreImpl implements ObjectStore {
             const payload = db.drain(meta.options.max_chunk_size);
             sha.update(payload);
             proms.push(
-              this.js.publish(chunkSubj, payload),
+              this.js.publish(chunkSubj, payload, { timeout }),
             );
           }
         }
@@ -403,16 +431,66 @@ export class ObjectStoreImpl implements ObjectStore {
     return d;
   }
 
+  putBlob(
+    meta: ObjectStoreMeta,
+    data: Uint8Array | null,
+    opts?: ObjectStorePutOpts,
+  ): Promise<ObjectInfo> {
+    function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
+      return new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.enqueue(data);
+          controller.close();
+        },
+      });
+    }
+    if (data === null) {
+      data = new Uint8Array(0);
+    }
+    return this.put(meta, readableStreamFrom(data), opts);
+  }
+
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array> | null,
+    opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo> {
     if (meta?.options?.link) {
       return Promise.reject(
         new Error("link cannot be set when putting the object in bucket"),
       );
     }
-    return this._put(meta, rs);
+    return this._put(meta, rs, opts);
+  }
+
+  async getBlob(name: string): Promise<Uint8Array | null> {
+    async function fromReadableStream(
+      rs: ReadableStream<Uint8Array>,
+    ): Promise<Uint8Array> {
+      const buf = new DataBuffer();
+      const reader = rs.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          return buf.drain();
+        }
+        if (value && value.length) {
+          buf.fill(value);
+        }
+      }
+    }
+
+    const r = await this.get(name);
+    if (r === null) {
+      return Promise.resolve(null);
+    }
+
+    const vs = await Promise.all([r.error, fromReadableStream(r.data)]);
+    if (vs[0]) {
+      return Promise.reject(vs[0]);
+    } else {
+      return Promise.resolve(vs[1]);
+    }
   }
 
   async get(name: string): Promise<ObjectResult | null> {
@@ -676,7 +754,7 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   _metaSubject(n: string): string {
-    return `$O.${this.name}.M.${Base64UrlCodec.encode(n)}`;
+    return `$O.${this.name}.M.${Base64UrlPaddedCodec.encode(n)}`;
   }
 
   _metaSubjectAll(): string {

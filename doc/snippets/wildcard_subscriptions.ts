@@ -28,7 +28,7 @@ const s3 = nc.subscribe("help.>");
 async function printMsgs(s: Subscription) {
   const subj = s.getSubject();
   console.log(`listening for ${subj}`);
-  const c = (13 - subj.length);
+  const c = 13 - subj.length;
   const pad = "".padEnd(c);
   for await (const m of s) {
     console.log(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -52,11 +52,14 @@ import {
   StringCodec,
 } from "../nats-base-client/internal_mod.ts";
 import {
+  assertArrayIncludes,
   assertEquals,
+  assertExists,
+  assertIsError,
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
@@ -74,7 +77,6 @@ import {
   isHeartbeatMsg,
   Js409Errors,
 } from "../nats-base-client/jsutil.ts";
-import { assertIsError } from "https://deno.land/std@0.138.0/testing/asserts.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -282,12 +284,29 @@ Deno.test("jetstream - get message last by subject", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jetstream - publish first sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { subj } = await initStream(nc);
+
+  const js = nc.jetstream();
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+  await assertRejects(
+    async () => {
+      await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
+    },
+    Error,
+    "wrong last sequence",
+  );
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jetstream - publish require last sequence", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
-  await js.publish(subj, Empty);
+  await js.publish(subj, Empty, { expect: { lastSequence: 0 } });
 
   await assertRejects(
     async () => {
@@ -1153,9 +1172,8 @@ Deno.test("jetstream - fetch one - breaks after expires", async () => {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
-  nc.publish(subj);
-
   const js = nc.jetstream();
+  await js.publish(subj);
 
   const sw = time();
   const batch = js.fetch(stream, "me", {
@@ -1903,7 +1921,8 @@ Deno.test("jetstream - idle heartbeats", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
 
   const { stream, subj } = await initStream(nc);
-  nc.publish(subj);
+  const js = nc.jetstream();
+  await js.publish(subj);
   const jsm = await nc.jetstreamManager();
   const inbox = createInbox();
   await jsm.consumers.add(stream, {
@@ -1927,11 +1946,25 @@ Deno.test("jetstream - idle heartbeats", async () => {
 });
 
 Deno.test("jetstream - flow control", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({
+    jetstream: {
+      max_file: -1,
+    },
+  }, true));
   const { stream, subj } = await initStream(nc);
   const data = new Uint8Array(1024 * 100);
+  const js = nc.jetstream();
+  const proms = [];
   for (let i = 0; i < 2000; i++) {
+    proms.push(js.publish(subj, data));
     nc.publish(subj, data);
+    if (proms.length % 100 === 0) {
+      await Promise.all(proms);
+      proms.length = 0;
+    }
+  }
+  if (proms.length) {
+    await Promise.all(proms);
   }
   await nc.flush();
 
@@ -2272,7 +2305,7 @@ Deno.test("jetstream - source", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jestream - nak delay", async () => {
+Deno.test("jetstream - nak delay", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.7.1")) {
     return;
@@ -2649,7 +2682,7 @@ Deno.test("jetstream - rollup subject", async () => {
 
   const h = headers();
   h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
-  await js.publish(`${stream}.A`, jc.encode({ value: 42 }), {
+  await js.publish(`${stream}.A`, jc.encode({ value: 0 }), {
     headers: h,
   });
 
@@ -2856,12 +2889,9 @@ Deno.test("jetstream - bind", async () => {
     `unable to bind - durable consumer hello doesn't exist in ${stream}`,
     undefined,
   );
-
-  nc.subscribe("$JS.API.CONSUMER.DURABLE.CREATE.>", {
-    callback: (_err, _msg) => {
-      // this will count
-    },
-  });
+  // the rejection happens and the unsub is scheduled, but it is possible that
+  // the server didn't process it yet - flush to make sure the unsub was seen
+  await nc.flush();
 
   opts.bind(stream, "me");
   const sub = await js.subscribe(subj, opts);
@@ -3250,26 +3280,25 @@ Deno.test("jetstream - detailed errors", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();
 
-  await assertRejects(() => {
+  const ne = await assertRejects(() => {
     return jsm.streams.add({
       name: "test",
       num_replicas: 3,
       subjects: ["foo"],
     });
-  }, (err: Error) => {
-    const ne = err as NatsError;
-    assert(ne.api_error);
-    assertEquals(
-      ne.message,
-      "replicas > 1 not supported in non-clustered mode",
-    );
-    assertEquals(
-      ne.api_error.description,
-      "replicas > 1 not supported in non-clustered mode",
-    );
-    assertEquals(ne.api_error.code, 500);
-    assertEquals(ne.api_error.err_code, 10074);
-  });
+  }) as NatsError;
+
+  assert(ne.api_error);
+  assertEquals(
+    ne.message,
+    "replicas > 1 not supported in non-clustered mode",
+  );
+  assertEquals(
+    ne.api_error.description,
+    "replicas > 1 not supported in non-clustered mode",
+  );
+  assertEquals(ne.api_error.code, 500);
+  assertEquals(ne.api_error.err_code, 10074);
 
   await cleanup(ns, nc);
 });
@@ -3306,7 +3335,7 @@ Deno.test("jetstream - ephemeral pull consumer", async () => {
   await nc.flush();
 
   const jsm = await nc.jetstreamManager();
-  await delay(1000);
+  await delay(1500);
   await assertRejects(
     async () => {
       await jsm.consumers.info(stream, old.name);
@@ -3837,12 +3866,10 @@ Deno.test("jetstream - ordered consumer reset", async () => {
 Deno.test("jetstream - fetch on stopped server doesn't close client", async () => {
   let { ns, nc } = await setup(jetstreamServerConf(), {
     maxReconnectAttempts: -1,
-    debug: true,
   });
   (async () => {
     let reconnects = 0;
     for await (const s of nc.status()) {
-      console.log(s);
       switch (s.type) {
         case DebugEvents.Reconnecting:
           reconnects++;
@@ -4217,5 +4244,362 @@ Deno.test("jetstream - push heartbeat callback", async () => {
   ns = await ns.restart();
   // this here because otherwise get a resource leak error in the test
   await reconnected;
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - consumer opt multi subject filter", () => {
+  const opts = new ConsumerOptsBuilderImpl();
+  opts.filterSubject("foo");
+  let co = opts.getOpts();
+  assertEquals(co.config.filter_subject, "foo");
+
+  opts.filterSubject("bar");
+  co = opts.getOpts();
+  assertEquals(co.config.filter_subject, undefined);
+  assertExists(co.config.filter_subjects);
+  assertArrayIncludes(co.config.filter_subjects, ["foo", "bar"]);
+});
+
+Deno.test("jetstream - push multi-subject filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .filterSubject("a.c")
+    .deliverTo(createInbox())
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.subscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertExists(ci.config.filter_subjects);
+  assertArrayIncludes(ci.config.filter_subjects, ["a.b", "a.c"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull multi-subject filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .filterSubject("a.c")
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.pullSubscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertExists(ci.config.filter_subjects);
+  assertArrayIncludes(ci.config.filter_subjects, ["a.b", "a.c"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push single filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .deliverTo(createInbox())
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.subscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertEquals(ci.config.filter_subject, "a.b");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull single filter", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  const opts = consumerOpts()
+    .durable("me")
+    .ackExplicit()
+    .filterSubject("a.b")
+    .callback((_err, msg) => {
+      msg?.ack();
+    });
+
+  const sub = await js.pullSubscribe("a.>", opts);
+  const ci = await sub.consumerInfo();
+  assertEquals(ci.config.filter_subject, "a.b");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - jsmsg decode", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  const js = nc.jetstream();
+  await jsm.streams.add({ name, subjects: [`a.>`] });
+
+  await jsm.consumers.add(name, {
+    durable_name: "me",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  await js.publish("a.a", StringCodec().encode("hello"));
+  await js.publish("a.a", JSONCodec().encode({ one: "two", a: [1, 2, 3] }));
+
+  assertEquals((await js.pull(name, "me")).string(), "hello");
+  assertEquals((await js.pull(name, "me")).json(), {
+    one: "two",
+    a: [1, 2, 3],
+  });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - input transform", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+
+  const si = await jsm.streams.add({
+    name,
+    subjects: ["foo"],
+    subject_transform: {
+      src: ">",
+      dest: "transformed.>",
+    },
+    storage: StorageType.Memory,
+  });
+
+  assertEquals(si.config.subject_transform, {
+    src: ">",
+    dest: "transformed.>",
+  });
+
+  const js = nc.jetstream();
+  const pa = await js.publish("foo", Empty);
+  assertEquals(pa.seq, 1);
+
+  const m = await jsm.streams.getMessage(si.config.name, { seq: 1 });
+  assertEquals(m.subject, "transformed.foo");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - source transform", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+
+  const proms = ["foo", "bar", "baz"].map((subj) => {
+    return jsm.streams.add({
+      name: subj,
+      subjects: [subj],
+      storage: StorageType.Memory,
+    });
+  });
+  await Promise.all(proms);
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("foo", Empty),
+    js.publish("bar", Empty),
+    js.publish("baz", Empty),
+  ]);
+
+  await jsm.streams.add({
+    name: "sourced",
+    storage: StorageType.Memory,
+    sources: [
+      { name: "foo", subject_transform_dest: "foo2.>" },
+      { name: "bar" },
+      { name: "baz" },
+    ],
+  });
+
+  while (true) {
+    const si = await jsm.streams.info("sourced");
+    if (si.state.messages === 3) {
+      break;
+    }
+    await delay(100);
+  }
+
+  const m = await jsm.streams.getMessage("sourced", { seq: 1 });
+  assertEquals(m.subject, "foo2.foo");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  js.pull(name, name, 5000)
+    .catch((err) => {
+      d.resolve(err);
+    });
+  await nc.flush();
+  await jsm.consumers.delete(name, name);
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  const iter = js.fetch(name, name, { expires: 5000 });
+  (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+  await nc.flush();
+  await jsm.consumers.delete(name, name);
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub cb consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  const opts = consumerOpts().bind(name, name).callback((err, _m) => {
+    if (err) {
+      d.resolve(err);
+    }
+  });
+  const sub = await js.pullSubscribe(name, opts);
+  sub.pull({ expires: 5000 });
+  await nc.flush();
+  await jsm.consumers.delete(name, name);
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pullSub iter consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const d = deferred<NatsError>();
+  const js = nc.jetstream();
+
+  const opts = consumerOpts().bind(name, name);
+
+  const sub = await js.pullSubscribe(name, opts);
+  (async () => {
+    for await (const _m of sub) {
+      // nothing
+    }
+  })().catch((err) => {
+    d.resolve(err);
+  });
+  sub.pull({ expires: 5000 });
+  await nc.flush();
+  await jsm.consumers.delete(name, name);
+
+  const err = await d;
+  assertEquals(err?.message, "consumer deleted");
+
   await cleanup(ns, nc);
 });

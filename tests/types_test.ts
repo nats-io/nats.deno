@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,7 @@ import { DataBuffer, deferred } from "../nats-base-client/internal_mod.ts";
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { NatsServer } from "./helpers/launcher.ts";
 
 function mh(nc: NatsConnection, subj: string): Promise<Msg> {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,13 +11,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import {
   connect,
   createInbox,
@@ -34,7 +33,7 @@ import {
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
-import { deadline } from "https://deno.land/std@0.114.0/async/deadline.ts";
+import { deadline } from "https://deno.land/std@0.177.0/async/deadline.ts";
 import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
@@ -341,7 +340,6 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const connections: Conn[] = [];
 
   const TE = new TextEncoder();
-
   const INFO = TE.encode(
     "INFO " + JSON.stringify({
       server_id: "TEST",
@@ -357,7 +355,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
 
   const startReading = (conn: Conn) => {
     const buf = new Uint8Array(1024 * 8);
-    let inbound = new DataBuffer();
+    const inbound = new DataBuffer();
     (async () => {
       while (true) {
         const count = await conn.read(buf);
@@ -388,8 +386,8 @@ Deno.test("reconnect - stale connections don't close", async () => {
 
   (async () => {
     for await (const conn of listener) {
+      connections.push(conn);
       try {
-        connections.push(conn);
         await conn.write(INFO);
         startReading(conn);
       } catch (_err) {
@@ -410,7 +408,6 @@ Deno.test("reconnect - stale connections don't close", async () => {
   let stales = 0;
   (async () => {
     for await (const s of nc.status()) {
-      console.log(s);
       if (s.type === DebugEvents.StaleConnection) {
         stales++;
         if (stales === 3) {
@@ -421,10 +418,10 @@ Deno.test("reconnect - stale connections don't close", async () => {
   })().then();
 
   await nc.closed();
+  listener.close();
   connections.forEach((c) => {
     return c.close();
   });
-  listener.close();
   assert(stales >= 3, `stales ${stales}`);
 });
 

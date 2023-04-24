@@ -30,6 +30,7 @@ import {
   RequestOptions,
   RequestStrategy,
   ServerInfo,
+  ServicesAPI,
   Stats,
   Status,
   Subscription,
@@ -49,12 +50,15 @@ import {
 import { isRequestError } from "./msg.ts";
 import { JetStreamManagerImpl } from "./jsm.ts";
 import { JetStreamClientImpl } from "./jsclient.ts";
+import { Service, ServiceConfig, ServiceImpl } from "./service.ts";
+import { ServiceClient, ServiceClientImpl } from "./serviceclient.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean;
   listeners: QueuedIterator<Status>[];
+  _services!: ServicesAPI;
 
   private constructor(opts: ConnectionOptions) {
     this.draining = false;
@@ -161,7 +165,7 @@ export class NatsConnectionImpl implements NatsConnection {
     subject: string,
     data: Uint8Array = Empty,
     opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
-  ): Promise<QueuedIterator<Msg | Error>> {
+  ): Promise<QueuedIterator<Msg>> {
     try {
       this._check(subject, true, true);
     } catch (err) {
@@ -175,11 +179,11 @@ export class NatsConnectionImpl implements NatsConnection {
     }
 
     // the iterator for user results
-    const qi = new QueuedIteratorImpl<Msg | Error>();
-    function stop() {
+    const qi = new QueuedIteratorImpl<Msg>();
+    function stop(err?: Error) {
       //@ts-ignore: stop function
       qi.push(() => {
-        qi.stop();
+        qi.stop(err);
       });
     }
 
@@ -187,11 +191,7 @@ export class NatsConnectionImpl implements NatsConnection {
     // simply pushes errors and messages into the iterator
     function callback(err: Error | null, msg: Msg | null) {
       if (err || msg === null) {
-        // FIXME: the stop function should not require commenting
-        if (err !== null) {
-          qi.push(err);
-        }
-        stop();
+        stop(err === null ? undefined : err);
       } else {
         qi.push(msg);
       }
@@ -208,7 +208,7 @@ export class NatsConnectionImpl implements NatsConnection {
         callback: (err, msg) => {
           // we only expect runtime errors or a no responders
           if (
-            msg.data.length === 0 &&
+            msg?.data?.length === 0 &&
             msg?.headers?.status === ErrorCode.NoResponders
           ) {
             err = NatsError.errorForCode(ErrorCode.NoResponders);
@@ -248,13 +248,15 @@ export class NatsConnectionImpl implements NatsConnection {
           stop();
         })
         .catch((err: Error) => {
-          qi.push(err);
-          stop();
+          qi.stop(err);
         });
 
       const cancel = (err?: Error) => {
         if (err) {
-          qi.push(err);
+          //@ts-ignore: error
+          qi.push(() => {
+            throw err;
+          });
         }
         clearTimers();
         sub.drain()
@@ -505,5 +507,35 @@ export class NatsConnectionImpl implements NatsConnection {
 
   get features(): Features {
     return this.protocol.features;
+  }
+
+  get services(): ServicesAPI {
+    if (!this._services) {
+      this._services = new ServicesFactory(this);
+    }
+    return this._services;
+  }
+}
+
+export class ServicesFactory implements ServicesAPI {
+  nc: NatsConnection;
+  constructor(nc: NatsConnection) {
+    this.nc = nc;
+    console.log(
+      `\u001B[33m >> service framework is beta functionality \u001B[0m`,
+    );
+  }
+
+  add(config: ServiceConfig): Promise<Service> {
+    try {
+      const s = new ServiceImpl(this.nc, config);
+      return s.start();
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
+    return new ServiceClientImpl(this.nc, opts, prefix);
   }
 }

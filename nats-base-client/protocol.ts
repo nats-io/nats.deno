@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,6 +65,12 @@ export function createInbox(prefix = ""): string {
   if (typeof prefix !== "string") {
     throw (new Error("prefix must be a string"));
   }
+  prefix.split(".")
+    .forEach((v) => {
+      if (v === "*" || v === ">") {
+        throw new Error(`inbox prefixes cannot have wildcards '${prefix}'`);
+      }
+    });
   return `${prefix}.${nuid.next()}`;
 }
 
@@ -104,7 +110,9 @@ export class Connect {
     this.name = opts.name;
 
     const creds =
-      (opts && opts.authenticator ? opts.authenticator(nonce) : {}) || {};
+      (opts && typeof opts.authenticator === "function"
+        ? opts.authenticator(nonce)
+        : {}) || {};
     extend(this, creds);
   }
 }
@@ -265,6 +273,14 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
               data: this.servers.getCurrentServer().toString(),
             },
           );
+          // if we are here we reconnected, but we have an authentication
+          // that expired, we need to clean it up, otherwise we'll queue up
+          // two of these, and the default for the client will be to
+          // close, rather than attempt again - possibly they have an
+          // authenticator that dynamically updates
+          if (this.lastError?.code === ErrorCode.AuthenticationExpired) {
+            this.lastError = undefined;
+          }
         })
         .catch((err) => {
           this._close(err);
@@ -444,7 +460,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  async processError(m: Uint8Array) {
+  processError(m: Uint8Array) {
     const s = decode(m);
     const err = ProtocolHandler.toError(s);
     const status: Status = { type: Events.Error, data: err.code };
@@ -463,10 +479,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       }
     }
     this.dispatchStatus(status);
-    await this.handleError(err);
+    this.handleError(err);
   }
 
-  async handleError(err: NatsError) {
+  handleError(err: NatsError) {
     if (err.isAuthError()) {
       this.handleAuthError(err);
     }

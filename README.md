@@ -841,3 +841,8 @@ The relationship between these is:
 JetStream is the NATS persistence engine providing streaming, message, and
 worker queues with At-Least-Once semantics.
 [Support for JetStream is built-in](jetstream.md).
+
+## Service API
+
+The service API allows you to [easily build NATS services](services.md) The
+services API is currently in beta functionality.

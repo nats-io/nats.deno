@@ -16,7 +16,7 @@ jobs:
     environment: CI
     strategy:
       matrix:
-        deno-version: [1.27.0]
+        deno-version: [1.30.3]
 
     steps:
       - name: Git Checkout Deno Module
@@ -30,7 +30,7 @@ jobs:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.9.5" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.9.15" >> $GITHUB_ENV
 
       # this here because dns seems to be wedged on gha
 #      - name: Add hosts to /etc/hosts
@@ -43,13 +43,6 @@ jobs:
           unzip tmp.zip
           mv nats-server-$NATS_VERSION-linux-amd64 nats-server
           rm nats-server/README.md LICENSE
-
-#      - name: Get nats-server
-#        run: |
-#          wget "https://github.com/aricart/wsgnatsd/releases/download/v0.8.4/nats-server-$NATS_VERSION-linux-amd64.zip" -O tmp.zip
-#          unzip tmp.zip
-#          mv nats-server-$NATS_VERSION-linux-amd64 nats-server
-#          rm nats-server/README.md LICENSE
 
       - name: Lint Deno Module
         run: deno fmt --check --ignore=docs/

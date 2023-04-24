@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 // deno-lint-ignore-file no-explicit-any
-import * as path from "https://deno.land/std@0.152.0/path/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.152.0/fmt/colors.ts";
+import * as path from "https://deno.land/std@0.177.0/path/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.177.0/fmt/colors.ts";
 import { check } from "./mod.ts";
 import {
   Deferred,
@@ -24,7 +24,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
@@ -194,9 +194,15 @@ export class NatsServer implements PortInfo {
   }
 
   restart(): Promise<NatsServer> {
-    const conf = JSON.parse(JSON.stringify(this.config));
-    conf.port = this.port;
-    return NatsServer.start(conf, this.debug);
+    return this.stop().then(() => {
+      const conf = JSON.parse(JSON.stringify(this.config));
+      conf.port = this.port;
+      return NatsServer.start(conf, this.debug);
+    });
+  }
+
+  pid(): number {
+    return this.process.pid;
   }
 
   getLog(): string {
@@ -206,7 +212,7 @@ export class NatsServer implements PortInfo {
   static stopAll(cluster: NatsServer[]): Promise<void[]> {
     const buf: Promise<void>[] = [];
     cluster.forEach((s) => {
-      buf.push(s.stop());
+      s === null ? buf.push(Promise.resolve()) : buf.push(s?.stop());
     });
 
     return Promise.all(buf);
@@ -259,6 +265,13 @@ export class NatsServer implements PortInfo {
     debug = false,
   ): Promise<NatsServer[]> {
     serverConf = serverConf || {};
+    const js = serverConf.jetstream as {
+      max_file_store?: number;
+      max_mem_store?: number;
+    };
+    if (js) {
+      delete serverConf.jetstream;
+    }
     // form a cluster with the specified count
     const servers = await NatsServer.cluster(count, serverConf, false);
 
@@ -284,6 +297,14 @@ export class NatsServer implements PortInfo {
 
       // jetstream defaults
       const { jetstream } = jsopts();
+      if (js) {
+        if (js.max_file_store !== undefined) {
+          jetstream.max_file_store = js.max_file_store;
+        }
+        if (js.max_mem_store !== undefined) {
+          jetstream.max_mem_store = js.max_mem_store;
+        }
+      }
       // need a server name for a cluster
       const serverName = nuid.next();
       // customize the store dir and make it
@@ -528,6 +549,7 @@ export class NatsServer implements PortInfo {
     );
 
     if (debug) {
+      console.info(`config: ${confFile}`);
       console.info(`[${srv.pid}] - launched`);
     }
 

@@ -1,7 +1,22 @@
-import * as path from "https://deno.land/std@0.152.0/path/mod.ts";
+/*
+ * Copyright 2021-2023 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import * as path from "https://deno.land/std@0.177.0/path/mod.ts";
 import { NatsServer } from "../tests/helpers/mod.ts";
 import { connect } from "../src/mod.ts";
-import { assert } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import {
   ConnectionOptions,
   extend,
@@ -16,7 +31,7 @@ export function jsopts() {
     // trace: true,
     jetstream: {
       max_file_store: 1024 * 1024,
-      max_memory_store: 1024 * 1024,
+      max_mem_store: 1024 * 1024,
       store_dir: "/tmp",
     },
   };

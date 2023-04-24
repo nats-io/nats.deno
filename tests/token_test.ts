@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2020 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { fail } from "https://deno.land/std@0.152.0/testing/asserts.ts";
+import { fail } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
 

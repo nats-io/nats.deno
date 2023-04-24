@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,14 +11,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 import {
   assert,
   assertEquals,
-  assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,
@@ -28,7 +26,7 @@ import {
   StringCodec,
 } from "../src/mod.ts";
 
-import { assertErrorCode, assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
+import { assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
 import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("drain - connection drains when no subs", async () => {
@@ -126,15 +124,13 @@ Deno.test("drain - publish after drain fails", async () => {
   nc.subscribe(subj);
   await nc.drain();
 
-  assertThrows(() => {
-    nc.publish(subj);
-  }, (err: Error) => {
-    assertErrorCode(
-      err,
-      ErrorCode.ConnectionClosed,
-      ErrorCode.ConnectionDraining,
-    );
-  });
+  assertThrowsErrorCode(
+    () => {
+      nc.publish(subj);
+    },
+    ErrorCode.ConnectionClosed,
+    ErrorCode.ConnectionDraining,
+  );
   await ns.stop();
 });
 

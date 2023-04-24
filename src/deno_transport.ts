@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { BufWriter } from "https://deno.land/std@0.152.0/io/mod.ts";
-import { Deferred, deferred } from "https://deno.land/std@0.152.0/async/mod.ts";
+import { BufWriter } from "https://deno.land/std@0.177.0/io/mod.ts";
+import { Deferred, deferred } from "../nats-base-client/internal_mod.ts";
 import Conn = Deno.Conn;
 import {
   checkOptions,
@@ -33,7 +33,7 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import type { TlsOptions } from "../nats-base-client/types.ts";
 
-const VERSION = "1.10.0-0";
+const VERSION = "1.14.0";
 const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason
@@ -89,6 +89,7 @@ export class DenoTransport implements Transport {
         this.writer = new BufWriter(this.conn);
       }
     } catch (err) {
+      this.conn?.close();
       throw err.name === "ConnectionRefused"
         ? NatsError.errorForCode(ErrorCode.ConnectionRefused)
         : err;
@@ -248,6 +249,7 @@ export class DenoTransport implements Transport {
 
   async _closed(err?: Error, internal = true): Promise<void> {
     if (this.done) return;
+    this.done = true;
     this.closeError = err;
     if (!err && internal) {
       try {
@@ -261,7 +263,6 @@ export class DenoTransport implements Transport {
         }
       }
     }
-    this.done = true;
     try {
       this.conn?.close();
     } catch (_err) {

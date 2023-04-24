@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,20 +20,20 @@ import {
   assertEquals,
   assertExists,
   equal,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { DataBuffer } from "../nats-base-client/databuffer.ts";
-import { crypto } from "https://deno.land/std@0.152.0/crypto/mod.ts";
+import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
 import {
   Empty,
   headers,
   StorageType,
   StringCodec,
 } from "../nats-base-client/mod.ts";
-import { assertRejects } from "https://deno.land/std@0.152.0/testing/asserts.ts";
-import { equals } from "https://deno.land/std@0.152.0/bytes/mod.ts";
+import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { equals } from "https://deno.land/std@0.177.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
-import { Base64UrlCodec } from "../nats-base-client/base64.ts";
+import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
 import { digestType } from "../nats-base-client/objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
@@ -680,36 +680,19 @@ Deno.test("objectstore - sanitize", async () => {
   });
   assertEquals(
     info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlCodec.encode("has_dots_here")}`],
+      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has_dots_here")}`],
     1,
   );
   assertEquals(
     info.streamInfo.state
-      .subjects![`$O.test.M.${Base64UrlCodec.encode("the_spaces_are_here")}`],
+      .subjects![
+        `$O.test.M.${Base64UrlPaddedCodec.encode("the_spaces_are_here")}`
+      ],
     1,
   );
 
   await cleanup(ns, nc);
 });
-
-// Deno.test("objectstore - compat", async () => {
-//   const nc = await connect();
-//   const js = nc.jetstream();
-//   const os = await js.views.os("test");
-//   console.log(await os.status({ subjects_filter: ">" }));
-//
-//   const a = await os.list();
-//   console.log(a);
-//
-//   const rs = await os.get("./main.go");
-//   const data = await fromReadableStream(rs!.data);
-//   const sc = StringCodec();
-//   console.log(sc.decode(data));
-//
-//   await os.put({ name: "hello" }, readableStreamFrom(sc.encode("hello world")));
-//
-//   await nc.close();
-// });
 
 Deno.test("objectstore - partials", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({
@@ -920,6 +903,117 @@ Deno.test("objectstore - cannot put links", async () => {
     Error,
     "link cannot be set when putting the object in bucket",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put purges old entries", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  // we expect 10 messages per put
+  const t = async (first: number, last: number) => {
+    const status = await os.status();
+    const si = status.streamInfo;
+    assertEquals(si.state.first_seq, first);
+    assertEquals(si.state.last_seq, last);
+  };
+
+  const blob = new Uint8Array(9);
+  let oi = await os.put(
+    { name: "BLOB", description: "myblob", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(blob)),
+  );
+  assertEquals(oi.revision, 10);
+  await t(1, 10);
+
+  oi = await os.put(
+    { name: "BLOB", description: "myblob", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(blob)),
+  );
+  assertEquals(oi.revision, 20);
+  await t(11, 20);
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put previous sequences", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  // putting the first
+  let oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(9))),
+    { previousRevision: 0 },
+  );
+  assertEquals(oi.revision, 10);
+
+  // putting another value, but the first value for the key - so previousRevision is 0
+  oi = await os.put(
+    { name: "B", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(3))),
+    { previousRevision: 0 },
+  );
+  assertEquals(oi.revision, 14);
+
+  // update A, previous A is found at 10
+  oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(3))),
+    { previousRevision: 10 },
+  );
+  assertEquals(oi.revision, 18);
+
+  // update A, previous A is found at 18
+  oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(Empty),
+    { previousRevision: 18 },
+  );
+  assertEquals(oi.revision, 19);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put/get blob", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  const payload = new Uint8Array(9);
+
+  // putting the first
+  await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(payload),
+    { previousRevision: 0 },
+  );
+
+  let bg = await os.getBlob("A");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
+
+  await os.putBlob({ name: "B", options: { max_chunk_size: 1 } }, payload);
+
+  bg = await os.getBlob("B");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
 
   await cleanup(ns, nc);
 });

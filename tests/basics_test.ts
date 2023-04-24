@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,11 +14,13 @@
  */
 import {
   assert,
+  assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.152.0/testing/asserts.ts";
+} from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 
@@ -33,14 +35,7 @@ import {
   NatsError,
   StringCodec,
 } from "../src/mod.ts";
-import {
-  assertErrorCode,
-  Connection,
-  disabled,
-  Lock,
-  NatsServer,
-  TestServer,
-} from "./helpers/mod.ts";
+import { assertErrorCode, disabled, Lock, NatsServer } from "./helpers/mod.ts";
 import {
   deferred,
   delay,
@@ -53,7 +48,6 @@ import { cleanup, setup } from "./jstest_util.ts";
 import { RequestStrategy } from "../nats-base-client/types.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import NetAddr = Deno.NetAddr;
-import { assertArrayIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1119,27 +1113,6 @@ Deno.test("basics - request many waits for timer late response", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("basics - request many stops on error", async () => {
-  const { ns, nc } = await setup({});
-  const nci = nc as NatsConnectionImpl;
-
-  const subj = createInbox();
-
-  const iter = await nci.requestMany(subj, Empty, {
-    strategy: RequestStrategy.Timer,
-    maxWait: 2000,
-  });
-  const d = deferred<Error>();
-  for await (const mer of iter) {
-    if (mer instanceof Error) {
-      d.resolve(mer);
-    }
-  }
-  const err = await d;
-  assertErrorCode(err, ErrorCode.NoResponders);
-  await cleanup(ns, nc);
-});
-
 Deno.test("basics - server version", async () => {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
@@ -1157,7 +1130,7 @@ Deno.test("basics - server version", async () => {
 
 Deno.test("basics - info", async () => {
   const { ns, nc } = await setup({});
-  console.log(nc.info);
+  assertExists(nc.info);
   await cleanup(ns, nc);
 });
 
@@ -1203,4 +1176,80 @@ Deno.test("basics - close promise resolves", async () => {
   }).catch((err) => {
     fail(err);
   });
+});
+
+Deno.test("basics - inbox prefixes cannot have wildcards", async () => {
+  await assertRejects(
+    async () => {
+      await connect({ inboxPrefix: "_inbox.foo.>" });
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+
+  assertThrows(
+    () => {
+      createInbox("_inbox.foo.*");
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+});
+
+Deno.test("basics - msg typed payload", async () => {
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port });
+
+  nc.subscribe("echo", {
+    callback: (_err, msg) => {
+      msg.respond(msg.data);
+    },
+  });
+
+  assertEquals((await nc.request("echo", Empty)).string(), "");
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("hello"))).string(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("5"))).string(),
+    "5",
+  );
+
+  await assertRejects(
+    async () => {
+      const r = await nc.request("echo", Empty);
+      r.json<number>();
+    },
+    Error,
+    "Bad JSON",
+  );
+
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(null))).json(),
+    null,
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(undefined))).json(),
+    null,
+  );
+  assertEquals((await nc.request("echo", JSONCodec().encode(5))).json(), 5);
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode("hello"))).json(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(["hello"]))).json(),
+    ["hello"],
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode({ one: "two" }))).json(),
+    { one: "two" },
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode([{ one: "two" }]))).json(),
+    [{ one: "two" }],
+  );
+
+  await cleanup(ns, nc);
 });

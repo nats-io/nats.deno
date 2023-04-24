@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -434,34 +434,37 @@ export class Bucket implements KV, KvRemove {
   }
 
   smToEntry(sm: StoredMsg): KvEntry {
-    return {
-      bucket: this.bucket,
-      key: sm.subject.substring(this.prefixLen),
-      value: sm.data,
-      delta: 0,
-      created: sm.time,
-      revision: sm.seq,
-      operation: sm.header.get(kvOperationHdr) as OperationType || "PUT",
-      length: this.dataLen(sm.data, sm.header),
-    };
+    return new KvStoredEntryImpl(this.bucket, this.prefixLen, sm);
   }
 
   jmToEntry(jm: JsMsg): KvEntry {
     const key = this.decodeKey(jm.subject.substring(this.prefixLen));
-    return {
-      bucket: this.bucket,
-      key: key,
-      value: jm.data,
-      created: new Date(millis(jm.info.timestampNanos)),
-      revision: jm.seq,
-      operation: jm.headers?.get(kvOperationHdr) as OperationType || "PUT",
-      delta: jm.info.pending,
-      length: this.dataLen(jm.data, jm.headers),
-    } as KvEntry;
+    return new KvJsMsgEntryImpl(this.bucket, key, jm);
   }
 
-  create(k: string, data: Uint8Array): Promise<number> {
-    return this.put(k, data, { previousSeq: 0 });
+  async create(k: string, data: Uint8Array): Promise<number> {
+    let firstErr;
+    try {
+      const n = await this.put(k, data, { previousSeq: 0 });
+      return Promise.resolve(n);
+    } catch (err) {
+      firstErr = err;
+      if (err?.api_error?.err_code !== 10071) {
+        return Promise.reject(err);
+      }
+    }
+    let rev = 0;
+    try {
+      const e = await this.get(k);
+      if (e?.operation === "DEL" || e?.operation === "PURGE") {
+        rev = e !== null ? e.revision : 0;
+        return this.update(k, data, rev);
+      } else {
+        return Promise.reject(firstErr);
+      }
+    } catch (err) {
+      return Promise.reject(err);
+    }
   }
 
   update(k: string, data: Uint8Array, version: number): Promise<number> {
@@ -918,5 +921,105 @@ export class KvStatusImpl implements KvStatus {
 
   get size(): number {
     return this.si.state.bytes;
+  }
+}
+
+class KvStoredEntryImpl implements KvEntry {
+  bucket: string;
+  sm: StoredMsg;
+  prefixLen: number;
+
+  constructor(bucket: string, prefixLen: number, sm: StoredMsg) {
+    this.bucket = bucket;
+    this.prefixLen = prefixLen;
+    this.sm = sm;
+  }
+
+  get key(): string {
+    return this.sm.subject.substring(this.prefixLen);
+  }
+
+  get value(): Uint8Array {
+    return this.sm.data;
+  }
+
+  get delta(): number {
+    return 0;
+  }
+
+  get created(): Date {
+    return this.sm.time;
+  }
+
+  get revision(): number {
+    return this.sm.seq;
+  }
+
+  get operation(): OperationType {
+    return this.sm.header.get(kvOperationHdr) as OperationType || "PUT";
+  }
+
+  get length(): number {
+    const slen = this.sm.header.get(JsHeaders.MessageSizeHdr) || "";
+    if (slen !== "") {
+      return parseInt(slen, 10);
+    }
+    return this.sm.data.length;
+  }
+
+  json<T>(): T {
+    return this.sm.json();
+  }
+
+  string(): string {
+    return this.sm.string();
+  }
+}
+
+class KvJsMsgEntryImpl implements KvEntry {
+  bucket: string;
+  key: string;
+  sm: JsMsg;
+
+  constructor(bucket: string, key: string, sm: JsMsg) {
+    this.bucket = bucket;
+    this.key = key;
+    this.sm = sm;
+  }
+
+  get value(): Uint8Array {
+    return this.sm.data;
+  }
+
+  get created(): Date {
+    return new Date(millis(this.sm.info.timestampNanos));
+  }
+
+  get revision(): number {
+    return this.sm.seq;
+  }
+
+  get operation(): OperationType {
+    return this.sm.headers?.get(kvOperationHdr) as OperationType || "PUT";
+  }
+
+  get delta(): number {
+    return this.sm.info.pending;
+  }
+
+  get length(): number {
+    const slen = this.sm.headers?.get(JsHeaders.MessageSizeHdr) || "";
+    if (slen !== "") {
+      return parseInt(slen, 10);
+    }
+    return this.sm.data.length;
+  }
+
+  json<T>(): T {
+    return this.sm.json();
+  }
+
+  string(): string {
+    return this.sm.string();
   }
 }

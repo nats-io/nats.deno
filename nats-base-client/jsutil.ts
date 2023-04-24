@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,11 +28,27 @@ import { MsgImpl } from "./msg.ts";
 import { Publisher } from "./protocol.ts";
 
 export function validateDurableName(name?: string) {
-  return validateName("durable", name);
+  return minValidation("durable", name);
 }
 
 export function validateStreamName(name?: string) {
-  return validateName("stream", name);
+  return minValidation("stream", name);
+}
+
+function minValidation(context: string, name = "") {
+  // minimum validation on streams/consumers matches nats cli
+  if (name === "") {
+    throw Error(`${context} name required`);
+  }
+  const bad = [".", "*", ">", "/", "\\"];
+  bad.forEach((v) => {
+    if (name.indexOf(v) !== -1) {
+      throw Error(
+        `invalid ${context} name - ${context} name cannot contain '${v}'`,
+      );
+    }
+  });
+  return "";
 }
 
 export function validateName(context: string, name = "") {
@@ -49,11 +65,14 @@ export function validName(name = ""): string {
   if (name === "") {
     throw Error(`name required`);
   }
-  const bad = [".", "*", ">"];
-  for (let i = 0; i < bad.length; i++) {
-    const v = bad[i];
-    if (name.indexOf(v) !== -1) {
-      return `cannot contain '${v}'`;
+  const RE = /^[-\w]+$/g;
+  const m = name.match(RE);
+  if (m === null) {
+    for (const c of name.split("")) {
+      const mm = c.match(RE);
+      if (mm === null) {
+        return `cannot contain '${c}'`;
+      }
     }
   }
   return "";
@@ -145,7 +164,10 @@ export enum Js409Errors {
   MaxMessageSizeExceeded = "message size exceeds maxbytes",
   PushConsumer = "consumer is push based",
   MaxWaitingExceeded = "exceeded maxwaiting", // not terminal
-  IdleHeartbeatMissed = "`idle heartbeats missed`",
+  IdleHeartbeatMissed = "idle heartbeats missed",
+  ConsumerDeleted = "consumer deleted",
+  // FIXME: consumer deleted - instead of no responder (terminal error)
+  //   leadership changed -
 }
 
 let MAX_WAITING_FAIL = false;
@@ -164,6 +186,7 @@ export function isTerminal409(err: NatsError): boolean {
     Js409Errors.MaxMessageSizeExceeded,
     Js409Errors.PushConsumer,
     Js409Errors.IdleHeartbeatMissed,
+    Js409Errors.ConsumerDeleted,
   ];
   if (MAX_WAITING_FAIL) {
     fatal.push(Js409Errors.MaxWaitingExceeded);
