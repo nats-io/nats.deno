@@ -2635,12 +2635,22 @@ export type ConsumeMessages =
   & IdleHeartbeat
   & ConsumeCallback;
 
+/**
+ * Options for fetching
+ */
 export type FetchBytes =
   & MaxBytes
   & Partial<MaxMessages>
   & Expires
   & IdleHeartbeat;
-export type FetchMessages = Partial<MaxMessages> & Expires & IdleHeartbeat;
+
+/**
+ * Options for a c
+ */
+export type FetchMessages =
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
 
 export type FetchOptions = FetchBytes | FetchMessages;
 export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
@@ -2676,6 +2686,45 @@ export type ConsumeCallback = {
   callback?: ConsumerCallbackFn;
 };
 
+/**
+ * ConsumerEvents are informational notifications emitted by ConsumerMessages
+ * that may be of interest to a client.
+ */
+export enum ConsumerEvents {
+  /**
+   * Notification that heartbeats were missed. This notification is informational.
+   * The `data` portion of the status, is a number indicating the number of missed heartbeats.
+   * Note that when a client disconnects, heartbeat tracking is paused while
+   * the client is disconnected.
+   */
+  HeartbeatsMissed = "heartbeats_missed",
+}
+
+/**
+ * These events represent informational notifications emitted by ConsumerMessages
+ * that can be safely ignored by clients.
+ */
+export enum ConsumerDebugEvents {
+  /**
+   * DebugEvents are effectively statuses returned by the server that were ignored
+   * by the client. The `data` portion of the
+   * status is just a string indicating the code/message of the status.
+   */
+  DebugEvent = "debug",
+  /**
+   * Requests for messages can be terminated by the server, these notifications
+   * provide information on the number of messages and/or bytes that couldn't
+   * be satisfied by the consumer request. The `data` portion of the status will
+   * have the format of `{msgsLeft: number, bytesLeft: number}`.
+   */
+  Discard = "discard",
+}
+
+export interface ConsumerStatus {
+  type: ConsumerEvents | ConsumerDebugEvents;
+  data: unknown;
+}
+
 export interface Consumer extends ExportedConsumer {
   info(cached?: boolean): Promise<ConsumerInfo>;
   delete(): Promise<boolean>;
@@ -2695,9 +2744,13 @@ export type ErrorResult = {
   error: Error;
 };
 
+/**
+ * Result is a value that may have resulted in an error.
+ */
 export type Result<T> = ValueResult<T> | ErrorResult;
-export interface ConsumerMessages
-  extends QueuedIterator<Result<JsMsg>>, Close {}
+export interface ConsumerMessages extends QueuedIterator<Result<JsMsg>>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
+}
 
 export interface ExportedConsumer {
   fetch(

@@ -26,7 +26,10 @@ import {
 import {
   AckPolicy,
   Consumer,
+  ConsumerDebugEvents,
+  ConsumerEvents,
   ConsumerMessages,
+  ConsumerStatus,
   Empty,
   NatsConnection,
   PubAck,
@@ -443,13 +446,28 @@ async function consumerHbTest(fetch: boolean) {
     servers[1].stop();
     servers[2].stop();
   }, 1000);
+
+  const d = deferred<ConsumerStatus>();
+
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError && r.error.message === "idle heartbeats missed") {
-        iter.stop();
-      }
+    const status = await iter.status();
+    for await (const s of status) {
+      d.resolve(s);
+      iter.stop();
+      break;
     }
   })();
+
+  await (async () => {
+    for await (const r of iter) {
+      // nothing
+    }
+  })();
+
+  const cs = await d;
+  assertEquals(cs.type, ConsumerEvents.HeartbeatsMissed);
+  assertEquals(cs.data, 2);
+
   await nc.close();
   await NatsServer.stopAll(servers);
 }
@@ -629,5 +647,27 @@ Deno.test("consumers - should be able to consume and pull", async () => {
 
   await Promise.all([consume(c), consume(c), fetch(c), fetch(c)]);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - discard notifications", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { stream } = await initStream(nc);
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    name: "a",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, "a");
+  const iter = await c.consume({ expires: 1000, max_messages: 101 });
+  for await (const s of await iter.status()) {
+    if (s.type === ConsumerDebugEvents.Discard) {
+      const r = s.data as Record<string, number>;
+      assertEquals(r.msgsLeft, 101);
+      break;
+    }
+  }
+  await iter.stop();
   await cleanup(ns, nc);
 });

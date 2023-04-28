@@ -36,13 +36,13 @@ const argv = parse(
       "j": ["jetstream"],
     },
     default: defaults,
-    boolean: ["debug", "jetstream", "server-debug"],
+    boolean: ["debug", "jetstream", "server-debug", "chaos"],
   },
 );
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 3] [--port 4222] [--debug] [--server_debug] [--jetstream] [--chaos millis]\n",
+    "usage: cluster [--count 3] [--port 4222] [--debug] [--server_debug] [--jetstream] [--chaos]\n",
   );
   Deno.exit(0);
 }
@@ -84,8 +84,8 @@ try {
     );
   });
 
-  if (argv.chaos) {
-    chaos(cluster, parseInt(argv.chaos));
+  if (argv.chaos === true && confirm("start chaos?")) {
+    chaos(cluster, 0);
   }
 
   waitForStop();
@@ -126,12 +126,15 @@ function restart(cluster: NatsServer[]) {
         old.rgb,
       ),
     );
-    const p = old.restart();
-    p.then((s) => {
-      s.rgb = old.rgb;
-      cluster[idx] = s;
-      console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
-    });
+    old.restart()
+      .then((s) => {
+        s.rgb = old.rgb;
+        cluster[idx] = s;
+        console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
+      }).catch((err) => {
+        console.log(`failed to replace ${oldPid}: ${err.message}`);
+        console.log(`to manually restart: nats-server -c ${old.configFile}`);
+      });
   }, millis);
 }
 

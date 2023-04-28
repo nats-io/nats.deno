@@ -12,11 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import type {
   ConsumeCallback,
   ConsumeOptions,
   ConsumerMessages,
+  ConsumerStatus,
   FetchOptions,
   PullOptions,
   Result,
@@ -24,6 +25,8 @@ import type {
 } from "./types.ts";
 import {
   ConsumerCallbackFn,
+  ConsumerDebugEvents,
+  ConsumerEvents,
   Events,
   JsMsg,
   MsgHdrs,
@@ -52,6 +55,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
   callback: ConsumerCallbackFn | null;
   timeout: Timeout<unknown> | null;
   cleanupHandler?: () => void;
+  listeners: QueuedIterator<ConsumerStatus>[];
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -77,6 +81,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
     this.stack = new Error().stack!.split("\n").slice(1).join("\n");
     this.timeout = null;
     this.inbox = createInbox();
+    this.listeners = [];
+
     const {
       max_messages,
       max_bytes,
@@ -123,8 +129,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
           const { msgsLeft, bytesLeft } = this.parseDiscard(msg.headers);
           if (msgsLeft > 0 || bytesLeft > 0) {
             this.pending.msgs -= msgsLeft;
-            this.pending.bytes -= msgsLeft;
+            this.pending.bytes -= bytesLeft;
             this.pending.requests--;
+            this.notify(ConsumerDebugEvents.Discard, { msgsLeft, bytesLeft });
           } else {
             // FIXME: 408 can be a Timeout or bad request,
             //  or it can be sent if a nowait request was
@@ -134,10 +141,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
             // FIXME: 400 bad request Invalid Heartbeat or Unmarshalling Fails
             //  these are real bad values - so this is bad request
             //  fail on this
-
-            // FIXME: non errors should be exposed via some iterator
-            //  that shows the JS errors
-
             const toErr = (): Error => {
               const err = new NatsError(description, `${code}`);
               err.stack += `\n\n${this.stack}`;
@@ -155,9 +158,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
               const error = toErr();
               this.stop(error);
             } else {
-              // log this for now so we can spot other things we want to handle
-              console.log(
-                `ConsumerMessagesImpl >>>>> Err: ${code} ${description}`,
+              this.notify(
+                ConsumerDebugEvents.DebugEvent,
+                `${code} ${description}`,
               );
             }
           }
@@ -204,20 +207,22 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
         Js409Errors.IdleHeartbeatMissed,
         ErrorCode.JetStreamIdleHeartBeat,
       );
-      this.monitor = new IdleHeartbeat(idle_heartbeat, (): boolean => {
-        // FIXME: this should be some sort of async notification of heartbeats missed
-        this._push({ isError: true, error: hbError });
+      this.monitor = new IdleHeartbeat(idle_heartbeat, (data): boolean => {
+        // for the pull consumer - missing heartbeats may be corrected
+        // on the next pull etc - the only assumption here is we should
+        // reset and check if the consumer was deleted from under us
+        this.notify(ConsumerEvents.HeartbeatsMissed, data);
         this.resetPending()
           .then(() => {
           })
           .catch(() => {
           });
         return false;
-      });
+      }, { maxOut: 2 });
     }
 
     // now if we disconnect, the consumer could be gone
-    // or we were slow consumered by the server
+    // or we were slow consumer'ed by the server
     (async () => {
       for await (const s of c.api.nc.status()) {
         switch (s.type) {
@@ -264,6 +269,18 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
       } catch (err) {
         this.callback({ isError: true, error: err });
       }
+    }
+  }
+
+  notify(type: ConsumerEvents | ConsumerDebugEvents, data: unknown) {
+    if (this.listeners.length > 0) {
+      (async () => {
+        this.listeners.forEach((l) => {
+          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
+            l.push({ type, data });
+          }
+        });
+      })();
     }
   }
 
@@ -416,6 +433,12 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
 
     return { value: args, isError: false };
   }
+
+  status(): Promise<AsyncIterable<ConsumerStatus>> {
+    const iter = new QueuedIteratorImpl<ConsumerStatus>();
+    this.listeners.push(iter);
+    return Promise.resolve(iter);
+  }
 }
 
 export class OrderedConsumerMessages extends QueuedIteratorImpl<Result<JsMsg>>
@@ -445,5 +468,11 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<Result<JsMsg>>
   close(): Promise<void> {
     this.stop();
     return this.iterClosed;
+  }
+
+  status(): Promise<AsyncIterable<ConsumerStatus>> {
+    return Promise.reject(
+      new Error("ordered consumers don't report consumer status"),
+    );
   }
 }
