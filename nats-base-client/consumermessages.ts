@@ -35,11 +35,11 @@ import {
 } from "./types.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
 import { createInbox } from "./protocol.ts";
-import { isHeartbeatMsg, Js409Errors, nanos } from "./jsutil.ts";
+import { isHeartbeatMsg, nanos } from "./jsutil.ts";
 import { PullConsumerImpl } from "./consumer.ts";
-import { ErrorCode, toJsMsg } from "./mod.ts";
 import { MsgImpl } from "./msg.ts";
 import { Timeout } from "./util.ts";
+import { toJsMsg } from "./jsmsg.ts";
 
 export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
   implements ConsumerMessages {
@@ -189,9 +189,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
           ) {
             const batch = this.pullOptions();
             // @ts-ignore: we are pushing the pull fn
-            this._push(() => {
-              this.pull(batch);
-            });
+            this.pull(batch);
           }
         } else if (this.pending.requests === 0) {
           // @ts-ignore: we are pushing the pull fn
@@ -203,10 +201,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
     });
 
     if (idle_heartbeat) {
-      const hbError = new NatsError(
-        Js409Errors.IdleHeartbeatMissed,
-        ErrorCode.JetStreamIdleHeartBeat,
-      );
       this.monitor = new IdleHeartbeat(idle_heartbeat, (data): boolean => {
         // for the pull consumer - missing heartbeats may be corrected
         // on the next pull etc - the only assumption here is we should
@@ -274,13 +268,11 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
 
   notify(type: ConsumerEvents | ConsumerDebugEvents, data: unknown) {
     if (this.listeners.length > 0) {
-      (async () => {
-        this.listeners.forEach((l) => {
-          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
-            l.push({ type, data });
-          }
-        });
-      })();
+      this.listeners.forEach((l) => {
+        if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
+          l.push({ type, data });
+        }
+      });
     }
   }
 
@@ -306,16 +298,20 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
   }
 
   pull(opts: Partial<PullOptions>) {
-    const nc = this.consumer.api.nc;
-
-    nc.publish(
-      `${this.consumer.api.prefix}.CONSUMER.MSG.NEXT.${this.consumer.stream}.${this.consumer.name}`,
-      this.consumer.api.jc.encode(opts),
-      { reply: this.inbox },
-    );
     this.pending.bytes += opts.max_bytes ?? 0;
     this.pending.msgs += opts.batch ?? 0;
     this.pending.requests++;
+
+    const nc = this.consumer.api.nc;
+    //@ts-ignore: iterator will pull
+    this._push(() => {
+      nc.publish(
+        `${this.consumer.api.prefix}.CONSUMER.MSG.NEXT.${this.consumer.stream}.${this.consumer.name}`,
+        this.consumer.api.jc.encode(opts),
+        { reply: this.inbox },
+      );
+      this.notify(ConsumerDebugEvents.Next, opts);
+    });
   }
 
   pullOptions(): Partial<PullOptions> {
@@ -376,6 +372,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
     //@ts-ignore: fn
     this._push(() => {
       super.stop(err);
+      this.listeners.forEach((n) => {
+        n.stop();
+      });
     });
   }
 
@@ -424,10 +423,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
       : args.idle_heartbeat;
 
     if (refilling) {
-      const minMsgs = Math.round(args.threshold_messages * .75) || 1;
+      const minMsgs = Math.round(args.max_messages * .75) || 1;
       args.threshold_messages = args.threshold_messages || minMsgs;
 
-      const minBytes = Math.round(args.threshold_bytes * .75) || 1;
+      const minBytes = Math.round(args.max_bytes * .75) || 1;
       args.threshold_bytes = args.threshold_bytes || minBytes;
     }
 
