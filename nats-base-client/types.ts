@@ -2718,6 +2718,7 @@ export type Expires = {
   /**
    * Amount of milliseconds to wait for messages before issuing another request.
    * Note this value shouldn't be set by the user, as the default provides proper behavior.
+   * A low value will stress the server.
    *
    * Minimum value is 1000 (1s).
    * @default 30_000 (30s)
@@ -2728,9 +2729,9 @@ export type Expires = {
 export type IdleHeartbeat = {
   /**
    * Number of milliseconds to wait for a server heartbeat when not actively receiving
-   * messages. If two or more heartbeats are missed in a row, the consumer will emit
+   * messages. When two or more heartbeats are missed in a row, the consumer will emit
    * a notification. Note this value shouldn't be set by the user, as the default provides
-   * the proper behavior.
+   * the proper behavior. A low value will stress the server.
    */
   idle_heartbeat?: number;
 };
