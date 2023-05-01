@@ -31,7 +31,7 @@ export function jsopts() {
     // trace: true,
     jetstream: {
       max_file_store: 1024 * 1024,
-      max_memory_store: 1024 * 1024,
+      max_mem_store: 1024 * 1024,
       store_dir: "/tmp",
     },
   };

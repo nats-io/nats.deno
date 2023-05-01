@@ -4491,6 +4491,7 @@ Deno.test("jetstream - pull consumer deleted", async () => {
     .catch((err) => {
       d.resolve(err);
     });
+  await nc.flush();
   await jsm.consumers.delete(name, name);
 
   const err = await d;
@@ -4524,6 +4525,7 @@ Deno.test("jetstream - fetch consumer deleted", async () => {
   })().catch((err) => {
     d.resolve(err);
   });
+  await nc.flush();
   await jsm.consumers.delete(name, name);
 
   const err = await d;
@@ -4556,6 +4558,7 @@ Deno.test("jetstream - pullSub cb consumer deleted", async () => {
   });
   const sub = await js.pullSubscribe(name, opts);
   sub.pull({ expires: 5000 });
+  await nc.flush();
   await jsm.consumers.delete(name, name);
 
   const err = await d;
@@ -4592,6 +4595,7 @@ Deno.test("jetstream - pullSub iter consumer deleted", async () => {
     d.resolve(err);
   });
   sub.pull({ expires: 5000 });
+  await nc.flush();
   await jsm.consumers.delete(name, name);
 
   const err = await d;

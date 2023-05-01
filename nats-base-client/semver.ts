@@ -44,7 +44,9 @@ export enum Feature {
   JS_NEW_CONSUMER_CREATE_API = "js_new_consumer_create",
   JS_ALLOW_DIRECT = "js_allow_direct",
   JS_MULTIPLE_CONSUMER_FILTER = "js_multiple_consumer_filter",
+  JS_SIMPLIFICATION = "js_simplification",
   JS_STREAM_CONSUMER_METADATA = "js_stream_consumer_metadata",
+  JS_CONSUMER_FILTER_SUBJECTS = "js_consumer_filter_subjects",
 }
 
 type FeatureVersion = {
@@ -94,7 +96,9 @@ export class Features {
     this.set(Feature.JS_NEW_CONSUMER_CREATE_API, "2.9.0");
     this.set(Feature.JS_ALLOW_DIRECT, "2.9.0");
     this.set(Feature.JS_MULTIPLE_CONSUMER_FILTER, "2.10.0");
+    this.set(Feature.JS_SIMPLIFICATION, "2.9.4");
     this.set(Feature.JS_STREAM_CONSUMER_METADATA, "2.10.0");
+    this.set(Feature.JS_CONSUMER_FILTER_SUBJECTS, "2.10.0");
 
     this.disabled.forEach((f) => {
       this.features.delete(f);

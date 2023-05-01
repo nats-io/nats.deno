@@ -15,6 +15,7 @@
 
 import type {
   ConsumerOptsBuilder,
+  Consumers,
   KV,
   KvOptions,
   ObjectStore,
@@ -85,6 +86,7 @@ import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
+import { ConsumersImpl } from "./consumers.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -120,10 +122,12 @@ class ViewsImpl implements Views {
 
 export class JetStreamClientImpl extends BaseApiClient
   implements JetStreamClient {
+  consumers: Consumers;
   api: ConsumerAPI;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
     this.api = new ConsumerAPIImpl(nc, opts);
+    this.consumers = new ConsumersImpl(this.api);
   }
 
   get apiPrefix(): string {

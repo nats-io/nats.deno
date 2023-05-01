@@ -67,7 +67,7 @@ Deno.test("heartbeat - timers fire", async () => {
   assert(hb.timer);
   hb.cancel();
   assertEquals(hb.timer, undefined);
-  assert(status.length >= 3);
+  assert(status.length >= 3, `status ${status.length} >= 3`);
   assertEquals(status[0].type, DebugEvents.PingTimer);
 });
 

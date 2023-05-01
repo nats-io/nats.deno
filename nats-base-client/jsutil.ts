@@ -166,6 +166,8 @@ export enum Js409Errors {
   MaxWaitingExceeded = "exceeded maxwaiting", // not terminal
   IdleHeartbeatMissed = "idle heartbeats missed",
   ConsumerDeleted = "consumer deleted",
+  // FIXME: consumer deleted - instead of no responder (terminal error)
+  //   leadership changed -
 }
 
 let MAX_WAITING_FAIL = false;

@@ -26,6 +26,7 @@ export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Service, ServiceConfig } from "./service.ts";
+import { OrderedConsumerOptions } from "./consumer.ts";
 
 export const Empty = new Uint8Array(0);
 
@@ -1058,6 +1059,23 @@ export interface JetStreamClient {
    * Returns the JS API prefix as processed from the JetStream Options
    */
   apiPrefix: string;
+
+  consumers: Consumers;
+}
+
+export interface Consumers {
+  /**
+   * Returns the Consumer configured for the specified stream having the specified name.
+   * {@link Consumer} present a simplified construct for handling JetStream messages.
+   * @param stream
+   * @param name
+   */
+  get(stream: string, name: string): Promise<Consumer>;
+
+  ordered(
+    stream: string,
+    opts?: Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer>;
 }
 
 export interface ConsumerOpts {
@@ -2602,15 +2620,145 @@ export interface ConsumerUpdateConfig {
   metadata?: Record<string, string>;
 }
 
-export interface Consumer {
+export type ConsumeBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & ThresholdBytes
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+export type ConsumeMessages =
+  & Partial<MaxMessages>
+  & ThresholdMessages
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+/**
+ * Options for fetching
+ */
+export type FetchBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
+
+/**
+ * Options for a c
+ */
+export type FetchMessages =
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
+
+export type FetchOptions = FetchBytes | FetchMessages;
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
+
+export type PullConsumerOptions = FetchOptions | ConsumeOptions;
+
+export type MaxMessages = {
+  max_messages: number;
+};
+
+export type MaxBytes = {
+  max_bytes: number;
+};
+
+export type ThresholdMessages = {
+  threshold_messages?: number;
+};
+
+export type ThresholdBytes = {
+  threshold_bytes?: number;
+};
+
+export type Expires = {
+  expires?: number;
+};
+
+export type IdleHeartbeat = {
+  idle_heartbeat?: number;
+};
+
+export type ConsumerCallbackFn = (r: Result<JsMsg>) => void;
+export type ConsumeCallback = {
+  callback?: ConsumerCallbackFn;
+};
+
+/**
+ * ConsumerEvents are informational notifications emitted by ConsumerMessages
+ * that may be of interest to a client.
+ */
+export enum ConsumerEvents {
   /**
-   * The name of the Stream the consumer is bound to
+   * Notification that heartbeats were missed. This notification is informational.
+   * The `data` portion of the status, is a number indicating the number of missed heartbeats.
+   * Note that when a client disconnects, heartbeat tracking is paused while
+   * the client is disconnected.
    */
-  "stream_name": string;
+  HeartbeatsMissed = "heartbeats_missed",
+}
+
+/**
+ * These events represent informational notifications emitted by ConsumerMessages
+ * that can be safely ignored by clients.
+ */
+export enum ConsumerDebugEvents {
   /**
-   * The consumer configuration
+   * DebugEvents are effectively statuses returned by the server that were ignored
+   * by the client. The `data` portion of the
+   * status is just a string indicating the code/message of the status.
    */
-  config: ConsumerConfig;
+  DebugEvent = "debug",
+  /**
+   * Requests for messages can be terminated by the server, these notifications
+   * provide information on the number of messages and/or bytes that couldn't
+   * be satisfied by the consumer request. The `data` portion of the status will
+   * have the format of `{msgsLeft: number, bytesLeft: number}`.
+   */
+  Discard = "discard",
+}
+
+export interface ConsumerStatus {
+  type: ConsumerEvents | ConsumerDebugEvents;
+  data: unknown;
+}
+
+export interface Consumer extends ExportedConsumer {
+  info(cached?: boolean): Promise<ConsumerInfo>;
+  delete(): Promise<boolean>;
+}
+
+export interface Close {
+  close(): Promise<void>;
+}
+
+export type ValueResult<T> = {
+  isError: false;
+  value: T;
+};
+
+export type ErrorResult = {
+  isError: true;
+  error: Error;
+};
+
+/**
+ * Result is a value that may have resulted in an error.
+ */
+export type Result<T> = ValueResult<T> | ErrorResult;
+export interface ConsumerMessages extends QueuedIterator<Result<JsMsg>>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
+}
+
+export interface ExportedConsumer {
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
 }
 
 export interface StreamNames {
