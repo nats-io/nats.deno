@@ -781,3 +781,39 @@ Deno.test("consumers - threshold_messages bytes", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("consumers - next", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, stream);
+  let ci = await c.info(true);
+  assertEquals(ci.num_pending, 0);
+
+  let m = await c.next({ expires: 1000 });
+  assertEquals(m, null);
+
+  await Promise.all([js.publish(subj), js.publish(subj)]);
+  ci = await c.info();
+  assertEquals(ci.num_pending, 2);
+
+  m = await c.next();
+  assertEquals(m?.seq, 1);
+  m?.ack();
+  await nc.flush();
+
+  ci = await c.info();
+  assertEquals(ci?.num_pending, 1);
+  m = await c.next();
+  assertEquals(m?.seq, 2);
+  m?.ack();
+
+  await cleanup(ns, nc);
+});
