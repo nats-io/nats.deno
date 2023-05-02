@@ -1253,3 +1253,10 @@ Deno.test("basics - msg typed payload", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("basics - ipv4 mapped to ipv6", async () => {
+  const ns = await NatsServer.start({ port: 4222 });
+  const nc = await connect({ servers: [`::ffff:127.0.0.1`] });
+  const nc2 = await connect({ servers: [`[::ffff:127.0.0.1]:${ns.port}`] });
+  await cleanup(ns, nc, nc2);
+});

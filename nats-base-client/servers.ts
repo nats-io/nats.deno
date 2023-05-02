@@ -42,6 +42,19 @@ function isIPV6(hp: string) {
   return !isIPV4OrHostname(hp);
 }
 
+function filterIpv6MappedToIpv4(hp: string): string {
+  const prefix = "::FFFF:";
+  const idx = hp.toUpperCase().indexOf(prefix);
+  if (idx !== -1 && hp.indexOf(".") !== -1) {
+    // we have something like: ::FFFF:127.0.0.1 or [::FFFF:127.0.0.1]:4222
+    let ip = hp.substring(idx + prefix.length);
+    ip = ip.replace("[", "");
+    return ip.replace("]", "");
+  }
+
+  return hp;
+}
+
 export function hostPort(
   u: string,
 ): { listen: string; hostname: string; port: number } {
@@ -50,13 +63,13 @@ export function hostPort(
   if (u.match(/^(.*:\/\/)(.*)/m)) {
     u = u.replace(/^(.*:\/\/)(.*)/gm, "$2");
   }
-
   // in web environments, URL may not be a living standard
   // that means that protocols other than HTTP/S are not
   // parsable correctly.
 
   // the third complication is that we may have been given
-  // an IPv6
+  // an IPv6 or worse IPv6 mapping an Ipv4
+  u = filterIpv6MappedToIpv4(u);
 
   // we only wrap cases where they gave us a plain ipv6
   // and we are not already bracketed
