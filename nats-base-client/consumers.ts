@@ -25,18 +25,26 @@ import { Feature } from "./semver.ts";
 
 export class ConsumersImpl implements Consumers {
   api: ConsumerAPI;
+  notified: boolean;
   constructor(api: ConsumerAPI) {
     this.api = api;
+    this.notified = false;
   }
 
   checkVersion(ordered = false): Promise<void> {
+    if (!this.notified) {
+      this.notified = true;
+      console.log(
+        `\u001B[33m >> consumers framework is beta functionality \u001B[0m`,
+      );
+    }
     const fv = (this.api as ConsumerAPIImpl).nc.features.get(
       Feature.JS_SIMPLIFICATION,
     );
     if (!fv.ok) {
       return Promise.reject(
         new Error(
-          `jetstream simplification is only supported on servers ${fv.min} or better`,
+          `consumers framework is only supported on servers ${fv.min} or better`,
         ),
       );
     }
@@ -47,7 +55,7 @@ export class ConsumersImpl implements Consumers {
       if (!fv.ok) {
         return Promise.reject(
           new Error(
-            `jetstream simplification ordered consumer is only supported on servers ${fv.min} or better`,
+            `consumers framework's ordered consumer is only supported on servers ${fv.min} or better`,
           ),
         );
       }
