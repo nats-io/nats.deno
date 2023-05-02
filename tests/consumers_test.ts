@@ -38,7 +38,6 @@ import {
 } from "../nats-base-client/types.ts";
 import { StringCodec } from "../nats-base-client/codec.ts";
 import { deferred, nanos, nuid } from "../nats-base-client/mod.ts";
-import { fail } from "https://deno.land/std@0.179.0/testing/asserts.ts";
 import { NatsServer } from "./helpers/launcher.ts";
 import { connect } from "../src/connect.ts";
 import { PullConsumerMessagesImpl } from "../nats-base-client/consumermessages.ts";
@@ -176,13 +175,8 @@ Deno.test("consumers - fetch no messages", async () => {
     max_messages: 100,
     expires: 1000,
   });
-  for await (const o of iter) {
-    if (o.isError) {
-      console.error(o.error);
-      continue;
-    }
-    console.log(o.value.seq);
-    o.value?.ack();
+  for await (const m of iter) {
+    m.ack();
   }
   assertEquals(iter.getReceived(), 0);
   assertEquals(iter.getProcessed(), 0);
@@ -206,12 +200,8 @@ Deno.test("consumers - fetch less messages", async () => {
   const consumer = await js.consumers.get(stream, "b");
   assertEquals((await consumer.info(true)).num_pending, 1);
   const iter = await consumer.fetch({ expires: 1000, max_messages: 10 });
-  for await (const o of iter) {
-    if (o.isError) {
-      console.error(o.error);
-      continue;
-    }
-    o.value.ack();
+  for await (const m of iter) {
+    m.ack();
   }
   assertEquals(iter.getReceived(), 1);
   assertEquals(iter.getProcessed(), 1);
@@ -242,12 +232,8 @@ Deno.test("consumers - fetch exactly messages", async () => {
   assertEquals((await consumer.info(true)).num_pending, 200);
 
   const iter = await consumer.fetch({ expires: 5000, max_messages: 100 });
-  for await (const o of iter) {
-    if (o.isError) {
-      fail(`failed with ${o.error}`);
-    } else {
-      o.value.ack();
-    }
+  for await (const m of iter) {
+    m.ack();
   }
   assertEquals(iter.getReceived(), 100);
   assertEquals(iter.getProcessed(), 100);
@@ -280,18 +266,14 @@ Deno.test("consumers - consume", async () => {
     expires: 10_000,
     max_messages: 50_000,
   });
-  for await (const o of iter) {
-    if (o.isError) {
-      fail(`failed with ${o.error}`);
-    } else {
-      o.value.ack();
-      if (o.value.seq === count) {
-        const millis = Date.now() - start;
-        console.log(
-          `consumer: ${millis}ms - ${count / (millis / 1000)} msgs/sec`,
-        );
-        break;
-      }
+  for await (const m of iter) {
+    m.ack();
+    if (m.seq === count) {
+      const millis = Date.now() - start;
+      console.log(
+        `consumer: ${millis}ms - ${count / (millis / 1000)} msgs/sec`,
+      );
+      break;
     }
   }
   assertEquals(iter.getReceived(), count);
@@ -319,12 +301,8 @@ Deno.test("consumers - consume callback rejects iter", async () => {
   const iter = await consumer.consume({
     expires: 10_000,
     max_messages: 50_000,
-    callback: (r) => {
-      if (r.isError) {
-        fail(`failed with ${r.error}`);
-      } else {
-        r.value.ack();
-      }
+    callback: (m) => {
+      m.ack();
     },
   });
   await assertRejects(
@@ -712,13 +690,9 @@ Deno.test("consumers - threshold_messages", async () => {
     }
   })().then();
 
-  for await (const r of iter) {
-    if (r.isError) {
-      fail(r.error.message);
-    } else {
-      if (r.value.info.pending === 0) {
-        iter.stop();
-      }
+  for await (const m of iter) {
+    if (m.info.pending === 0) {
+      iter.stop();
     }
   }
 
@@ -777,19 +751,13 @@ Deno.test("consumers - threshold_messages bytes", async () => {
     }
   })().then();
 
-  for await (const r of iter) {
-    if (r.isError) {
-      fail(r.error.message);
-    } else {
-      // console.log(((r.value as JsMsgImpl).msg as MsgImpl).size())
-      const seq = r.value.seq;
-      a[seq] = true;
-      r.value.ack();
-      if (r.value.info.pending === 0) {
-        setTimeout(() => {
-          iter.stop();
-        }, 1000);
-      }
+  for await (const m of iter) {
+    a[m.seq] = true;
+    m.ack();
+    if (m.info.pending === 0) {
+      setTimeout(() => {
+        iter.stop();
+      }, 1000);
     }
   }
 

@@ -20,7 +20,6 @@ import type {
   ConsumerStatus,
   FetchOptions,
   PullOptions,
-  Result,
   Subscription,
 } from "./types.ts";
 import {
@@ -41,7 +40,7 @@ import { MsgImpl } from "./msg.ts";
 import { Timeout } from "./util.ts";
 import { toJsMsg } from "./jsmsg.ts";
 
-export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
+export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   implements ConsumerMessages {
   consumer: PullConsumerImpl;
   opts: Record<string, number>;
@@ -66,14 +65,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
     super();
     this.consumer = c;
 
-    const args = this.parseOptions(opts, refilling);
-    if (args.isError) {
-      throw args.error;
-    }
+    this.opts = this.parseOptions(opts, refilling);
     this.callback = (opts as ConsumeCallback).callback || null;
     this.noIterator = typeof this.callback === "function";
-
-    this.opts = args.value!;
     this.monitor = null;
     this.pong = null;
     this.pending = { msgs: 0, bytes: 0, requests: 0 };
@@ -150,9 +144,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
             // we got a bad request - no progress here
             if (code === 400) {
               const error = toErr();
-              this._push({
-                isError: true,
-                error,
+              //@ts-ignore: fn
+              this._push(() => {
+                this.stop(error);
               });
             } else if (code === 409 && description === "consumer deleted") {
               const error = toErr();
@@ -166,7 +160,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
           }
         } else {
           // push the user message
-          this._push({ isError: false, value: toJsMsg(msg) });
+          this._push(toJsMsg(msg));
           this.received++;
           if (this.pending.msgs) {
             this.pending.msgs--;
@@ -249,7 +243,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
     this.pull(this.pullOptions());
   }
 
-  _push(r: Result<JsMsg>) {
+  _push(r: JsMsg) {
     if (!this.callback) {
       super.push(r);
     } else {
@@ -261,18 +255,20 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
           fn();
         }
       } catch (err) {
-        this.callback({ isError: true, error: err });
+        this.stop(err);
       }
     }
   }
 
   notify(type: ConsumerEvents | ConsumerDebugEvents, data: unknown) {
     if (this.listeners.length > 0) {
-      this.listeners.forEach((l) => {
-        if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
-          l.push({ type, data });
-        }
-      });
+      (() => {
+        this.listeners.forEach((l) => {
+          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
+            l.push({ type, data });
+          }
+        });
+      })();
     }
   }
 
@@ -381,18 +377,15 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
   parseOptions(
     opts: PullConsumerOptions,
     refilling = false,
-  ): Result<Record<string, number>> {
+  ): Record<string, number> {
     const args = (opts || {}) as Record<string, number>;
     args.max_messages = args.max_messages || 0;
     args.max_bytes = args.max_bytes || 0;
 
     if (args.max_messages !== 0 && args.max_bytes !== 0) {
-      return {
-        isError: true,
-        error: new Error(
-          `only specify one of max_messages or max_bytes`,
-        ),
-      };
+      throw new Error(
+        `only specify one of max_messages or max_bytes`,
+      );
     }
 
     // we must have at least one limit - default to 100 msgs
@@ -410,10 +403,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
 
     args.expires = args.expires || 30_000;
     if (args.expires < 1000) {
-      return {
-        isError: true,
-        error: new Error("expires should be at least 1000ms"),
-      };
+      throw new Error("expires should be at least 1000ms");
     }
 
     // require idle_heartbeat
@@ -430,7 +420,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
       args.threshold_bytes = args.threshold_bytes || minBytes;
     }
 
-    return { value: args, isError: false };
+    return args;
   }
 
   status(): Promise<AsyncIterable<ConsumerStatus>> {
@@ -440,7 +430,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<Result<JsMsg>>
   }
 }
 
-export class OrderedConsumerMessages extends QueuedIteratorImpl<Result<JsMsg>>
+export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
   implements ConsumerMessages {
   src!: PullConsumerMessagesImpl;
 

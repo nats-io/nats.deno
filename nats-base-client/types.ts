@@ -2642,6 +2642,10 @@ export interface ConsumerUpdateConfig {
   metadata?: Record<string, string>;
 }
 
+export type Ordered = {
+  ordered: true;
+};
+
 export type ConsumeBytes =
   & MaxBytes
   & Partial<MaxMessages>
@@ -2656,6 +2660,8 @@ export type ConsumeMessages =
   & Expires
   & IdleHeartbeat
   & ConsumeCallback;
+
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 
 /**
  * Options for fetching
@@ -2675,7 +2681,6 @@ export type FetchMessages =
   & IdleHeartbeat;
 
 export type FetchOptions = FetchBytes | FetchMessages;
-export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 
 export type PullConsumerOptions = FetchOptions | ConsumeOptions;
 
@@ -2736,7 +2741,7 @@ export type IdleHeartbeat = {
   idle_heartbeat?: number;
 };
 
-export type ConsumerCallbackFn = (r: Result<JsMsg>) => void;
+export type ConsumerCallbackFn = (r: JsMsg) => void;
 export type ConsumeCallback = {
   /**
    * Process messages using a callback instead of an iterator. Note that when using callbacks,
@@ -2791,6 +2796,15 @@ export interface ConsumerStatus {
   data: unknown;
 }
 
+export interface ExportedConsumer {
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
+}
+
 export interface Consumer extends ExportedConsumer {
   info(cached?: boolean): Promise<ConsumerInfo>;
   delete(): Promise<boolean>;
@@ -2800,12 +2814,12 @@ export interface Close {
   close(): Promise<void>;
 }
 
-export type ValueResult<T> = {
+type ValueResult<T> = {
   isError: false;
   value: T;
 };
 
-export type ErrorResult = {
+type ErrorResult = {
   isError: true;
   error: Error;
 };
@@ -2813,18 +2827,10 @@ export type ErrorResult = {
 /**
  * Result is a value that may have resulted in an error.
  */
-export type Result<T> = ValueResult<T> | ErrorResult;
-export interface ConsumerMessages extends QueuedIterator<Result<JsMsg>>, Close {
-  status(): Promise<AsyncIterable<ConsumerStatus>>;
-}
+type Result<T> = ValueResult<T> | ErrorResult;
 
-export interface ExportedConsumer {
-  fetch(
-    opts?: FetchOptions,
-  ): Promise<ConsumerMessages>;
-  consume(
-    opts?: ConsumeOptions,
-  ): Promise<ConsumerMessages>;
+export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
 }
 
 export interface StreamNames {

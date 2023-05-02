@@ -27,7 +27,6 @@ import {
   FetchOptions,
   JsMsg,
   ReplayPolicy,
-  Result,
 } from "./types.ts";
 import { timeout } from "./util.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
@@ -228,23 +227,22 @@ export class OrderedPullConsumerImpl implements Consumer {
 
   internalHandler(serial: number) {
     // this handler will be noop if the consumer's serial changes
-    return (r: Result<JsMsg>): void => {
+    return (m: JsMsg): void => {
       if (this.serial !== serial) {
         return;
       }
-      if (!r.isError) {
-        const dseq = r.value.info.deliverySequence;
-        if (dseq !== this.cursor.deliver_seq + 1) {
-          this.reset(this.opts);
-          return;
-        }
-        this.cursor.deliver_seq = dseq;
-        this.cursor.stream_seq = r.value.info.streamSequence;
+      const dseq = m.info.deliverySequence;
+      if (dseq !== this.cursor.deliver_seq + 1) {
+        this.reset(this.opts);
+        return;
       }
+      this.cursor.deliver_seq = dseq;
+      this.cursor.stream_seq = m.info.streamSequence;
+
       if (this.userCallback) {
-        this.userCallback(r);
+        this.userCallback(m);
       } else {
-        this.iter?.push(r);
+        this.iter?.push(m);
       }
     };
   }

@@ -18,10 +18,9 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
-  fail,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import { DeliverPolicy, JsMsg, Result } from "../nats-base-client/types.ts";
+import { DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
 import { notCompatible } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
@@ -72,23 +71,15 @@ Deno.test("ordered - fetch", async () => {
   assertExists(oc);
 
   let iter = await oc.fetch({ max_messages: 1 });
-  for await (const r of iter) {
-    if (r.isError) {
-      throw r.error;
-    } else {
-      assertEquals(r.value.subject, "test.a");
-      assertEquals(r.value.seq, 1);
-    }
+  for await (const m of iter) {
+    assertEquals(m.subject, "test.a");
+    assertEquals(m.seq, 1);
   }
 
   iter = await oc.fetch({ max_messages: 1 });
-  for await (const r of iter) {
-    if (r.isError) {
-      throw r.error;
-    } else {
-      assertEquals(r.value.subject, "test.b");
-      assertEquals(r.value.seq, 2);
-    }
+  for await (const m of iter) {
+    assertEquals(m.subject, "test.b");
+    assertEquals(m.seq, 2);
   }
 
   await cleanup(ns, nc);
@@ -113,20 +104,16 @@ Deno.test("ordered - fetch reset", async () => {
   const seen: number[] = new Array(3).fill(0);
   let done = deferred();
 
-  const callback = (r: Result<JsMsg>) => {
-    if (r.isError) {
-      throw r.error;
-    } else {
-      const idx = r.value.seq - 1;
-      seen[idx]++;
-      // mess with the internals so we see these again
-      if (seen[idx] === 1) {
-        oc.cursor.deliver_seq--;
-        oc.cursor.stream_seq--;
-      }
-      iter.stop();
-      done.resolve();
+  const callback = (m: JsMsg) => {
+    const idx = m.seq - 1;
+    seen[idx]++;
+    // mess with the internals so we see these again
+    if (seen[idx] === 1) {
+      oc.cursor.deliver_seq--;
+      oc.cursor.stream_seq--;
     }
+    iter.stop();
+    done.resolve();
   };
 
   let iter = await oc.fetch({
@@ -201,21 +188,17 @@ Deno.test("ordered - consume reset", async () => {
   const seen: number[] = new Array(3).fill(0);
   const done = deferred();
 
-  const callback = (r: Result<JsMsg>) => {
-    if (r.isError) {
-      throw r.error;
-    } else {
-      const idx = r.value.seq - 1;
-      seen[idx]++;
-      // mess with the internals so we see these again
-      if (seen[idx] === 1) {
-        oc.cursor.deliver_seq--;
-        oc.cursor.stream_seq--;
-      }
-      if (r.value.info.pending === 0) {
-        iter.stop();
-        done.resolve();
-      }
+  const callback = (r: JsMsg) => {
+    const idx = r.seq - 1;
+    seen[idx]++;
+    // mess with the internals so we see these again
+    if (seen[idx] === 1) {
+      oc.cursor.deliver_seq--;
+      oc.cursor.stream_seq--;
+    }
+    if (r.info.pending === 0) {
+      iter.stop();
+      done.resolve();
     }
   };
 
@@ -248,13 +231,9 @@ Deno.test("ordered - consume", async () => {
   assertExists(oc);
 
   const iter = await oc.consume({ max_messages: 1 });
-  for await (const r of iter) {
-    if (r.isError) {
-      throw r.error;
-    } else {
-      if (r.value.info.pending === 0) {
-        break;
-      }
+  for await (const m of iter) {
+    if (m.info.pending === 0) {
+      break;
     }
   }
 
@@ -279,16 +258,13 @@ Deno.test("ordered - filters consume", async () => {
   assertExists(oc);
 
   const iter = await oc.consume();
-  for await (const r of iter) {
-    if (r.isError) {
-      fail(r.error.message);
-    } else {
-      assertEquals("test.b", r.value.subject);
-      if (r.value.info.pending === 0) {
-        break;
-      }
+  for await (const m of iter) {
+    assertEquals("test.b", m.subject);
+    if (m.info.pending === 0) {
+      break;
     }
   }
+
   assertEquals(iter.getProcessed(), 1);
 
   await cleanup(ns, nc);
@@ -312,12 +288,8 @@ Deno.test("ordered - filters fetch", async () => {
   assertExists(oc);
 
   const iter = await oc.fetch({ expires: 1000 });
-  for await (const r of iter) {
-    if (r.isError) {
-      fail(r.error.message);
-    } else {
-      assertEquals("test.b", r.value.subject);
-    }
+  for await (const m of iter) {
+    assertEquals("test.b", m.subject);
   }
   assertEquals(iter.getProcessed(), 1);
 
@@ -419,12 +391,8 @@ Deno.test("ordered - last per subject", async () => {
   });
   let iter = await oc.fetch({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 2);
     }
   })();
 
@@ -433,13 +401,9 @@ Deno.test("ordered - last per subject", async () => {
   });
   iter = await oc.consume({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-        break;
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 2);
+      break;
     }
   })();
 
@@ -466,12 +430,8 @@ Deno.test("ordered - start sequence", async () => {
 
   let iter = await oc.fetch({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 2);
     }
   })();
 
@@ -481,13 +441,9 @@ Deno.test("ordered - start sequence", async () => {
   iter = await oc.consume({ max_messages: 1 });
   await (async () => {
     for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-        assertEquals(r.value.subject, "test.b");
-        break;
-      }
+      assertEquals(r.info.streamSequence, 2);
+      assertEquals(r.subject, "test.b");
+      break;
     }
   })();
 
@@ -514,13 +470,9 @@ Deno.test("ordered - last", async () => {
 
   let iter = await oc.fetch({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-        assertEquals(r.value.subject, "test.b");
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 2);
+      assertEquals(m.subject, "test.b");
     }
   })();
 
@@ -529,14 +481,10 @@ Deno.test("ordered - last", async () => {
   });
   iter = await oc.consume({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 2);
-        assertEquals(r.value.subject, "test.b");
-        break;
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 2);
+      assertEquals(m.subject, "test.b");
+      break;
     }
   })();
 
@@ -564,13 +512,9 @@ Deno.test("ordered - new", async () => {
   let iter = await oc.fetch({ max_messages: 1 });
   await (async () => {
     await js.publish("test.c");
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 3);
-        assertEquals(r.value.subject, "test.c");
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 3);
+      assertEquals(m.subject, "test.c");
     }
   })();
 
@@ -580,14 +524,10 @@ Deno.test("ordered - new", async () => {
   iter = await oc.consume({ max_messages: 1 });
   await (async () => {
     await js.publish("test.d");
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 4);
-        assertEquals(r.value.subject, "test.d");
-        break;
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 4);
+      assertEquals(m.subject, "test.d");
+      break;
     }
   })();
 
@@ -620,13 +560,9 @@ Deno.test("ordered - start time", async () => {
 
   let iter = await oc.fetch({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 3);
-        assertEquals(r.value.subject, "test.c");
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 3);
+      assertEquals(m.subject, "test.c");
     }
   })();
 
@@ -636,14 +572,10 @@ Deno.test("ordered - start time", async () => {
   });
   iter = await oc.consume({ max_messages: 1 });
   await (async () => {
-    for await (const r of iter) {
-      if (r.isError) {
-        fail(r.error.message);
-      } else {
-        assertEquals(r.value.info.streamSequence, 3);
-        assertEquals(r.value.subject, "test.c");
-        break;
-      }
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 3);
+      assertEquals(m.subject, "test.c");
+      break;
     }
   })();
 

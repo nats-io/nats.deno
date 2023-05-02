@@ -76,7 +76,6 @@ export type {
   Republish,
   RequestManyOptions,
   RequestOptions,
-  Result,
   RoKV,
   SeqMsgRequest,
   SequenceInfo,
