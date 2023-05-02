@@ -993,6 +993,7 @@ export interface JetStreamClient {
    * @param stream - the name of the stream
    * @param consumer - the consumer's durable name (if durable) or name if ephemeral
    * @param expires - the number of milliseconds to wait for a message
+   * @deprecated - use {@link Consumer#fetch()}
    */
   pull(stream: string, consumer: string, expires?: number): Promise<JsMsg>;
 
@@ -1001,6 +1002,7 @@ export interface JetStreamClient {
    * @param stream - the name of the stream
    * @param durable - the consumer's durable name (if durable) or name if ephemeral
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()}
    */
   fetch(
     stream: string,
@@ -1024,6 +1026,7 @@ export interface JetStreamClient {
    *
    * @param subject - a subject used to locate the stream
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()} or {@link Consumer#consume()}
    */
   pullSubscribe(
     subject: string,
@@ -1044,6 +1047,7 @@ export interface JetStreamClient {
    *
    * @param subject - a subject used to locate the stream
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()} or {@link Consumer#consume()}
    */
   subscribe(
     subject: string,
@@ -1060,18 +1064,34 @@ export interface JetStreamClient {
    */
   apiPrefix: string;
 
+  /**
+   * Returns the interface for accessing {@link Consumers}. Consumers
+   * allow you to process messages stored in a stream. To create a
+   * consumer use {@link JetStreamManager}.
+   */
   consumers: Consumers;
 }
 
 export interface Consumers {
   /**
    * Returns the Consumer configured for the specified stream having the specified name.
-   * {@link Consumer} present a simplified construct for handling JetStream messages.
+   * Consumers are created with {@link JetStreamManager}.
+   *
+   * {@link Consumer}.
    * @param stream
    * @param name
    */
   get(stream: string, name: string): Promise<Consumer>;
 
+  /**
+   * Returns an ordered consumer for the specified stream. Ordered consumers
+   * track that messages must be delivered in order. If there's any inconsistency
+   * the ordered consumer will recreate the underlying consumer at the appropiate
+   * sequence.
+   *
+   * @param stream
+   * @param opts
+   */
   ordered(
     stream: string,
     opts?: Partial<OrderedConsumerOptions>,
@@ -2494,6 +2514,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
   "deliver_policy": DeliverPolicy;
   /**
    * Allows push consumers to form a queue group
+   * @deprecated
    */
   "deliver_group"?: string;
   /**
@@ -2571,6 +2592,7 @@ export interface ConsumerUpdateConfig {
   "headers_only"?: boolean;
   /**
    * The subject where the push consumer should be sent the messages
+   * @deprecated
    */
   "deliver_subject"?: string;
   /**
@@ -2620,6 +2642,10 @@ export interface ConsumerUpdateConfig {
   metadata?: Record<string, string>;
 }
 
+export type Ordered = {
+  ordered: true;
+};
+
 export type ConsumeBytes =
   & MaxBytes
   & Partial<MaxMessages>
@@ -2634,6 +2660,8 @@ export type ConsumeMessages =
   & Expires
   & IdleHeartbeat
   & ConsumeCallback;
+
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 
 /**
  * Options for fetching
@@ -2653,36 +2681,73 @@ export type FetchMessages =
   & IdleHeartbeat;
 
 export type FetchOptions = FetchBytes | FetchMessages;
-export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 
 export type PullConsumerOptions = FetchOptions | ConsumeOptions;
 
 export type MaxMessages = {
+  /**
+   * Maximum number of messages to retrieve.
+   * @default 100 messages
+   */
   max_messages: number;
 };
 
 export type MaxBytes = {
+  /**
+   * Maximum number of bytes to retrieve - note request must fit the entire message
+   * to be honored (this includes, subject, headers, etc). Partial messages are not
+   * supported.
+   */
   max_bytes: number;
 };
 
 export type ThresholdMessages = {
+  /**
+   * Threshold message count on which the client will auto-trigger additional requests
+   * from the server. This is only applicable to `consume`.
+   * @default  75% of {@link max_messages}.
+   */
   threshold_messages?: number;
 };
 
 export type ThresholdBytes = {
+  /**
+   * Threshold bytes on which the client wil auto-trigger additional message requests
+   * from the server. This is only applicable to `consume`.
+   * @default 75% of {@link max_bytes}.
+   */
   threshold_bytes?: number;
 };
 
 export type Expires = {
+  /**
+   * Amount of milliseconds to wait for messages before issuing another request.
+   * Note this value shouldn't be set by the user, as the default provides proper behavior.
+   * A low value will stress the server.
+   *
+   * Minimum value is 1000 (1s).
+   * @default 30_000 (30s)
+   */
   expires?: number;
 };
 
 export type IdleHeartbeat = {
+  /**
+   * Number of milliseconds to wait for a server heartbeat when not actively receiving
+   * messages. When two or more heartbeats are missed in a row, the consumer will emit
+   * a notification. Note this value shouldn't be set by the user, as the default provides
+   * the proper behavior. A low value will stress the server.
+   */
   idle_heartbeat?: number;
 };
 
-export type ConsumerCallbackFn = (r: Result<JsMsg>) => void;
+export type ConsumerCallbackFn = (r: JsMsg) => void;
 export type ConsumeCallback = {
+  /**
+   * Process messages using a callback instead of an iterator. Note that when using callbacks,
+   * the callback cannot be async. If you must use async functionality, process messages
+   * using an iterator.
+   */
   callback?: ConsumerCallbackFn;
 };
 
@@ -2718,11 +2783,26 @@ export enum ConsumerDebugEvents {
    * have the format of `{msgsLeft: number, bytesLeft: number}`.
    */
   Discard = "discard",
+  /**
+   * Notifies whenever there's a request for additional messages from the server.
+   * This notification telegraphs the request options, which should be treated as
+   * read-only. This notification is only useful for debugging. Data is PullOptions.
+   */
+  Next = "next",
 }
 
 export interface ConsumerStatus {
   type: ConsumerEvents | ConsumerDebugEvents;
   data: unknown;
+}
+
+export interface ExportedConsumer {
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
 }
 
 export interface Consumer extends ExportedConsumer {
@@ -2734,12 +2814,12 @@ export interface Close {
   close(): Promise<void>;
 }
 
-export type ValueResult<T> = {
+type ValueResult<T> = {
   isError: false;
   value: T;
 };
 
-export type ErrorResult = {
+type ErrorResult = {
   isError: true;
   error: Error;
 };
@@ -2747,18 +2827,10 @@ export type ErrorResult = {
 /**
  * Result is a value that may have resulted in an error.
  */
-export type Result<T> = ValueResult<T> | ErrorResult;
-export interface ConsumerMessages extends QueuedIterator<Result<JsMsg>>, Close {
-  status(): Promise<AsyncIterable<ConsumerStatus>>;
-}
+type Result<T> = ValueResult<T> | ErrorResult;
 
-export interface ExportedConsumer {
-  fetch(
-    opts?: FetchOptions,
-  ): Promise<ConsumerMessages>;
-  consume(
-    opts?: ConsumeOptions,
-  ): Promise<ConsumerMessages>;
+export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
 }
 
 export interface StreamNames {

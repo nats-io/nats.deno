@@ -139,7 +139,6 @@ export type {
   RepublishHeaders,
   RequestManyOptions,
   RequestOptions,
-  Result,
   RoKV,
   SchemaInfo,
   SeqMsgRequest,

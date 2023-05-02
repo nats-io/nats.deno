@@ -156,21 +156,6 @@ await js.publish("a.b", Empty, { expect: { lastSubjectSequence: pa.seq } });
 
 ### Processing Messages
 
-Starting with nats-base-client (NBC) 1.14.0, a new API for consuming and
-processing messages in JetStream is available in the JavaScript clients. The new
-API is currently provided as a _preview_, and will deprecate previous JetStream
-subscribe APIs as [_legacy_](./legacy_jetstream.md). It is encouraged to start
-experimenting with the new APIs as soon as possible.
-
-The new API:
-
-- Streamlines consumer creation/updates only happen on JSM APIs (or via ordered
-  consumer operations)
-- Consuming messages requires a consumer to already exist
-- Adopts a "pull" consumer for all consumer operations, however messages are
-  presented to the client as if they were a "push" consumer.
--
-
 Messages are processed by subscriptions to the stream. The JavaScript client
 provides several ways a consumer can read its messages from a stream.
 
