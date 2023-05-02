@@ -26,9 +26,10 @@ import {
   FetchMessages,
   FetchOptions,
   JsMsg,
+  NextOptions,
   ReplayPolicy,
 } from "./types.ts";
-import { timeout } from "./util.ts";
+import { deferred, timeout } from "./util.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import {
   OrderedConsumerMessages,
@@ -84,6 +85,38 @@ export class PullConsumerImpl implements Consumer {
     m.trackTimeout(timer);
 
     return Promise.resolve(m);
+  }
+
+  next(
+    opts: NextOptions = { expires: 30_000 },
+  ): Promise<JsMsg | null> {
+    const d = deferred<JsMsg | null>();
+    const fopts = opts as FetchMessages;
+    fopts.max_messages = 1;
+
+    const iter = new PullConsumerMessagesImpl(this, fopts, false);
+    (async () => {
+      for await (const m of iter) {
+        d.resolve(m);
+        break;
+      }
+    })().catch();
+    // FIXME: need some way to pad this correctly
+    const to = Math.round(iter.opts.expires * 1.05);
+    const timer = timeout(to);
+    iter.closed().then(() => {
+      d.resolve(null);
+      timer.cancel();
+    }).catch((err) => {
+      d.reject(err);
+    });
+    timer.catch((err) => {
+      d.resolve(null);
+      iter.close().catch();
+    });
+    iter.trackTimeout(timer);
+
+    return d;
   }
 
   delete(): Promise<boolean> {
@@ -318,6 +351,32 @@ export class OrderedPullConsumerImpl implements Consumer {
     this.opts = opts;
     this.iter = new OrderedConsumerMessages();
     return this.reset(opts, true);
+  }
+
+  async next(
+    opts: NextOptions = { expires: 30_000 },
+  ): Promise<JsMsg | null> {
+    const d = deferred<JsMsg | null>();
+    const copts = opts as ConsumeOptions;
+    copts.max_messages = 1;
+    copts.callback = (m) => {
+      // we can clobber the callback, because they are not supported
+      // except on consume, which will fail when we try to fetch
+      this.userCallback = null;
+      d.resolve(m);
+    };
+    const iter = await this.fetch(
+      copts as FetchMessages,
+    ) as OrderedConsumerMessages;
+    iter.iterClosed
+      .then(() => {
+        d.resolve(null);
+      })
+      .catch((err) => {
+        d.reject(err);
+      });
+
+    return d;
   }
 
   delete(): Promise<boolean> {

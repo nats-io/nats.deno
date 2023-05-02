@@ -2646,6 +2646,8 @@ export type Ordered = {
   ordered: true;
 };
 
+export type NextOptions = Expires;
+
 export type ConsumeBytes =
   & MaxBytes
   & Partial<MaxMessages>
@@ -2797,6 +2799,9 @@ export interface ConsumerStatus {
 }
 
 export interface ExportedConsumer {
+  next(
+    opts?: NextOptions,
+  ): Promise<JsMsg | null>;
   fetch(
     opts?: FetchOptions,
   ): Promise<ConsumerMessages>;
@@ -2813,21 +2818,6 @@ export interface Consumer extends ExportedConsumer {
 export interface Close {
   close(): Promise<void>;
 }
-
-type ValueResult<T> = {
-  isError: false;
-  value: T;
-};
-
-type ErrorResult = {
-  isError: true;
-  error: Error;
-};
-
-/**
- * Result is a value that may have resulted in an error.
- */
-type Result<T> = ValueResult<T> | ErrorResult;
 
 export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
   status(): Promise<AsyncIterable<ConsumerStatus>>;

@@ -348,7 +348,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   }
 
   closed(): Promise<void> {
-    // FIXME: check what ordered consumer usage of this is by user code
     return this.iterClosed;
   }
 

@@ -581,3 +581,30 @@ Deno.test("ordered - start time", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("ordered - next", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test"] });
+  const js = nc.jetstream();
+
+  const c = await js.consumers.ordered("test");
+  let m = await c.next({ expires: 1000 });
+  assertEquals(m, null);
+
+  await Promise.all([
+    js.publish("test"),
+    js.publish("test"),
+  ]);
+
+  m = await c.next();
+  assertEquals(m?.seq, 1);
+
+  m = await c.next();
+  assertEquals(m?.seq, 2);
+
+  await cleanup(ns, nc);
+});

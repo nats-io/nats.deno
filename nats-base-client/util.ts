@@ -24,6 +24,21 @@ export const CRLF = DataBuffer.fromAscii(CR_LF);
 export const CR = new Uint8Array(CRLF)[0]; // 13
 export const LF = new Uint8Array(CRLF)[1]; // 10
 
+export type ValueResult<T> = {
+  isError: false;
+  value: T;
+};
+
+export type ErrorResult = {
+  isError: true;
+  error: Error;
+};
+
+/**
+ * Result is a value that may have resulted in an error.
+ */
+export type Result<T> = ValueResult<T> | ErrorResult;
+
 export function isUint8Array(a: unknown): boolean {
   return a instanceof Uint8Array;
 }
