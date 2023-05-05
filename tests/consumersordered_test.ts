@@ -34,7 +34,7 @@ Deno.test("ordered - get", async () => {
 
   await assertRejects(
     async () => {
-      await js.consumers.ordered("a");
+      await js.consumers.get("a");
     },
     Error,
     "stream not found",
@@ -44,7 +44,7 @@ Deno.test("ordered - get", async () => {
   await jsm.streams.add({ name: "test", subjects: ["test"] });
   await js.publish("test");
 
-  const oc = await js.consumers.ordered("test") as OrderedPullConsumerImpl;
+  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
   assertExists(oc);
 
   const ci = await oc.info();
@@ -67,7 +67,7 @@ Deno.test("ordered - fetch", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test") as OrderedPullConsumerImpl;
+  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
   assertExists(oc);
 
   let iter = await oc.fetch({ max_messages: 1 });
@@ -98,7 +98,7 @@ Deno.test("ordered - fetch reset", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test") as OrderedPullConsumerImpl;
+  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
   assertExists(oc);
 
   const seen: number[] = new Array(3).fill(0);
@@ -182,7 +182,7 @@ Deno.test("ordered - consume reset", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test") as OrderedPullConsumerImpl;
+  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
   assertExists(oc);
 
   const seen: number[] = new Array(3).fill(0);
@@ -227,7 +227,7 @@ Deno.test("ordered - consume", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test") as OrderedPullConsumerImpl;
+  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
   assertExists(oc);
 
   const iter = await oc.consume({ max_messages: 1 });
@@ -254,7 +254,7 @@ Deno.test("ordered - filters consume", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test", { filterSubjects: ["test.b"] });
+  const oc = await js.consumers.get("test", { filterSubjects: ["test.b"] });
   assertExists(oc);
 
   const iter = await oc.consume();
@@ -284,7 +284,7 @@ Deno.test("ordered - filters fetch", async () => {
   await js.publish("test.b");
   await js.publish("test.c");
 
-  const oc = await js.consumers.ordered("test", { filterSubjects: ["test.b"] });
+  const oc = await js.consumers.get("test", { filterSubjects: ["test.b"] });
   assertExists(oc);
 
   const iter = await oc.fetch({ expires: 1000 });
@@ -305,7 +305,7 @@ Deno.test("ordered - fetch reject consumer type change or concurrency", async ()
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
   const js = nc.jetstream();
-  const oc = await js.consumers.ordered("test");
+  const oc = await js.consumers.get("test");
   const iter = await oc.fetch({ expires: 3000 });
   (async () => {
     for await (const _r of iter) {
@@ -343,7 +343,7 @@ Deno.test("ordered - consume reject consumer type change or concurrency", async 
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
   const js = nc.jetstream();
-  const oc = await js.consumers.ordered("test");
+  const oc = await js.consumers.get("test");
   const iter = await oc.consume({ expires: 3000 });
   (async () => {
     for await (const _r of iter) {
@@ -386,7 +386,7 @@ Deno.test("ordered - last per subject", async () => {
     js.publish("test.a"),
   ]);
 
-  let oc = await js.consumers.ordered("test", {
+  let oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.LastPerSubject,
   });
   let iter = await oc.fetch({ max_messages: 1 });
@@ -396,7 +396,7 @@ Deno.test("ordered - last per subject", async () => {
     }
   })();
 
-  oc = await js.consumers.ordered("test", {
+  oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.LastPerSubject,
   });
   iter = await oc.consume({ max_messages: 1 });
@@ -424,7 +424,7 @@ Deno.test("ordered - start sequence", async () => {
     js.publish("test.b"),
   ]);
 
-  let oc = await js.consumers.ordered("test", {
+  let oc = await js.consumers.get("test", {
     opt_start_seq: 2,
   });
 
@@ -435,7 +435,7 @@ Deno.test("ordered - start sequence", async () => {
     }
   })();
 
-  oc = await js.consumers.ordered("test", {
+  oc = await js.consumers.get("test", {
     opt_start_seq: 2,
   });
   iter = await oc.consume({ max_messages: 1 });
@@ -464,7 +464,7 @@ Deno.test("ordered - last", async () => {
     js.publish("test.b"),
   ]);
 
-  let oc = await js.consumers.ordered("test", {
+  let oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.Last,
   });
 
@@ -476,7 +476,7 @@ Deno.test("ordered - last", async () => {
     }
   })();
 
-  oc = await js.consumers.ordered("test", {
+  oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.Last,
   });
   iter = await oc.consume({ max_messages: 1 });
@@ -505,7 +505,7 @@ Deno.test("ordered - new", async () => {
     js.publish("test.b"),
   ]);
 
-  let oc = await js.consumers.ordered("test", {
+  let oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.New,
   });
 
@@ -518,7 +518,7 @@ Deno.test("ordered - new", async () => {
     }
   })();
 
-  oc = await js.consumers.ordered("test", {
+  oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.New,
   });
   iter = await oc.consume({ max_messages: 1 });
@@ -551,7 +551,7 @@ Deno.test("ordered - start time", async () => {
   await delay(500);
   const date = new Date().toISOString();
 
-  let oc = await js.consumers.ordered("test", {
+  let oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.StartTime,
     opt_start_time: date,
   });
@@ -566,7 +566,7 @@ Deno.test("ordered - start time", async () => {
     }
   })();
 
-  oc = await js.consumers.ordered("test", {
+  oc = await js.consumers.get("test", {
     deliver_policy: DeliverPolicy.StartTime,
     opt_start_time: date,
   });
@@ -591,7 +591,7 @@ Deno.test("ordered - next", async () => {
   await jsm.streams.add({ name: "test", subjects: ["test"] });
   const js = nc.jetstream();
 
-  const c = await js.consumers.ordered("test");
+  const c = await js.consumers.get("test");
   let m = await c.next({ expires: 1000 });
   assertEquals(m, null);
 

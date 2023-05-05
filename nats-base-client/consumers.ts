@@ -63,7 +63,13 @@ export class ConsumersImpl implements Consumers {
     return Promise.resolve();
   }
 
-  async get(stream: string, name: string): Promise<Consumer> {
+  async get(
+    stream: string,
+    name: string | Partial<OrderedConsumerOptions> = {},
+  ): Promise<Consumer> {
+    if (typeof name === "object") {
+      return this.ordered(stream, name);
+    }
     // check we have support for pending msgs and header notifications
     await this.checkVersion();
 

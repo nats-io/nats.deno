@@ -1075,26 +1075,21 @@ export interface JetStreamClient {
 export interface Consumers {
   /**
    * Returns the Consumer configured for the specified stream having the specified name.
-   * Consumers are created with {@link JetStreamManager}.
+   * Consumers are typically created with {@link JetStreamManager}. If no name is specified,
+   * the Consumers API will return an ordered consumer.
+   *
+   * An ordered consumer expects messages to be delivered in order. If there's
+   * any inconsistency, the ordered consumer will recreate the underlying consumer at the
+   * correct sequence. Note that ordered consumers don't yield messages that can be acked
+   * because the client can simply recreate the consumer.
    *
    * {@link Consumer}.
    * @param stream
-   * @param name
+   * @param name or OrderedConsumer options - if not specified an ordered consumer is returned.
    */
-  get(stream: string, name: string): Promise<Consumer>;
-
-  /**
-   * Returns an ordered consumer for the specified stream. Ordered consumers
-   * track that messages must be delivered in order. If there's any inconsistency
-   * the ordered consumer will recreate the underlying consumer at the appropiate
-   * sequence.
-   *
-   * @param stream
-   * @param opts
-   */
-  ordered(
+  get(
     stream: string,
-    opts?: Partial<OrderedConsumerOptions>,
+    name?: string | Partial<OrderedConsumerOptions>,
   ): Promise<Consumer>;
 }
 
