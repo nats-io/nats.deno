@@ -64,7 +64,7 @@ Deno.test("consumers - min supported server", async () => {
 
   await assertRejects(
     async () => {
-      await js.consumers.ordered(stream);
+      await js.consumers.get(stream);
     },
     Error,
     "consumers framework is only supported on servers",
