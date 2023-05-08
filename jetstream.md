@@ -8,9 +8,9 @@ associated with a stream.
 
 Messages are replayed from a stream by _consumers_. A consumer configuration
 specifies which messages should be presented. For example a consumer may only be
-interested in viewing messages from a specific sequence or since a specific
-time. The configuration also specifies if the server should require for a
-message to be acknowledged, and how long to wait for acknowledgements. The
+interested in viewing messages from a specific sequence or starting from a
+specific time. The configuration also specifies if the server should require for
+a message to be acknowledged, and how long to wait for acknowledgements. The
 consumer configuration also specifies options to control the rate at which
 messages are presented to the client.
 
@@ -27,10 +27,10 @@ The new generation of Javascript clients:
 
 all support JetStream. Please report any issues you find.
 
-## JetStreamManager
+## JetStreamManager (JSM)
 
 The client provides CRUD functionality to manage streams and consumers, via
-JetStreamManager. To create a JetStream manager:
+JetStreamManager. To access a JetStream manager:
 
 ```typescript
 const jsm = await nc.jetstreamManager();
@@ -47,7 +47,7 @@ const stream = "mystream";
 const subj = `mystream.*`;
 await jsm.streams.add({ name: stream, subjects: [subj] });
 
-// publish a reg nats message directly to the stream
+// jetstream can capture nats core messages
 for (let i = 0; i < 100; i++) {
   nc.publish(`${subj}.a`, Empty);
 }
@@ -91,13 +91,13 @@ consumers.forEach((ci) => {
   console.log(ci);
 });
 
-// add a new durable pull consumer
+// add a new durable consumer
 await jsm.consumers.add(stream, {
   durable_name: "me",
   ack_policy: AckPolicy.Explicit,
 });
 
-// retrieve a consumer's configuration
+// retrieve a consumer's status and configuration
 const ci = await jsm.consumers.info(stream, "me");
 console.log(ci);
 
@@ -107,20 +107,20 @@ await jsm.consumers.delete(stream, "me");
 
 ## JetStream Client
 
-The JetStream client functionality presents a JetStream view on a NATS client.
-While you can implement your own API to interact with streams, the JetStream
-APIs make this convenient.
+The JetStream client presents an API for working with messages stored on a
+stream.
 
 ```typescript
+// create the stream
 const jsm = await nc.jetstreamManager();
 await jsm.streams.add({ name: "a", subjects: ["a.*"] });
 
 // create a jetstream client:
 const js = nc.jetstream();
 
-// to publish messages to a stream:
+// to publish messages to a stream
 let pa = await js.publish("a.b");
-// the jetstream returns an acknowledgement with the
+// jetstream returns an acknowledgement with the
 // stream that captured the message, it's assigned sequence
 // and whether the message is a duplicate.
 const stream = pa.stream;
@@ -130,8 +130,9 @@ const duplicate = pa.duplicate;
 // More interesting is the ability to prevent duplicates
 // on messages that are stored in the server. If
 // you assign a message ID, the server will keep looking
-// for the same ID for a configured amount of time, and
-// reject messages that sport the same ID:
+// for the same ID for a configured amount of time (specified
+// by the stream configuration), and reject messages that
+// sport the same ID:
 await js.publish("a.b", Empty, { msgID: "a" });
 
 // you can also specify constraints that should be satisfied.
@@ -156,277 +157,282 @@ await js.publish("a.b", Empty, { expect: { lastSubjectSequence: pa.seq } });
 
 ### Processing Messages
 
+The JetStream API provides different mechanisms for retrieving messages. Each
+mechanism offers a different "buffering strategy" that provides advantages that
+map to how your application works and processes messages.
+
 Starting with nats-base-client (NBC) 1.14.0, a new API for consuming and
-processing messages in JetStream is available in the JavaScript clients. The new
+processing JetStream messages is available in the JavaScript clients. The new
 API is currently provided as a _preview_, and will deprecate previous JetStream
 subscribe APIs as [_legacy_](./legacy_jetstream.md). It is encouraged to start
 experimenting with the new APIs as soon as possible.
 
 The new API:
 
-- Streamlines consumer creation/updates only happen on JSM APIs (or via ordered
-  consumer operations)
-- Consuming messages requires a consumer to already exist
-- Adopts a "pull" consumer for all consumer operations, however messages are
-  presented to the client as if they were a "push" consumer.
--
+- Streamlines consumer creation/updates to only happen on JSM APIs
+- Consuming messages requires a consumer to already exist (unless an ordered
+  consumer) - all consumers are effectively `bound` (a legacy configuration
+  ensured the consumer was not created if it didn't exist).
+- Adopts the "pull" consumer pattern for all consumer operations. The legacy
+  "push" consumer is deprecated. This means that all consumers, except for
+  ordered consumers, can horizontally scale easily.
 
-Messages are processed by subscriptions to the stream. The JavaScript client
-provides several ways a consumer can read its messages from a stream.
+#### Basics
+
+To understand how these strategies differentiate, let's review some aspects of
+processing a stream which will help you choose and design a strategy that works
+for your application.
+
+First and foremost, processing a stream is different than processing NATS core
+messages:
+
+In NATS core, you will be presented with a message whenever a publishes to a
+subject that you have subscribed to. When you process a stream you can filter
+messages found ton a stream to those matching subjects that interest you, but
+the rate of publishing can be much higher, as the stream could store many more
+messages that match your consumer than you would normally receive in a core NATS
+subscription. When processing a stream, you can simulate the original rate at
+which messages were ingested, but typically messages are processed "as fast as
+possible". This means that a client could be overwhelmed by the number of
+messages presented by the server.
+
+In NATS core, if you want to ensure that your message was received as intended,
+you publish data as requests. The receiving client can then respond a result or
+simply to let you know that your request was handled. When processing a stream,
+the consumer configuration dictates whether messages sent to the consumer should
+be acknowledged or not. The server tracks acknowledged messages and knows which
+messages the clients has not seen or may need to be resent. By default, clients
+have 30 seconds to respond or extend the acknowledgement. If a message fails to
+be acknowledged in time, the server could present the client with a duplicate.
+This functionality has a very important implication for the client. Consumers
+should not buffer more messages than they can process and acknowledge within
+this constraint.
+
+Lastly, the NATS server protects itself and when it detects that a client
+connection is not draining data quickly enough, it disconnects it to prevent the
+degradation from impacting other clients.
+
+Given these competing conditions, the JetStream APIs allow a client to express
+not only the buffering strategy for reading a stream at a pace the client can
+sustain, but also how the reading happens.
+
+JetStream allows the client to:
+
+- Request the next message
+- Request the next N messages
+- Request and maintain a buffer of N messages
+
+The first two options allow the client to control and manage its buffering, when
+the client is done processing the messages, it can at its discretion to
+re-request additional message.
+
+The last option auto buffers messages for the client. The client specifies how
+many messages it wants to receive and as it consumes them, the client auto
+requests additional messages attempting to maintain the message buffer filled so
+that performance can be maximized
+
+#### Retrieving the Consumer
+
+Before messages can be read, the consumer should have been created using the JSM
+APIs as shown above. After the consumer is created the client simply retrieves
+it:
+
+```typescript
+const js = nc.jetstream();
+const c = await js.consumers.get(name, "a");
+```
+
+With the consumer in hand, now its time to start reading messages.
 
 #### Requesting a single message
 
-The simplest mechanism is to request a single message. This requires a round
-trip to the server, but it is very simple to use. If no messages are available,
-the request fails. This API requires the consumer to already exist.
+The simplest mechanism to process messages is to request a single message. This
+requires a round trip to the server, but it is very simple to use. If when no
+messages are available, the request will return a null message. Since the client
+is explicitly requesting the message, it is in full control of when to ask for
+the next one.
+
+The request will reject if there's an exceptional condition, such as when the
+underlying consumer or stream was deleted, or the runtime subject permissions
+for the client were changed preventing interactions with JetStream or JetStream
+is not available.
 
 ```typescript
-let msg = await js.pull(stream, durableName);
-msg.ack();
+const js = nc.jetstream();
+const c = await js.consumers.get(name, "b");
+
+// ask for a single message
+const m = await c.next();
+if (m === null) {
+  console.log(`${n} didn't get any messages`);
+} else {
+  m?.ack();
+  console.log(`${n}: ${m.seq} ${m.subject}`);
+}
 ```
+
+The operation takes an optional argument. Currently, the only option is an
+`expires` option which specifies the maximum number of milliseconds to wait for
+a message. This is defaulted to 30 seconds. Note this default is a good value
+because it gives the opportunity to retrieve a message without excessively
+polling the server (which could affect the server performance).
+
+`next()` should be your go-to API when implementing services that process
+messages or work queue streams, as it allows you to horizontally scale your
+processing simply by starting and managing multiple processes.
 
 #### Fetching batch of messages
 
 You can also request more than one message at time. The request is a _long_
 poll. So it remains open until the desired number of messages is received, or
-the expiration time triggers.
+the `expires` time triggers.
 
 ```typescript
-// To get multiple messages in one request you can:
-let msgs = await js.fetch(stream, durable, { batch: 10, expires: 5000 });
-// the request returns an iterator that will get at most 10 messages or wait
-// for 5000ms for messages to arrive.
-
-const done = (async () => {
+const msgs = await c.fetch({ max_messages: 5 });
+await (async () => {
   for await (const m of msgs) {
     // do something with the message
-    // and if the consumer is not set to auto-ack, ack!
+    console.log(`${n}: ${m.seq} ${m.subject}`);
     m.ack();
   }
-})();
-// The iterator completed
-await done;
-```
-
-#### Push Subscriptions
-
-A push subscription is similar to a standard NATS subscription. The consumer
-configuration registers for messages to be delivered to a specific subject. When
-a client subscribes to that subject, JetStream starts presenting messages.
-
-The jetstream `subscribe()` provides the syntactic sugar to auto-create the
-consumer for you if it doesn't exist by matching the stream to the requested
-subject. It also presents messages to you as a JsMsg. To stop getting messages,
-`unsubscribe()`. The consumer will be preserved, so the client can resume at a
-later time. To destroy the consumer, call `destroy()`. This will stop the
-subscription and destroy the consumer.
-
-```typescript
-const opts = consumerOpts();
-opts.durable("me");
-opts.manualAck();
-opts.ackExplicit();
-opts.deliverTo(createInbox());
-
-let sub = await js.subscribe(subj, opts);
-const done = (async () => {
-  for await (const m of sub) {
-    m.ack();
-  }
-})();
-
-// when done (by some logic not shown here), you can delete
-// the consumer by simply calling `destroy()`. Destroying
-// a consumer removes all its state information.
-sub.destroy();
-```
-
-#### Pull Subscriptions
-
-Pull subscriber API is similar to the _push subscriber_, but messages will be
-delivered by `pull()`. The subscription remains open, but the client has to
-periodically pull for messages. This allows the subscriber to determine when to
-ask for messages and only for those messages it can handle during its pull
-interval.
-
-```typescript
-const psub = await js.pullSubscribe(subj, {
-  mack: true,
-  // artificially low ack_wait, to show some messages
-  // not getting acked being redelivered
-  config: {
-    durable_name: durable,
-    ack_policy: AckPolicy.Explicit,
-    ack_wait: nanos(4000),
-  },
+})().catch((err) => {
+  console.log(`error processing fetch: ${err.message}`);
 });
+```
 
+Note that the iterator returned by fetch will complete when the specified number
+of messages is received or the expires for the fetch ends. This means that it is
+possible to get at most the number of requested messages.
+
+Fetching batches is useful if you parallelize a number of requests to take
+advantage of the asynchronous processing of data with a number of workers for
+example. To get a new, batch simply fetch again.
+
+#### Consuming messages
+
+In the previous two sections messages were retrieved manually by your
+application, and allowed you to remain in control of whether you wanted to
+receive one or more messages with a single request.
+
+A third option automates the process of re-requesting more messages. The one
+caveat is that when the iterator yields a message, more messages are requested
+if necessary maintain the buffer. The operation will continue until you `break`
+or `stop()` the iterator.
+
+The `consume()` operation maintains an internal buffer of messages that auto
+refreshes whenever 50% of the initial buffer is consumed. This allows the client
+to process messages in a loop forever.
+
+```typescript
+const msgs = await c.consume({ max_messages: 20 });
 (async () => {
-  for await (const m of psub) {
-    console.log(
-      `[${m.seq}] ${
-        m.redelivered ? `- redelivery ${m.info.redeliveryCount}` : ""
-      }`,
-    );
-    if (m.seq % 2 === 0) {
-      m.ack();
+  await (async () => {
+    for await (const m of msgs) {
+      m?.ack();
+      console.log(`${n}: ${m.seq} ${m.subject}`);
     }
+  })().catch((err) => {
+    console.log(`consume failed with an error: ${err.message}`);
+  });
+})().then();
+```
+
+Note that it is possible to do an automatic version of `next()`:
+
+```typescript
+const c = await js.consumers.get(name, "d");
+const msgs = await c.consume({ max_messages: 1 });
+try {
+  for await (const m of msgs) {
+    m?.ack();
+    console.log(`${n}: ${m.seq} ${m.subject}`);
   }
-})();
-
-const fn = () => {
-  console.log("[PULL]");
-  psub.pull({ batch: 1000, expires: 10000 });
-};
-
-// do the initial pull
-fn();
-// and now schedule a pull every so often
-const interval = setInterval(fn, 10000); // and repeat every 2s
+} catch (err) {
+  console.log(`consume failed with an error: ${err.message}`);
+}
 ```
 
-Note the above example is contrived, as the pull interval is fixed based on some
-interval.
+The API simply asks for one message, but as soon as that message is processed or
+the request expires, another is requested.
 
-#### Consumer Binding
+#### Horizontally Scaling Consumers (Previously known as Queue Consumer)
 
-JetStream's `subscribe()`, and `pullSubscribe()` can `bind` to a specific
-durable consumer. The consumer must already exist, note that if your consumer is
-working on a stream that is sourced from another `bind` is the only way you can
-attach to the correct consumer on the correct stream:
+Scaling processing in a consumer is simply calling `next()/fetch()/consume()` on
+a shared consumer. When horizontally scaling limiting the number of buffered
+messages will likely yield better results as requests will be mapped 1-1 with
+the processes preventing some processes from booking more messages while others
+are idle.
 
-```typescript
-const inbox = createInbox();
-await jsm.consumers.add("A", {
-  durable_name: "me",
-  ack_policy: AckPolicy.None,
-  deliver_subject: inbox,
-});
+A more reliable approach is to simply use `next()` or
+`consume({max_messages: 1})`. This makes it so that if you start or stop
+processes you automatically scale your processing.
 
-const opts = consumerOpts();
-opts.bind("A", "me");
+#### Callbacks
 
-const sub = await js.subscribe(subj, opts);
-// process messages...
-```
-
-#### JetStream Queue Consumers
-
-Queue Consumers allow scaling the processing of messages stored in a stream. To
-create a Queue Consumer, you have to set its `deliver_group` property to the
-name of the queue group (or use the `ConsumerOptsBuilder#queue()`). Then reuse
-the consumer from the various subscriptions:
+The `consume()` API normally use iterators for processing. If you want to
+specify a callback, you can:
 
 ```typescript
-const opts = consumerOpts();
-opts.queue("q");
-opts.durable("n");
-opts.deliverTo("here");
-opts.callback((_err, m) => {
-  if (m) {
-    m.ack();
-  }
-});
-
-const sub = await js.subscribe(subj, opts);
-const sub2 = await js.subscribe(subj, opts);
-```
-
-### JsMsg
-
-A `JsMsg` is a wrapped `Msg` - it has all the standard fields in a `Msg`, a
-`JsMsg` and provides functionality for inspecting metadata encoded into the
-message's reply subject. This metadata includes:
-
-- sequence (`seq`)
-- `redelivered`
-- full info via info which shows the delivery sequence, and how many messages
-  are pending among other things.
-- Multiple ways to acknowledge a message:
-  - `ack()`
-  - `nak(millis?)` - like ack, but tells the server you failed to process it,
-    and it should be resent. If a number is specified, the message will be
-    resent after the specified value. The additional argument only supported on
-    server versions 2.7.1 or greater
-  - `working()` - informs the server that you are still working on the message
-    and thus prevent receiving the message again as a redelivery.
-  - `term()` - specifies that you failed to process the message and instructs
-    the server to not send it again (to any consumer).
-
-If you implement a standard NATS subscription to process your JetStream
-messages, you can use `toJsMsg()` to convert a message. Note that subscriptions
-processing stream data can contain nats Msgs that are not convertible to
-`JsMsg`.
-
-### Callbacks
-
-JetStream `subscribe()` and `pullSubscribe()` normally have iterators associated
-with them, but you can also specify to handle the message in a callback. Unlike
-the standard message callaback `(err: NatsError|null, msg: Msg)=>void`,
-JetStream callbacks look like this:
-`(err: NatsError | null, msg: JsMsg | null) => void`
-
-As you can see, it is possible for your callback to get `null` for both the
-error and the message argument. The reason for this, is that JetStream sends
-standard NATS `Msg` that contains headers to inform the client of various
-things. When using iterators, any control message is handled, so your iterator
-won't see them. When specifying callbacks to process your
-`JetStreamSubscription` or `JetStreamPullSubscription`, this is not possible.
-Protocol messages will be handled behind the scenes, but your callback will
-still be invoked.
-
-### Flow Control
-
-JetStream added a new consumer option to control whether flow control messages
-are dispatched to a client. Flow control messages enable JetStream to
-dynamically attempt to determine an optimal delivery message rate for the
-client. This feature can help prevent the slow consumer issues when the number
-of messages in a stream are large.
-
-You don't need to do anything special to make use of the flow control feature,
-except for setting `flow_control` property on your consumer configuration.
-
-If you are creating plain NATS subscriptions, you'll need to handle these flow
-control messages yourself. To identify them, simply test to see if the message
-has headers, and if the `code` of the header is equal to `100`. If it has a
-reply subject, simply respond to it. The server will then adjust its delivery
-rate as necessary. Note that there's also the handy function
-`isFlowControlMsg(Msg)` that can perform this check for you. Note that
-`msg.respond()` is a noop if there's no reply subject (in that case it is not a
-flow control message but a heartbeat).
-
-Here's a snippet:
-
-```typescript
-let data = 0;
-let fc = 0;
-// note this is a plan NATS subscription!
-const sub = nc.subscribe("my.messages", {
-  callback: (err, msg) => {
-    // simply checking if has headers and code === 100
-    if (isFlowControlMsg(msg)) {
-      fc++;
-      msg.respond();
-      return;
-    }
-    // do something with the message
-    data++;
-    const m = toJsMsg(msg);
-    m.ack();
-    if (data === N) {
-      console.log(`processed ${data} msgs and ${fc} flow control messages`);
-      sub.drain();
-    }
+const c = await js.consumers.get(name, "e");
+const msgs = await c.consume({
+  max_messages: 1,
+  callback: (m) => {
+    m?.ack();
+    console.log(`${n}: ${m.seq} ${m.subject}`);
   },
 });
-
-// create a consumer that delivers to the subscription
-await jsm.consumers.add(stream, {
-  ack_policy: AckPolicy.Explicit,
-  deliver_subject: "my.messages",
-  flow_control: true,
-});
 ```
+
+#### Iterators, Callbacks, and Concurrency
+
+The `consume()` and `fetch()` APIs yield a ConsumerMessages. One thing to keep
+in mind is that the iterator for processing messages will not yield a new
+message until the body of the loop completes.
+
+Compare:
+
+```typescript
+const msgs = await c.consume();
+for await (const m of msgs) {
+  try {
+    // this is simplest but could also create a head-of-line blocking
+    // as no other message for this consumer will be processed until
+    // this iteration completes
+    await asyncFn(m);
+    m.ack();
+  } catch (err) {
+    m.nack();
+  }
+}
+```
+
+```typescript
+const msgs = await c.consume();
+for await (const m of msgs) {
+  // this potentially has the problem of generating a very large number
+  // of async operations which may exceed the limits of the runtime
+  asyncFn(m)
+    .then(() => {
+      m.ack();
+    })
+    .catch((err) => {
+      m.nack();
+    });
+}
+```
+
+In the first scenario, the processing is sequential. The second scenario is
+concurrent.
+
+Both of these behaviors are standard JavaScript, but you can use this to your
+advantage. You can improve latency by not awaiting, but that will require a more
+complex handling as you'll need to restrict and limit how many concurrent
+operations you create and thus avoid hitting limits in your runtime.
+
+One possible strategy is to use `fetch()`, and process asynchronously without
+awaiting as you process message you'll need to implement accounting to track
+when you should re-fetch, but a far simpler solution is to use `next()`, process
+asynchronously and scale by horizontally managing a processes instead.
 
 ### Heartbeats
 
@@ -437,79 +443,58 @@ for the client to not notice it. This would mean your client would sit idle
 thinking there are no messages, when in reality the JetStream service may have
 restarted elsewhere.
 
-By creating a consumer that enables heartbeats, you can request JetStream to
-send you heartbeat messages every so often. This way your client can reconcile
-if the lack of messages means that you should be restarting your consumer.
+For most issues, the client will auto-recover, but if it doesn't, and it starts
+reporting `HeartbeatsMissed` statuses, you will want to `stop()` the messages,
+and recreate it. Note that in the example below this is done in a loop for
+example purposes:
 
 ```typescript
-const stream = nuid.next();
-const subj = nuid.next();
-await jsm.streams.add({ name: stream, subjects: [`${subj}.>`] });
+const c = await js.consumers.get(name, "a");
 
-const js = nc.jetstream();
-let opts = consumerOpts()
-  .deliverTo("push")
-  .manualAck()
-  .ackExplicit()
-  .idleHeartbeat(500)
-  .durable("iter-dur");
-const iter = await js.subscribe(`${subj}.>`, opts);
-// if 2 heartbeats are missed, the iterator will end with an error
-// simply re-do the js.subscribe() and attempt again
-const done = (async () => {
+while (true) {
+  const iter = await c.consume({ max_messages: 10 });
+  // the ConsumeMessages object is not only an iterator for
+  // messages but also offers additional API to monitor some
+  // status information. In general the only interesting one
+  // is `HeartbeatsMissed`.
+  (async () => {
+    for await (const s of await iter.status()) {
+      if (s.type === ConsumerEvents.HeartbeatsMissed) {
+        const n = s.data as number;
+        // if you miss 3 heartbeats - stop the consume
+        if (n === 3) {
+          iter.stop();
+        }
+      }
+    }
+  })().then();
+
   for await (const m of iter) {
     m.ack();
   }
-})();
-done.catch((err) => {
-  console.log(`iterator closed: ${err}`);
-});
-
-opts = consumerOpts()
-  .deliverTo("push")
-  .manualAck()
-  .ackExplicit()
-  .idleHeartbeat(500)
-  .durable("callback-dur")
-  .callback((err, m) => {
-    if (err) {
-      // the callback will also report a heartbeat error, however because the
-      // callback can receive errors, it continues active. If the server returns
-      // the client will automatically resume receiving messages
-      console.log(err);
-    } else {
-      m?.ack();
-    }
-  });
-
-const sub = await js.subscribe(`${subj}.>`, opts);
-await sub.closed.then(() => console.log("sub closed"));
+}
 ```
+
+Note that while the heartbeat interval is configurable, you shouldn't change it.
 
 #### JetStream Ordered Consumers
 
-An Ordered Consumers is a specialized push consumer that puts together flow
-control, heartbeats, and additional logic to handle message gaps. Ordered
-consumers cannot operate on a queue and cannot be durable.
+Ordered Consumers is a specialized consumer that tracks the order of messages
+and ensures that messages are presented in the correct order. If a message
+sequence is not expected, the consumer is recreated at the expected sequence.
 
-As the ordered consumer processes messages, it enforces that messages are
-presented to the client with the correct sequence. If a gap is detected, the
-consumer is recreated at the expected sequence.
-
-Most consumer options are rejected, as the ordered consumer manages its
-configuration in a very specific way.
-
-To create an ordered consumer (assuming a stream that captures `my.messages`):
+An ordered consumer is created and destroyed under the covers, so you only have
+to specify the stream and possible startup options, or filtering:
 
 ```typescript
-const subj = "my.messages";
-const opts = consumerOpts();
-opts.orderedConsumer();
-const sub = await js.subscribe(subj, opts);
+// note the name of the consumer is not specified
+const a = await js.consumers.get(name);
+const b = await js.consumers.get(name, { filterSubjects: [`${name}.a`] });
 ```
 
-Use callbacks or iterators as desired to process the messages.
-`sub.unsubscribe()` or break out of an iterator to stop processing messages.
+Note that consumer API for reading messages is checked preventing the ordered
+consumer from having operations started with `fetch()` and `consume()` or
+`next()` at the same time.
 
 #### JetStream Materialized Views
 
