@@ -20,6 +20,7 @@ import {
   ConsumerAPI,
   ConsumerCallbackFn,
   ConsumerConfig,
+  ConsumerEvents,
   ConsumerInfo,
   ConsumerMessages,
   DeliverPolicy,
@@ -95,14 +96,30 @@ export class PullConsumerImpl implements Consumer {
     fopts.max_messages = 1;
 
     const iter = new PullConsumerMessagesImpl(this, fopts, false);
+
+    // FIXME: need some way to pad this correctly
+    const to = Math.round(iter.opts.expires * 1.05);
+
+    // watch the messages for heartbeats missed
+    if (to >= 60_000) {
+      (async () => {
+        for await (const s of await iter.status()) {
+          if (
+            s.type === ConsumerEvents.HeartbeatsMissed &&
+            (s.data as number) >= 2
+          ) {
+            d.reject(new Error("consumer missed heartbeats"));
+          }
+        }
+      })().catch();
+    }
+
     (async () => {
       for await (const m of iter) {
         d.resolve(m);
         break;
       }
     })().catch();
-    // FIXME: need some way to pad this correctly
-    const to = Math.round(iter.opts.expires * 1.05);
     const timer = timeout(to);
     iter.closed().then(() => {
       d.resolve(null);
@@ -110,7 +127,7 @@ export class PullConsumerImpl implements Consumer {
     }).catch((err) => {
       d.reject(err);
     });
-    timer.catch((err) => {
+    timer.catch((_err) => {
       d.resolve(null);
       iter.close().catch();
     });
