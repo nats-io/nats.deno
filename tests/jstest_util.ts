@@ -130,26 +130,33 @@ export async function createConsumer(
   return ci.name;
 }
 
+export type FillOptions = {
+  randomize: boolean;
+  suffixes: string[];
+};
+
 export function fill(
   nc: NatsConnection,
   prefix: string,
   count = 100,
-  opts: Partial<{ randomize: boolean; suffixes: string[] }> = {},
+  opts: Partial<FillOptions> = {},
 ): Promise<PubAck[]> {
   const js = nc.jetstream();
 
-  opts.randomize = opts.randomize ?? false;
-  opts.suffixes = opts.suffixes || "abcdefghijklmnopqrstuvwxyz".split("");
+  const options = Object.assign({}, {
+    randomize: false,
+    suffixes: "abcdefghijklmnopqrstuvwxyz".split(""),
+  }, opts) as FillOptions;
 
   function randomSuffix(): string {
-    const idx = Math.floor(Math.random() * opts.suffixes.length);
-    return opts.suffixes[idx];
+    const idx = Math.floor(Math.random() * options.suffixes.length);
+    return options.suffixes[idx];
   }
 
   const a = Array.from({ length: count }, (_, idx) => {
     const subj = opts.randomize
       ? `${prefix}.${randomSuffix()}`
-      : `${prefix}.${opts.suffixes[idx % opts.suffixes.length]}`;
+      : `${prefix}.${options.suffixes[idx % options.suffixes.length]}`;
     return js.publish(subj);
   });
 
