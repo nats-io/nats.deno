@@ -16,16 +16,16 @@ jobs:
     environment: CI
     strategy:
       matrix:
-        deno-version: [1.30.3]
+        deno-version: [1.32.5]
 
     steps:
       - name: Git Checkout Deno Module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
       - name: Use Deno Version ${{ matrix.deno-version }}
-        uses: denolib/setup-deno@master
+        uses: denoland/setup-deno@v1
         with:
           deno-version: ${{ matrix.deno-version }}
 

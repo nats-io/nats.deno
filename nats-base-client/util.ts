@@ -218,3 +218,45 @@ export class Perf {
     return values;
   }
 }
+
+export class SimpleMutex {
+  max: number;
+  current: number;
+  waiting: Deferred<void>[];
+
+  /**
+   * @param max number of concurrent operations
+   */
+  constructor(max = 1) {
+    this.max = max;
+    this.current = 0;
+    this.waiting = [];
+  }
+
+  /**
+   * Returns a promise that resolves when the mutex is acquired
+   */
+  lock(): Promise<void> {
+    // increment the count
+    this.current++;
+    // if we have runners, resolve it
+    if (this.current <= this.max) {
+      return Promise.resolve();
+    }
+    // otherwise defer it
+    const d = deferred<void>();
+    this.waiting.push(d);
+    return d;
+  }
+
+  /**
+   * Release an acquired mutex - must be called
+   */
+  unlock(): void {
+    // decrement the count
+    this.current--;
+    // if we have deferred, resolve one
+    const d = this.waiting.pop();
+    d?.resolve();
+  }
+}
