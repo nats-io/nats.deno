@@ -19,6 +19,7 @@ import { AckPolicy, connect, nanos, PubAck } from "../src/mod.ts";
 import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import {
   ConnectionOptions,
+  Empty,
   extend,
   NatsConnection,
   nuid,
@@ -133,6 +134,7 @@ export async function createConsumer(
 export type FillOptions = {
   randomize: boolean;
   suffixes: string[];
+  payload: number;
 };
 
 export function fill(
@@ -146,6 +148,7 @@ export function fill(
   const options = Object.assign({}, {
     randomize: false,
     suffixes: "abcdefghijklmnopqrstuvwxyz".split(""),
+    payload: 0,
   }, opts) as FillOptions;
 
   function randomSuffix(): string {
@@ -153,11 +156,15 @@ export function fill(
     return options.suffixes[idx];
   }
 
+  const payload = options.payload === 0
+    ? Empty
+    : new Uint8Array(options.payload);
+
   const a = Array.from({ length: count }, (_, idx) => {
     const subj = opts.randomize
       ? `${prefix}.${randomSuffix()}`
       : `${prefix}.${options.suffixes[idx % options.suffixes.length]}`;
-    return js.publish(subj);
+    return js.publish(subj, payload);
   });
 
   return Promise.all(a);

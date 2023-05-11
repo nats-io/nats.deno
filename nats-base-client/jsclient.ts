@@ -20,6 +20,7 @@ import type {
   KvOptions,
   ObjectStore,
   ObjectStoreOptions,
+  Streams,
   Views,
 } from "./types.ts";
 import {
@@ -87,6 +88,8 @@ import { Feature } from "./semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
 import { ConsumersImpl } from "./consumers.ts";
+import { StreamsImpl } from "./stream.ts";
+import { StreamAPIImpl } from "./jsmstream_api.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -123,11 +126,15 @@ class ViewsImpl implements Views {
 export class JetStreamClientImpl extends BaseApiClient
   implements JetStreamClient {
   consumers: Consumers;
-  api: ConsumerAPI;
+  streams: Streams;
+  consumerAPI: ConsumerAPI;
+  streamAPI: StreamAPIImpl;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
-    this.api = new ConsumerAPIImpl(nc, opts);
-    this.consumers = new ConsumersImpl(this.api);
+    this.consumerAPI = new ConsumerAPIImpl(nc, opts);
+    this.streamAPI = new StreamAPIImpl(nc, opts);
+    this.consumers = new ConsumersImpl(this.consumerAPI);
+    this.streams = new StreamsImpl(this.streamAPI);
   }
 
   get apiPrefix(): string {
@@ -546,7 +553,10 @@ export class JetStreamClientImpl extends BaseApiClient
     jsi.attached = false;
     if (jsi.config.durable_name) {
       try {
-        const info = await this.api.info(jsi.stream, jsi.config.durable_name);
+        const info = await this.consumerAPI.info(
+          jsi.stream,
+          jsi.config.durable_name,
+        );
         if (info) {
           if (
             info.config.filter_subject && info.config.filter_subject !== subject
@@ -646,7 +656,7 @@ export class JetStreamClientImpl extends BaseApiClient
       replay_policy: ReplayPolicy.Instant,
     }, jsi.config);
 
-    const ci = await this.api.add(jsi.stream, jsi.config);
+    const ci = await this.consumerAPI.add(jsi.stream, jsi.config);
     if (
       Array.isArray(
         jsi.config.filter_subjects && !Array.isArray(ci.config.filter_subjects),

@@ -505,6 +505,7 @@ export class NatsServer implements PortInfo {
     conf.http = conf.http || "127.0.0.1:-1";
     conf.leafnodes = conf.leafnodes || {};
     conf.leafnodes.listen = conf.leafnodes.listen || "127.0.0.1:-1";
+    conf.server_tags = [`id:${nuid.next()}`];
 
     return conf;
   }

@@ -29,6 +29,7 @@ import {
   PurgeResponse,
   PurgeTrimOpts,
   StoredMsg,
+  Stream,
   StreamAPI,
   StreamConfig,
   StreamInfo,
@@ -50,6 +51,7 @@ import { Codec, JSONCodec } from "./codec.ts";
 import { TD } from "./encoders.ts";
 import { Feature } from "./semver.ts";
 import { NatsConnectionImpl } from "./nats.ts";
+import { StreamImpl } from "./stream.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -318,6 +320,11 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     };
     const subj = `${this.prefix}.STREAM.NAMES`;
     return new ListerImpl<string>(subj, listerFilter, this, payload);
+  }
+
+  async get(name: string): Promise<Stream> {
+    const si = await this.info(name);
+    return Promise.resolve(new StreamImpl(this, si));
   }
 }
 
