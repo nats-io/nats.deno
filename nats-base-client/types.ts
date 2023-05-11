@@ -1070,6 +1070,15 @@ export interface JetStreamClient {
    * consumer use {@link JetStreamManager}.
    */
   consumers: Consumers;
+
+  /**
+   * Returns the interface for accessing {@link Streams}.
+   */
+  streams: Streams;
+}
+
+export interface Streams {
+  get(stream: string): Promise<Stream>;
 }
 
 export interface Consumers {
@@ -1480,6 +1489,12 @@ export interface StreamAPI {
    *  subject (can be wildcarded)
    */
   names(subject?: string): Lister<string>;
+
+  /**
+   * Returns a Stream object
+   * @param name
+   */
+  get(name: string): Promise<Stream>;
 }
 
 /**
@@ -2824,6 +2839,17 @@ export interface StreamNames {
 
 export interface StreamNameBySubject {
   subject: string;
+}
+
+export interface Stream {
+  name: string;
+  info(cached?: boolean): Promise<StreamInfo>;
+  alternates(): Promise<StreamAlternate[]>;
+  best(): Promise<Stream>;
+  getConsumer(
+    name?: string | Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer>;
+  getMessage(query: MsgRequest): Promise<StoredMsg>;
 }
 
 export enum JsHeaders {

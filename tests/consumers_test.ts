@@ -130,11 +130,33 @@ Deno.test("consumers - info", async () => {
 
   const js = nc.jetstream();
 
-  const { stream } = await initStream(nc);
+  const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, { durable_name: "b" });
   const c = await js.consumers.get(stream, "b");
-  assertEquals(await jsm.consumers.info(stream, "b"), await c.info());
+  // retrieve the cached consumer - no messages
+  const cached = await c.info(false);
+  assertEquals(cached.num_pending, 0);
+  assertEquals(await jsm.consumers.info(stream, "b"), cached);
+
+  // add a message, retrieve the cached one - still not updated
+  await js.publish(subj);
+  assertEquals(await c.info(true), cached);
+
+  // update - info and cached copies are updated
+  const ci = await c.info();
+  assertEquals(ci.num_pending, 1);
+  assertEquals((await c.info(true)).num_pending, 1);
+
+  await assertRejects(
+    async () => {
+      await jsm.consumers.delete(stream, "b");
+      await c.info();
+    },
+    Error,
+    "consumer not found",
+  );
+
   await cleanup(ns, nc);
 });
 

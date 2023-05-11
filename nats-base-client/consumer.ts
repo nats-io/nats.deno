@@ -146,7 +146,11 @@ export class PullConsumerImpl implements Consumer {
       return Promise.resolve(this._info);
     }
     const { stream_name, name } = this._info;
-    return this.api.info(stream_name, name);
+    return this.api.info(stream_name, name)
+      .then((ci) => {
+        this._info = ci;
+        return this._info;
+      });
   }
 }
 
