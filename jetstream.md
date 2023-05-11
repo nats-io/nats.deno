@@ -10,7 +10,7 @@ Messages are replayed from a stream by _consumers_. A consumer configuration
 specifies which messages should be presented. For example a consumer may only be
 interested in viewing messages from a specific sequence or starting from a
 specific time, or having a specific subject. The configuration also specifies if
-the server should require for a message to be acknowledged, and how long to wait
+the server should require messages to be acknowledged and how long to wait
 for acknowledgements. The consumer configuration also specifies options to
 control the rate at which messages are presented to the client.
 
@@ -42,12 +42,11 @@ streams.forEach((si) => {
   console.log(si);
 });
 
-// add a stream
+// add a stream - jetstream can capture nats core messages
 const stream = "mystream";
 const subj = `mystream.*`;
 await jsm.streams.add({ name: stream, subjects: [subj] });
 
-// jetstream can capture nats core messages
 for (let i = 0; i < 100; i++) {
   nc.publish(`${subj}.a`, Empty);
 }
@@ -107,7 +106,7 @@ await jsm.consumers.delete(stream, "me");
 
 ## JetStream Client
 
-The JetStream client presents an API for working with messages stored on a
+The JetStream client presents an API for working with messages stored in a
 stream.
 
 ```typescript
@@ -118,7 +117,7 @@ await jsm.streams.add({ name: "a", subjects: ["a.*"] });
 // create a jetstream client:
 const js = nc.jetstream();
 
-// to publish messages to a stream
+// publish a message received by a stream
 let pa = await js.publish("a.b");
 // jetstream returns an acknowledgement with the
 // stream that captured the message, it's assigned sequence
@@ -130,9 +129,9 @@ const duplicate = pa.duplicate;
 // More interesting is the ability to prevent duplicates
 // on messages that are stored in the server. If
 // you assign a message ID, the server will keep looking
-// for the same ID for a configured amount of time (specified
-// by the stream configuration), and reject messages that
-// sport the same ID:
+// for the same ID for a configured amount of time (within a
+// configurable time window), and reject messages that
+// have the same ID:
 await js.publish("a.b", Empty, { msgID: "a" });
 
 // you can also specify constraints that should be satisfied.
@@ -251,7 +250,7 @@ const c = await js.consumers.get(stream, consumer);
 const oc = await js.consumers.get(stream);
 ```
 
-[full example](examples/jetstream/simplified/01_consumers.ts)
+[full example](examples/jetstream/01_consumers.ts)
 
 With the consumer in hand, the client can start reading messages using whatever
 API is appropriate for the application.
@@ -300,7 +299,7 @@ if (m) {
 }
 ```
 
-[full example](examples/jetstream/simplified/02_next.ts)
+[full example](examples/jetstream/02_next.ts)
 
 The operation takes an optional argument. Currently, the only option is an
 `expires` option which specifies the maximum number of milliseconds to wait for
@@ -335,7 +334,7 @@ for (let i = 0; i < 3; i++) {
 }
 ```
 
-[full example](examples/jetstream/simplified/03_batch.ts)
+[full example](examples/03_batch.ts)
 
 Fetching batches is useful if you parallelize a number of requests to take
 advantage of the asynchronous processing of data with a number of workers for
@@ -364,7 +363,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/simplified/04_consume.ts)
+[full example](examples/jetstream/04_consume.ts)
 
 Note that it is possible to do an automatic version of `next()` by simply
 setting the maximum number of messages to buffer to `1`:
@@ -493,7 +492,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/simplified/07_consume_jobs.ts)
+[full example](examples/jetstream/07_consume_jobs.ts)
 
 #### Processing a Stream
 
@@ -534,7 +533,7 @@ keys.forEach((k) => {
 });
 ```
 
-[full example](examples/jetstream/simplified/08_consume_process.ts)
+[full example](examples/jetstream/08_consume_process.ts)
 
 ### Heartbeats
 
@@ -577,7 +576,7 @@ while (true) {
 }
 ```
 
-[full example](examples/jetstream/simplified/06_heartbeats.ts)
+[full example](examples/jetstream/06_heartbeats.ts)
 
 Note that while the heartbeat interval is configurable, you shouldn't change it.
 

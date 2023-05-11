@@ -8,7 +8,7 @@ await jsm.streams.add({ name: "a", subjects: ["a.*"] });
 // create a jetstream client:
 const js = nc.jetstream();
 
-// to publish messages to a stream:
+// publish a message received by a stream
 let pa = await js.publish("a.b");
 // the jetstream returns an acknowledgement with the
 // stream that captured the message, it's assigned sequence
@@ -20,8 +20,9 @@ console.log(
 // More interesting is the ability to prevent duplicates
 // on messages that are stored in the server. If
 // you assign a message ID, the server will keep looking
-// for the same ID for a configured amount of time, and
-// reject messages that sport the same ID:
+// for the same ID for a configured amount of time (within a
+// configurable time window), and reject messages that
+// have the same ID:
 await js.publish("a.b", Empty, { msgID: "a" });
 
 // you can also specify constraints that should be satisfied.

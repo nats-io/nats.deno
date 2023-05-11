@@ -38,7 +38,7 @@ while (true) {
         const n = s.data as number;
         console.log(`${n} heartbeats missed`);
         if (n === 2) {
-          // by calling `stop()` the message processing loop ends
+          // by calling `stop()` the message processing loop ends.
           // in this case this is wrapped by a loop, so it attempts
           // to re-setup the consume
           messages.stop();
