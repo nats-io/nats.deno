@@ -28,12 +28,11 @@ const { stream, consumer } = await setupStreamAndConsumer(nc, 100);
 const js = nc.jetstream();
 const c = await js.consumers.get(stream, consumer);
 
-// this example uses a consume that is monitors a rate limiter
-// this effectively allows it to process 5 messages as fast
-// as it can but stalls the consume if no resources are available
 const messages = await c.consume({ max_messages: 10 });
 
-// this rate limiter is just example code, do not use in production
+// this example controls parallel processing of the messages
+// by only allowing 5 concurrent messages to be processed
+// and then only allowing additional processing as others complete
 const rl = new SimpleMutex(5);
 
 async function schedule(m: JsMsg): Promise<void> {

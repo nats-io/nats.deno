@@ -10,7 +10,7 @@ streams.forEach((si) => {
   console.log(si);
 });
 
-// add a stream
+// add a stream - jetstream can capture nats core messages
 const stream = "mystream";
 const subj = `mystream.*`;
 await jsm.streams.add({ name: stream, subjects: [subj] });
