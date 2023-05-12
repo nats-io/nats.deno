@@ -126,6 +126,16 @@ export function delay(ms = 0): Promise<void> {
   });
 }
 
+export function deadline<T>(p: Promise<T>, millis = 1000): Promise<T> {
+  const err = new Error(`deadline exceeded`);
+  const d = deferred<never>();
+  const timer = setTimeout(
+    () => d.reject(err),
+    millis,
+  );
+  return Promise.race([p, d]).finally(() => clearTimeout(timer));
+}
+
 export interface Deferred<T> extends Promise<T> {
   /**
    * Resolves the Deferred to a value T

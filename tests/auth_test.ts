@@ -616,7 +616,7 @@ Deno.test("auth - expiration is notified and recovered", async () => {
     }).then((token) => {
       ujwt = token;
     });
-  });
+  }, 250);
 
   const nc = await connect({
     port: ns.port,

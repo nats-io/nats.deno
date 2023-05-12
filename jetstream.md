@@ -10,9 +10,9 @@ Messages are replayed from a stream by _consumers_. A consumer configuration
 specifies which messages should be presented. For example a consumer may only be
 interested in viewing messages from a specific sequence or starting from a
 specific time, or having a specific subject. The configuration also specifies if
-the server should require messages to be acknowledged and how long to wait
-for acknowledgements. The consumer configuration also specifies options to
-control the rate at which messages are presented to the client.
+the server should require messages to be acknowledged and how long to wait for
+acknowledgements. The consumer configuration also specifies options to control
+the rate at which messages are presented to the client.
 
 For more information about JetStream, please visit the
 [JetStream repo](https://github.com/nats-io/jetstream).

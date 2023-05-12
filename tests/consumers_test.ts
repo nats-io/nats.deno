@@ -272,7 +272,6 @@ Deno.test("consumers - consume", async () => {
 
   const count = 50_000;
   const conf = await memStream(nc, count);
-  console.log(`seeded server: ${conf.millis}ms`);
 
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(conf.stream, {
@@ -753,7 +752,6 @@ Deno.test("consumers - threshold_messages bytes", async () => {
 
   const a = new Array(1001).fill(false);
   const c = await js.consumers.get(stream, "a");
-  console.log(c.info(true));
   const iter = await c.consume({
     expires: 30_000,
     max_bytes: 1100,
@@ -794,7 +792,6 @@ Deno.test("consumers - threshold_messages bytes", async () => {
     if (discards[i] === undefined) {
       continue;
     }
-    console.log(next[i], discards[i]);
     // pull batch - close responses
     received += next[i].batch - discards[i].msgsLeft;
   }

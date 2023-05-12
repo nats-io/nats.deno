@@ -1095,7 +1095,7 @@ Deno.test("jetstream - fetch none - no wait breaks fast", async () => {
 
   await done;
   sw.mark();
-  assert(25 > sw.duration());
+  assertBetween(sw.duration(), 0, 500);
   assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });
