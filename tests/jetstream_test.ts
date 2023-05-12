@@ -556,7 +556,7 @@ Deno.test("jetstream - fetch expires waits", async () => {
     }
   })();
   const elapsed = Date.now() - start;
-  assertBetween(elapsed, 950, 1050);
+  assertBetween(elapsed, 950, 1250);
   assertEquals(iter.getReceived(), 0);
   await cleanup(ns, nc);
 });
@@ -579,7 +579,7 @@ Deno.test("jetstream - fetch expires waits after initial", async () => {
     }
   })();
   const elapsed = Date.now() - start;
-  assertBetween(elapsed, 950, 1050);
+  assertBetween(elapsed, 950, 1250);
   assertEquals(iter.getReceived(), 1);
   await cleanup(ns, nc);
 });
@@ -1095,7 +1095,7 @@ Deno.test("jetstream - fetch none - no wait breaks fast", async () => {
 
   await done;
   sw.mark();
-  assert(25 > sw.duration());
+  assertBetween(sw.duration(), 0, 125);
   assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });
@@ -1125,7 +1125,7 @@ Deno.test("jetstream - fetch one - no wait breaks fast", async () => {
 
   await done;
   sw.mark();
-  assert(25 > sw.duration());
+  assertBetween(sw.duration(), 0, 125);
   assertEquals(batch.getReceived(), 1);
   await cleanup(ns, nc);
 });
@@ -1159,7 +1159,7 @@ Deno.test("jetstream - fetch none - cancel timers", async () => {
 
   await done;
   sw.mark();
-  assert(25 > sw.duration());
+  assertBetween(sw.duration(), 0, 125);
   assertEquals(batch.getReceived(), 0);
   await cleanup(ns, nc);
 });

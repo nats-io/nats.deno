@@ -107,7 +107,8 @@ Deno.test("streams - mirrors", async () => {
   );
 
   const s2 = await s.best();
-  assertEquals(s2.name, alternates[0].name);
+  assertExists(s2);
+  assertEquals(s2.name, (await s.info(true)).alternates?.[0].name);
 
   await nc.close();
   await NatsServer.stopAll(cluster);
