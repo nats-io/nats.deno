@@ -844,11 +844,6 @@ export interface PubAck {
    * True if the message is a duplicate
    */
   duplicate: boolean;
-
-  /**
-   * Acknowledges the PubAck back to the server
-   */
-  ack(): void;
 }
 
 /**

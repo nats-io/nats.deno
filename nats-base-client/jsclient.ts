@@ -205,7 +205,6 @@ export class JetStreamClientImpl extends BaseApiClient
         }
       }
     }
-
     const pa = this.parseJsResponse(r!) as PubAck;
     if (pa.stream === "") {
       throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
