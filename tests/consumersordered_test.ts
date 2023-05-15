@@ -13,14 +13,26 @@
  * limitations under the License.
  */
 
-import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
+import {
+  cleanup,
+  initStream,
+  jetstreamServerConf,
+  setup,
+} from "./jstest_util.ts";
 import {
   assertEquals,
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import { DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
+import {
+  AckPolicy,
+  ConsumeOptions,
+  ConsumerMessages,
+  ConsumeStopStrategy,
+  DeliverPolicy,
+  JsMsg,
+} from "../nats-base-client/types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
 import { notCompatible } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
@@ -607,4 +619,59 @@ Deno.test("ordered - next", async () => {
   assertEquals(m?.seq, 2);
 
   await cleanup(ns, nc);
+});
+
+async function testOrderedConsumerStop(
+  conf: ConsumeOptions,
+  count: number,
+): Promise<ConsumerMessages> {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  await Promise.all(
+    Array.from({ length: count }).map(() => {
+      return js.publish(subj);
+    }),
+  );
+
+  const c = await js.consumers.get(stream);
+  const iter = await c.consume(conf);
+  await (async () => {
+    for await (const m of iter) {
+      m.ack();
+    }
+  })().then();
+
+  await cleanup(ns, nc);
+
+  return iter;
+}
+
+Deno.test("ordered - stopStrategy empty", async () => {
+  const messages = await testOrderedConsumerStop({
+    strategy: ConsumeStopStrategy.NoMessages,
+  }, 0);
+  assertEquals(messages.getProcessed(), 0);
+});
+
+Deno.test("ordered - stopStrategy all ", async () => {
+  const messages = await testOrderedConsumerStop({
+    strategy: ConsumeStopStrategy.NoMessages,
+  }, 10);
+  assertEquals(messages.getProcessed(), 10);
+});
+
+Deno.test("ordered - stopStrategy sequence", async () => {
+  const messages = await testOrderedConsumerStop({
+    strategy: ConsumeStopStrategy.Sequence,
+    arg: 5,
+  }, 10);
+  assertEquals(messages.getProcessed(), 5);
 });

@@ -2647,10 +2647,6 @@ export interface ConsumerUpdateConfig {
   metadata?: Record<string, string>;
 }
 
-export type Ordered = {
-  ordered: true;
-};
-
 export type NextOptions = Expires;
 
 export type ConsumeBytes =
@@ -2659,19 +2655,21 @@ export type ConsumeBytes =
   & ThresholdBytes
   & Expires
   & IdleHeartbeat
-  & ConsumeCallback;
+  & ConsumeCallback
+  & ConsumeStop;
 
 export type ConsumeMessages =
   & Partial<MaxMessages>
   & ThresholdMessages
   & Expires
   & IdleHeartbeat
-  & ConsumeCallback;
+  & ConsumeCallback
+  & ConsumeStop;
 
 export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 
 /**
- * Options for fetching
+ * Options for fetching bytes
  */
 export type FetchBytes =
   & MaxBytes
@@ -2680,7 +2678,7 @@ export type FetchBytes =
   & IdleHeartbeat;
 
 /**
- * Options for a c
+ * Options for fetching messages
  */
 export type FetchMessages =
   & Partial<MaxMessages>
@@ -2736,6 +2734,16 @@ export type Expires = {
    * @default 30_000 (30s)
    */
   expires?: number;
+};
+
+export enum ConsumeStopStrategy {
+  NoMessages,
+  Sequence,
+}
+
+export type ConsumeStop = {
+  strategy?: ConsumeStopStrategy;
+  arg?: number;
 };
 
 export type IdleHeartbeat = {

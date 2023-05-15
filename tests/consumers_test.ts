@@ -25,11 +25,13 @@ import {
 } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import {
   AckPolicy,
+  ConsumeOptions,
   Consumer,
   ConsumerDebugEvents,
   ConsumerEvents,
   ConsumerMessages,
   ConsumerStatus,
+  ConsumeStopStrategy,
   Empty,
   NatsConnection,
   PubAck,
@@ -835,4 +837,59 @@ Deno.test("consumers - next", async () => {
   m?.ack();
 
   await cleanup(ns, nc);
+});
+
+async function testConsumerStop(
+  conf: ConsumeOptions,
+  count: number,
+): Promise<ConsumerMessages> {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream, subj } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  await Promise.all(
+    Array.from({ length: count }).map(() => {
+      return js.publish(subj);
+    }),
+  );
+
+  const c = await js.consumers.get(stream, stream);
+  const iter = await c.consume(conf);
+  await (async () => {
+    for await (const m of iter) {
+      m.ack();
+    }
+  })().then();
+
+  await cleanup(ns, nc);
+
+  return iter;
+}
+
+Deno.test("consumer - stopStrategy empty", async () => {
+  const messages = await testConsumerStop({
+    strategy: ConsumeStopStrategy.NoMessages,
+  }, 0);
+  assertEquals(messages.getProcessed(), 0);
+});
+
+Deno.test("consumer - stopStrategy all ", async () => {
+  const messages = await testConsumerStop({
+    strategy: ConsumeStopStrategy.NoMessages,
+  }, 10);
+  assertEquals(messages.getProcessed(), 10);
+});
+
+Deno.test("consumer - stopStrategy sequence", async () => {
+  const messages = await testConsumerStop({
+    strategy: ConsumeStopStrategy.Sequence,
+    arg: 5,
+  }, 10);
+  assertEquals(messages.getProcessed(), 5);
 });
