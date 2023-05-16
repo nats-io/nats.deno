@@ -47,18 +47,18 @@ if (argv.h || argv.help) {
   Deno.exit(0);
 }
 
-try {
-  const port = typeof argv.port === "number" ? argv.port : parseInt(argv.port);
+const count = argv["count"] as number || 3;
+const port = argv["port"] as number ?? 4222;
 
-  const base = {};
+try {
+  const base = { debug: false };
   const serverDebug = argv["server-debug"];
   if (serverDebug) {
     base.debug = true;
   }
-
   const cluster = argv.jetstream
     ? await NatsServer.jetstreamCluster(
-      argv.count,
+      count,
       Object.assign(base, {
         port,
         jetstream: {
@@ -66,12 +66,12 @@ try {
           max_mem_store: -1,
         },
       }),
-      serverDebug,
+      base.debug,
     )
     : await NatsServer.cluster(
-      argv.count,
+      count,
       Object.assign(base, { port }),
-      serverDebug,
+      base.debug,
     );
 
   cluster.forEach((s) => {

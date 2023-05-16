@@ -86,8 +86,8 @@ async function testAuthenticatorFn(
 }
 
 Deno.test("authenticator - username password fns", async () => {
-  let user = "a";
-  let pass = "a";
+  const user = "a";
+  const pass = "a";
   const authenticator = usernamePasswordAuthenticator(() => {
     return user;
   }, () => {
@@ -105,7 +105,7 @@ Deno.test("authenticator - username password fns", async () => {
 });
 
 Deno.test("authenticator - username string password fn", async () => {
-  let pass = "a";
+  const pass = "a";
   const authenticator = usernamePasswordAuthenticator("a", () => {
     return pass;
   });
@@ -121,7 +121,7 @@ Deno.test("authenticator - username string password fn", async () => {
 });
 
 Deno.test("authenticator - username fn password string", async () => {
-  let user = "a";
+  const user = "a";
   const authenticator = usernamePasswordAuthenticator(() => {
     return user;
   }, "a");
@@ -137,7 +137,7 @@ Deno.test("authenticator - username fn password string", async () => {
 });
 
 Deno.test("authenticator - token fn", async () => {
-  let token = "tok";
+  const token = "tok";
   const authenticator = tokenAuthenticator(() => {
     return token;
   });
@@ -151,8 +151,8 @@ Deno.test("authenticator - token fn", async () => {
 
 Deno.test("authenticator - nkey fn", async () => {
   const user = nkeys.createUser();
-  let seed = user.getSeed();
-  let nkey = user.getPublicKey();
+  const seed = user.getSeed();
+  const nkey = user.getPublicKey();
 
   const authenticator = nkeyAuthenticator(() => {
     return seed;
@@ -168,15 +168,15 @@ Deno.test("authenticator - nkey fn", async () => {
 
 Deno.test("authenticator - jwt bearer fn", async () => {
   const O = nkeys.createOperator();
-  let A = nkeys.createAccount();
-  let U = nkeys.createUser();
-  let ujwt = await encodeUser("U", U, A, { bearer_token: true });
+  const A = nkeys.createAccount();
+  const U = nkeys.createUser();
+  const ujwt = await encodeUser("U", U, A, { bearer_token: true });
 
   const authenticator = jwtAuthenticator(() => {
     return ujwt;
   });
 
-  let resolver: Record<string, string> = {};
+  const resolver: Record<string, string> = {};
   resolver[A.getPublicKey()] = await encodeAccount("A", A, {
     limits: {
       conn: -1,
@@ -194,9 +194,9 @@ Deno.test("authenticator - jwt bearer fn", async () => {
 
 Deno.test("authenticator - jwt fn", async () => {
   const O = nkeys.createOperator();
-  let A = nkeys.createAccount();
-  let U = nkeys.createUser();
-  let ujwt = await encodeUser("U", U, A, {});
+  const A = nkeys.createAccount();
+  const U = nkeys.createUser();
+  const ujwt = await encodeUser("U", U, A, {});
 
   const authenticator = jwtAuthenticator(() => {
     return ujwt;
@@ -222,16 +222,16 @@ Deno.test("authenticator - jwt fn", async () => {
 
 Deno.test("authenticator - creds fn", async () => {
   const O = nkeys.createOperator();
-  let A = nkeys.createAccount();
-  let U = nkeys.createUser();
-  let ujwt = await encodeUser("U", U, A, {});
-  let creds = fmtCreds(ujwt, U);
+  const A = nkeys.createAccount();
+  const U = nkeys.createUser();
+  const ujwt = await encodeUser("U", U, A, {});
+  const creds = fmtCreds(ujwt, U);
 
   const authenticator = credsAuthenticator(() => {
     return creds;
   });
 
-  let resolver: Record<string, string> = {};
+  const resolver: Record<string, string> = {};
   resolver[A.getPublicKey()] = await encodeAccount("A", A, {
     limits: {
       conn: -1,

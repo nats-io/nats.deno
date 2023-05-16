@@ -734,7 +734,6 @@ Deno.test("service - cross platform service test", async () => {
   await nc.services.add(conf);
 
   const args = [
-    "deno",
     "run",
     "-A",
     "./tests/helpers/service-check.ts",
@@ -744,17 +743,16 @@ Deno.test("service - cross platform service test", async () => {
     "demo.nats.io",
   ];
 
-  const p = Deno.run({ cmd: args, stderr: "piped", stdout: "piped" });
-  const [status, _stdout, stderr] = await Promise.all([
-    p.status(),
-    p.output(),
-    p.stderrOutput(),
-  ]);
+  const cmd = new Deno.Command(Deno.execPath(), {
+    args,
+    stderr: "piped",
+    stdout: "piped",
+  });
+  const { success, stderr } = await cmd.output();
 
-  if (!status.success) {
+  if (!success) {
     fail(StringCodec().decode(stderr));
   }
-  p.close();
 
   await nc.close();
 });
