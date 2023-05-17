@@ -99,13 +99,13 @@ Deno.test("service - client", async () => {
     name: "test",
     version: "1.0.0",
     description: "responds with hello",
-    endpoint: {
-      subject: subj,
-      handler: (_err, msg) => {
-        msg?.respond(sc.encode("hello"));
-      },
-    },
   }) as ServiceImpl;
+  srv.addEndpoint("hello", {
+    handler: (_err, msg) => {
+      msg?.respond(sc.encode("hello"));
+    },
+    subject: subj,
+  });
 
   await nc.request(subj);
   await nc.request(subj);
@@ -192,15 +192,15 @@ Deno.test("service - basics", async () => {
   const conf: ServiceConfig = {
     name: "test",
     version: "0.0.0",
-    endpoint: {
-      subject: "foo",
-      handler: (_err: Error | null, msg: Msg) => {
-        msg?.respond();
-      },
-    },
   };
   const srvA = await nc.services.add(conf) as ServiceImpl;
+  srvA.addEndpoint("foo", (_err: Error | null, msg: Msg) => {
+    msg?.respond();
+  });
   const srvB = await nc.services.add(conf) as ServiceImpl;
+  srvB.addEndpoint("foo", (_err: Error | null, msg: Msg) => {
+    msg?.respond();
+  });
 
   const m = nc.services.client();
   const count = async (
@@ -266,16 +266,14 @@ Deno.test("service - stop error", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "fail",
-      handler: () => {
-        if (err) {
-          service.stop(err);
-          return;
-        }
-        fail("shouldn't have subscribed");
-      },
-    },
+  });
+
+  service.addEndpoint("fail", () => {
+    if (err) {
+      service.stop(err);
+      return;
+    }
+    fail("shouldn't have subscribed");
   });
 
   const err = await service.stopped as NatsError;
@@ -305,12 +303,10 @@ Deno.test("service - start error", async () => {
   const service = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "fail",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
+  });
+
+  service.addEndpoint("fail", (_err, msg) => {
+    msg?.respond();
   });
 
   const err = await service.stopped as NatsError;
@@ -324,17 +320,15 @@ Deno.test("service - start error", async () => {
 
 Deno.test("service - callback error", async () => {
   const { ns, nc } = await setup();
-  await nc.services.add({
+  const srv = await nc.services.add({
     name: "test",
     version: "2.0.0",
-    endpoint: {
-      subject: "fail",
-      handler: (err) => {
-        if (err === null) {
-          throw new Error("boom");
-        }
-      },
-    },
+  });
+
+  srv.addEndpoint("fail", (err) => {
+    if (err === null) {
+      throw new Error("boom");
+    }
   });
 
   const m = await nc.request("fail");
@@ -654,28 +648,28 @@ Deno.test("service - cross platform service test", async () => {
     statsHandler: (): Promise<unknown> => {
       return Promise.resolve("hello world");
     },
-    endpoint: {
-      subject: createInbox(),
-      metadata: {
-        endpoint: "a",
-      },
-      handler: (_err, m): void => {
-        if (m.data.length === 0) {
-          m.respondError(400, "need a string", JSONCodec().encode(""));
-        } else {
-          if (StringCodec().decode(m.data) === "error") {
-            throw new Error("service asked to throw an error");
-          }
-          m.respond(m.data);
-        }
-      },
-    },
     metadata: {
       service: name,
     },
   };
 
-  await nc.services.add(conf);
+  const srv = await nc.services.add(conf);
+  srv.addEndpoint("test", {
+    subject: createInbox(),
+    handler: (_err, m): void => {
+      if (m.data.length === 0) {
+        m.respondError(400, "need a string", JSONCodec().encode(""));
+      } else {
+        if (StringCodec().decode(m.data) === "error") {
+          throw new Error("service asked to throw an error");
+        }
+        m.respond(m.data);
+      }
+    },
+    metadata: {
+      endpoint: "a",
+    },
+  });
 
   const args = [
     "run",
@@ -709,12 +703,9 @@ Deno.test("service - stats name respects assigned name", async () => {
     name: "tEsT",
     // @ts-ignore: testing
     version: "0.0.1",
-    endpoint: {
-      subject: "q",
-      handler: (_err, msg) => {
-        msg?.respond();
-      },
-    },
+  });
+  test.addEndpoint("q", (_err, msg) => {
+    msg?.respond();
   });
   const stats = await test.stats();
   assertEquals(stats.name, "tEsT");
@@ -816,9 +807,6 @@ Deno.test("service - group subs", async () => {
   const srv = await nc.services.add({
     name: "example",
     version: "0.0.1",
-    endpoint: {
-      subject: "default.>",
-    },
   });
   const t = (subject: string) => {
     const sub = (nc as NatsConnectionImpl).protocol.subscriptions.all().find(
@@ -828,7 +816,6 @@ Deno.test("service - group subs", async () => {
     );
     assertExists(sub);
   };
-  t("default.>");
   srv.addGroup("").addEndpoint("root");
   t("root");
   srv.addGroup("a").addEndpoint("add");
@@ -848,15 +835,6 @@ Deno.test("service - metadata", async () => {
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
-    endpoint: {
-      subject: "main",
-      handler: (_err, msg) => {
-        msg.respond();
-      },
-      metadata: {
-        main: "main",
-      },
-    },
   });
   srv.addGroup("group").addEndpoint("endpoint", {
     handler: (_err, msg) => {
@@ -870,9 +848,8 @@ Deno.test("service - metadata", async () => {
   const info = srv.info();
   assertEquals(info.metadata, { service: "1" });
   const stats = await srv.stats();
-  assertEquals(stats.endpoints?.length, 2);
-  assertEquals(stats.endpoints?.[0].metadata, { main: "main" });
-  assertEquals(stats.endpoints?.[1].metadata, { endpoint: "endpoint" });
+  assertEquals(stats.endpoints?.length, 1);
+  assertEquals(stats.endpoints?.[0].metadata, { endpoint: "endpoint" });
 
   await cleanup(ns, nc);
 });
@@ -883,15 +860,6 @@ Deno.test("service - schema metadata", async () => {
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
-    endpoint: {
-      subject: "main",
-      handler: (_err, msg) => {
-        msg.respond();
-      },
-      metadata: {
-        main: "main",
-      },
-    },
   });
   srv.addGroup("group").addEndpoint("endpoint", {
     handler: (_err, msg) => {

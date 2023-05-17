@@ -239,7 +239,7 @@ function validInternalToken(context: string, subj: string) {
   });
 }
 
-export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
+export interface Service extends ServiceGroup {
   /**
    * A promise that gets resolved to null or Error once the service ends.
    * If an error, then service exited because of an error.
@@ -375,12 +375,6 @@ export type ServiceConfig = {
    */
   description?: string;
   /**
-   * An optional endpoint mapping a handler to a subject.
-   * More complex multi-endpoint services can be achieved by
-   * {@link Service}.addEndpoint() and addGroup().
-   */
-  endpoint?: Endpoint;
-  /**
    * A customized handler for the stats of an endpoint. The
    * data returned by the endpoint will be serialized as is
    * @param endpoint
@@ -458,8 +452,7 @@ export class ServiceError extends Error {
   }
 }
 
-export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
-  implements Service {
+export class ServiceImpl implements Service {
   nc: NatsConnection;
   _id: string;
   config: ServiceConfig;
@@ -499,7 +492,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     nc: NatsConnection,
     config: ServiceConfig = { name: "", version: "" },
   ) {
-    super();
     this.nc = nc;
     this.config = config;
     // this will throw if no name
@@ -511,18 +503,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     this._done = deferred();
     this._stopped = false;
     this.handlers = [];
-    this.noIterator = true;
     this.started = new Date().toISOString();
     // initialize the stats
     this.reset();
-    if (this.config.endpoint) {
-      this._addEndpoint({
-        name: "default",
-        subject: this.config.endpoint?.subject,
-        handler: this.config.endpoint?.handler,
-        metadata: this.config.endpoint?.metadata,
-      }, true);
-    }
 
     // close if the connection closes
     this.nc.closed()
@@ -815,9 +798,8 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   _addEndpoint(
     e: NamedEndpoint,
-    main = false,
   ): QueuedIterator<ServiceMsg> {
-    const qi = main ? this : new QueuedIteratorImpl<ServiceMsg>();
+    const qi = new QueuedIteratorImpl<ServiceMsg>();
     qi.noIterator = typeof e.handler === "function";
     if (!qi.noIterator) {
       e.handler = (err, msg): void => {
