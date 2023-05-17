@@ -33,9 +33,9 @@ import { parseSemVer } from "./semver.ts";
 /**
  * Services have common backplane subject pattern:
  *
- * `$SRV.PING|STATS|INFO|SCHEMA` - pings or retrieves status for all services
- * `$SRV.PING|STATS|INFO|SCHEMA.<name>` - pings or retrieves status for all services having the specified name
- * `$SRV.PING|STATS|INFO|SCHEMA.<name>.<id>` - pings or retrieves status of a particular service
+ * `$SRV.PING|STATS|INFO` - pings or retrieves status for all services
+ * `$SRV.PING|STATS|INFO.<name>` - pings or retrieves status for all services having the specified name
+ * `$SRV.PING|STATS|INFO.<name>.<id>` - pings or retrieves status of a particular service
  *
  * Note that <name> and <id> are upper-cased.
  */
@@ -47,14 +47,12 @@ export enum ServiceVerb {
   PING = "PING",
   STATS = "STATS",
   INFO = "INFO",
-  SCHEMA = "SCHEMA",
 }
 
 export enum ServiceResponseType {
   STATS = "io.nats.micro.v1.stats_response",
   INFO = "io.nats.micro.v1.info_response",
   PING = "io.nats.micro.v1.ping_response",
-  SCHEMA = "io.nats.micro.v1.schema_response",
 }
 
 export interface ServiceResponse {
@@ -201,11 +199,11 @@ export class ServiceGroupImpl implements ServiceGroup {
       ? { handler: opts, subject: name }
       : opts;
     validateName("endpoint", name);
-    let { subject, handler, schema, metadata } = args;
+    let { subject, handler, metadata } = args;
     subject = subject || name;
     validSubjectName("endpoint subject", subject);
     subject = this.calcSubject(this.subject, subject);
-    const ne = { name, subject, handler, schema, metadata };
+    const ne = { name, subject, handler, metadata };
     return this.srv._addEndpoint(ne);
   }
 
@@ -261,11 +259,6 @@ export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
    * Returns a service info for the service
    */
   info(): ServiceInfo;
-
-  /**
-   * Returns the service schema
-   */
-  schema(): ServiceSchema;
 
   /**
    * Returns the identity used by this service
@@ -338,11 +331,6 @@ export type ServiceSchema = ServiceIdentity & {
   endpoints: EndpointSchema[];
 };
 
-export type SchemaInfo = {
-  request: string;
-  response: string;
-};
-
 export type EndpointSchema = {
   /**
    * Endpoint Name
@@ -352,10 +340,6 @@ export type EndpointSchema = {
    * Subject the endpoint receiving requests on
    */
   subject: string;
-  /**
-   * Optional schema if defined
-   */
-  schema?: SchemaInfo;
   /*
    * Service metadata
    */
@@ -428,10 +412,6 @@ export type Endpoint = {
    */
   handler?: ServiceHandler;
   /**
-   * An optional schema
-   */
-  schema?: SchemaInfo;
-  /**
    * Optional metadata about the endpoint
    */
   metadata?: Record<string, string>;
@@ -455,7 +435,6 @@ type ServiceSubscription<T = unknown> =
     sub: Sub<T>;
     qi?: QueuedIterator<T>;
     stats: NamedEndpointStatsImpl;
-    schema?: SchemaInfo;
     metadata?: Record<string, string>;
   };
 
@@ -541,7 +520,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
         name: "default",
         subject: this.config.endpoint?.subject,
         handler: this.config.endpoint?.handler,
-        schema: this.config.endpoint?.schema,
         metadata: this.config.endpoint?.metadata,
       }, true);
     }
@@ -603,7 +581,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   ): ServiceSubscription {
     // internals don't use a queue
     const queue = internal ? "" : "q";
-    const { name, subject, handler, schema } = h as NamedEndpoint;
+    const { name, subject, handler } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
@@ -611,7 +589,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
     sv.stats.metadata = h.metadata;
-    sv.schema = schema;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -752,19 +729,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       return Promise.resolve();
     };
 
-    const schemaHandler = (err: Error | null, msg: Msg): Promise<void> => {
-      if (err) {
-        this.close(err);
-        return Promise.reject(err);
-      }
-      msg?.respond(JSONCodec().encode(this.schema()));
-      return Promise.resolve();
-    };
-
     this.addInternalHandler(ServiceVerb.PING, pingHandler);
     this.addInternalHandler(ServiceVerb.STATS, statsHandler);
     this.addInternalHandler(ServiceVerb.INFO, infoHandler);
-    this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
 
     // now the actual service
     this.handlers.forEach((h) => {
@@ -822,22 +789,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       version: this.version,
       metadata: this.metadata,
     };
-  }
-
-  schema(): ServiceSchema {
-    const v: ServiceSchema = {
-      type: ServiceResponseType.SCHEMA,
-      name: this.name,
-      id: this.id,
-      version: this.version,
-      endpoints: [],
-      metadata: this.metadata,
-    };
-    v.endpoints = this.handlers.map((h) => {
-      const { metadata, schema, subject, name } = h;
-      return { metadata, schema, subject, name };
-    });
-    return v;
   }
 
   reset(): void {

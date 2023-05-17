@@ -23,7 +23,6 @@ import {
   ServiceImpl,
   ServiceInfo,
   ServiceResponseType,
-  ServiceSchema,
   ServiceStats,
 } from "../nats-base-client/service.ts";
 import {
@@ -64,7 +63,7 @@ Deno.test("service - control subject", () => {
       `hello.service.${verb}.nAMe.iD`,
     );
   };
-  [ServiceVerb.INFO, ServiceVerb.PING, ServiceVerb.SCHEMA, ServiceVerb.STATS]
+  [ServiceVerb.INFO, ServiceVerb.PING, ServiceVerb.STATS]
     .forEach((v) => {
       test(v);
     });
@@ -104,10 +103,6 @@ Deno.test("service - client", async () => {
       subject: subj,
       handler: (_err, msg) => {
         msg?.respond(sc.encode("hello"));
-      },
-      schema: {
-        request: "a",
-        response: "b",
       },
     },
   }) as ServiceImpl;
@@ -189,38 +184,6 @@ Deno.test("service - client", async () => {
   verifyStats(await collect(await m.stats("test")));
   verifyStats(await collect(await m.stats("test", srv.id)));
 
-  function verifySchema(schemas: ServiceSchema[]) {
-    verifyIdentity(schemas);
-    const schema = schemas[0];
-    assertEquals(schema.type, ServiceResponseType.SCHEMA);
-    assertExists(schema.endpoints);
-    assert(Array.isArray(schema.endpoints));
-    assertEquals(schema.endpoints?.[0].name, srv.handlers[0]?.name);
-    assertEquals(schema.endpoints?.[0].subject, srv.handlers[0].subject);
-    assertEquals(
-      schema.endpoints?.[0].schema?.request,
-      srv.handlers[0].schema?.request,
-    );
-    assertEquals(
-      schema.endpoints?.[0].schema?.response,
-      srv.handlers[0].schema?.response,
-    );
-
-    const r = schema as unknown as Record<string, unknown>;
-    delete r.type;
-    delete r.version;
-    delete r.name;
-    delete r.id;
-    delete r.api_url;
-    delete r.endpoints;
-    assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
-  }
-
-  // schema
-  verifySchema(await collect(await m.schema()));
-  verifySchema(await collect(await m.schema("test")));
-  verifySchema(await collect(await m.schema("test", srv.id)));
-
   await cleanup(ns, nc);
 });
 
@@ -233,10 +196,6 @@ Deno.test("service - basics", async () => {
       subject: "foo",
       handler: (_err: Error | null, msg: Msg) => {
         msg?.respond();
-      },
-      schema: {
-        request: "a",
-        response: "b",
       },
     },
   };
@@ -278,17 +237,6 @@ Deno.test("service - basics", async () => {
   await assertRejects(
     async () => {
       await collect(await m.stats("test", "c"));
-    },
-    Error,
-    ErrorCode.NoResponders,
-  );
-
-  assertEquals(await count(m.schema()), 2);
-  assertEquals(await count(m.schema("test")), 2);
-  assertEquals(await count(m.schema("test", srvB.id)), 1);
-  await assertRejects(
-    async () => {
-      await collect(await m.schema("test", "c"));
     },
     Error,
     ErrorCode.NoResponders,
@@ -708,7 +656,6 @@ Deno.test("service - cross platform service test", async () => {
     },
     endpoint: {
       subject: createInbox(),
-      schema: { request: "a", response: "b" },
       metadata: {
         endpoint: "a",
       },
@@ -944,10 +891,6 @@ Deno.test("service - schema metadata", async () => {
       metadata: {
         main: "main",
       },
-      schema: {
-        request: "main_request",
-        response: "main_response",
-      },
     },
   });
   srv.addGroup("group").addEndpoint("endpoint", {
@@ -957,23 +900,6 @@ Deno.test("service - schema metadata", async () => {
     metadata: {
       endpoint: "endpoint",
     },
-    schema: {
-      request: "endpoint_request",
-      response: "endpoint_response",
-    },
-  });
-
-  const schema = srv.schema();
-  assertEquals(schema.endpoints?.length, 2);
-  assertEquals(schema.endpoints?.[0].metadata, { main: "main" });
-  assertEquals(schema.endpoints?.[0].schema, {
-    request: "main_request",
-    response: "main_response",
-  });
-  assertEquals(schema.endpoints?.[1].metadata, { endpoint: "endpoint" });
-  assertEquals(schema.endpoints?.[1].schema, {
-    request: "endpoint_request",
-    response: "endpoint_response",
   });
 
   await cleanup(ns, nc);

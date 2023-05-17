@@ -26,7 +26,6 @@ import {
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
-  ServiceSchema,
   ServiceStats,
   ServiceVerb,
 } from "../../nats-base-client/service.ts";
@@ -46,7 +45,6 @@ const root = cli({
       await invoke(nc, name);
       await checkPing(nc, name);
       await checkInfo(nc, name);
-      await checkSchema(nc, name);
       await checkStats(nc, name);
     } catch (err) {
       cmd.stderr(err.message);
@@ -116,14 +114,6 @@ async function checkStats(nc: NatsConnection, name: string) {
   const validateFn = ajv.compile(statsSchema);
   await check<ServiceStats>(nc, ServiceVerb.STATS, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.STATS);
-    parseSemVer(v.version);
-  });
-}
-
-async function checkSchema(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(serviceSchema);
-  await check<ServiceSchema>(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
-    assertEquals(v.type, ServiceResponseType.SCHEMA);
     parseSemVer(v.version);
   });
 }
@@ -302,45 +292,6 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     "started",
     "metadata",
   ],
-  additionalProperties: false,
-};
-
-const serviceSchema: JSONSchemaType<ServiceSchema> = {
-  type: "object",
-  properties: {
-    type: { type: "string" },
-    name: { type: "string" },
-    id: { type: "string" },
-    version: { type: "string" },
-    metadata: {
-      type: "object",
-      minProperties: 1,
-    },
-    endpoints: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          subject: { type: "string" },
-          metadata: {
-            type: "object",
-            minProperties: 1,
-          },
-          schema: {
-            type: "object",
-            properties: {
-              request: { type: "string" },
-              response: { type: "string" },
-            },
-            required: ["request", "response"],
-          },
-        },
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["type", "name", "id", "version", "metadata"],
   additionalProperties: false,
 };
 
