@@ -64,7 +64,11 @@ export interface ServiceResponse {
   type: ServiceResponseType;
 }
 
-export type ServiceIdentity = ServiceResponse & {
+export type ServiceMetadata = {
+  metadata?: Record<string, string>;
+};
+
+export type ServiceIdentity = ServiceResponse & ServiceMetadata & {
   /**
    * The kind of the service reporting the stats
    */
@@ -264,6 +268,11 @@ export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
   schema(): ServiceSchema;
 
   /**
+   * Returns the identity used by this service
+   */
+  ping(): ServiceIdentity;
+
+  /**
    * Resets all the stats
    */
   reset(): void;
@@ -326,7 +335,6 @@ export type EndpointStats = ServiceIdentity & {
 };
 
 export type ServiceSchema = ServiceIdentity & {
-  api_url?: string;
   endpoints: EndpointSchema[];
 };
 
@@ -382,10 +390,6 @@ export type ServiceConfig = {
    * Description for the service
    */
   description?: string;
-  /**
-   * Schema for the service
-   */
-  apiURL?: string;
   /**
    * An optional endpoint mapping a handler to a subject.
    * More complex multi-endpoint services can be achieved by
@@ -681,6 +685,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       id: this.id,
       version: this.version,
       started: this.started,
+      metadata: this.metadata,
       endpoints,
     };
   }
@@ -737,12 +742,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       return Promise.resolve();
     };
 
-    const ping = jc.encode({
-      type: ServiceResponseType.PING,
-      name: this.name,
-      id: this.id,
-      version: this.version,
-    });
+    const ping = jc.encode(this.ping());
     const pingHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err).then().catch();
@@ -813,14 +813,25 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   stop(err?: Error): Promise<null | Error> {
     return this.close(err);
   }
+
+  ping(): ServiceIdentity {
+    return {
+      type: ServiceResponseType.PING,
+      name: this.name,
+      id: this.id,
+      version: this.version,
+      metadata: this.metadata,
+    };
+  }
+
   schema(): ServiceSchema {
     const v: ServiceSchema = {
       type: ServiceResponseType.SCHEMA,
       name: this.name,
       id: this.id,
       version: this.version,
-      api_url: this.config.apiURL,
       endpoints: [],
+      metadata: this.metadata,
     };
     v.endpoints = this.handlers.map((h) => {
       const { metadata, schema, subject, name } = h;

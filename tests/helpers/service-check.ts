@@ -105,8 +105,9 @@ function checkResponse<T extends ServiceIdentity>(
   responses.forEach((r) => {
     const valid = validator(r);
     if (!valid) {
+      console.log(r);
       console.log(validator.errors);
-      throw new Error(validator.errors?.[0].message);
+      throw new Error(tag + " " + validator.errors?.[0].message);
     }
   });
 }
@@ -261,6 +262,10 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     id: { type: "string" },
     version: { type: "string" },
     started: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
     endpoints: {
       type: "array",
       items: {
@@ -295,6 +300,7 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     "id",
     "version",
     "started",
+    "metadata",
   ],
   additionalProperties: false,
 };
@@ -306,7 +312,10 @@ const serviceSchema: JSONSchemaType<ServiceSchema> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
-    api_url: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
     endpoints: {
       type: "array",
       items: {
@@ -331,7 +340,7 @@ const serviceSchema: JSONSchemaType<ServiceSchema> = {
       },
     },
   },
-  required: ["type", "name", "id", "version"],
+  required: ["type", "name", "id", "version", "metadata"],
   additionalProperties: false,
 };
 
@@ -360,8 +369,12 @@ const pingSchema: JSONSchemaType<ServiceIdentity> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
   },
-  required: ["type", "name", "id", "version"],
+  required: ["type", "name", "id", "version", "metadata"],
   additionalProperties: false,
 };
 

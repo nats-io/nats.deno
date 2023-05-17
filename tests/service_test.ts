@@ -100,7 +100,6 @@ Deno.test("service - client", async () => {
     name: "test",
     version: "1.0.0",
     description: "responds with hello",
-    apiURL: "http://www.myapi.com",
     endpoint: {
       subject: subj,
       handler: (_err, msg) => {
@@ -194,7 +193,6 @@ Deno.test("service - client", async () => {
     verifyIdentity(schemas);
     const schema = schemas[0];
     assertEquals(schema.type, ServiceResponseType.SCHEMA);
-    assertEquals(schema.api_url, srv.config.apiURL);
     assertExists(schema.endpoints);
     assert(Array.isArray(schema.endpoints));
     assertEquals(schema.endpoints?.[0].name, srv.handlers[0]?.name);
@@ -705,7 +703,6 @@ Deno.test("service - cross platform service test", async () => {
   const conf: ServiceConfig = {
     name,
     version: "0.0.1",
-    apiURL: "http://www.myapi.com",
     statsHandler: (): Promise<unknown> => {
       return Promise.resolve("hello world");
     },
@@ -748,9 +745,11 @@ Deno.test("service - cross platform service test", async () => {
     stderr: "piped",
     stdout: "piped",
   });
-  const { success, stderr } = await cmd.output();
+  const { success, stderr, stdout } = await cmd.output();
 
   if (!success) {
+    console.log(StringCodec().decode(stdout));
+    console.log(StringCodec().decode(stderr));
     fail(StringCodec().decode(stderr));
   }
 

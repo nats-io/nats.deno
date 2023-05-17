@@ -42,7 +42,6 @@ const calc = await nc.services.add({
   name: "calc",
   version: "0.0.1",
   description: "example calculator service",
-  apiURL: "http://somesite.com",
 });
 
 // For this example the thing we want to showcase is how you can
