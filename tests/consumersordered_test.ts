@@ -13,14 +13,19 @@
  * limitations under the License.
  */
 
-import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
+import {
+  cleanup,
+  initStream,
+  jetstreamServerConf,
+  setup,
+} from "./jstest_util.ts";
 import {
   assertEquals,
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import { DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
+import { AckPolicy, DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
 import { notCompatible } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
@@ -606,5 +611,72 @@ Deno.test("ordered - next", async () => {
   m = await c.next();
   assertEquals(m?.seq, 2);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - sub leaks next()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const { stream } = await initStream(nc);
+
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream);
+  await c.next({ expires: 1000 });
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - sub leaks fetch()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const { stream } = await initStream(nc);
+
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream);
+  const iter = await c.fetch({ expires: 1000 });
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+  await done;
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - sub leaks consume()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const { stream } = await initStream(nc);
+
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream);
+  const iter = await c.consume({ expires: 30000 });
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+  setTimeout(() => {
+    iter.close();
+  }, 1000);
+
+  await done;
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
   await cleanup(ns, nc);
 });

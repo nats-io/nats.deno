@@ -100,6 +100,11 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       }
     });
 
+    const { sub } = this;
+    if (sub) {
+      sub.unsubscribe();
+    }
+
     this.sub = c.api.nc.subscribe(this.inbox, {
       callback: (err, msg) => {
         if (err) {
@@ -333,7 +338,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     if (bytesLeft) {
       discard.bytesLeft = parseInt(bytesLeft);
     }
-    // FIXME: batch complete header goes here...
 
     return discard;
   }
@@ -363,6 +367,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   }
 
   stop(err?: Error) {
+    this.sub?.unsubscribe();
     this.clearTimers();
     //@ts-ignore: fn
     this._push(() => {
