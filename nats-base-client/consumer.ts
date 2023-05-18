@@ -23,6 +23,7 @@ import {
   ConsumerEvents,
   ConsumerInfo,
   ConsumerMessages,
+  ConsumeStop,
   DeliverPolicy,
   FetchMessages,
   FetchOptions,
@@ -161,7 +162,7 @@ export type OrderedConsumerOptions = {
   opt_start_time: string;
   replay_policy: ReplayPolicy;
   inactive_threshold: number;
-};
+} & ConsumeStop;
 
 export class OrderedPullConsumerImpl implements Consumer {
   api: ConsumerAPIImpl;

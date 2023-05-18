@@ -26,6 +26,8 @@ import {
   ConsumerCallbackFn,
   ConsumerDebugEvents,
   ConsumerEvents,
+  ConsumeStop,
+  ConsumeStopStrategy,
   Events,
   JsMsg,
   MsgHdrs,
@@ -55,6 +57,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   timeout: Timeout<unknown> | null;
   cleanupHandler?: () => void;
   listeners: QueuedIterator<ConsumerStatus>[];
+  stopStrategy?: ConsumeStopStrategy;
+  stopStrategyFn?: (m: JsMsg) => boolean;
+  noMore: boolean;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -67,6 +72,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
 
     this.opts = this.parseOptions(opts, refilling);
     this.callback = (opts as ConsumeCallback).callback || null;
+    this.noMore = false;
     this.noIterator = typeof this.callback === "function";
     this.monitor = null;
     this.pong = null;
@@ -76,6 +82,31 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.timeout = null;
     this.inbox = createInbox();
     this.listeners = [];
+
+    const stopOpts = opts as ConsumeStop;
+    this.stopStrategy = stopOpts.strategy;
+    switch (this.stopStrategy) {
+      case ConsumeStopStrategy.NoMessages:
+        {
+          this.stopStrategyFn = (m): boolean => {
+            return m.info.pending === 0;
+          };
+        }
+        break;
+      case ConsumeStopStrategy.Sequence:
+        {
+          if (typeof stopOpts.arg !== "number") {
+            throw new Error("stop strategy args is not a number");
+          }
+          const seq = stopOpts.arg;
+          this.stopStrategyFn = (m): boolean => {
+            return m.seq >= seq;
+          };
+        }
+        break;
+      default:
+        // nothing
+    }
 
     const {
       max_messages,
@@ -102,6 +133,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
 
     this.sub = c.api.nc.subscribe(this.inbox, {
       callback: (err, msg) => {
+        if (this.noMore) {
+          return;
+        }
         if (err) {
           // this is possibly only a permissions error which means
           // that the server rejected (eliminating the sub)
@@ -144,10 +178,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
             // we got a bad request - no progress here
             if (code === 400) {
               const error = toErr();
-              //@ts-ignore: fn
-              this._push(() => {
-                this.stop(error);
-              });
+              this.stop(error);
             } else if (code === 409 && description === "consumer deleted") {
               const error = toErr();
               this.stop(error);
@@ -160,7 +191,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
           }
         } else {
           // push the user message
-          this._push(toJsMsg(msg));
+          const jsMsg = toJsMsg(msg);
+          this._push(jsMsg);
           this.received++;
           if (this.pending.msgs) {
             this.pending.msgs--;
@@ -168,13 +200,20 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
           if (this.pending.bytes) {
             this.pending.bytes -= (msg as MsgImpl).size();
           }
+          // if we are just processing a stream, end when we get the last message
+          if (this.stopStrategyFn) {
+            this.noMore = this.stopStrategyFn(jsMsg);
+          }
         }
 
         // if we don't have pending bytes/messages we are done or starving
         if (this.pending.msgs === 0 && this.pending.bytes === 0) {
           this.pending.requests = 0;
         }
-        if (this.refilling) {
+
+        if (this.noMore) {
+          this.stop();
+        } else if (this.refilling) {
           // FIXME: this could result in  1/4 = 0
           if (
             (max_messages &&
@@ -238,6 +277,20 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
         }
       }
     })();
+
+    if (this.refilling && this.stopStrategyFn) {
+      // this is the initial pull if we have a consume, but we are
+      // checking pending, we want to verify that the info on the
+      // consumer is up-to-date, and whether we have any pending
+      // messages
+      this.consumer.info()
+        .then((ci) => {
+          if (ci.num_pending === 0) {
+            this.stop();
+          }
+        })
+        .catch();
+    }
 
     // this is the initial pull
     this.pull(this.pullOptions());
