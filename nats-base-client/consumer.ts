@@ -109,6 +109,7 @@ export class PullConsumerImpl implements Consumer {
             (s.data as number) >= 2
           ) {
             d.reject(new Error("consumer missed heartbeats"));
+            break;
           }
         }
       })().catch();

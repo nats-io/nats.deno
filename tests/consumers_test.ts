@@ -836,3 +836,76 @@ Deno.test("consumers - next", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("consumers - sub leaks next()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, stream);
+  await c.next({ expires: 1000 });
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - sub leaks fetch()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, stream);
+  const iter = await c.fetch({ expires: 1000 });
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+  await done;
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - sub leaks consume()", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, stream);
+  const iter = await c.consume({ expires: 30000 });
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+  setTimeout(() => {
+    iter.close();
+  }, 1000);
+
+  await done;
+  //@ts-ignore: test
+  assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
