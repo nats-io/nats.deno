@@ -13,36 +13,21 @@
  * limitations under the License.
  */
 
-import {
-  connect,
-  JSONCodec,
-  SchemaInfo,
-  ServiceError,
-  ServiceMsg,
-} from "../../src/mod.ts";
+import { connect, JSONCodec, ServiceError, ServiceMsg } from "../../src/mod.ts";
 
 const jc = JSONCodec();
 
 // connect to NATS on demo.nats.io
 const nc = await connect({ servers: ["demo.nats.io"] });
 
-// this is a pseudo JSON schema - current requirements is that it is a string
-// so more conveniently return an URL to your schemas.
-const schema: SchemaInfo = {
-  request: JSON.stringify({
-    type: "array",
-    minItems: 1,
-    items: { type: "number" },
-  }),
-  response: JSON.stringify({ type: "number" }),
-};
-
 // create a service - using the statsHandler and decoder
 const calc = await nc.services.add({
   name: "calc",
   version: "0.0.1",
   description: "example calculator service",
-  apiURL: "http://somesite.com",
+  metadata: {
+    "example": "entry",
+  },
 });
 
 // For this example the thing we want to showcase is how you can
@@ -64,7 +49,12 @@ const g = calc.addGroup("calc");
 // additional options such as a handler, subject, or schema can be
 // specified.
 // this endpoint is accessible as `calc.sum`
-const sums = g.addEndpoint("sum");
+const sums = g.addEndpoint("sum", {
+  metadata: {
+    "input": "JSON number array",
+    "output": "JSON number with the sum",
+  },
+});
 (async () => {
   for await (const m of sums) {
     const numbers = decode(m);
@@ -76,21 +66,26 @@ const sums = g.addEndpoint("sum");
 })().then();
 
 // Here's another implemented using a callback, will be accessible by `calc.average`:
-g.addEndpoint("average", (err, m) => {
-  if (err) {
-    calc.stop(err);
-    return;
-  }
-  const numbers = decode(m);
-  const sum = numbers.reduce((sum, v) => {
-    return sum + v;
-  });
-  m.respond(jc.encode(sum / numbers.length));
+g.addEndpoint("average", {
+  handler: (err, m) => {
+    if (err) {
+      calc.stop(err);
+      return;
+    }
+    const numbers = decode(m);
+    const sum = numbers.reduce((sum, v) => {
+      return sum + v;
+    });
+    m.respond(jc.encode(sum / numbers.length));
+  },
+  metadata: {
+    "input": "JSON number array",
+    "output": "JSON number average value found in the array",
+  },
 });
 
 // and another using a callback, and specifying our schema:
 g.addEndpoint("min", {
-  schema,
   handler: (err, m) => {
     if (err) {
       calc.stop(err);
@@ -102,18 +97,28 @@ g.addEndpoint("min", {
     });
     m.respond(jc.encode(min));
   },
+  metadata: {
+    "input": "JSON number array",
+    "output": "JSON number min value found in the array",
+  },
 });
 
-g.addEndpoint("max", (err, m) => {
-  if (err) {
-    calc.stop(err);
-    return;
-  }
-  const numbers = decode(m);
-  const max = numbers.reduce((n, v) => {
-    return Math.max(n, v);
-  });
-  m.respond(jc.encode(max));
+g.addEndpoint("max", {
+  handler: (err, m) => {
+    if (err) {
+      calc.stop(err);
+      return;
+    }
+    const numbers = decode(m);
+    const max = numbers.reduce((n, v) => {
+      return Math.max(n, v);
+    });
+    m.respond(jc.encode(max));
+  },
+  metadata: {
+    "input": "JSON number array",
+    "output": "JSON number max value found in the array",
+  },
 });
 
 calc.stopped.then((err: Error | null) => {
@@ -127,7 +132,7 @@ async function calculate(op: string, a: number[]): Promise<void> {
     console.log(ServiceError.toServiceError(r));
     return;
   }
-  const ans = jc.decode<number>(r.data);
+  const ans = r.json<number>();
   console.log(`${op} ${a.join(", ")} = ${ans}`);
 }
 
@@ -145,7 +150,7 @@ await nc.close();
 
 // a simple decoder that tosses a ServiceError if the input is not what we want.
 function decode(m: ServiceMsg): number[] {
-  const a = jc.decode<number[]>(m.data);
+  const a = m.json<number[]>();
   if (!Array.isArray(a)) {
     throw new ServiceError(400, "input requires array");
   }

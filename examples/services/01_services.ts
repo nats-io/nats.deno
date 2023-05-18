@@ -17,7 +17,6 @@ import {
   connect,
   JSONCodec,
   QueuedIterator,
-  SchemaInfo,
   ServiceError,
   ServiceErrorCodeHeader,
   ServiceErrorHeader,
@@ -28,17 +27,6 @@ import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 // connect to NATS on demo.nats.io
 const nc = await connect({ servers: ["demo.nats.io"] });
-
-// this is a pseudo JSON schema - current requirements is that it is a string
-// so more conveniently return an URL to your schemas.
-const schema: SchemaInfo = {
-  request: JSON.stringify({
-    type: "array",
-    minItems: 1,
-    items: { type: "number" },
-  }),
-  response: JSON.stringify({ type: "number" }),
-};
 
 // All services have some basic stats that are collected like the
 // number of requests processed, etc. Your service can accumulate
@@ -57,13 +45,11 @@ const service = await nc.services.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
-  apiURL: "http://someurl.com",
-  endpoint: {
-    subject: "max",
-    schema,
-  },
   statsHandler,
 });
+
+// add an endpoint listening on "max"
+const max = service.addEndpoint("max");
 
 // a service has the `stopped` property - which is a promise that
 // resolves to null or an error (not rejects). This promise resolves
@@ -78,7 +64,7 @@ service.stopped.then((err: Error | null) => {
 // we can have this example be in a single file
 (async () => {
   const jc = JSONCodec<number>();
-  for await (const r of service) {
+  for await (const r of max) {
     // most of the logic is about validating the input
     // and returning an error to the client if the input
     // is not what we expect.
@@ -208,7 +194,7 @@ await collect(m.stats("max", found[0].id));
 
 // All monitoring subjects have the format:
 // $SRV.<VERB>.<name>.<id>
-// where the verb can be 'PING', 'INFO', 'STATS' or 'SCHEMA'
+// where the verb can be 'PING', 'INFO', or 'STATS'
 // the name is optional but matches a service name.
 // The id is also optional, but you must know it (from ping or one of
 // other requests that allowed you to discover the service) to

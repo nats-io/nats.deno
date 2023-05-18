@@ -26,7 +26,6 @@ import {
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
-  ServiceSchema,
   ServiceStats,
   ServiceVerb,
 } from "../../nats-base-client/service.ts";
@@ -46,7 +45,6 @@ const root = cli({
       await invoke(nc, name);
       await checkPing(nc, name);
       await checkInfo(nc, name);
-      await checkSchema(nc, name);
       await checkStats(nc, name);
     } catch (err) {
       cmd.stderr(err.message);
@@ -105,8 +103,9 @@ function checkResponse<T extends ServiceIdentity>(
   responses.forEach((r) => {
     const valid = validator(r);
     if (!valid) {
+      console.log(r);
       console.log(validator.errors);
-      throw new Error(validator.errors?.[0].message);
+      throw new Error(tag + " " + validator.errors?.[0].message);
     }
   });
 }
@@ -115,14 +114,6 @@ async function checkStats(nc: NatsConnection, name: string) {
   const validateFn = ajv.compile(statsSchema);
   await check<ServiceStats>(nc, ServiceVerb.STATS, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.STATS);
-    parseSemVer(v.version);
-  });
-}
-
-async function checkSchema(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(serviceSchema);
-  await check<ServiceSchema>(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
-    assertEquals(v.type, ServiceResponseType.SCHEMA);
     parseSemVer(v.version);
   });
 }
@@ -261,6 +252,10 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     id: { type: "string" },
     version: { type: "string" },
     started: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
     endpoints: {
       type: "array",
       items: {
@@ -295,43 +290,8 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     "id",
     "version",
     "started",
+    "metadata",
   ],
-  additionalProperties: false,
-};
-
-const serviceSchema: JSONSchemaType<ServiceSchema> = {
-  type: "object",
-  properties: {
-    type: { type: "string" },
-    name: { type: "string" },
-    id: { type: "string" },
-    version: { type: "string" },
-    api_url: { type: "string" },
-    endpoints: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          subject: { type: "string" },
-          metadata: {
-            type: "object",
-            minProperties: 1,
-          },
-          schema: {
-            type: "object",
-            properties: {
-              request: { type: "string" },
-              response: { type: "string" },
-            },
-            required: ["request", "response"],
-          },
-        },
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["type", "name", "id", "version"],
   additionalProperties: false,
 };
 
@@ -360,8 +320,12 @@ const pingSchema: JSONSchemaType<ServiceIdentity> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
   },
-  required: ["type", "name", "id", "version"],
+  required: ["type", "name", "id", "version", "metadata"],
   additionalProperties: false,
 };
 
