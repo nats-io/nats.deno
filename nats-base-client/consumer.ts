@@ -38,6 +38,7 @@ import {
 } from "./consumermessages.ts";
 import { nuid } from "./nuid.ts";
 import { nanos } from "./jsutil.ts";
+import { Feature } from "./semver.ts";
 
 enum PullConsumerType {
   Unset = -1,
@@ -156,7 +157,7 @@ export class PullConsumerImpl implements Consumer {
 }
 
 export type OrderedConsumerOptions = {
-  filterSubjects: string[];
+  filterSubjects: string[] | string;
   deliver_policy: DeliverPolicy;
   opt_start_seq: number;
   opt_start_time: string;
@@ -218,6 +219,9 @@ export class OrderedPullConsumerImpl implements Consumer {
     if (Array.isArray(this.consumerOpts.filterSubjects)) {
       config.filter_subjects = this.consumerOpts.filterSubjects;
     }
+    if (typeof this.consumerOpts.filterSubjects === "string") {
+      config.filter_subject = this.consumerOpts.filterSubjects;
+    }
     // this is the initial request - tweak some options
     if (seq === this.startSeq + 1) {
       config.deliver_policy = this.consumerOpts.deliver_policy ||
@@ -230,8 +234,15 @@ export class OrderedPullConsumerImpl implements Consumer {
         delete config.opt_start_seq;
         config.deliver_policy = this.consumerOpts.deliver_policy;
       }
+      // this requires a filter subject - we only set if they didn't
+      // set anything, and to be pre-2.10 we set it as filter_subject
       if (config.deliver_policy === DeliverPolicy.LastPerSubject) {
-        config.filter_subjects = config.filter_subjects || [">"];
+        if (
+          typeof config.filter_subjects === "undefined" &&
+          typeof config.filter_subject === "undefined"
+        ) {
+          config.filter_subject = ">";
+        }
       }
       if (this.consumerOpts.opt_start_time) {
         delete config.opt_start_seq;

@@ -25,16 +25,18 @@ import {
   assertRejects,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import { AckPolicy, DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
+import {
+  AckPolicy,
+  DeliverPolicy,
+  JsMsg,
+  PubAck,
+} from "../nats-base-client/types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
 import { notCompatible } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
 Deno.test("ordered - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const js = nc.jetstream();
 
   await assertRejects(
@@ -61,9 +63,6 @@ Deno.test("ordered - get", async () => {
 
 Deno.test("ordered - fetch", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const js = nc.jetstream();
 
   const jsm = await nc.jetstreamManager();
@@ -92,9 +91,6 @@ Deno.test("ordered - fetch", async () => {
 
 Deno.test("ordered - fetch reset", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const js = nc.jetstream();
 
   const jsm = await nc.jetstreamManager();
@@ -176,9 +172,6 @@ Deno.test("ordered - fetch reset", async () => {
 
 Deno.test("ordered - consume reset", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const js = nc.jetstream();
 
   const jsm = await nc.jetstreamManager();
@@ -221,9 +214,6 @@ Deno.test("ordered - consume reset", async () => {
 
 Deno.test("ordered - consume", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const js = nc.jetstream();
 
   const jsm = await nc.jetstreamManager();
@@ -303,9 +293,6 @@ Deno.test("ordered - filters fetch", async () => {
 
 Deno.test("ordered - fetch reject consumer type change or concurrency", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -341,9 +328,6 @@ Deno.test("ordered - fetch reject consumer type change or concurrency", async ()
 
 Deno.test("ordered - consume reject consumer type change or concurrency", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -379,9 +363,6 @@ Deno.test("ordered - consume reject consumer type change or concurrency", async 
 
 Deno.test("ordered - last per subject", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -417,9 +398,6 @@ Deno.test("ordered - last per subject", async () => {
 
 Deno.test("ordered - start sequence", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -457,9 +435,6 @@ Deno.test("ordered - start sequence", async () => {
 
 Deno.test("ordered - last", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -498,9 +473,6 @@ Deno.test("ordered - last", async () => {
 
 Deno.test("ordered - new", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -541,9 +513,6 @@ Deno.test("ordered - new", async () => {
 
 Deno.test("ordered - start time", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test.*"] });
 
@@ -589,9 +558,6 @@ Deno.test("ordered - start time", async () => {
 
 Deno.test("ordered - next", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "test", subjects: ["test"] });
   const js = nc.jetstream();
@@ -616,9 +582,6 @@ Deno.test("ordered - next", async () => {
 
 Deno.test("ordered - sub leaks next()", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const { stream } = await initStream(nc);
 
   //@ts-ignore: test
@@ -633,9 +596,6 @@ Deno.test("ordered - sub leaks next()", async () => {
 
 Deno.test("ordered - sub leaks fetch()", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const { stream } = await initStream(nc);
 
   //@ts-ignore: test
@@ -656,9 +616,6 @@ Deno.test("ordered - sub leaks fetch()", async () => {
 
 Deno.test("ordered - sub leaks consume()", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.0")) {
-    return;
-  }
   const { stream } = await initStream(nc);
 
   //@ts-ignore: test
