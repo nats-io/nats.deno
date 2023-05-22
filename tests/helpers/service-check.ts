@@ -1,3 +1,18 @@
+/*
+ * Copyright 2023 The NATS Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
 import { connect, NatsConnection, StringCodec } from "../../src/mod.ts";
 
@@ -11,7 +26,6 @@ import {
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
-  ServiceSchema,
   ServiceStats,
   ServiceVerb,
 } from "../../nats-base-client/service.ts";
@@ -31,7 +45,6 @@ const root = cli({
       await invoke(nc, name);
       await checkPing(nc, name);
       await checkInfo(nc, name);
-      await checkSchema(nc, name);
       await checkStats(nc, name);
     } catch (err) {
       cmd.stderr(err.message);
@@ -90,8 +103,9 @@ function checkResponse<T extends ServiceIdentity>(
   responses.forEach((r) => {
     const valid = validator(r);
     if (!valid) {
+      console.log(r);
       console.log(validator.errors);
-      throw new Error(validator.errors?.[0].message);
+      throw new Error(tag + " " + validator.errors?.[0].message);
     }
   });
 }
@@ -100,14 +114,6 @@ async function checkStats(nc: NatsConnection, name: string) {
   const validateFn = ajv.compile(statsSchema);
   await check<ServiceStats>(nc, ServiceVerb.STATS, name, validateFn, (v) => {
     assertEquals(v.type, ServiceResponseType.STATS);
-    parseSemVer(v.version);
-  });
-}
-
-async function checkSchema(nc: NatsConnection, name: string) {
-  const validateFn = ajv.compile(serviceSchema);
-  await check<ServiceSchema>(nc, ServiceVerb.SCHEMA, name, validateFn, (v) => {
-    assertEquals(v.type, ServiceResponseType.SCHEMA);
     parseSemVer(v.version);
   });
 }
@@ -246,6 +252,10 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     id: { type: "string" },
     version: { type: "string" },
     started: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
     endpoints: {
       type: "array",
       items: {
@@ -257,6 +267,10 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           processing_time: { type: "number" },
           average_processing_time: { type: "number" },
           data: { type: "string" },
+          metadata: {
+            type: "object",
+            minProperties: 1,
+          },
         },
         required: [
           "num_requests",
@@ -265,6 +279,7 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           "processing_time",
           "average_processing_time",
           "data",
+          "metadata",
         ],
       },
     },
@@ -275,39 +290,8 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
     "id",
     "version",
     "started",
+    "metadata",
   ],
-  additionalProperties: false,
-};
-
-const serviceSchema: JSONSchemaType<ServiceSchema> = {
-  type: "object",
-  properties: {
-    type: { type: "string" },
-    name: { type: "string" },
-    id: { type: "string" },
-    version: { type: "string" },
-    api_url: { type: "string" },
-    endpoints: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          subject: { type: "string" },
-          schema: {
-            type: "object",
-            properties: {
-              request: { type: "string" },
-              response: { type: "string" },
-            },
-            required: ["request", "response"],
-          },
-        },
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["type", "name", "id", "version"],
   additionalProperties: false,
 };
 
@@ -320,8 +304,12 @@ const infoSchema: JSONSchemaType<ServiceInfo> = {
     version: { type: "string" },
     description: { type: "string" },
     subjects: { type: "array", items: { type: "string" } },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
   },
-  required: ["type", "name", "id", "version", "subjects"],
+  required: ["type", "name", "id", "version", "subjects", "metadata"],
   additionalProperties: false,
 };
 
@@ -332,8 +320,12 @@ const pingSchema: JSONSchemaType<ServiceIdentity> = {
     name: { type: "string" },
     id: { type: "string" },
     version: { type: "string" },
+    metadata: {
+      type: "object",
+      minProperties: 1,
+    },
   },
-  required: ["type", "name", "id", "version"],
+  required: ["type", "name", "id", "version", "metadata"],
   additionalProperties: false,
 };
 

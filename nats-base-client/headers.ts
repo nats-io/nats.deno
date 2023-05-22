@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -143,11 +143,17 @@ export class MsgHdrsImpl implements MsgHdrs {
     const lines = s.split("\r\n");
     const h = lines[0];
     if (h !== HEADER) {
-      let str = h.replace(HEADER, "");
-      mh._code = parseInt(str, 10);
-      const scode = mh._code.toString();
-      str = str.replace(scode, "");
-      mh._description = str.trim();
+      // malformed headers could add extra space without adding a code or description
+      let str = h.replace(HEADER, "").trim();
+      if (str.length > 0) {
+        mh._code = parseInt(str, 10);
+        if (isNaN(mh._code)) {
+          mh._code = 0;
+        }
+        const scode = mh._code.toString();
+        str = str.replace(scode, "");
+        mh._description = str.trim();
+      }
     }
     if (lines.length >= 1) {
       lines.slice(1).map((s) => {

@@ -33,6 +33,7 @@ import {
 import {
   MsgHdrsImpl,
   MsgImpl,
+  NatsConnectionImpl,
   Parser,
 } from "../nats-base-client/internal_mod.ts";
 import { Publisher } from "../nats-base-client/protocol.ts";
@@ -355,5 +356,87 @@ Deno.test("headers - codec", async () => {
   assertEquals(r.headers?.code, 500);
   assertEquals(r.headers?.description, "custom status from client");
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("headers - malformed headers", async () => {
+  const { ns, nc } = await setup();
+  const nci = nc as NatsConnectionImpl;
+
+  type t = {
+    proto: string;
+    expected: {
+      payload: string;
+      code?: number;
+      description?: string;
+      key?: string;
+      value?: string;
+    };
+  };
+
+  const h = headers(1, "h");
+  nc.publish("foo", Empty, { headers: h });
+
+  const tests: t[] = [
+    {
+      // extra spaces after subject, only new line after lengths
+      // trailing space after default status - this resulted in a
+      // NaN for the code but no crash
+      proto: "HPUB foo  13 15\nNATS/1.0 \r\n\r\nhi\r\n",
+      expected: {
+        payload: "hi",
+        code: 0,
+        description: "",
+      },
+    },
+    {
+      // extra spaces and pub lengths not followed by crlf
+      // status line followed by extra spaces etc
+      proto: "HPUB foo  17 19\nNATS/1.0  1 H\r\n\r\nhi\r\n",
+      expected: {
+        payload: "hi",
+        code: 1,
+        description: "H",
+      },
+    },
+    {
+      // server will convert this to msg, so no headers
+      proto: "HPUB foo 0 0\r\n\r\n",
+      expected: {
+        payload: "",
+      },
+    },
+    {
+      // this was the issue that broke java client
+      proto: "HPUB foo 12 12\r\nNATS/1.0\r\n\r\n\r\n",
+      expected: {
+        payload: "",
+        code: 0,
+        description: "",
+      },
+    },
+  ];
+
+  const sub = nc.subscribe("foo", { max: tests.length });
+  let i = 0;
+  const done = (async () => {
+    for await (const m of sub) {
+      const t = tests[i++];
+      assertEquals(m.string(), t.expected.payload);
+      if (typeof t.expected.code === "number") {
+        assertEquals(m.headers?.code, t.expected.code);
+        assertEquals(m.headers?.description, t.expected.description);
+        if (t.expected.key) {
+          assertEquals(m.headers?.get(t.expected.key), t.expected.value);
+        }
+      }
+    }
+  })();
+
+  tests.forEach((v) => {
+    nci.protocol.sendCommand(v.proto);
+  });
+
+  await done;
   await cleanup(ns, nc);
 });

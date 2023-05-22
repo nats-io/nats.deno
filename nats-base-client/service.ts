@@ -33,9 +33,9 @@ import { parseSemVer } from "./semver.ts";
 /**
  * Services have common backplane subject pattern:
  *
- * `$SRV.PING|STATS|INFO|SCHEMA` - pings or retrieves status for all services
- * `$SRV.PING|STATS|INFO|SCHEMA.<name>` - pings or retrieves status for all services having the specified name
- * `$SRV.PING|STATS|INFO|SCHEMA.<name>.<id>` - pings or retrieves status of a particular service
+ * `$SRV.PING|STATS|INFO` - pings or retrieves status for all services
+ * `$SRV.PING|STATS|INFO.<name>` - pings or retrieves status for all services having the specified name
+ * `$SRV.PING|STATS|INFO.<name>.<id>` - pings or retrieves status of a particular service
  *
  * Note that <name> and <id> are upper-cased.
  */
@@ -47,14 +47,12 @@ export enum ServiceVerb {
   PING = "PING",
   STATS = "STATS",
   INFO = "INFO",
-  SCHEMA = "SCHEMA",
 }
 
 export enum ServiceResponseType {
   STATS = "io.nats.micro.v1.stats_response",
   INFO = "io.nats.micro.v1.info_response",
   PING = "io.nats.micro.v1.ping_response",
-  SCHEMA = "io.nats.micro.v1.schema_response",
 }
 
 export interface ServiceResponse {
@@ -64,7 +62,11 @@ export interface ServiceResponse {
   type: ServiceResponseType;
 }
 
-export type ServiceIdentity = ServiceResponse & {
+export type ServiceMetadata = {
+  metadata?: Record<string, string>;
+};
+
+export type ServiceIdentity = ServiceResponse & ServiceMetadata & {
   /**
    * The kind of the service reporting the stats
    */
@@ -106,6 +108,14 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.subject;
   }
 
+  get reply(): string {
+    return this.msg.reply || "";
+  }
+
+  get headers(): MsgHdrs | undefined {
+    return this.msg.headers;
+  }
+
   respond(data?: Uint8Array, opts?: PublishOptions): boolean {
     return this.msg.respond(data, opts);
   }
@@ -121,6 +131,14 @@ export class ServiceMsgImpl implements ServiceMsg {
     opts.headers?.set(ServiceErrorCodeHeader, `${code}`);
     opts.headers?.set(ServiceErrorHeader, description);
     return this.msg.respond(data, opts);
+  }
+
+  json<T = unknown>(): T {
+    return this.msg.json();
+  }
+
+  string(): string {
+    return this.msg.string();
   }
 }
 
@@ -181,11 +199,11 @@ export class ServiceGroupImpl implements ServiceGroup {
       ? { handler: opts, subject: name }
       : opts;
     validateName("endpoint", name);
-    let { subject, handler, schema } = args;
+    let { subject, handler, metadata } = args;
     subject = subject || name;
     validSubjectName("endpoint subject", subject);
     subject = this.calcSubject(this.subject, subject);
-    const ne = { name, subject, handler, schema };
+    const ne = { name, subject, handler, metadata };
     return this.srv._addEndpoint(ne);
   }
 
@@ -221,7 +239,7 @@ function validInternalToken(context: string, subj: string) {
   });
 }
 
-export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
+export interface Service extends ServiceGroup {
   /**
    * A promise that gets resolved to null or Error once the service ends.
    * If an error, then service exited because of an error.
@@ -241,6 +259,12 @@ export interface Service extends ServiceGroup, QueuedIterator<ServiceMsg> {
    * Returns a service info for the service
    */
   info(): ServiceInfo;
+
+  /**
+   * Returns the identity used by this service
+   */
+  ping(): ServiceIdentity;
+
   /**
    * Resets all the stats
    */
@@ -286,6 +310,10 @@ export type NamedEndpointStats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
+  /**
+   * Endpoint Metadata
+   */
+  metadata?: Record<string, string>;
 };
 
 /**
@@ -300,13 +328,7 @@ export type EndpointStats = ServiceIdentity & {
 };
 
 export type ServiceSchema = ServiceIdentity & {
-  api_url?: string;
   endpoints: EndpointSchema[];
-};
-
-export type SchemaInfo = {
-  request: string;
-  response: string;
 };
 
 export type EndpointSchema = {
@@ -318,10 +340,10 @@ export type EndpointSchema = {
    * Subject the endpoint receiving requests on
    */
   subject: string;
-  /**
-   * Optional schema if defined
+  /*
+   * Service metadata
    */
-  schema?: SchemaInfo;
+  metadata?: Record<string, string>;
 };
 
 export type ServiceInfo = ServiceIdentity & {
@@ -333,6 +355,10 @@ export type ServiceInfo = ServiceIdentity & {
    * Subject where the service can be invoked
    */
   subjects: string[];
+  /**
+   * Service metadata
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ServiceConfig = {
@@ -349,16 +375,6 @@ export type ServiceConfig = {
    */
   description?: string;
   /**
-   * Schema for the service
-   */
-  apiURL?: string;
-  /**
-   * An optional endpoint mapping a handler to a subject.
-   * More complex multi-endpoint services can be achieved by
-   * {@link Service}.addEndpoint() and addGroup().
-   */
-  endpoint?: Endpoint;
-  /**
    * A customized handler for the stats of an endpoint. The
    * data returned by the endpoint will be serialized as is
    * @param endpoint
@@ -366,6 +382,11 @@ export type ServiceConfig = {
   statsHandler?: (
     endpoint: Endpoint,
   ) => Promise<unknown | null>;
+
+  /**
+   * Optional metadata about the service
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
@@ -385,9 +406,9 @@ export type Endpoint = {
    */
   handler?: ServiceHandler;
   /**
-   * An optional schema
+   * Optional metadata about the endpoint
    */
-  schema?: SchemaInfo;
+  metadata?: Record<string, string>;
 };
 
 export type EndpointOptions = Partial<Endpoint>;
@@ -408,7 +429,7 @@ type ServiceSubscription<T = unknown> =
     sub: Sub<T>;
     qi?: QueuedIterator<T>;
     stats: NamedEndpointStatsImpl;
-    schema?: SchemaInfo;
+    metadata?: Record<string, string>;
   };
 
 export class ServiceError extends Error {
@@ -431,8 +452,7 @@ export class ServiceError extends Error {
   }
 }
 
-export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
-  implements Service {
+export class ServiceImpl implements Service {
   nc: NatsConnection;
   _id: string;
   config: ServiceConfig;
@@ -440,7 +460,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   internal: ServiceSubscription[];
   _stopped: boolean;
   _done: Deferred<Error | null>;
-  _schema?: Uint8Array;
   started: string;
 
   /**
@@ -473,7 +492,6 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     nc: NatsConnection,
     config: ServiceConfig = { name: "", version: "" },
   ) {
-    super();
     this.nc = nc;
     this.config = config;
     // this will throw if no name
@@ -485,18 +503,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     this._done = deferred();
     this._stopped = false;
     this.handlers = [];
-    this.noIterator = true;
     this.started = new Date().toISOString();
     // initialize the stats
     this.reset();
-    if (this.config.endpoint) {
-      this._addEndpoint({
-        name: "default",
-        subject: this.config.endpoint?.subject,
-        handler: this.config.endpoint?.handler,
-        schema: this.config.endpoint?.schema,
-      }, true);
-    }
 
     // close if the connection closes
     this.nc.closed()
@@ -532,6 +541,10 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
     return this.config.version;
   }
 
+  get metadata(): Record<string, string> | undefined {
+    return this.config.metadata;
+  }
+
   errorToHeader(err: Error): MsgHdrs {
     const h = headers();
     if (err instanceof ServiceError) {
@@ -551,14 +564,14 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   ): ServiceSubscription {
     // internals don't use a queue
     const queue = internal ? "" : "q";
-    const { name, subject, handler, schema } = h as NamedEndpoint;
+    const { name, subject, handler } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
-    sv.schema = schema;
+    sv.stats.metadata = h.metadata;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -610,6 +623,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       version: this.version,
       description: this.description,
       subjects: this.subjects,
+      metadata: this.metadata,
     } as ServiceInfo;
   }
 
@@ -631,6 +645,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       id: this.id,
       version: this.version,
       started: this.started,
+      metadata: this.metadata,
       endpoints,
     };
   }
@@ -687,12 +702,7 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       return Promise.resolve();
     };
 
-    const ping = jc.encode({
-      type: ServiceResponseType.PING,
-      name: this.name,
-      id: this.id,
-      version: this.version,
-    });
+    const ping = jc.encode(this.ping());
     const pingHandler = (err: Error | null, msg: Msg): Promise<void> => {
       if (err) {
         this.close(err).then().catch();
@@ -702,19 +712,9 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
       return Promise.resolve();
     };
 
-    const schemaHandler = (err: Error | null, msg: Msg): Promise<void> => {
-      if (err) {
-        this.close(err);
-        return Promise.reject(err);
-      }
-      msg?.respond(JSONCodec().encode(this.schema()));
-      return Promise.resolve();
-    };
-
     this.addInternalHandler(ServiceVerb.PING, pingHandler);
     this.addInternalHandler(ServiceVerb.STATS, statsHandler);
     this.addInternalHandler(ServiceVerb.INFO, infoHandler);
-    this.addInternalHandler(ServiceVerb.SCHEMA, schemaHandler);
 
     // now the actual service
     this.handlers.forEach((h) => {
@@ -763,20 +763,15 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
   stop(err?: Error): Promise<null | Error> {
     return this.close(err);
   }
-  schema(): ServiceSchema {
-    const v: ServiceSchema = {
-      type: ServiceResponseType.SCHEMA,
+
+  ping(): ServiceIdentity {
+    return {
+      type: ServiceResponseType.PING,
       name: this.name,
       id: this.id,
       version: this.version,
-      api_url: this.config.apiURL,
-      endpoints: [],
+      metadata: this.metadata,
     };
-    v.endpoints = this.handlers.map((h) => {
-      const { schema, subject, name } = h;
-      return { schema, subject, name };
-    });
-    return v;
   }
 
   reset(): void {
@@ -803,9 +798,8 @@ export class ServiceImpl extends QueuedIteratorImpl<ServiceMsg>
 
   _addEndpoint(
     e: NamedEndpoint,
-    main = false,
   ): QueuedIterator<ServiceMsg> {
-    const qi = main ? this : new QueuedIteratorImpl<ServiceMsg>();
+    const qi = new QueuedIteratorImpl<ServiceMsg>();
     qi.noIterator = typeof e.handler === "function";
     if (!qi.noIterator) {
       e.handler = (err, msg): void => {
@@ -833,6 +827,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
   num_errors: number;
   last_error?: string;
   data?: unknown;
+  metadata?: Record<string, string>;
 
   constructor(name: string, subject: string) {
     this.name = name;
@@ -877,6 +872,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      metadata,
     } = this;
     return {
       name,
@@ -887,6 +883,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      metadata,
     };
   }
 

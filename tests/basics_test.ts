@@ -1177,3 +1177,86 @@ Deno.test("basics - close promise resolves", async () => {
     fail(err);
   });
 });
+
+Deno.test("basics - inbox prefixes cannot have wildcards", async () => {
+  await assertRejects(
+    async () => {
+      await connect({ inboxPrefix: "_inbox.foo.>" });
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+
+  assertThrows(
+    () => {
+      createInbox("_inbox.foo.*");
+    },
+    Error,
+    "inbox prefixes cannot have wildcards",
+  );
+});
+
+Deno.test("basics - msg typed payload", async () => {
+  const ns = await NatsServer.start();
+  const nc = await connect({ port: ns.port });
+
+  nc.subscribe("echo", {
+    callback: (_err, msg) => {
+      msg.respond(msg.data);
+    },
+  });
+
+  assertEquals((await nc.request("echo", Empty)).string(), "");
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("hello"))).string(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", StringCodec().encode("5"))).string(),
+    "5",
+  );
+
+  await assertRejects(
+    async () => {
+      const r = await nc.request("echo", Empty);
+      r.json<number>();
+    },
+    Error,
+    "Bad JSON",
+  );
+
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(null))).json(),
+    null,
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(undefined))).json(),
+    null,
+  );
+  assertEquals((await nc.request("echo", JSONCodec().encode(5))).json(), 5);
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode("hello"))).json(),
+    "hello",
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode(["hello"]))).json(),
+    ["hello"],
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode({ one: "two" }))).json(),
+    { one: "two" },
+  );
+  assertEquals(
+    (await nc.request("echo", JSONCodec().encode([{ one: "two" }]))).json(),
+    [{ one: "two" }],
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - ipv4 mapped to ipv6", async () => {
+  const ns = await NatsServer.start({ port: 4222 });
+  const nc = await connect({ servers: [`::ffff:127.0.0.1`] });
+  const nc2 = await connect({ servers: [`[::ffff:127.0.0.1]:${ns.port}`] });
+  await cleanup(ns, nc, nc2);
+});

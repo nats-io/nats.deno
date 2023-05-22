@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -65,6 +65,12 @@ export function createInbox(prefix = ""): string {
   if (typeof prefix !== "string") {
     throw (new Error("prefix must be a string"));
   }
+  prefix.split(".")
+    .forEach((v) => {
+      if (v === "*" || v === ">") {
+        throw new Error(`inbox prefixes cannot have wildcards '${prefix}'`);
+      }
+    });
   return `${prefix}.${nuid.next()}`;
 }
 
@@ -104,7 +110,9 @@ export class Connect {
     this.name = opts.name;
 
     const creds =
-      (opts && opts.authenticator ? opts.authenticator(nonce) : {}) || {};
+      (opts && typeof opts.authenticator === "function"
+        ? opts.authenticator(nonce)
+        : {}) || {};
     extend(this, creds);
   }
 }

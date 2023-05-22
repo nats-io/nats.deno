@@ -265,6 +265,13 @@ export class NatsServer implements PortInfo {
     debug = false,
   ): Promise<NatsServer[]> {
     serverConf = serverConf || {};
+    const js = serverConf.jetstream as {
+      max_file_store?: number;
+      max_mem_store?: number;
+    };
+    if (js) {
+      delete serverConf.jetstream;
+    }
     // form a cluster with the specified count
     const servers = await NatsServer.cluster(count, serverConf, false);
 
@@ -290,6 +297,14 @@ export class NatsServer implements PortInfo {
 
       // jetstream defaults
       const { jetstream } = jsopts();
+      if (js) {
+        if (js.max_file_store !== undefined) {
+          jetstream.max_file_store = js.max_file_store;
+        }
+        if (js.max_mem_store !== undefined) {
+          jetstream.max_mem_store = js.max_mem_store;
+        }
+      }
       // need a server name for a cluster
       const serverName = nuid.next();
       // customize the store dir and make it
@@ -490,6 +505,7 @@ export class NatsServer implements PortInfo {
     conf.http = conf.http || "127.0.0.1:-1";
     conf.leafnodes = conf.leafnodes || {};
     conf.leafnodes.listen = conf.leafnodes.listen || "127.0.0.1:-1";
+    conf.server_tags = [`id:${nuid.next()}`];
 
     return conf;
   }
@@ -534,6 +550,7 @@ export class NatsServer implements PortInfo {
     );
 
     if (debug) {
+      console.info(`config: ${confFile}`);
       console.info(`[${srv.pid}] - launched`);
     }
 

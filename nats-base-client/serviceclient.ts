@@ -20,7 +20,7 @@ import {
 } from "./types.ts";
 import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
 import { JSONCodec, ServiceInfo, ServiceStats, ServiceVerb } from "./mod.ts";
-import { ServiceIdentity, ServiceImpl, ServiceSchema } from "./service.ts";
+import { ServiceIdentity, ServiceImpl } from "./service.ts";
 
 export interface ServiceClient {
   /**
@@ -36,12 +36,6 @@ export interface ServiceClient {
    * @param id
    */
   stats(name?: string, id?: string): Promise<QueuedIterator<ServiceStats>>;
-  /**
-   * Requests schema information from services
-   * @param name
-   * @param id
-   */
-  schema(name?: string, id?: string): Promise<QueuedIterator<ServiceSchema>>;
 
   /**
    * Requests info from services
@@ -80,17 +74,6 @@ export class ServiceClientImpl implements ServiceClient {
     id = "",
   ): Promise<QueuedIterator<ServiceStats>> {
     return this.q<ServiceStats>(ServiceVerb.STATS, name, id);
-  }
-
-  schema(
-    name = "",
-    id = "",
-  ): Promise<QueuedIterator<ServiceSchema>> {
-    return this.q<ServiceSchema>(
-      ServiceVerb.SCHEMA,
-      name,
-      id,
-    );
   }
 
   info(

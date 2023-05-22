@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -27,6 +27,8 @@ import {
 } from "./types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
 import { MsgHdrs } from "./headers.ts";
+import { Codec, JSONCodec } from "./codec.ts";
+import { TD } from "./encoders.ts";
 
 export class DirectStreamAPIImpl extends BaseApiClient
   implements DirectStreamAPI {
@@ -71,6 +73,7 @@ export class DirectStreamAPIImpl extends BaseApiClient
 export class DirectMsgImpl implements DirectMsg {
   data: Uint8Array;
   header: MsgHdrs;
+  static jc?: Codec<unknown>;
 
   constructor(m: Msg) {
     if (!m.headers) {
@@ -90,10 +93,25 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get time(): Date {
-    return new Date(Date.parse(this.header.get(DirectMsgHeaders.TimeStamp)));
+    return new Date(Date.parse(this.timestamp));
+  }
+
+  get timestamp(): string {
+    return this.header.get(DirectMsgHeaders.TimeStamp);
   }
 
   get stream(): string {
     return this.header.get(DirectMsgHeaders.Stream);
+  }
+
+  json<T = unknown>(): T {
+    if (!DirectMsgImpl.jc) {
+      DirectMsgImpl.jc = JSONCodec();
+    }
+    return DirectMsgImpl.jc.decode(this.data) as T;
+  }
+
+  string(): string {
+    return TD.decode(this.data);
   }
 }

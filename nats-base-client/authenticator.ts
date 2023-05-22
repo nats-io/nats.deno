@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -73,22 +73,37 @@ export interface Authenticator {
   (nonce?: string): Auth;
 }
 
+function multiAuthenticator(authenticators: Authenticator[]) {
+  return (nonce?: string): Auth => {
+    let auth: Partial<NoAuth & TokenAuth & UserPass & NKeyAuth & JwtAuth> = {};
+    authenticators.forEach((a) => {
+      const args = a(nonce) || {};
+      auth = Object.assign(auth, args);
+    });
+    return auth as Auth;
+  };
+}
+
 export function buildAuthenticator(
   opts: ConnectionOptions,
 ): Authenticator {
+  const buf: Authenticator[] = [];
   // jwtAuthenticator is created by the user, since it
   // will require possibly reading files which
   // some of the clients are simply unable to do
-  if (opts.authenticator) {
-    return opts.authenticator;
+  if (typeof opts.authenticator === "function") {
+    buf.push(opts.authenticator);
+  }
+  if (Array.isArray(opts.authenticator)) {
+    buf.push(...opts.authenticator);
   }
   if (opts.token) {
-    return tokenAuthenticator(opts.token);
+    buf.push(tokenAuthenticator(opts.token));
   }
   if (opts.user) {
-    return usernamePasswordAuthenticator(opts.user, opts.pass);
+    buf.push(usernamePasswordAuthenticator(opts.user, opts.pass));
   }
-  return noAuthFn();
+  return buf.length === 0 ? noAuthFn() : multiAuthenticator(buf);
 }
 
 export function noAuthFn(): Authenticator {
@@ -174,7 +189,7 @@ export function jwtAuthenticator(
 /**
  * Returns an Authenticator function that returns a JwtAuth.
  * This is a convenience Authenticator that parses the
- * specifid creds and delegates to the jwtAuthenticator.
+ * specified creds and delegates to the jwtAuthenticator.
  * @param {Uint8Array | () => Uint8Array } creds - the contents of a creds file or a function that returns the creds
  * @returns {JwtAuth}
  */

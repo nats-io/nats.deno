@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The NATS Authors
+ * Copyright 2022-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,10 +15,12 @@
 
 import type {
   ConsumerOptsBuilder,
+  Consumers,
   KV,
   KvOptions,
   ObjectStore,
   ObjectStoreOptions,
+  Streams,
   Views,
 } from "./types.ts";
 import {
@@ -85,6 +87,9 @@ import { NatsConnectionImpl } from "./nats.ts";
 import { Feature } from "./semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "./idleheartbeat.ts";
+import { ConsumersImpl } from "./consumers.ts";
+import { StreamsImpl } from "./stream.ts";
+import { StreamAPIImpl } from "./jsmstream_api.ts";
 
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
@@ -120,10 +125,16 @@ class ViewsImpl implements Views {
 
 export class JetStreamClientImpl extends BaseApiClient
   implements JetStreamClient {
-  api: ConsumerAPI;
+  consumers: Consumers;
+  streams: Streams;
+  consumerAPI: ConsumerAPI;
+  streamAPI: StreamAPIImpl;
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
-    this.api = new ConsumerAPIImpl(nc, opts);
+    this.consumerAPI = new ConsumerAPIImpl(nc, opts);
+    this.streamAPI = new StreamAPIImpl(nc, opts);
+    this.consumers = new ConsumersImpl(this.consumerAPI);
+    this.streams = new StreamsImpl(this.streamAPI);
   }
 
   get apiPrefix(): string {
@@ -194,7 +205,6 @@ export class JetStreamClientImpl extends BaseApiClient
         }
       }
     }
-
     const pa = this.parseJsResponse(r!) as PubAck;
     if (pa.stream === "") {
       throw NatsError.errorForCode(ErrorCode.JetStreamInvalidAck);
@@ -410,9 +420,6 @@ export class JetStreamClientImpl extends BaseApiClient
     if (cso.ordered) {
       throw new Error("pull subscribers cannot be be ordered");
     }
-    if (!cso.attached) {
-      cso.config.filter_subject = subject;
-    }
     if (cso.config.deliver_subject) {
       throw new Error(
         "consumer info specifies deliver_subject - pull consumers cannot have deliver_subject set",
@@ -545,7 +552,10 @@ export class JetStreamClientImpl extends BaseApiClient
     jsi.attached = false;
     if (jsi.config.durable_name) {
       try {
-        const info = await this.api.info(jsi.stream, jsi.config.durable_name);
+        const info = await this.consumerAPI.info(
+          jsi.stream,
+          jsi.config.durable_name,
+        );
         if (info) {
           if (
             info.config.filter_subject && info.config.filter_subject !== subject
@@ -587,7 +597,11 @@ export class JetStreamClientImpl extends BaseApiClient
       }
     }
 
-    if (!jsi.attached) {
+    if (
+      !jsi.attached && jsi.config.filter_subject === undefined &&
+      jsi.config.filter_subjects === undefined
+    ) {
+      // if no filter specified, we set the subject as the filter
       jsi.config.filter_subject = subject;
     }
 
@@ -641,7 +655,17 @@ export class JetStreamClientImpl extends BaseApiClient
       replay_policy: ReplayPolicy.Instant,
     }, jsi.config);
 
-    const ci = await this.api.add(jsi.stream, jsi.config);
+    const ci = await this.consumerAPI.add(jsi.stream, jsi.config);
+    if (
+      Array.isArray(
+        jsi.config.filter_subjects && !Array.isArray(ci.config.filter_subjects),
+      )
+    ) {
+      // server didn't honor `filter_subjects`
+      throw new Error(
+        `jetstream server doesn't support consumers with multiple filter subjects`,
+      );
+    }
     jsi.name = ci.name;
     jsi.config = ci.config;
     jsi.last = ci;

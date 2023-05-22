@@ -16,21 +16,21 @@ jobs:
     environment: CI
     strategy:
       matrix:
-        deno-version: [1.30.3]
+        deno-version: [1.32.5]
 
     steps:
       - name: Git Checkout Deno Module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
       - name: Use Deno Version ${{ matrix.deno-version }}
-        uses: denolib/setup-deno@master
+        uses: denoland/setup-deno@v1
         with:
           deno-version: ${{ matrix.deno-version }}
 
       - name: Set NATS Server Version
-        run: echo "NATS_VERSION=v2.9.14" >> $GITHUB_ENV
+        run: echo "NATS_VERSION=v2.9.15" >> $GITHUB_ENV
 
       # this here because dns seems to be wedged on gha
 #      - name: Add hosts to /etc/hosts
@@ -61,7 +61,7 @@ jobs:
         run: deno coverage --unstable --lcov ./cov > cov.lcov
 
       - name: Upload coverage
-        uses: coverallsapp/github-action@v1.1.2
+        uses: coverallsapp/github-action@1.1.3
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: ./cov.lcov

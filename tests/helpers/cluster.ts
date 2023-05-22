@@ -19,8 +19,9 @@ import { rgb24 } from "https://deno.land/std@0.177.0/fmt/colors.ts";
 import { setTimeout } from "https://deno.land/std@0.177.0/node/timers.ts";
 
 const defaults = {
-  c: 2,
+  c: 3,
   p: 4222,
+  D: false,
   chaos: false,
 };
 
@@ -31,47 +32,60 @@ const argv = parse(
       "p": ["port"],
       "c": ["count"],
       "d": ["debug"],
+      "D": ["server-debug"],
       "j": ["jetstream"],
     },
     default: defaults,
-    boolean: ["debug", "jetstream"],
+    boolean: ["debug", "jetstream", "server-debug", "chaos"],
   },
 );
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 2] [--port 4222] [--debug] [--jetstream] [--chaos millis]\n",
+    "usage: cluster [--count 3] [--port 4222] [--debug] [--server_debug] [--jetstream] [--chaos]\n",
   );
   Deno.exit(0);
 }
 
+const count = argv["count"] as number || 3;
+const port = argv["port"] as number ?? 4222;
+
 try {
-  const port = typeof argv.port === "number" ? argv.port : parseInt(argv.port);
+  const base = { debug: false };
+  const serverDebug = argv["server-debug"];
+  if (serverDebug) {
+    base.debug = true;
+  }
   const cluster = argv.jetstream
     ? await NatsServer.jetstreamCluster(
-      argv.count,
-      { port },
-      argv.debug,
+      count,
+      Object.assign(base, {
+        port,
+        jetstream: {
+          max_file_store: -1,
+          max_mem_store: -1,
+        },
+      }),
+      base.debug,
     )
     : await NatsServer.cluster(
-      argv.count,
-      { port },
-      argv.debug,
+      count,
+      Object.assign(base, { port }),
+      base.debug,
     );
 
   cluster.forEach((s) => {
-    const pid = `[${s.process.pid}]`;
-    console.log(rgb24(
+    const pid = rgb24(`[${s.process.pid}]`, s.rgb);
+    console.log(
       `${pid} ${s.configFile} at nats://${s.hostname}:${s.port}
 \tcluster://${s.hostname}:${s.cluster}
 \thttp://127.0.0.1:${s.monitoring}
 \tstore: ${s.config?.jetstream?.store_dir}`,
-      s.rgb,
-    ));
+    );
   });
 
-  if (argv.chaos) {
-    chaos(cluster, parseInt(argv.chaos));
+  if (argv.chaos === true && confirm("start chaos?")) {
+    chaos(cluster, 0);
   }
 
   waitForStop();
@@ -112,12 +126,15 @@ function restart(cluster: NatsServer[]) {
         old.rgb,
       ),
     );
-    const p = old.restart();
-    p.then((s) => {
-      s.rgb = old.rgb;
-      cluster[idx] = s;
-      console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
-    });
+    old.restart()
+      .then((s) => {
+        s.rgb = old.rgb;
+        cluster[idx] = s;
+        console.log(rgb24(`[${s.pid()}] replaces PID ${oldPid}`, s.rgb));
+      }).catch((err) => {
+        console.log(`failed to replace ${oldPid}: ${err.message}`);
+        console.log(`to manually restart: nats-server -c ${old.configFile}`);
+      });
   }, millis);
 }
 

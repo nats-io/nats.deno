@@ -26,7 +26,6 @@ import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
 import {
   Empty,
   headers,
-  JSONCodec,
   StorageType,
   StringCodec,
 } from "../nats-base-client/mod.ts";
@@ -34,16 +33,8 @@ import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts"
 import { equals } from "https://deno.land/std@0.177.0/bytes/mod.ts";
 import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
-import {
-  Base64UrlCodec,
-  Base64UrlPaddedCodec,
-} from "../nats-base-client/base64.ts";
-import {
-  digestType,
-  ObjectStoreImpl,
-  osPrefix,
-} from "../nats-base-client/objectstore.ts";
-import { connect } from "../src/mod.ts";
+import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
+import { digestType } from "../nats-base-client/objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -912,6 +903,117 @@ Deno.test("objectstore - cannot put links", async () => {
     Error,
     "link cannot be set when putting the object in bucket",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put purges old entries", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  // we expect 10 messages per put
+  const t = async (first: number, last: number) => {
+    const status = await os.status();
+    const si = status.streamInfo;
+    assertEquals(si.state.first_seq, first);
+    assertEquals(si.state.last_seq, last);
+  };
+
+  const blob = new Uint8Array(9);
+  let oi = await os.put(
+    { name: "BLOB", description: "myblob", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(blob)),
+  );
+  assertEquals(oi.revision, 10);
+  await t(1, 10);
+
+  oi = await os.put(
+    { name: "BLOB", description: "myblob", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(blob)),
+  );
+  assertEquals(oi.revision, 20);
+  await t(11, 20);
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put previous sequences", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  // putting the first
+  let oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(9))),
+    { previousRevision: 0 },
+  );
+  assertEquals(oi.revision, 10);
+
+  // putting another value, but the first value for the key - so previousRevision is 0
+  oi = await os.put(
+    { name: "B", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(3))),
+    { previousRevision: 0 },
+  );
+  assertEquals(oi.revision, 14);
+
+  // update A, previous A is found at 10
+  oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(crypto.getRandomValues(new Uint8Array(3))),
+    { previousRevision: 10 },
+  );
+  assertEquals(oi.revision, 18);
+
+  // update A, previous A is found at 18
+  oi = await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(Empty),
+    { previousRevision: 18 },
+  );
+  assertEquals(oi.revision, 19);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - put/get blob", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", { description: "testing" });
+
+  const payload = new Uint8Array(9);
+
+  // putting the first
+  await os.put(
+    { name: "A", options: { max_chunk_size: 1 } },
+    readableStreamFrom(payload),
+    { previousRevision: 0 },
+  );
+
+  let bg = await os.getBlob("A");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
+
+  await os.putBlob({ name: "B", options: { max_chunk_size: 1 } }, payload);
+
+  bg = await os.getBlob("B");
+  assertExists(bg);
+  assertEquals(bg.length, payload.length);
+  assertEquals(bg, payload);
 
   await cleanup(ns, nc);
 });

@@ -26,6 +26,7 @@ export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Service, ServiceConfig } from "./service.ts";
+import { OrderedConsumerOptions } from "./consumer.ts";
 
 export const Empty = new Uint8Array(0);
 
@@ -226,7 +227,7 @@ export interface ConnectionOptions {
    * authentication configurations
    * if {@link user} and {@link pass} or the {@link token} options are set.
    */
-  authenticator?: Authenticator;
+  authenticator?: Authenticator | Authenticator[];
   /**
    * When set to `true` the client will print protocol messages that it receives
    * or sends to the server.
@@ -430,6 +431,18 @@ export interface Msg {
    * @param opts
    */
   respond(data?: Uint8Array, opts?: PublishOptions): boolean;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**
@@ -831,11 +844,6 @@ export interface PubAck {
    * True if the message is a duplicate
    */
   duplicate: boolean;
-
-  /**
-   * Acknowledges the PubAck back to the server
-   */
-  ack(): void;
 }
 
 /**
@@ -980,6 +988,7 @@ export interface JetStreamClient {
    * @param stream - the name of the stream
    * @param consumer - the consumer's durable name (if durable) or name if ephemeral
    * @param expires - the number of milliseconds to wait for a message
+   * @deprecated - use {@link Consumer#fetch()}
    */
   pull(stream: string, consumer: string, expires?: number): Promise<JsMsg>;
 
@@ -988,6 +997,7 @@ export interface JetStreamClient {
    * @param stream - the name of the stream
    * @param durable - the consumer's durable name (if durable) or name if ephemeral
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()}
    */
   fetch(
     stream: string,
@@ -1011,6 +1021,7 @@ export interface JetStreamClient {
    *
    * @param subject - a subject used to locate the stream
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()} or {@link Consumer#consume()}
    */
   pullSubscribe(
     subject: string,
@@ -1031,6 +1042,7 @@ export interface JetStreamClient {
    *
    * @param subject - a subject used to locate the stream
    * @param opts
+   * @deprecated - use {@link Consumer#fetch()} or {@link Consumer#consume()}
    */
   subscribe(
     subject: string,
@@ -1046,6 +1058,43 @@ export interface JetStreamClient {
    * Returns the JS API prefix as processed from the JetStream Options
    */
   apiPrefix: string;
+
+  /**
+   * Returns the interface for accessing {@link Consumers}. Consumers
+   * allow you to process messages stored in a stream. To create a
+   * consumer use {@link JetStreamManager}.
+   */
+  consumers: Consumers;
+
+  /**
+   * Returns the interface for accessing {@link Streams}.
+   */
+  streams: Streams;
+}
+
+export interface Streams {
+  get(stream: string): Promise<Stream>;
+}
+
+export interface Consumers {
+  /**
+   * Returns the Consumer configured for the specified stream having the specified name.
+   * Consumers are typically created with {@link JetStreamManager}. If no name is specified,
+   * the Consumers API will return an ordered consumer.
+   *
+   * An ordered consumer expects messages to be delivered in order. If there's
+   * any inconsistency, the ordered consumer will recreate the underlying consumer at the
+   * correct sequence. Note that ordered consumers don't yield messages that can be acked
+   * because the client can simply recreate the consumer.
+   *
+   * {@link Consumer}.
+   * @param stream
+   * @param name or OrderedConsumer options - if not specified an ordered consumer is returned.
+   */
+  get(
+    stream: string,
+    name?: string | Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer>;
 }
 
 export interface ConsumerOpts {
@@ -1173,6 +1222,7 @@ export interface ConsumerOptsBuilder {
   maxDeliver(max: number): this;
   /**
    * Consumer should filter the messages to those that match the specified filter.
+   * This api can be called multiple times.
    * @param s
    */
   filterSubject(s: string): this;
@@ -1434,6 +1484,12 @@ export interface StreamAPI {
    *  subject (can be wildcarded)
    */
   names(subject?: string): Lister<string>;
+
+  /**
+   * Returns a Stream object
+   * @param name
+   */
+  get(name: string): Promise<Stream>;
 }
 
 /**
@@ -1546,6 +1602,16 @@ export interface JsMsg {
    * that the acknowledgement was received.
    */
   ackAck(): Promise<boolean>;
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DeliveryInfo {
@@ -1616,6 +1682,23 @@ export interface StoredMsg {
    * The time the message was received
    */
   time: Date;
+
+  /**
+   * The raw ISO formatted date returned by the server
+   */
+  timestamp: string;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 export interface DirectMsg extends StoredMsg {
@@ -1725,9 +1808,9 @@ export interface StreamInfo extends ApiPaged {
    */
   config: StreamConfig;
   /**
-   * Timestamp when the stream was created
+   * The ISO Timestamp when the stream was created
    */
-  created: Nanos;
+  created: string;
   /**
    * Detail about the current State of the Stream
    */
@@ -1750,6 +1833,17 @@ export interface StreamInfo extends ApiPaged {
    * closer and faster to access.
    */
   alternates?: StreamAlternate[];
+}
+
+export interface SubjectTransformConfig {
+  /**
+   * The source pattern
+   */
+  src?: string;
+  /**
+   * The destination pattern
+   */
+  dest: string;
 }
 
 export interface StreamConfig extends StreamUpdateConfig {
@@ -1872,6 +1966,17 @@ export interface StreamUpdateConfig {
    * onto new subjects for partitioning and more
    */
   republish?: Republish;
+  /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
+  /**
+   * Apply a subject transform to incoming messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform?: SubjectTransformConfig;
 }
 
 export interface Republish {
@@ -1930,6 +2035,11 @@ export interface StreamSource {
    * if external is set.
    */
   domain?: string;
+  /**
+   * Apply a subject transform to sourced messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform_dest?: string;
 }
 
 export interface Placement {
@@ -2051,15 +2161,15 @@ export interface StreamState {
    */
   "first_seq": number;
   /**
-   * The timestamp of the first message in the Stream
+   * The ISO timestamp of the first message in the Stream
    */
-  "first_ts": number;
+  "first_ts": string;
   /**
    * Sequence number of the last message in the Stream
    */
   "last_seq": number;
   /**
-   * The timestamp of the last message in the Stream
+   * The ISO timestamp of the last message in the Stream
    */
   "last_ts": string;
   /**
@@ -2409,6 +2519,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
   "deliver_policy": DeliverPolicy;
   /**
    * Allows push consumers to form a queue group
+   * @deprecated
    */
   "deliver_group"?: string;
   /**
@@ -2420,10 +2531,6 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    * The consumer name
    */
   name?: string;
-  /**
-   * Deliver only messages that match the subject filter
-   */
-  "filter_subject"?: string;
   /**
    * For push consumers this will regularly send an empty mess with Status header 100
    * and a reply subject, consumers must reply to these messages to control
@@ -2490,6 +2597,7 @@ export interface ConsumerUpdateConfig {
   "headers_only"?: boolean;
   /**
    * The subject where the push consumer should be sent the messages
+   * @deprecated
    */
   "deliver_subject"?: string;
   /**
@@ -2521,17 +2629,203 @@ export interface ConsumerUpdateConfig {
    * Force the consumer state to be kept in memory rather than inherit the setting from the stream
    */
   "mem_storage"?: boolean;
+  /**
+   * Deliver only messages that match the subject filter
+   * This is exclusive of {@link filter_subjects}
+   */
+  "filter_subject"?: string;
+  /**
+   * Deliver only messages that match the specified filters.
+   * This is exclusive of {@link filter_subject}.
+   */
+  "filter_subjects"?: string[];
+  /**
+   * Metadata field to store additional information about the consumer. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
-export interface Consumer {
+export type Ordered = {
+  ordered: true;
+};
+
+export type NextOptions = Expires;
+
+export type ConsumeBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & ThresholdBytes
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+export type ConsumeMessages =
+  & Partial<MaxMessages>
+  & ThresholdMessages
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback;
+
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
+
+/**
+ * Options for fetching
+ */
+export type FetchBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
+
+/**
+ * Options for a c
+ */
+export type FetchMessages =
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat;
+
+export type FetchOptions = FetchBytes | FetchMessages;
+
+export type PullConsumerOptions = FetchOptions | ConsumeOptions;
+
+export type MaxMessages = {
   /**
-   * The name of the Stream the consumer is bound to
+   * Maximum number of messages to retrieve.
+   * @default 100 messages
    */
-  "stream_name": string;
+  max_messages: number;
+};
+
+export type MaxBytes = {
   /**
-   * The consumer configuration
+   * Maximum number of bytes to retrieve - note request must fit the entire message
+   * to be honored (this includes, subject, headers, etc). Partial messages are not
+   * supported.
    */
-  config: ConsumerConfig;
+  max_bytes: number;
+};
+
+export type ThresholdMessages = {
+  /**
+   * Threshold message count on which the client will auto-trigger additional requests
+   * from the server. This is only applicable to `consume`.
+   * @default  75% of {@link max_messages}.
+   */
+  threshold_messages?: number;
+};
+
+export type ThresholdBytes = {
+  /**
+   * Threshold bytes on which the client wil auto-trigger additional message requests
+   * from the server. This is only applicable to `consume`.
+   * @default 75% of {@link max_bytes}.
+   */
+  threshold_bytes?: number;
+};
+
+export type Expires = {
+  /**
+   * Amount of milliseconds to wait for messages before issuing another request.
+   * Note this value shouldn't be set by the user, as the default provides proper behavior.
+   * A low value will stress the server.
+   *
+   * Minimum value is 1000 (1s).
+   * @default 30_000 (30s)
+   */
+  expires?: number;
+};
+
+export type IdleHeartbeat = {
+  /**
+   * Number of milliseconds to wait for a server heartbeat when not actively receiving
+   * messages. When two or more heartbeats are missed in a row, the consumer will emit
+   * a notification. Note this value shouldn't be set by the user, as the default provides
+   * the proper behavior. A low value will stress the server.
+   */
+  idle_heartbeat?: number;
+};
+
+export type ConsumerCallbackFn = (r: JsMsg) => void;
+export type ConsumeCallback = {
+  /**
+   * Process messages using a callback instead of an iterator. Note that when using callbacks,
+   * the callback cannot be async. If you must use async functionality, process messages
+   * using an iterator.
+   */
+  callback?: ConsumerCallbackFn;
+};
+
+/**
+ * ConsumerEvents are informational notifications emitted by ConsumerMessages
+ * that may be of interest to a client.
+ */
+export enum ConsumerEvents {
+  /**
+   * Notification that heartbeats were missed. This notification is informational.
+   * The `data` portion of the status, is a number indicating the number of missed heartbeats.
+   * Note that when a client disconnects, heartbeat tracking is paused while
+   * the client is disconnected.
+   */
+  HeartbeatsMissed = "heartbeats_missed",
+}
+
+/**
+ * These events represent informational notifications emitted by ConsumerMessages
+ * that can be safely ignored by clients.
+ */
+export enum ConsumerDebugEvents {
+  /**
+   * DebugEvents are effectively statuses returned by the server that were ignored
+   * by the client. The `data` portion of the
+   * status is just a string indicating the code/message of the status.
+   */
+  DebugEvent = "debug",
+  /**
+   * Requests for messages can be terminated by the server, these notifications
+   * provide information on the number of messages and/or bytes that couldn't
+   * be satisfied by the consumer request. The `data` portion of the status will
+   * have the format of `{msgsLeft: number, bytesLeft: number}`.
+   */
+  Discard = "discard",
+  /**
+   * Notifies whenever there's a request for additional messages from the server.
+   * This notification telegraphs the request options, which should be treated as
+   * read-only. This notification is only useful for debugging. Data is PullOptions.
+   */
+  Next = "next",
+}
+
+export interface ConsumerStatus {
+  type: ConsumerEvents | ConsumerDebugEvents;
+  data: unknown;
+}
+
+export interface ExportedConsumer {
+  next(
+    opts?: NextOptions,
+  ): Promise<JsMsg | null>;
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
+}
+
+export interface Consumer extends ExportedConsumer {
+  info(cached?: boolean): Promise<ConsumerInfo>;
+  delete(): Promise<boolean>;
+}
+
+export interface Close {
+  close(): Promise<void>;
+}
+
+export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
 }
 
 export interface StreamNames {
@@ -2540,6 +2834,17 @@ export interface StreamNames {
 
 export interface StreamNameBySubject {
   subject: string;
+}
+
+export interface Stream {
+  name: string;
+  info(cached?: boolean): Promise<StreamInfo>;
+  alternates(): Promise<StreamAlternate[]>;
+  best(): Promise<Stream>;
+  getConsumer(
+    name?: string | Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer>;
+  getMessage(query: MsgRequest): Promise<StoredMsg>;
 }
 
 export enum JsHeaders {
@@ -2580,6 +2885,18 @@ export interface KvEntry {
   delta?: number;
   operation: "PUT" | "DEL" | "PURGE";
   length: number;
+
+  /**
+   * Convenience method to parse the entry payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the entry payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
 }
 
 /**
@@ -2878,6 +3195,7 @@ export interface ObjectInfo extends ObjectStoreMeta {
   digest: string;
   deleted: boolean;
   mtime: string;
+  revision: number;
 }
 
 export interface ObjectLink {
@@ -2924,16 +3242,28 @@ export type ObjectStorePutOpts = {
   /**
    * maximum number of millis for the put requests to succeed
    */
-  timeout: number;
+  timeout?: number;
+  /**
+   * If set the ObjectStore must be at the current sequence or the
+   * put will fail. Note the sequence accounts where the metadata
+   * for the entry is stored.
+   */
+  previousRevision?: number;
 };
 
 export interface ObjectStore {
   info(name: string): Promise<ObjectInfo | null>;
   list(): Promise<ObjectInfo[]>;
   get(name: string): Promise<ObjectResult | null>;
+  getBlob(name: string): Promise<Uint8Array | null>;
   put(
     meta: ObjectStoreMeta,
     rs: ReadableStream<Uint8Array>,
+    opts?: ObjectStorePutOpts,
+  ): Promise<ObjectInfo>;
+  putBlob(
+    meta: ObjectStoreMeta,
+    data: Uint8Array | null,
     opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo>;
   delete(name: string): Promise<PurgeResponse>;

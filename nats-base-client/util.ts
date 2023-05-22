@@ -24,6 +24,21 @@ export const CRLF = DataBuffer.fromAscii(CR_LF);
 export const CR = new Uint8Array(CRLF)[0]; // 13
 export const LF = new Uint8Array(CRLF)[1]; // 10
 
+export type ValueResult<T> = {
+  isError: false;
+  value: T;
+};
+
+export type ErrorResult = {
+  isError: true;
+  error: Error;
+};
+
+/**
+ * Result is a value that may have resulted in an error.
+ */
+export type Result<T> = ValueResult<T> | ErrorResult;
+
 export function isUint8Array(a: unknown): boolean {
   return a instanceof Uint8Array;
 }
@@ -109,6 +124,16 @@ export function delay(ms = 0): Promise<void> {
       resolve();
     }, ms);
   });
+}
+
+export function deadline<T>(p: Promise<T>, millis = 1000): Promise<T> {
+  const err = new Error(`deadline exceeded`);
+  const d = deferred<never>();
+  const timer = setTimeout(
+    () => d.reject(err),
+    millis,
+  );
+  return Promise.race([p, d]).finally(() => clearTimeout(timer));
 }
 
 export interface Deferred<T> extends Promise<T> {
@@ -201,5 +226,47 @@ export class Perf {
       values.push({ name: k, duration: v });
     });
     return values;
+  }
+}
+
+export class SimpleMutex {
+  max: number;
+  current: number;
+  waiting: Deferred<void>[];
+
+  /**
+   * @param max number of concurrent operations
+   */
+  constructor(max = 1) {
+    this.max = max;
+    this.current = 0;
+    this.waiting = [];
+  }
+
+  /**
+   * Returns a promise that resolves when the mutex is acquired
+   */
+  lock(): Promise<void> {
+    // increment the count
+    this.current++;
+    // if we have runners, resolve it
+    if (this.current <= this.max) {
+      return Promise.resolve();
+    }
+    // otherwise defer it
+    const d = deferred<void>();
+    this.waiting.push(d);
+    return d;
+  }
+
+  /**
+   * Release an acquired mutex - must be called
+   */
+  unlock(): void {
+    // decrement the count
+    this.current--;
+    // if we have deferred, resolve one
+    const d = this.waiting.pop();
+    d?.resolve();
   }
 }

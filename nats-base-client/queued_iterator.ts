@@ -67,9 +67,9 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   received: number;
   noIterator: boolean;
   iterClosed: Deferred<void>;
-  protected done: boolean;
-  private signal: Deferred<void>;
-  private yields: T[];
+  done: boolean;
+  signal: Deferred<void>;
+  yields: T[];
   filtered: number;
   pendingFiltered: number;
   ingestionFilterFn?: IngestionFilterFn<T>;

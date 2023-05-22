@@ -17,12 +17,11 @@ const service = await nc.services.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
-  endpoint: {
-    subject: "max",
-    handler: (err, msg) => {
-      msg?.respond();
-    },
-  },
+});
+
+// add an endpoint listening on "max"
+const max = service.addEndpoint("max", (err, msg) => {
+  msg?.respond();
 });
 ```
 
@@ -30,7 +29,7 @@ If you omit the handler, the service is actually an iterator for service
 messages. To process messages incoming to the service:
 
 ```typescript
-for await (const r of service) {
+for await (const r of max) {
   r.respond();
 }
 ```
@@ -58,14 +57,13 @@ To discover services that are running, create a monitoring client:
 ```typescript
 const m = nc.services.client();
 
-// you can ping, request info, stats, and schema information
+// you can ping, request info, and stats information.
 // All the operations return iterators describing the services found.
 for await (const s of await m.ping()) {
   console.log(s.id);
 }
 await m.stats();
 await m.info();
-await m.schema();
 ```
 
 Additional filtering is possible, and they are valid for all the operations:

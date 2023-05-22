@@ -15,10 +15,11 @@
 
 import * as path from "https://deno.land/std@0.177.0/path/mod.ts";
 import { NatsServer } from "../tests/helpers/mod.ts";
-import { connect } from "../src/mod.ts";
+import { AckPolicy, connect, nanos, PubAck } from "../src/mod.ts";
 import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import {
   ConnectionOptions,
+  Empty,
   extend,
   NatsConnection,
   nuid,
@@ -31,7 +32,7 @@ export function jsopts() {
     // trace: true,
     jetstream: {
       max_file_store: 1024 * 1024,
-      max_memory_store: 1024 * 1024,
+      max_mem_store: 1024 * 1024,
       store_dir: "/tmp",
     },
   };
@@ -114,6 +115,59 @@ export async function initStream(
   const sc = Object.assign({ name: stream, subjects: [subj] }, opts);
   await jsm.streams.add(sc);
   return { stream, subj };
+}
+
+export async function createConsumer(
+  nc: NatsConnection,
+  stream: string,
+): Promise<string> {
+  const jsm = await nc.jetstreamManager();
+  const ci = await jsm.consumers.add(stream, {
+    name: nuid.next(),
+    inactive_threshold: nanos(2 * 60 * 1000),
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  return ci.name;
+}
+
+export type FillOptions = {
+  randomize: boolean;
+  suffixes: string[];
+  payload: number;
+};
+
+export function fill(
+  nc: NatsConnection,
+  prefix: string,
+  count = 100,
+  opts: Partial<FillOptions> = {},
+): Promise<PubAck[]> {
+  const js = nc.jetstream();
+
+  const options = Object.assign({}, {
+    randomize: false,
+    suffixes: "abcdefghijklmnopqrstuvwxyz".split(""),
+    payload: 0,
+  }, opts) as FillOptions;
+
+  function randomSuffix(): string {
+    const idx = Math.floor(Math.random() * options.suffixes.length);
+    return options.suffixes[idx];
+  }
+
+  const payload = options.payload === 0
+    ? Empty
+    : new Uint8Array(options.payload);
+
+  const a = Array.from({ length: count }, (_, idx) => {
+    const subj = opts.randomize
+      ? `${prefix}.${randomSuffix()}`
+      : `${prefix}.${options.suffixes[idx % options.suffixes.length]}`;
+    return js.publish(subj, payload);
+  });
+
+  return Promise.all(a);
 }
 
 export function time(): Mark {

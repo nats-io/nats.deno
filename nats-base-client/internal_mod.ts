@@ -16,6 +16,7 @@ export type {
   ConsumerConfig,
   ConsumerInfo,
   ConsumerInfoable,
+  ConsumerMessages,
   ConsumerOpts,
   ConsumerOptsBuilder,
   ConsumerUpdateConfig,
@@ -220,7 +221,6 @@ export type {
   EndpointSchema,
   EndpointStats,
   NamedEndpointStats,
-  SchemaInfo,
   Service,
   ServiceConfig,
   ServiceGroup,
@@ -230,6 +230,5 @@ export type {
   ServiceMsg,
   ServiceResponse,
   ServiceResponseType,
-  ServiceSchema,
   ServiceStats,
 } from "./service.ts";

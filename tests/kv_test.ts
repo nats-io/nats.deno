@@ -59,6 +59,7 @@ import { Lock, NatsServer, notCompatible } from "./helpers/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
 import { connect } from "../src/mod.ts";
+import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -1680,6 +1681,44 @@ Deno.test("kv - mirror cross domain", async () => {
   await checkEntry(mkv, "name", "ivan", "PUT");
 
   await cleanup(lns, lnc);
+});
+
+Deno.test("kv - previous sequence", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+
+  assertEquals(await kv.put("A", Empty, { previousSeq: 0 }), 1);
+  assertEquals(await kv.put("B", Empty, { previousSeq: 0 }), 2);
+  assertEquals(await kv.put("A", Empty, { previousSeq: 1 }), 3);
+  assertEquals(await kv.put("A", Empty, { previousSeq: 3 }), 4);
+  await assertRejects(async () => {
+    await kv.put("A", Empty, { previousSeq: 1 });
+  });
+  assertEquals(await kv.put("B", Empty, { previousSeq: 2 }), 5);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - encoded entry", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+  await kv.put("a", StringCodec().encode("hello"));
+  await kv.put("b", JSONCodec().encode(5));
+  await kv.put("c", JSONCodec().encode(["hello", 5]));
+
+  assertEquals((await kv.get("a"))?.string(), "hello");
+  assertEquals((await kv.get("b"))?.json(), 5);
+  assertEquals((await kv.get("c"))?.json(), ["hello", 5]);
+
+  await cleanup(ns, nc);
 });
 
 Deno.test("kv - create after delete", async () => {
