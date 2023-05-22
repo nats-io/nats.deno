@@ -48,18 +48,6 @@ export class ConsumersImpl implements Consumers {
         ),
       );
     }
-    if (ordered) {
-      const fv = (this.api as ConsumerAPIImpl).nc.features.get(
-        Feature.JS_CONSUMER_FILTER_SUBJECTS,
-      );
-      if (!fv.ok) {
-        return Promise.reject(
-          new Error(
-            `consumers framework's ordered consumer is only supported on servers ${fv.min} or better`,
-          ),
-        );
-      }
-    }
     return Promise.resolve();
   }
 
