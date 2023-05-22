@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><a href="StreamConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamConfig</a></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1788</li></ul></aside>
+<li>Defined in cjs_src/types.ts:1880</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -46,12 +46,14 @@
 <a href="StreamUpdateConfig.html#max_msg_size" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>msg_<wbr/>size</span></a>
 <a href="StreamUpdateConfig.html#max_msgs" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>msgs</span></a>
 <a href="StreamUpdateConfig.html#max_msgs_per_subject" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</span></a>
+<a href="StreamUpdateConfig.html#metadata" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>metadata?</span></a>
 <a href="StreamUpdateConfig.html#mirror_direct" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>mirror_<wbr/>direct</span></a>
 <a href="StreamUpdateConfig.html#no_ack" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>no_<wbr/>ack?</span></a>
 <a href="StreamUpdateConfig.html#num_replicas" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>num_<wbr/>replicas</span></a>
 <a href="StreamUpdateConfig.html#placement" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>placement?</span></a>
 <a href="StreamUpdateConfig.html#republish" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>republish?</span></a>
 <a href="StreamUpdateConfig.html#sources" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>sources?</span></a>
+<a href="StreamUpdateConfig.html#subject_transform" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>subject_<wbr/>transform?</span></a>
 <a href="StreamUpdateConfig.html#subjects" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>subjects</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
@@ -62,7 +64,7 @@
 <div class="tsd-comment tsd-typography"><p>Allow higher performance, direct access to get individual messages via the $JS.DS.GET API</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1865</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1957</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="allow_rollup_hdrs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>allow_<wbr/>rollup_<wbr/>hdrs</span><a href="#allow_rollup_hdrs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">allow_<wbr/>rollup_<wbr/>hdrs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -70,7 +72,7 @@
 or subject in a stream, with a single new message</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1843</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1935</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="deny_delete" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>delete</span><a href="#deny_delete" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>delete<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -78,7 +80,7 @@ or subject in a stream, with a single new message</p>
 Cannot be changed once set to true</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1856</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1948</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="deny_purge" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>purge</span><a href="#deny_purge" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>purge<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -86,21 +88,21 @@ Cannot be changed once set to true</p>
 Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1861</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1953</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="description" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>description</span><a href="#description" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">description<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>A short description of the purpose of this stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1796</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1888</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="discard" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>discard</span><a href="#discard" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">discard<span class="tsd-signature-symbol">:</span> <a href="../enums/DiscardPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">DiscardPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>When a Stream reach its limits either old messages are deleted or new ones are denied</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1820</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1912</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="discard_new_per_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>discard_<wbr/>new_<wbr/>per_<wbr/>subject</span><a href="#discard_new_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">discard_<wbr/>new_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -108,7 +110,7 @@ Cannot be change once set to true</p>
 <a href="StreamUpdateConfig.html#discard">discard</a> policy.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1825</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1917</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="duplicate_window" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>duplicate_<wbr/>window</span><a href="#duplicate_window" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">duplicate_<wbr/>window<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -116,70 +118,79 @@ Cannot be change once set to true</p>
 Set <a href="JetStreamPublishOptions.html#msgID">msgID</a> to enable duplicate detection.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1834</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1926</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_age" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>age</span><a href="#max_age" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>age<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Maximum age of any message in the stream, expressed in nanoseconds. 0 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1808</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1900</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How big the Stream may be, when the combined stream size exceeds this old messages are removed. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1812</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1904</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_msg_size" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msg_<wbr/>size</span><a href="#max_msg_size" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msg_<wbr/>size<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>The largest message that will be accepted by the Stream. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1816</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1908</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_msgs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs</span><a href="#max_msgs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many messages may be in a Stream, oldest messages will be removed if the Stream exceeds this size. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1804</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1896</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_msgs_per_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</span><a href="#max_msgs_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>For wildcard streams ensure that for every unique subject this many messages are kept - a per subject retention limit</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1800</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1892</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="metadata" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>metadata</span><a href="#metadata" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">metadata<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
+<div class="tsd-comment tsd-typography"><p>Metadata field to store additional information about the stream. Note that
+keys starting with <code>_nats</code> are reserved. This feature only supported on servers
+2.10.x and better.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs_src/types.ts:1972</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="mirror_direct" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>mirror_<wbr/>direct</span><a href="#mirror_direct" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror_<wbr/>direct<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Allow higher performance, direct access to get individual messages via the $JS.DS.GET API</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1869</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1961</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="no_ack" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>no_<wbr/>ack</span><a href="#no_ack" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">no_<wbr/>ack<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Disables acknowledging messages that are received by the Stream.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1829</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1921</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="num_replicas" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>num_<wbr/>replicas</span><a href="#num_replicas" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">num_<wbr/>replicas<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many replicas to keep for each message. Min 1, Max 5. Default 1.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1847</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1939</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="placement" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>placement</span><a href="#placement" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">placement<span class="tsd-signature-symbol">?:</span> <a href="Placement.html" class="tsd-signature-type" data-tsd-kind="Interface">Placement</a></div>
 <div class="tsd-comment tsd-typography"><p>Placement directives to consider when placing replicas of this stream, random placement when unset</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1851</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1943</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="republish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>republish</span><a href="#republish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">republish<span class="tsd-signature-symbol">?:</span> <a href="Republish.html" class="tsd-signature-type" data-tsd-kind="Interface">Republish</a></div>
@@ -187,21 +198,29 @@ Set <a href="JetStreamPublishOptions.html#msgID">msgID</a> to enable duplicate d
 onto new subjects for partitioning and more</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1874</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1966</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="sources" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>sources</span><a href="#sources" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sources<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>List of Stream names to replicate into this Stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1838</li></ul></aside></section>
+<li>Defined in cjs_src/types.ts:1930</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="subject_transform" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>subject_<wbr/>transform</span><a href="#subject_transform" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">subject_<wbr/>transform<span class="tsd-signature-symbol">?:</span> <a href="SubjectTransformConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">SubjectTransformConfig</a></div>
+<div class="tsd-comment tsd-typography"><p>Apply a subject transform to incoming messages before doing anything else.
+This feature only supported on 2.10.x and better.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs_src/types.ts:1977</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="subjects" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>subjects</span><a href="#subjects" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">subjects<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>A list of subjects to consume, supports wildcards. Must be empty when a mirror is configured. May be empty when sources are configured.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1792</li></ul></aside></section></section></div>
+<li>Defined in cjs_src/types.ts:1884</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -240,12 +259,14 @@ onto new subjects for partitioning and more</p>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#max_msg_size" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>msg_<wbr/>size</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#max_msgs" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>msgs</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#max_msgs_per_subject" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#metadata" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>metadata?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#mirror_direct" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>mirror_<wbr/>direct</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#no_ack" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>no_<wbr/>ack?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#num_replicas" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>num_<wbr/>replicas</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#placement" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>placement?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#republish" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>republish?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#sources" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>sources?</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#subject_transform" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>subject_<wbr/>transform?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamUpdateConfig.html#subjects" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>subjects</a></li></ul></li></ul></nav></div></div>
 <div class="container tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
