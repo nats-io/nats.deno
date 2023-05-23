@@ -26,8 +26,6 @@ export type { TypedSubscriptionOptions } from "./typedsub.ts";
 
 import { QueuedIterator } from "./queued_iterator.ts";
 import { Service, ServiceConfig } from "./service.ts";
-import { OrderedConsumerOptions } from "./consumer.ts";
-
 export const Empty = new Uint8Array(0);
 
 /**
@@ -2680,7 +2678,7 @@ export type FetchBytes =
   & IdleHeartbeat;
 
 /**
- * Options for a c
+ * Options for fetching
  */
 export type FetchMessages =
   & Partial<MaxMessages>
@@ -2712,7 +2710,7 @@ export type ThresholdMessages = {
   /**
    * Threshold message count on which the client will auto-trigger additional requests
    * from the server. This is only applicable to `consume`.
-   * @default  75% of {@link max_messages}.
+   * @default  75% of {@link MaxMessages}.
    */
   threshold_messages?: number;
 };
@@ -2721,7 +2719,7 @@ export type ThresholdBytes = {
   /**
    * Threshold bytes on which the client wil auto-trigger additional message requests
    * from the server. This is only applicable to `consume`.
-   * @default 75% of {@link max_bytes}.
+   * @default 75% of {@link MaxBytes}.
    */
   threshold_bytes?: number;
 };
@@ -2846,6 +2844,15 @@ export interface Stream {
   ): Promise<Consumer>;
   getMessage(query: MsgRequest): Promise<StoredMsg>;
 }
+
+export type OrderedConsumerOptions = {
+  filterSubjects: string[] | string;
+  deliver_policy: DeliverPolicy;
+  opt_start_seq: number;
+  opt_start_time: string;
+  replay_policy: ReplayPolicy;
+  inactive_threshold: number;
+};
 
 export enum JsHeaders {
   /**
