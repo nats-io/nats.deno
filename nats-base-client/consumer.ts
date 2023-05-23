@@ -38,7 +38,6 @@ import {
 } from "./consumermessages.ts";
 import { nuid } from "./nuid.ts";
 import { nanos } from "./jsutil.ts";
-import { Feature } from "./semver.ts";
 
 enum PullConsumerType {
   Unset = -1,

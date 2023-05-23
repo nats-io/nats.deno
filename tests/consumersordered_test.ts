@@ -25,12 +25,7 @@ import {
   assertRejects,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import {
-  AckPolicy,
-  DeliverPolicy,
-  JsMsg,
-  PubAck,
-} from "../nats-base-client/types.ts";
+import { DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
 import { notCompatible } from "./helpers/mod.ts";
 import { delay } from "../nats-base-client/util.ts";

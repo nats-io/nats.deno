@@ -31,7 +31,7 @@ export class ConsumersImpl implements Consumers {
     this.notified = false;
   }
 
-  checkVersion(ordered = false): Promise<void> {
+  checkVersion(): Promise<void> {
     if (!this.notified) {
       this.notified = true;
       console.log(
