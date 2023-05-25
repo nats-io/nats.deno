@@ -1,5 +1,6 @@
 export {
   Bench,
+  buildAuthenticator,
   canonicalMIMEHeaderKey,
   createInbox,
   credsAuthenticator,

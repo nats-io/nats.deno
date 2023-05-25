@@ -14,7 +14,11 @@ export { Heartbeat } from "./heartbeats.ts";
 export type { PH } from "./heartbeats.ts";
 export { MuxSubscription } from "./muxsubscription.ts";
 export { DataBuffer } from "./databuffer.ts";
-export { checkOptions, checkUnsupportedOption } from "./options.ts";
+export {
+  buildAuthenticator,
+  checkOptions,
+  checkUnsupportedOption,
+} from "./options.ts";
 export { RequestOne } from "./request.ts";
 export {
   credsAuthenticator,
