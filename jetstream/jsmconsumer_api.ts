@@ -12,27 +12,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  ConsumerAPI,
-  ConsumerConfig,
-  ConsumerInfo,
-  ConsumerListResponse,
-  ConsumerUpdateConfig,
-  CreateConsumerRequest,
-  JetStreamOptions,
-  Lister,
-  NatsConnection,
-  SuccessResponse,
-} from "./types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import {
   validateDurableName,
   validateStreamName,
   validName,
 } from "./jsutil.ts";
-import { NatsConnectionImpl } from "./nats.ts";
-import { Feature } from "./semver.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { Feature } from "../nats-base-client/semver.ts";
+import { JetStreamOptions, NatsConnection } from "../nats-base-client/core.ts";
+import {
+  ConsumerConfig,
+  ConsumerInfo,
+  ConsumerListResponse,
+  ConsumerUpdateConfig,
+  CreateConsumerRequest,
+  SuccessResponse,
+} from "./jsapi_types.ts";
+
+export interface ConsumerAPI {
+  /**
+   * Returns the ConsumerInfo for the specified consumer in the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  info(stream: string, consumer: string): Promise<ConsumerInfo>;
+
+  /**
+   * Adds a new consumer to the specified stream with the specified consumer options.
+   * @param stream
+   * @param cfg
+   */
+  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
+
+  /**
+   * Updates the consumer configuration for the specified consumer on the specified
+   * stream that has the specified durable name.
+   * @param stream
+   * @param durable
+   * @param cfg
+   */
+  update(
+    stream: string,
+    durable: string,
+    cfg: Partial<ConsumerUpdateConfig>,
+  ): Promise<ConsumerInfo>;
+
+  /**
+   * Deletes the specified consumer name/durable from the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  delete(stream: string, consumer: string): Promise<boolean>;
+
+  /**
+   * Lists all the consumers on the specfied streams
+   * @param stream
+   */
+  list(stream: string): Lister<ConsumerInfo>;
+}
 
 export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {

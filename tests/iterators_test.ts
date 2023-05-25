@@ -18,7 +18,7 @@ import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const { ns, nc } = await setup();

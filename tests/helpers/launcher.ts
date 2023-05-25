@@ -15,7 +15,7 @@
 // deno-lint-ignore-file no-explicit-any
 import * as path from "https://deno.land/std@0.177.0/path/mod.ts";
 import { rgb24 } from "https://deno.land/std@0.177.0/fmt/colors.ts";
-import { check } from "./mod.ts";
+import { check, jsopts } from "./mod.ts";
 import {
   Deferred,
   deferred,
@@ -25,7 +25,6 @@ import {
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
 import { assert } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { jsopts } from "../jstest_util.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: "SIGQUIT",

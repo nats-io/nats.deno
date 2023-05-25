@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { ErrorCode, NatsError } from "./error.ts";
 import { TD, TE } from "./encoders.ts";
+import { ErrorCode, NatsError } from "./core.ts";
 
 export interface Codec<T> {
   /**

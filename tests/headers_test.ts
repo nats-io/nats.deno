@@ -36,9 +36,9 @@ import {
   NatsConnectionImpl,
   Parser,
 } from "../nats-base-client/internal_mod.ts";
-import { Publisher } from "../nats-base-client/protocol.ts";
 import { TestDispatcher } from "./parser_test.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
+import { Publisher } from "../nats-base-client/core.ts";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();

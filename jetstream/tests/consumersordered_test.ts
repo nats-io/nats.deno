@@ -13,22 +13,22 @@
  * limitations under the License.
  */
 
-import {
-  cleanup,
-  initStream,
-  jetstreamServerConf,
-  setup,
-} from "./jstest_util.ts";
+import { initStream } from "./jstest_util.ts";
 import {
   assertEquals,
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.125.0/testing/asserts.ts";
-import { OrderedPullConsumerImpl } from "../nats-base-client/consumer.ts";
-import { DeliverPolicy, JsMsg } from "../nats-base-client/types.ts";
-import { deferred } from "../nats-base-client/mod.ts";
-import { notCompatible } from "./helpers/mod.ts";
-import { delay } from "../nats-base-client/util.ts";
+import { DeliverPolicy, JsMsg } from "../mod.ts";
+import { OrderedPullConsumerImpl } from "../consumer.ts";
+import { deferred } from "../../nats-base-client/mod.ts";
+import {
+  cleanup,
+  jetstreamServerConf,
+  notCompatible,
+  setup,
+} from "../../tests/helpers/mod.ts";
+import { delay } from "../../nats-base-client/util.ts";
 
 Deno.test("ordered - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

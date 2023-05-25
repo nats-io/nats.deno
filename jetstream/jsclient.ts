@@ -13,43 +13,7 @@
  * limitations under the License.
  */
 
-import type {
-  ConsumerOptsBuilder,
-  Consumers,
-  KV,
-  KvOptions,
-  ObjectStore,
-  ObjectStoreOptions,
-  Streams,
-  Views,
-} from "./types.ts";
-import {
-  AckPolicy,
-  ConsumerAPI,
-  ConsumerConfig,
-  ConsumerInfo,
-  ConsumerInfoable,
-  ConsumerOpts,
-  CreateConsumerRequest,
-  DeliverPolicy,
-  Destroyable,
-  Empty,
-  JetStreamClient,
-  JetStreamOptions,
-  JetStreamPublishOptions,
-  JetStreamPullSubscription,
-  JetStreamSubscription,
-  JetStreamSubscriptionOptions,
-  JsHeaders,
-  JsMsg,
-  Msg,
-  NatsConnection,
-  PubAck,
-  Pullable,
-  PullOptions,
-  ReplayPolicy,
-  RequestOptions,
-} from "./types.ts";
+import { Empty, NatsError } from "../nats-base-client/types.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import {
   checkJsError,
@@ -63,37 +27,72 @@ import {
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
-import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { JsMsgImpl, toJsMsg } from "./jsmsg.ts";
+import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { JsMsg, JsMsgImpl, toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
   TypedSubscription,
   TypedSubscriptionOptions,
-} from "./typedsub.ts";
-import { ErrorCode, isNatsError, NatsError } from "./error.ts";
-import { SubscriptionImpl } from "./subscription.ts";
+} from "../nats-base-client/typedsub.ts";
 import {
   IngestionFilterFn,
   IngestionFilterFnResult,
-  QueuedIterator,
   QueuedIteratorImpl,
-} from "./queued_iterator.ts";
-import { delay, Timeout, timeout } from "./util.ts";
-import { createInbox } from "./protocol.ts";
-import { headers } from "./headers.ts";
-import { consumerOpts, isConsumerOptsBuilder } from "./jsconsumeropts.ts";
+} from "../nats-base-client/queued_iterator.ts";
+import { delay, Timeout, timeout } from "../nats-base-client/util.ts";
+import { headers } from "../nats-base-client/headers.ts";
 import { Bucket } from "./kv.ts";
-import { NatsConnectionImpl } from "./nats.ts";
-import { Feature } from "./semver.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
-import { IdleHeartbeat } from "./idleheartbeat.ts";
-import { ConsumersImpl } from "./consumers.ts";
-import { StreamsImpl } from "./stream.ts";
-import { StreamAPIImpl } from "./jsmstream_api.ts";
-
-export interface JetStreamSubscriptionInfoable {
-  info: JetStreamSubscriptionInfo | null;
-}
+import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
+import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
+import {
+  ConsumerInfoable,
+  ConsumerOpts,
+  consumerOpts,
+  ConsumerOptsBuilder,
+  Consumers,
+  Destroyable,
+  isConsumerOptsBuilder,
+  JetStreamClient,
+  JetStreamManager,
+  JetStreamPublishOptions,
+  JetStreamPullSubscription,
+  JetStreamSubscription,
+  JetStreamSubscriptionInfo,
+  JetStreamSubscriptionInfoable,
+  JetStreamSubscriptionOptions,
+  JsHeaders,
+  KV,
+  KvOptions,
+  ObjectStore,
+  ObjectStoreOptions,
+  PubAck,
+  Pullable,
+  Streams,
+  Views,
+} from "./types.ts";
+import {
+  createInbox,
+  ErrorCode,
+  isNatsError,
+  JetStreamOptions,
+  Msg,
+  NatsConnection,
+  QueuedIterator,
+  RequestOptions,
+} from "../nats-base-client/core.ts";
+import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
+import {
+  AckPolicy,
+  ConsumerConfig,
+  ConsumerInfo,
+  CreateConsumerRequest,
+  DeliverPolicy,
+  PullOptions,
+  ReplayPolicy,
+} from "./jsapi_types.ts";
 
 enum PubHeaders {
   MsgIdHdr = "Nats-Msg-Id",
@@ -105,13 +104,22 @@ enum PubHeaders {
 
 class ViewsImpl implements Views {
   js: JetStreamClientImpl;
+  jsm?: JetStreamManager;
   constructor(js: JetStreamClientImpl) {
     this.js = js;
   }
   kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    const jsi = this.js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`kv is only supported on servers ${min} or better`),
+      );
+    }
     if (opts.bindOnly) {
       return Bucket.bind(this.js, name);
     }
+
     return Bucket.create(this.js, name, opts);
   }
   os(
@@ -119,6 +127,20 @@ class ViewsImpl implements Views {
     opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
     jetstreamPreview(this.js.nc);
+    if (typeof crypto?.subtle?.digest !== "function") {
+      return Promise.reject(
+        new Error(
+          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
+        ),
+      );
+    }
+    const jsi = this.js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`objectstore is only supported on servers ${min} or better`),
+      );
+    }
     return ObjectStoreImpl.create(this.js, name, opts);
   }
 }
@@ -135,6 +157,10 @@ export class JetStreamClientImpl extends BaseApiClient
     this.streamAPI = new StreamAPIImpl(nc, opts);
     this.consumers = new ConsumersImpl(this.consumerAPI);
     this.streams = new StreamsImpl(this.streamAPI);
+  }
+
+  jetstreamManager(): Promise<JetStreamManager> {
+    return this.nc.jetstreamManager(this.opts);
   }
 
   get apiPrefix(): string {
@@ -935,20 +961,6 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
       );
     }
   }
-}
-
-interface JetStreamSubscriptionInfo extends ConsumerOpts {
-  api: BaseApiClient;
-  last: ConsumerInfo;
-  attached: boolean;
-  deliver: string;
-  bind: boolean;
-  "ordered_consumer_sequence": { "delivery_seq": number; "stream_seq": number };
-  "flow_control": {
-    "heartbeat_count": number;
-    "fc_count": number;
-    "consumer_restarts": number;
-  };
 }
 
 function msgAdapter(iterator: boolean): MsgAdapter<JsMsg> {

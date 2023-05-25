@@ -27,7 +27,7 @@ import {
 } from "../src/mod.ts";
 
 import { assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("drain - connection drains when no subs", async () => {
   const { ns, nc } = await setup();

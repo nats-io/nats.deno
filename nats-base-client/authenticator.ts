@@ -13,67 +13,20 @@
  * limitations under the License.
  */
 import { nkeys } from "./nkeys.ts";
-import type { ConnectionOptions } from "./types.ts";
 import { TD, TE } from "./encoders.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import {
+  Auth,
+  Authenticator,
+  ErrorCode,
+  JwtAuth,
+  NatsError,
+  NKeyAuth,
+  NoAuth,
+  TokenAuth,
+  UserPass,
+} from "./core.ts";
 
-/**
- * @type {}
- */
-export type NoAuth = void;
-
-/**
- * @type {auth_token: string} the user token
- */
-export interface TokenAuth {
-  "auth_token": string;
-}
-
-/**
- * @type {user: string, pass?: string} the username and
- * optional password if the server requires.
- */
-export interface UserPass {
-  user: string;
-  pass?: string;
-}
-
-/**
- * @type {nkey: string, sig: string} the public nkey for the user,
- * and a base64 encoded string for the calculated signature of the
- * challenge nonce.
- */
-export interface NKeyAuth {
-  nkey: string;
-  sig: string;
-}
-
-/**
- * @type {jwt: string, nkey?: string, sig?: string} the user JWT,
- * and if not a bearer token also the public nkey for the user,
- * and a base64 encoded string for the calculated signature of the
- * challenge nonce.
- */
-export interface JwtAuth {
-  jwt: string;
-  nkey?: string;
-  sig?: string;
-}
-
-/**
- * @type NoAuth|TokenAuth|UserPass|NKeyAuth|JwtAuth
- */
-export type Auth = NoAuth | TokenAuth | UserPass | NKeyAuth | JwtAuth;
-
-/**
- * Authenticator is an interface that returns credentials.
- * @type function(nonce?: string) => Auth
- */
-export interface Authenticator {
-  (nonce?: string): Auth;
-}
-
-function multiAuthenticator(authenticators: Authenticator[]) {
+export function multiAuthenticator(authenticators: Authenticator[]) {
   return (nonce?: string): Auth => {
     let auth: Partial<NoAuth & TokenAuth & UserPass & NKeyAuth & JwtAuth> = {};
     authenticators.forEach((a) => {
@@ -82,28 +35,6 @@ function multiAuthenticator(authenticators: Authenticator[]) {
     });
     return auth as Auth;
   };
-}
-
-export function buildAuthenticator(
-  opts: ConnectionOptions,
-): Authenticator {
-  const buf: Authenticator[] = [];
-  // jwtAuthenticator is created by the user, since it
-  // will require possibly reading files which
-  // some of the clients are simply unable to do
-  if (typeof opts.authenticator === "function") {
-    buf.push(opts.authenticator);
-  }
-  if (Array.isArray(opts.authenticator)) {
-    buf.push(...opts.authenticator);
-  }
-  if (opts.token) {
-    buf.push(tokenAuthenticator(opts.token));
-  }
-  if (opts.user) {
-    buf.push(usernamePasswordAuthenticator(opts.user, opts.pass));
-  }
-  return buf.length === 0 ? noAuthFn() : multiAuthenticator(buf);
 }
 
 export function noAuthFn(): Authenticator {

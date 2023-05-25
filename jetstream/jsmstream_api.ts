@@ -13,45 +13,54 @@
  * limitations under the License.
  */
 
+import { Empty, MsgHdrs } from "../nats-base-client/types.ts";
+import { BaseApiClient, StreamNames } from "./jsbaseclient_api.ts";
+import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { validateStreamName } from "./jsutil.ts";
+import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
+import { KvStatusImpl } from "./kv.ts";
+import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
+import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
+import { TD } from "../nats-base-client/encoders.ts";
+import { Feature } from "../nats-base-client/semver.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import {
+  Consumers,
+  kvPrefix,
+  KvStatus,
+  ObjectStoreStatus,
+  StoredMsg,
+  Stream,
+  StreamAPI,
+  Streams,
+} from "./types.ts";
+import { JetStreamOptions, NatsConnection } from "../nats-base-client/core.ts";
 import {
   ApiPagedRequest,
-  Empty,
   ExternalStream,
-  JetStreamOptions,
-  KvStatus,
-  Lister,
   MsgDeleteRequest,
   MsgRequest,
-  NatsConnection,
-  ObjectStoreStatus,
   PurgeBySeq,
   PurgeOpts,
   PurgeResponse,
   PurgeTrimOpts,
-  StoredMsg,
-  Stream,
-  StreamAPI,
+  StreamAlternate,
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
   StreamListResponse,
   StreamMsgResponse,
-  StreamNames,
   StreamSource,
   StreamUpdateConfig,
   SuccessResponse,
-} from "./types.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { ListerFieldFilter, ListerImpl } from "./jslister.ts";
-import { validateStreamName } from "./jsutil.ts";
-import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import { kvPrefix, KvStatusImpl } from "./kv.ts";
-import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
-import { Codec, JSONCodec } from "./codec.ts";
-import { TD } from "./encoders.ts";
-import { Feature } from "./semver.ts";
-import { NatsConnectionImpl } from "./nats.ts";
-import { StreamImpl } from "./stream.ts";
+} from "./jsapi_types.ts";
+import {
+  Consumer,
+  OrderedConsumerOptions,
+  OrderedPullConsumerImpl,
+  PullConsumerImpl,
+} from "./consumer.ts";
+import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -72,6 +81,130 @@ export function convertStreamSourceDomain(s?: StreamSource) {
   }
   copy.external = { api: `$JS.${domain}.API` } as ExternalStream;
   return copy;
+}
+
+export class ConsumersImpl implements Consumers {
+  api: ConsumerAPI;
+  notified: boolean;
+
+  constructor(api: ConsumerAPI) {
+    this.api = api;
+    this.notified = false;
+  }
+
+  checkVersion(): Promise<void> {
+    if (!this.notified) {
+      this.notified = true;
+      console.log(
+        `\u001B[33m >> consumers framework is beta functionality \u001B[0m`,
+      );
+    }
+    const fv = (this.api as ConsumerAPIImpl).nc.features.get(
+      Feature.JS_SIMPLIFICATION,
+    );
+    if (!fv.ok) {
+      return Promise.reject(
+        new Error(
+          `consumers framework is only supported on servers ${fv.min} or better`,
+        ),
+      );
+    }
+    return Promise.resolve();
+  }
+
+  async get(
+    stream: string,
+    name: string | Partial<OrderedConsumerOptions> = {},
+  ): Promise<Consumer> {
+    if (typeof name === "object") {
+      return this.ordered(stream, name);
+    }
+    // check we have support for pending msgs and header notifications
+    await this.checkVersion();
+
+    return this.api.info(stream, name)
+      .then((ci) => {
+        if (ci.config.deliver_subject !== undefined) {
+          return Promise.reject(new Error("push consumer not supported"));
+        }
+        return new PullConsumerImpl(this.api, ci);
+      })
+      .catch((err) => {
+        return Promise.reject(err);
+      });
+  }
+
+  async ordered(
+    stream: string,
+    opts?: Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer> {
+    await this.checkVersion();
+
+    const impl = this.api as ConsumerAPIImpl;
+    const sapi = new StreamAPIImpl(impl.nc, impl.opts);
+    return sapi.info(stream)
+      .then((_si) => {
+        return Promise.resolve(
+          new OrderedPullConsumerImpl(this.api, stream, opts),
+        );
+      })
+      .catch((err) => {
+        return Promise.reject(err);
+      });
+  }
+}
+
+export class StreamImpl implements Stream {
+  api: StreamAPIImpl;
+  _info: StreamInfo;
+
+  constructor(api: StreamAPI, info: StreamInfo) {
+    this.api = api as StreamAPIImpl;
+    this._info = info;
+  }
+
+  get name(): string {
+    return this._info.config.name;
+  }
+
+  alternates(): Promise<StreamAlternate[]> {
+    return this.info()
+      .then((si) => {
+        return si.alternates ? si.alternates : [];
+      });
+  }
+
+  async best(): Promise<Stream> {
+    await this.info();
+    if (this._info.alternates) {
+      const asi = await this.api.info(this._info.alternates[0].name);
+      return new StreamImpl(this.api, asi);
+    } else {
+      return this;
+    }
+  }
+
+  info(cached = false): Promise<StreamInfo> {
+    if (cached) {
+      return Promise.resolve(this._info);
+    }
+    return this.api.info(this.name)
+      .then((si) => {
+        this._info = si;
+        return this._info;
+      });
+  }
+
+  getConsumer(
+    name?: string | Partial<OrderedConsumerOptions>,
+  ): Promise<Consumer> {
+    return new ConsumersImpl(new ConsumerAPIImpl(this.api.nc, this.api.opts))
+      .get(this.name, name);
+  }
+
+  getMessage(query: MsgRequest): Promise<StoredMsg> {
+    return this.api.getMessage(this.name, query);
+  }
 }
 
 export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
@@ -388,5 +521,20 @@ export class StoredMsgImpl implements StoredMsg {
 
   string(): string {
     return TD.decode(this.data);
+  }
+}
+
+export class StreamsImpl implements Streams {
+  api: StreamAPIImpl;
+
+  constructor(api: StreamAPI) {
+    this.api = api as StreamAPIImpl;
+  }
+
+  get(stream: string): Promise<Stream> {
+    return this.api.info(stream)
+      .then((si) => {
+        return new StreamImpl(this.api, si);
+      });
   }
 }

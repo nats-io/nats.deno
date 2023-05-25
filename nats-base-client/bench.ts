@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-import { Empty, NatsConnection } from "./types.ts";
+import { Empty } from "./types.ts";
 import { nuid } from "./nuid.ts";
 import { deferred, Perf } from "./util.ts";
-import { ErrorCode, NatsError } from "./error.ts";
 import type { NatsConnectionImpl } from "./nats.ts";
+import { ErrorCode, NatsConnection, NatsError } from "./core.ts";
 
 export class Metric {
   name: string;

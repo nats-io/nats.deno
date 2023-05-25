@@ -21,7 +21,7 @@ import {
   deferred,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const { ns, nc } = await setup();

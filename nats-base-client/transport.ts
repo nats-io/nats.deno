@@ -12,13 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { TD } from "./encoders.ts";
+
 import {
   ConnectionOptions,
   DEFAULT_PORT,
   DnsResolveFn,
   Server,
   URLParseFn,
-} from "./types.ts";
+} from "./core.ts";
+import { DataBuffer } from "./databuffer.ts";
 
 let transportConfig: TransportFactory;
 export function setTransportFactory(config: TransportFactory): void {
@@ -80,4 +83,30 @@ export interface Transport extends AsyncIterable<Uint8Array> {
   disconnect(): void;
 
   closed(): Promise<void | Error>;
+}
+
+export const CR_LF = "\r\n";
+export const CR_LF_LEN = CR_LF.length;
+export const CRLF = DataBuffer.fromAscii(CR_LF);
+export const CR = new Uint8Array(CRLF)[0]; // 13
+export const LF = new Uint8Array(CRLF)[1]; // 10
+export function protoLen(ba: Uint8Array): number {
+  for (let i = 0; i < ba.length; i++) {
+    const n = i + 1;
+    if (ba.byteLength > n && ba[i] === CR && ba[n] === LF) {
+      return n + 1;
+    }
+  }
+  return 0;
+}
+
+export function extractProtocolMessage(a: Uint8Array): string {
+  // protocol messages are ascii, so Uint8Array
+  const len = protoLen(a);
+  if (len > 0) {
+    const ba = new Uint8Array(a);
+    const out = ba.slice(0, len);
+    return TD.decode(out);
+  }
+  return "";
 }

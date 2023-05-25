@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,20 +13,18 @@
  * limitations under the License.
  */
 
+import { Empty } from "../nats-base-client/encoders.ts";
+import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
+import { extend } from "../nats-base-client/util.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { checkJsErrorCode } from "./jsutil.ts";
 import {
-  ApiResponse,
-  Empty,
   JetStreamOptions,
   Msg,
   NatsConnection,
   RequestOptions,
-  StreamNameBySubject,
-  StreamNames,
-} from "./types.ts";
-import { Codec, JSONCodec } from "./codec.ts";
-import { extend } from "./util.ts";
-import { NatsConnectionImpl } from "./nats.ts";
-import { checkJsErrorCode } from "./jsutil.ts";
+} from "../nats-base-client/core.ts";
+import { ApiResponse } from "./jsapi_types.ts";
 
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;
@@ -38,6 +36,14 @@ export function defaultJsOptions(opts?: JetStreamOptions): JetStreamOptions {
     delete opts.domain;
   }
   return extend({ apiPrefix: defaultPrefix, timeout: defaultTimeout }, opts);
+}
+
+export interface StreamNames {
+  streams: string[];
+}
+
+export interface StreamNameBySubject {
+  subject: string;
 }
 
 export class BaseApiClient {
@@ -54,6 +60,10 @@ export class BaseApiClient {
     this.prefix = this.opts.apiPrefix!;
     this.timeout = this.opts.timeout!;
     this.jc = JSONCodec();
+  }
+
+  getOptions(): JetStreamOptions {
+    return Object.assign({}, this.opts);
   }
 
   _parseOpts() {
@@ -97,6 +107,10 @@ export class BaseApiClient {
       throw new Error("no stream matches subject");
     }
     return names.streams[0];
+  }
+
+  getConnection(): NatsConnection {
+    return this.nc;
   }
 
   parseJsResponse(m: Msg): unknown {

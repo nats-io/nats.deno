@@ -14,7 +14,11 @@
  */
 
 import { nuid } from "../../nats-base-client/nuid.ts";
-import { createConsumer, fill, initStream } from "../../tests/jstest_util.ts";
+import {
+  createConsumer,
+  fill,
+  initStream,
+} from "../../jetstream/tests/jstest_util.ts";
 import { NatsConnection } from "../../src/mod.ts";
 
 export async function setupStreamAndConsumer(

@@ -15,23 +15,8 @@
 
 // Heavily inspired by Golang's https://golang.org/src/net/http/header.go
 
-import { ErrorCode, NatsError } from "./error.ts";
 import { TD, TE } from "./encoders.ts";
-
-export interface MsgHdrs extends Iterable<[string, string[]]> {
-  hasError: boolean;
-  status: string;
-  code: number;
-  description: string;
-
-  get(k: string, match?: Match): string;
-  set(k: string, v: string, match?: Match): void;
-  append(k: string, v: string, match?: Match): void;
-  has(k: string, match?: Match): boolean;
-  keys(): string[];
-  values(k: string, match?: Match): string[];
-  delete(k: string, match?: Match): void;
-}
+import { ErrorCode, Match, MsgHdrs, NatsError } from "./core.ts";
 
 // https://www.ietf.org/rfc/rfc822.txt
 // 3.1.2.  STRUCTURE OF HEADER FIELDS
@@ -85,15 +70,6 @@ export function headers(code = 0, description = ""): MsgHdrs {
 }
 
 const HEADER = "NATS/1.0";
-
-export enum Match {
-  // Exact option is case sensitive
-  Exact = 0,
-  // Case sensitive, but key is transformed to Canonical MIME representation
-  CanonicalMIME,
-  // Case insensitive matches
-  IgnoreCase,
-}
 
 export class MsgHdrsImpl implements MsgHdrs {
   _code: number;

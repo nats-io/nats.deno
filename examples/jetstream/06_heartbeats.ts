@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 
-import { connect } from "../../src/mod.ts";
+import { connect, ConsumerEvents } from "../../src/mod.ts";
 import { setupStreamAndConsumer } from "./util.ts";
-import { ConsumerEvents } from "../../nats-base-client/types.ts";
 
 // create a connection
 const nc = await connect();

@@ -13,33 +13,29 @@
  * limitations under the License.
  */
 
+import { Js409Errors, nanos, setMaxWaitingToFail } from "../jsutil.ts";
 import {
-  AckPolicy,
-  JetStreamClient,
-  PullOptions,
-} from "../nats-base-client/types.ts";
-import {
-  Js409Errors,
-  nanos,
-  setMaxWaitingToFail,
-} from "../nats-base-client/jsutil.ts";
-import {
-  consumerOpts,
   deferred,
   NatsError,
   StringCodec,
-} from "../nats-base-client/mod.ts";
+} from "../../nats-base-client/mod.ts";
+import {
+  AckPolicy,
+  consumerOpts,
+  JetStreamClient,
+  PullOptions,
+} from "../mod.ts";
 import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { initStream } from "./jstest_util.ts";
 import {
   cleanup,
-  initStream,
   jetstreamServerConf,
+  notCompatible,
   setup,
-} from "./jstest_util.ts";
-import { notCompatible } from "./helpers/mod.ts";
+} from "../../tests/helpers/mod.ts";
 
 type testArgs = {
   js: JetStreamClient;

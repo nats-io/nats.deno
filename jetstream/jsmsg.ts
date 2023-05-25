@@ -12,20 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  DeliveryInfo,
-  JsMsg,
-  Msg,
-  PullOptions,
-  RequestOptions,
-} from "./types.ts";
-import { MsgHdrs } from "./headers.ts";
-import { DataBuffer } from "./databuffer.ts";
-import { JSONCodec, StringCodec } from "./codec.ts";
-import { MsgImpl } from "./msg.ts";
-import { ProtocolHandler } from "./protocol.ts";
-import { RequestOne } from "./request.ts";
+import { DataBuffer } from "../nats-base-client/databuffer.ts";
+import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
+import { MsgImpl } from "../nats-base-client/msg.ts";
+import { ProtocolHandler } from "../nats-base-client/protocol.ts";
+import { RequestOne } from "../nats-base-client/request.ts";
 import { nanos } from "./jsutil.ts";
+import { Msg, MsgHdrs, RequestOptions } from "../nats-base-client/core.ts";
+import { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);
@@ -33,6 +27,100 @@ const WPI = Uint8Array.of(43, 87, 80, 73);
 const NXT = Uint8Array.of(43, 78, 88, 84);
 const TERM = Uint8Array.of(43, 84, 69, 82, 77);
 const SPACE = Uint8Array.of(32);
+
+/**
+ * Represents a message stored in JetStream
+ */
+export interface JsMsg {
+  /**
+   * True if the message was redelivered
+   */
+  redelivered: boolean;
+  /**
+   * The delivery info for the message
+   */
+  info: DeliveryInfo;
+  /**
+   * The sequence number for the message
+   */
+  seq: number;
+  /**
+   * Any headers associated with the message
+   */
+  headers: MsgHdrs | undefined;
+  /**
+   * The message's data
+   */
+  data: Uint8Array;
+  /**
+   * The subject on which the message was published
+   */
+  subject: string;
+  /**
+   * @ignore
+   */
+  sid: number;
+
+  /**
+   * Indicate to the JetStream server that the message was processed
+   * successfully.
+   */
+  ack(): void;
+
+  /**
+   * Indicate to the JetStream server that processing of the message
+   * failed, and that it should be resent after the spefied number of
+   * milliseconds.
+   * @param millis
+   */
+  nak(millis?: number): void;
+
+  /**
+   * Indicate to the JetStream server that processing of the message
+   * is on going, and that the ack wait timer for the message should be
+   * reset preventing a redelivery.
+   */
+  working(): void;
+
+  /**
+   * !! this is an experimental feature - and could be removed
+   *
+   * next() combines ack() and pull(), requires the subject for a
+   * subscription processing to process a message is provided
+   * (can be the same) however, because the ability to specify
+   * how long to keep the request open can be specified, this
+   * functionality doesn't work well with iterators, as an error
+   * (408s) are expected and needed to re-trigger a pull in case
+   * there was a timeout. In an iterator, the error will close
+   * the iterator, requiring a subscription to be reset.
+   */
+  next(subj: string, ro?: Partial<PullOptions>): void;
+
+  /**
+   * Indicate to the JetStream server that processing of the message
+   * failed and that the message should not be sent to the consumer again.
+   */
+  term(): void;
+
+  /**
+   * Indicate to the JetStream server that the message was processed
+   * successfully and that the JetStream server should acknowledge back
+   * that the acknowledgement was received.
+   */
+  ackAck(): Promise<boolean>;
+
+  /**
+   * Convenience method to parse the message payload as JSON. This method
+   * will throw an exception if there's a parsing error;
+   */
+  json<T>(): T;
+
+  /**
+   * Convenience method to parse the message payload as string. This method
+   * may throw an exception if there's a conversion error
+   */
+  string(): string;
+}
 
 export function toJsMsg(m: Msg): JsMsg {
   return new JsMsgImpl(m);

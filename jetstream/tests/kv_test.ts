@@ -12,24 +12,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
 import {
   collect,
   compare,
+  ConnectionOptions,
   deferred,
   delay,
-  DiscardPolicy,
   Empty,
-  KvOptions,
-  nanos,
+  NatsConnection,
   NatsConnectionImpl,
   NatsError,
   nuid,
   parseSemVer,
   QueuedIterator,
-  StorageType,
   StringCodec,
-} from "../nats-base-client/internal_mod.ts";
+} from "../../nats-base-client/internal_mod.ts";
+
+import {
+  DirectMsgHeaders,
+  DiscardPolicy,
+  KV,
+  KvEntry,
+  KvOptions,
+  nanos,
+  StorageType,
+} from "../mod.ts";
+
 import {
   assert,
   assertArrayIncludes,
@@ -39,27 +47,25 @@ import {
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 import {
-  ConnectionOptions,
-  DirectMsgHeaders,
-  JetStreamOptions,
-  KV,
-  KvEntry,
-  NatsConnection,
-} from "../nats-base-client/types.ts";
-
-import {
   Base64KeyCodec,
   Bucket,
-  kvPrefix,
   NoopKvCodecs,
   validateBucket,
   validateKey,
-} from "../nats-base-client/kv.ts";
-import { Lock, NatsServer, notCompatible } from "./helpers/mod.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { JetStreamSubscriptionInfoable } from "../nats-base-client/jsclient.ts";
-import { connect } from "../src/mod.ts";
+} from "../kv.ts";
+import {
+  cleanup,
+  jetstreamServerConf,
+  Lock,
+  NatsServer,
+  notCompatible,
+  setup,
+} from "../../tests/helpers/mod.ts";
+import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
+import { connect } from "../../src/mod.ts";
 import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
+import { JetStreamOptions } from "../../nats-base-client/core.ts";
+import { JetStreamSubscriptionInfoable, kvPrefix } from "../types.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [

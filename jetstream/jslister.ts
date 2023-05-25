@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,15 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { BaseApiClient } from "./jsbaseclient_api.ts";
 import {
   ApiPaged,
   ApiPagedRequest,
   ApiResponse,
   ConsumerListResponse,
-  Lister,
   StreamListResponse,
-} from "./types.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+} from "./jsapi_types.ts";
+
+/**
+ * An interface for listing. Returns a promise with typed list.
+ */
+export interface Lister<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T>;
+
+  next(): Promise<T[]>;
+}
 
 export type ListerFieldFilter<T> = (v: unknown) => T[];
 

@@ -16,7 +16,7 @@
 import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { createInbox, Msg } from "../src/mod.ts";
 import { deferred } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 function macro(input: Uint8Array) {
   return async () => {

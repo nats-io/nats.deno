@@ -14,21 +14,23 @@
  */
 
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
-import { connect, NatsConnection, StringCodec } from "../../src/mod.ts";
-
-import { collect } from "../../nats-base-client/util.ts";
-import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
-import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
-
-import { parseSemVer } from "../../nats-base-client/semver.ts";
 import {
+  connect,
+  NatsConnection,
   ServiceError,
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
-} from "../../nats-base-client/service.ts";
+  StringCodec,
+} from "../../src/mod.ts";
+
+import { collect } from "../../nats-base-client/util.ts";
+import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
+import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
+
+import { parseSemVer } from "../../nats-base-client/semver.ts";
 
 const ajv = new Ajv();
 

@@ -16,9 +16,15 @@ import {
   assertEquals,
   fail,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { connect, createInbox, Empty, Msg, StringCodec } from "../src/mod.ts";
-import { nanos } from "../nats-base-client/jsutil.ts";
-import { parseInfo, toJsMsg } from "../nats-base-client/jsmsg.ts";
+import {
+  connect,
+  createInbox,
+  Empty,
+  Msg,
+  StringCodec,
+} from "../../src/mod.ts";
+import { nanos } from "../jsutil.ts";
+import { parseInfo, toJsMsg } from "../jsmsg.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"

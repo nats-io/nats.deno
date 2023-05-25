@@ -28,6 +28,7 @@ import {
   jwtAuthenticator,
   NatsConnection,
   NatsError,
+  NKeyAuth,
   nkeyAuthenticator,
   Status,
   StringCodec,
@@ -35,21 +36,20 @@ import {
   usernamePasswordAuthenticator,
   UserPass,
 } from "../src/mod.ts";
-import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
+import { assertErrorCode, cleanup, NatsServer, setup } from "./helpers/mod.ts";
 import {
   deferred,
   NatsConnectionImpl,
   nkeys,
 } from "../nats-base-client/internal_mod.ts";
-import { NKeyAuth } from "../nats-base-client/authenticator.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { cleanup, setup } from "./jstest_util.ts";
 import {
   encodeAccount,
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { DEFAULT_MAX_RECONNECT_ATTEMPTS } from "../nats-base-client/types.ts";
+
+import { DEFAULT_MAX_RECONNECT_ATTEMPTS } from "../nats-base-client/options.ts";
 
 const conf = {
   authorization: {

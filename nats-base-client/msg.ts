@@ -12,13 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Empty, Msg } from "./types.ts";
-import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import type { Publisher } from "./protocol.ts";
+import { MsgHdrsImpl } from "./headers.ts";
 import type { MsgArg } from "./parser.ts";
-import { TD } from "./encoders.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import { Empty, TD } from "./encoders.ts";
 import { Codec, JSONCodec } from "./codec.ts";
+import { ErrorCode, Msg, MsgHdrs, NatsError, Publisher } from "./core.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload

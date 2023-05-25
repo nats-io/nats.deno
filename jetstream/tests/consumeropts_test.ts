@@ -20,18 +20,19 @@ import {
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 import {
+  ConsumerOpts,
   consumerOpts,
   ConsumerOptsBuilderImpl,
   isConsumerOptsBuilder,
-} from "../nats-base-client/jsconsumeropts.ts";
+  JsMsgCallback,
+} from "../types.ts";
+
 import {
   AckPolicy,
-  ConsumerOpts,
   DeliverPolicy,
-  JsMsgCallback,
+  millis,
   ReplayPolicy,
-} from "../nats-base-client/types.ts";
-import { millis } from "../nats-base-client/mod.ts";
+} from "../../src/mod.ts";
 
 Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder(consumerOpts()), true);

@@ -12,6 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { defaultPort, getUrlParseFn } from "./transport.ts";
+import { shuffle } from "./util.ts";
+import { isIP } from "./ipparser.ts";
 import {
   DEFAULT_HOST,
   DEFAULT_PORT,
@@ -19,10 +22,7 @@ import {
   Server,
   ServerInfo,
   ServersChanged,
-} from "./types.ts";
-import { defaultPort, getUrlParseFn } from "./transport.ts";
-import { shuffle } from "./util.ts";
-import { isIP } from "./ipparser.ts";
+} from "./core.ts";
 
 export function isIPV4OrHostname(hp: string): boolean {
   if (hp.indexOf(".") !== -1) {

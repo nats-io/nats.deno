@@ -12,20 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Empty } from "../nats-base-client/encoders.ts";
+import { MsgArg } from "../nats-base-client/parser.ts";
+import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
+import { MsgImpl } from "../nats-base-client/msg.ts";
 import {
-  AckPolicy,
-  ConsumerConfig,
-  DeliverPolicy,
-  Empty,
+  ErrorCode,
   Msg,
   Nanos,
-  ReplayPolicy,
-} from "./types.ts";
-import { ErrorCode, NatsError } from "./error.ts";
-import { MsgArg } from "./parser.ts";
-import { headers, MsgHdrsImpl } from "./headers.ts";
-import { MsgImpl } from "./msg.ts";
-import { Publisher } from "./protocol.ts";
+  NatsError,
+  Publisher,
+} from "../nats-base-client/core.ts";
 
 export function validateDurableName(name?: string) {
   return minValidation("durable", name);
@@ -76,19 +73,6 @@ export function validName(name = ""): string {
     }
   }
   return "";
-}
-
-export function defaultConsumer(
-  name: string,
-  opts: Partial<ConsumerConfig> = {},
-): ConsumerConfig {
-  return Object.assign({
-    name: name,
-    deliver_policy: DeliverPolicy.All,
-    ack_policy: AckPolicy.Explicit,
-    ack_wait: nanos(30 * 1000),
-    replay_policy: ReplayPolicy.Instant,
-  }, opts);
 }
 
 /**
