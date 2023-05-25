@@ -5,9 +5,9 @@ import {
   connect,
   ConnectionOptions,
   credsAuthenticator,
+  headers,
   StringCodec,
 } from "../src/mod.ts";
-import { headers } from "../nats-base-client/mod.ts";
 
 const argv = parse(
   Deno.args,
