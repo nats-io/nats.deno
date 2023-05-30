@@ -25,6 +25,7 @@ import {
   DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
+  ReviverFn,
   StoredMsg,
   StreamAPI,
 } from "./types.ts";
@@ -119,11 +120,8 @@ export class DirectMsgImpl implements DirectMsg {
     return this.header.get(DirectMsgHeaders.Stream);
   }
 
-  json<T = unknown>(): T {
-    if (!DirectMsgImpl.jc) {
-      DirectMsgImpl.jc = JSONCodec();
-    }
-    return DirectMsgImpl.jc.decode(this.data) as T;
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return JSONCodec<T>(reviver).decode(this.data);
   }
 
   string(): string {

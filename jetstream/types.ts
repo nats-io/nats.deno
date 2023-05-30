@@ -19,6 +19,7 @@ import {
   MsgHdrs,
   Nanos,
   NatsError,
+  Payload,
   QueuedIterator,
   Sub,
 } from "../nats-base-client/core.ts";
@@ -327,12 +328,12 @@ export interface JetStreamClient {
    * request will fail with {@link ErrorCode.NoResponders} error.
    *
    * @param subj - the subject for the message
-   * @param data - the message's data
+   * @param payload - the message's data
    * @param options - the optional message
    */
   publish(
     subj: string,
-    data?: Uint8Array,
+    payload?: Payload,
     options?: Partial<JetStreamPublishOptions>,
   ): Promise<PubAck>;
 
@@ -758,6 +759,12 @@ export interface DirectStreamAPI {
 }
 
 /**
+ * A reviver function
+ */
+//deno-lint-ignore no-explicit-any
+export type ReviverFn = (key: string, value: any) => any;
+
+/**
  * An interface representing a message that retrieved directly from JetStream.
  */
 export interface StoredMsg {
@@ -790,8 +797,9 @@ export interface StoredMsg {
   /**
    * Convenience method to parse the message payload as JSON. This method
    * will throw an exception if there's a parsing error;
+   * @param reviver
    */
-  json<T>(): T;
+  json<T>(reviver?: ReviverFn): T;
 
   /**
    * Convenience method to parse the message payload as string. This method

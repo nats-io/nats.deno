@@ -80,6 +80,7 @@ import {
   JetStreamOptions,
   Msg,
   NatsConnection,
+  Payload,
   QueuedIterator,
   RequestOptions,
 } from "../nats-base-client/core.ts";
@@ -173,7 +174,7 @@ export class JetStreamClientImpl extends BaseApiClient
 
   async publish(
     subj: string,
-    data: Uint8Array = Empty,
+    data: Payload = Empty,
     opts?: Partial<JetStreamPublishOptions>,
   ): Promise<PubAck> {
     opts = opts || {};

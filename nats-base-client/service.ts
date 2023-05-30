@@ -29,6 +29,7 @@ import {
   Nanos,
   NatsConnection,
   NatsError,
+  Payload,
   PublishOptions,
   QueuedIterator,
   Service,
@@ -84,7 +85,7 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.headers;
   }
 
-  respond(data?: Uint8Array, opts?: PublishOptions): boolean {
+  respond(data?: Payload, opts?: PublishOptions): boolean {
     return this.msg.respond(data, opts);
   }
 

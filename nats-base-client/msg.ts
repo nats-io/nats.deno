@@ -17,6 +17,7 @@ import type { MsgArg } from "./parser.ts";
 import { Empty, TD } from "./encoders.ts";
 import { Codec, JSONCodec } from "./codec.ts";
 import { ErrorCode, Msg, MsgHdrs, NatsError, Publisher } from "./core.ts";
+import { ReviverFn } from "../jetstream/types.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload
@@ -99,11 +100,8 @@ export class MsgImpl implements Msg {
     return subj + reply + payloadAndHeaders;
   }
 
-  json<T = unknown>(): T {
-    if (!MsgImpl.jc) {
-      MsgImpl.jc = JSONCodec();
-    }
-    return MsgImpl.jc.decode(this.data) as T;
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return JSONCodec<T>(reviver).decode(this.data);
   }
 
   string(): string {

@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
-import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
+import {
+  JetStreamClient,
+  JetStreamManager,
+  ReviverFn,
+} from "../jetstream/types.ts";
 import { nuid } from "./nuid.ts";
 
 /**
@@ -498,6 +502,8 @@ export interface JetStreamOptions {
   domain?: string;
 }
 
+export type Payload = Uint8Array | string;
+
 export interface NatsConnection {
   /**
    * ServerInfo to the currently connected server or undefined
@@ -522,10 +528,14 @@ export interface NatsConnection {
   /**
    * Publishes the specified data to the specified subject.
    * @param subject
-   * @param data
+   * @param payload
    * @param options
    */
-  publish(subject: string, data?: Uint8Array, options?: PublishOptions): void;
+  publish(
+    subject: string,
+    payload?: Payload,
+    options?: PublishOptions,
+  ): void;
 
   /**
    * Subscribe expresses interest in the specified subject. The subject may
@@ -545,12 +555,12 @@ export interface NatsConnection {
    * the request will fail as soon as the server processes it.
    *
    * @param subject
-   * @param data
+   * @param payload
    * @param opts
    */
   request(
     subject: string,
-    data?: Uint8Array,
+    payload?: Payload,
     opts?: RequestOptions,
   ): Promise<Msg>;
 
@@ -558,13 +568,13 @@ export interface NatsConnection {
    * Publishes a request expecting multiple responses back. Several strategies
    * to determine when the request should stop gathering responses.
    * @param subject
-   * @param data
+   * @param payload
    * @param opts
    */
   requestMany(
     subject: string,
-    data: Uint8Array,
-    opts: Partial<RequestManyOptions>,
+    payload?: Payload,
+    opts?: Partial<RequestManyOptions>,
   ): Promise<AsyncIterable<Msg>>;
 
   /**
@@ -669,16 +679,17 @@ export interface Msg {
   /**
    * Convenience to publish a response to the {@link reply} subject in the
    * message - this is the same as doing `nc.publish(msg.reply, ...)`.
-   * @param data
+   * @param payload
    * @param opts
    */
-  respond(data?: Uint8Array, opts?: PublishOptions): boolean;
+  respond(payload?: Payload, opts?: PublishOptions): boolean;
 
   /**
    * Convenience method to parse the message payload as JSON. This method
    * will throw an exception if there's a parsing error;
+   * @param reviver a reviver function
    */
-  json<T>(): T;
+  json<T>(reviver?: ReviverFn): T;
 
   /**
    * Convenience method to parse the message payload as string. This method
@@ -1039,7 +1050,7 @@ export class ServiceError extends Error {
 export interface Publisher {
   publish(
     subject: string,
-    data: Uint8Array,
+    data: Payload,
     options?: { reply?: string; headers?: MsgHdrs },
   ): void;
 }

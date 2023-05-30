@@ -41,6 +41,7 @@ import {
   JetStreamOptions,
   Msg,
   NatsConnection,
+  Payload,
   PublishOptions,
   QueuedIterator,
   RequestManyOptions,
@@ -116,14 +117,10 @@ export class NatsConnectionImpl implements NatsConnection {
 
   publish(
     subject: string,
-    data: Uint8Array = Empty,
+    data?: Payload,
     options?: PublishOptions,
   ): void {
     this._check(subject, false, true);
-    // if argument is not undefined/null and not a Uint8Array, toss
-    if (data && !(data instanceof Uint8Array)) {
-      throw NatsError.errorForCode(ErrorCode.BadPayload);
-    }
     this.protocol.publish(subject, data, options);
   }
 
@@ -166,7 +163,7 @@ export class NatsConnectionImpl implements NatsConnection {
   // - wait for unknown messages, done when an empty payload is received or timer expires (with possible alt wait)
   requestMany(
     subject: string,
-    data: Uint8Array = Empty,
+    data: Payload = Empty,
     opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
   ): Promise<QueuedIterator<Msg>> {
     try {
@@ -329,7 +326,7 @@ export class NatsConnectionImpl implements NatsConnection {
 
   request(
     subject: string,
-    data: Uint8Array = Empty,
+    data?: Payload,
     opts: RequestOptions = { timeout: 1000, noMux: false },
   ): Promise<Msg> {
     try {
