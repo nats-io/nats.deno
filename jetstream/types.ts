@@ -852,7 +852,10 @@ export enum AdvisoryKind {
 export interface Stream {
   name: string;
 
-  info(cached?: boolean): Promise<StreamInfo>;
+  info(
+    cached?: boolean,
+    opts?: Partial<StreamInfoRequestOptions>,
+  ): Promise<StreamInfo>;
 
   alternates(): Promise<StreamAlternate[]>;
 
@@ -863,6 +866,8 @@ export interface Stream {
   ): Promise<Consumer>;
 
   getMessage(query: MsgRequest): Promise<StoredMsg>;
+
+  deleteMessage(seq: number, erase?: boolean): Promise<boolean>;
 }
 
 export enum JsHeaders {

@@ -154,3 +154,35 @@ Deno.test("streams - consumers", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("streams - delete message", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const js = nc.jetstream();
+
+  // add a stream and a message
+  const { stream, subj } = await initStream(nc);
+  await Promise.all([js.publish(subj), js.publish(subj), js.publish(subj)]);
+
+  // retrieve the stream
+  const s = await js.streams.get(stream);
+  assertExists(s);
+  assertEquals(s.name, stream);
+
+  // get a message
+  const sm = await s.getMessage({ seq: 2 });
+  assertExists(sm);
+
+  assertEquals(await s.deleteMessage(2, true), true);
+  await assertRejects(
+    async () => {
+      await s.getMessage({ seq: 2 });
+    },
+    Error,
+    "no message found",
+  );
+
+  const si = await s.info(false, { deleted_details: true });
+  assertEquals(si.state.deleted, [2]);
+
+  await cleanup(ns, nc);
+});
