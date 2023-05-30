@@ -64,6 +64,7 @@ export type {
   Msg,
   Nanos,
   NatsConnection,
+  Payload,
   PublishOptions,
   RequestManyOptions,
   RequestOptions,

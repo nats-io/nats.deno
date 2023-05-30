@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { decode, Empty, encode } from "./encoders.ts";
+import { decode, Empty, encode, TE } from "./encoders.ts";
 import {
   CR_LF,
   CRLF,
@@ -45,6 +45,7 @@ import {
   Events,
   Msg,
   NatsError,
+  Payload,
   Publisher,
   PublishOptions,
   QueuedIterator,
@@ -852,9 +853,18 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   publish(
     subject: string,
-    data: Uint8Array,
+    payload: Payload = Empty,
     options?: PublishOptions,
   ) {
+    let data;
+    if (payload instanceof Uint8Array) {
+      data = payload;
+    } else if (typeof payload === "string") {
+      data = TE.encode(payload);
+    } else {
+      throw NatsError.errorForCode(ErrorCode.BadPayload);
+    }
+
     let len = data.length;
     options = options || {};
     options.reply = options.reply || "";

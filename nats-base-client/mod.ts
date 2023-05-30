@@ -52,6 +52,7 @@ export type {
   NatsConnection,
   NKeyAuth,
   NoAuth,
+  Payload,
   Perf,
   ProtocolFilterFn,
   PublishOptions,

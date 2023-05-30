@@ -29,6 +29,7 @@ import {
   kvPrefix,
   KvStatus,
   ObjectStoreStatus,
+  ReviverFn,
   StoredMsg,
   Stream,
   StreamAPI,
@@ -512,11 +513,8 @@ export class StoredMsgImpl implements StoredMsg {
     return bytes;
   }
 
-  json<T = unknown>(): T {
-    if (!StoredMsgImpl.jc) {
-      StoredMsgImpl.jc = JSONCodec();
-    }
-    return StoredMsgImpl.jc.decode(this.data) as T;
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return JSONCodec<T>(reviver).decode(this.data);
   }
 
   string(): string {
