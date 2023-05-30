@@ -141,7 +141,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   const infos = await collect(await sc.info(name));
 
   let proms = infos.map((v) => {
-    return nc.request(v.subjects[0]);
+    return nc.request(v.endpoints[0].subject);
   });
   let responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -154,7 +154,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
 
   // the service should throw/register an error if "error" is specified as payload
   proms = infos.map((v) => {
-    return nc.request(v.subjects[0], StringCodec().encode("error"));
+    return nc.request(v.endpoints[0].subject, StringCodec().encode("error"));
   });
   responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -166,7 +166,10 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   });
 
   proms = infos.map((v, idx) => {
-    return nc.request(v.subjects[0], StringCodec().encode(`hello ${idx}`));
+    return nc.request(
+      v.endpoints[0].subject,
+      StringCodec().encode(`hello ${idx}`),
+    );
   });
   responses = await Promise.all(proms);
   responses.forEach((m, idx) => {
@@ -305,13 +308,23 @@ const infoSchema: JSONSchemaType<ServiceInfo> = {
     id: { type: "string" },
     version: { type: "string" },
     description: { type: "string" },
-    subjects: { type: "array", items: { type: "string" } },
+    endpoints: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          subject: { type: "string" },
+          metadata: { type: "object", minProperties: 1 },
+        },
+      },
+    },
     metadata: {
       type: "object",
       minProperties: 1,
     },
   },
-  required: ["type", "name", "id", "version", "subjects", "metadata"],
+  required: ["type", "name", "id", "version", "metadata", "endpoints"],
   additionalProperties: false,
 };
 

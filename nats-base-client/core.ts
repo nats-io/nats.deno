@@ -819,6 +819,12 @@ export type Endpoint = {
 };
 export type EndpointOptions = Partial<Endpoint>;
 
+export type EndpointInfo = {
+  name: string;
+  subject: string;
+  metadata?: Record<string, string>;
+};
+
 export interface Dispatcher<T> {
   push(v: T): void;
 }
@@ -941,13 +947,13 @@ export type ServiceInfo = ServiceIdentity & {
    */
   description: string;
   /**
-   * Subject where the service can be invoked
-   */
-  subjects: string[];
-  /**
    * Service metadata
    */
   metadata?: Record<string, string>;
+  /**
+   * Information about the Endpoints
+   */
+  endpoints: EndpointInfo[];
 };
 export type ServiceConfig = {
   /**
