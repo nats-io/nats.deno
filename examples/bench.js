@@ -1,7 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 import { parse } from "https://deno.land/std@0.177.0/flags/mod.ts";
-import { connect, Nuid } from "../src/mod.ts";
-import { Bench, Metric } from "../nats-base-client/bench.ts";
+import { Bench, connect, Metric, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "127.0.0.1:4222",
   c: 100000,

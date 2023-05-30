@@ -12,45 +12,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "./helpers/launcher.ts";
+import { NatsServer } from "../../tests/helpers/launcher.ts";
 
-import {
-  cleanup,
-  initStream,
-  jetstreamExportServerConf,
-  jetstreamServerConf,
-  setup,
-  time,
-} from "./jstest_util.ts";
+import { initStream, time } from "./jstest_util.ts";
 import {
   AckPolicy,
   checkJsError,
-  collect,
   ConsumerConfig,
   ConsumerOpts,
   consumerOpts,
+  DeliverPolicy,
+  JsHeaders,
+  JsMsg,
+  JsMsgCallback,
+  nanos,
+  PubAck,
+  RepublishHeaders,
+  RetentionPolicy,
+  StorageType,
+} from "../mod.ts";
+import {
+  collect,
+  delay,
+  NatsConnectionImpl,
+} from "../../nats-base-client/internal_mod.ts";
+import {
   createInbox,
   DebugEvents,
   deferred,
-  delay,
-  DeliverPolicy,
   Empty,
   ErrorCode,
   Events,
   headers,
-  JsHeaders,
-  JsMsg,
-  JsMsgCallback,
   JSONCodec,
-  nanos,
-  NatsConnectionImpl,
   NatsError,
   nuid,
   QueuedIterator,
-  RetentionPolicy,
-  StorageType,
   StringCodec,
-} from "../nats-base-client/internal_mod.ts";
+} from "../../nats-base-client/mod.ts";
 import {
   assertArrayIncludes,
   assertEquals,
@@ -61,22 +60,25 @@ import {
   fail,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
-import { assert } from "../nats-base-client/denobuffer.ts";
-import { PubAck, RepublishHeaders } from "../nats-base-client/types.ts";
+import { assert } from "../../nats-base-client/denobuffer.ts";
+import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
+import { defaultJsOptions } from "../jsbaseclient_api.ts";
+import { connect } from "../../src/connect.ts";
 import {
-  JetStreamClientImpl,
-  JetStreamSubscriptionImpl,
+  assertBetween,
+  cleanup,
+  disabled,
+  jetstreamExportServerConf,
+  jetstreamServerConf,
+  Lock,
+  notCompatible,
+  setup,
+} from "../../tests/helpers/mod.ts";
+import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
+import {
+  ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
-} from "../nats-base-client/jsclient.ts";
-import { defaultJsOptions } from "../nats-base-client/jsbaseclient_api.ts";
-import { connect } from "../src/connect.ts";
-import { ConsumerOptsBuilderImpl } from "../nats-base-client/jsconsumeropts.ts";
-import { assertBetween, disabled, Lock, notCompatible } from "./helpers/mod.ts";
-import {
-  isFlowControlMsg,
-  isHeartbeatMsg,
-  Js409Errors,
-} from "../nats-base-client/jsutil.ts";
+} from "../types.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {

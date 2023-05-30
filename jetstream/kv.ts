@@ -14,27 +14,42 @@
  */
 
 import {
-  AckPolicy,
-  callbackFn,
-  ConsumerConfig,
-  ConsumerInfo,
-  DeliverPolicy,
-  DiscardPolicy,
-  Empty,
+  MsgHdrs,
+  NatsConnection,
+  NatsError,
+} from "../nats-base-client/core.ts";
+import { millis, nanos } from "./jsutil.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
+import { headers } from "../nats-base-client/headers.ts";
+import {
+  consumerOpts,
+  DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
-  JetStreamOptions,
   JetStreamPublishOptions,
+  JetStreamSubscriptionInfoable,
   JsHeaders,
-  JsMsg,
   KV,
   KvCodec,
   KvCodecs,
   KvEntry,
   KvOptions,
+  kvPrefix,
   KvPutOptions,
   KvRemove,
   KvStatus,
+  StoredMsg,
+} from "./types.ts";
+import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
+import { deferred } from "../nats-base-client/util.ts";
+import { Empty } from "../nats-base-client/encoders.ts";
+import { ErrorCode, QueuedIterator } from "../nats-base-client/core.ts";
+import {
+  AckPolicy,
+  ConsumerConfig,
+  ConsumerInfo,
+  DeliverPolicy,
+  DiscardPolicy,
   MsgRequest,
   Placement,
   PurgeOpts,
@@ -42,21 +57,12 @@ import {
   Republish,
   RetentionPolicy,
   StorageType,
-  StoredMsg,
   StreamConfig,
   StreamInfo,
   StreamSource,
-} from "./types.ts";
-import {
-  JetStreamClientImpl,
-  JetStreamSubscriptionInfoable,
-} from "./jsclient.ts";
-import { millis, nanos } from "./jsutil.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { headers, MsgHdrs } from "./headers.ts";
-import { consumerOpts, deferred, ErrorCode, NatsError } from "./mod.ts";
-import { compare, Feature, parseSemVer } from "./semver.ts";
-import { JetStreamManagerImpl } from "./jsm.ts";
+} from "./jsapi_types.ts";
+import { JsMsg } from "./jsmsg.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -105,7 +111,6 @@ export function defaultBucketOpts(): Partial<KvOptions> {
 type OperationType = "PUT" | "DEL" | "PURGE";
 
 export const kvOperationHdr = "KV-Operation";
-export const kvPrefix = "KV_";
 const kvSubjectPrefix = "$KV";
 
 const validKeyRe = /^[-/=.\w]+$/;
@@ -158,8 +163,8 @@ export function validateBucket(name: string) {
 }
 
 export class Bucket implements KV, KvRemove {
-  jsm: JetStreamManager;
   js: JetStreamClient;
+  jsm: JetStreamManager;
   stream!: string;
   bucket: string;
   direct!: boolean;
@@ -169,10 +174,10 @@ export class Bucket implements KV, KvRemove {
   useJsPrefix: boolean;
   _prefixLen: number;
 
-  constructor(bucket: string, jsm: JetStreamManager, js: JetStreamClient) {
+  constructor(bucket: string, js: JetStreamClient, jsm: JetStreamManager) {
     validateBucket(bucket);
-    this.jsm = jsm;
     this.js = js;
+    this.jsm = jsm;
     this.bucket = bucket;
     this.prefix = kvSubjectPrefix;
     this.editPrefix = "";
@@ -185,19 +190,9 @@ export class Bucket implements KV, KvRemove {
     name: string,
     opts: Partial<KvOptions> = {},
   ): Promise<KV> {
-    const jsi = js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`kv is only supported on servers ${min} or better`),
-      );
-    }
     validateBucket(name);
-    const to = opts.timeout || 2000;
-    let jsopts = jsi.opts || {} as JetStreamOptions;
-    jsopts = Object.assign(jsopts, { timeout: to });
-    const jsm = await jsi.nc.jetstreamManager(jsopts);
-    const bucket = new Bucket(name, jsm, js);
+    const jsm = await js.jetstreamManager();
+    const bucket = new Bucket(name, js, jsm);
     await bucket.init(opts);
     return bucket;
   }
@@ -207,11 +202,10 @@ export class Bucket implements KV, KvRemove {
     name: string,
     opts: Partial<{ codec: KvCodecs }> = {},
   ): Promise<KV> {
-    const jsi = js as JetStreamClientImpl;
-    const jsm = await jsi.nc.jetstreamManager();
+    const jsm = await js.jetstreamManager();
     const info = await jsm.streams.info(`${kvPrefix}${name}`);
     validateBucket(info.config.name);
-    const bucket = new Bucket(name, jsm, js);
+    const bucket = new Bucket(name, js, jsm);
     Object.assign(bucket, info);
     bucket.codec = opts.codec || NoopKvCodecs();
     bucket.direct = info.config.allow_direct ?? false;
@@ -269,7 +263,7 @@ export class Bucket implements KV, KvRemove {
       sc.subjects = [this.subjectForBucket()];
     }
 
-    const nci = (this.js as JetStreamClientImpl).nc;
+    const nci = (this.js as unknown as { nc: NatsConnectionImpl }).nc;
     const have = nci.getServerVersion();
     const discardNew = have ? compare(have, parseSemVer("2.7.2")) >= 0 : false;
     sc.discard = discardNew ? DiscardPolicy.New : DiscardPolicy.Old;
@@ -322,8 +316,7 @@ export class Bucket implements KV, KvRemove {
   initializePrefixes(info: StreamInfo) {
     this._prefixLen = 0;
     this.prefix = `$KV.${this.bucket}`;
-    this.useJsPrefix =
-      (this.js as JetStreamClientImpl).opts.apiPrefix !== "$JS.API";
+    this.useJsPrefix = this.js.apiPrefix !== "$JS.API";
     const { mirror } = info.config;
     if (mirror) {
       let n = mirror.name;
@@ -353,7 +346,7 @@ export class Bucket implements KV, KvRemove {
     const builder: string[] = [];
     if (edit) {
       if (this.useJsPrefix) {
-        builder.push((this.js as JetStreamClientImpl).apiPrefix);
+        builder.push(this.js.apiPrefix);
       }
       if (this.editPrefix !== "") {
         builder.push(this.editPrefix);
@@ -517,8 +510,9 @@ export class Bucket implements KV, KvRemove {
     let sm: StoredMsg;
     try {
       if (this.direct) {
-        const jsmi = this.jsm as JetStreamManagerImpl;
-        sm = await jsmi.direct.getMessage(this.bucketName(), arg);
+        const direct =
+          (this.jsm as unknown as { direct: DirectStreamAPI }).direct;
+        sm = await direct.getMessage(this.bucketName(), arg);
       } else {
         sm = await this.jsm.streams.getMessage(this.bucketName(), arg);
       }
@@ -642,7 +636,7 @@ export class Bucket implements KV, KvRemove {
     const co = {} as ConsumerConfig;
     co.headers_only = opts.headers_only || false;
 
-    let fn: callbackFn | undefined;
+    let fn: (() => void) | undefined;
     fn = () => {
       qi.stop();
     };
@@ -715,7 +709,7 @@ export class Bucket implements KV, KvRemove {
     opts: {
       key?: string;
       headers_only?: boolean;
-      initializedFn?: callbackFn;
+      initializedFn?: () => void;
     } = {},
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
@@ -785,7 +779,7 @@ export class Bucket implements KV, KvRemove {
     });
     sub.closed.then(() => {
       qi.stop();
-    }).catch((err) => {
+    }).catch((err: Error) => {
       qi.stop(err);
     });
 
@@ -836,8 +830,8 @@ export class Bucket implements KV, KvRemove {
   }
 
   async status(): Promise<KvStatus> {
-    const ji = this.js as JetStreamClientImpl;
-    const cluster = ji.nc.info?.cluster ?? "";
+    const nc = (this.js as unknown as { nc: NatsConnection }).nc;
+    const cluster = nc.info?.cluster ?? "";
     const bn = this.bucketName();
     const si = await this.jsm.streams.info(bn);
     return new KvStatusImpl(si, cluster);

@@ -21,8 +21,9 @@ import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 import { join, resolve } from "https://deno.land/std@0.177.0/path/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { cleanup } from "./jstest_util.ts";
+import { cleanup } from "./helpers/mod.ts";
 import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertStringIncludes } from "https://deno.land/std@0.179.0/testing/asserts.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
@@ -66,10 +67,11 @@ Deno.test("tls - custom ca fails without root", async () => {
     .catch((err) => {
       // this is a bogus error name - but at least we know we are rejected
       assertEquals(err.name, "InvalidData");
-      assertEquals(
+      assertStringIncludes(
         err.message,
-        "invalid peer certificate contents: invalid peer certificate: UnknownIssuer",
+        "invalid peer certificate",
       );
+      assertStringIncludes(err.message, "UnknownIssuer");
       lock.unlock();
     });
 

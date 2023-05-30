@@ -13,12 +13,7 @@
  * limitations under the License.
  */
 import { Deferred, deferred } from "./util.ts";
-import { ErrorCode, NatsError } from "./error.ts";
-import { callbackFn } from "./types.ts";
-
-export interface Dispatcher<T> {
-  push(v: T): void;
-}
+import { ErrorCode, NatsError, QueuedIterator } from "./core.ts";
 
 export type IngestionFilterFnResult = { ingest: boolean; protocol: boolean };
 
@@ -51,14 +46,6 @@ export type ProtocolFilterFn<T = unknown> = (data: T | null) => boolean;
  * @param data: the value
  */
 export type DispatchedFn<T = unknown> = (data: T | null) => void;
-
-export interface QueuedIterator<T> extends Dispatcher<T> {
-  [Symbol.asyncIterator](): AsyncIterator<T>;
-  stop(err?: Error): void;
-  getProcessed(): number;
-  getPending(): number;
-  getReceived(): number;
-}
 
 export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   inflight: number;
@@ -137,7 +124,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
         this.yields = [];
         for (let i = 0; i < yields.length; i++) {
           if (typeof yields[i] === "function") {
-            const fn = yields[i] as unknown as callbackFn;
+            const fn = yields[i] as unknown as () => void;
             try {
               fn();
             } catch (err) {

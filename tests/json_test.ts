@@ -24,7 +24,7 @@ import {
 
 import { Lock } from "./helpers/mod.ts";
 import { assertThrowsErrorCode } from "./helpers/asserts.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};

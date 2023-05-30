@@ -13,13 +13,18 @@
  * limitations under the License.
  */
 
+import { validateBucket, validateKey } from "./kv.ts";
+import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
+import { JSONCodec } from "../nats-base-client/codec.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
+import { deferred } from "../nats-base-client/util.ts";
+import { DataBuffer } from "../nats-base-client/databuffer.ts";
+import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
 import {
-  DiscardPolicy,
+  consumerOpts,
   JetStreamClient,
   JetStreamManager,
-  JetStreamOptions,
   JsHeaders,
-  JsMsg,
   ObjectInfo,
   ObjectResult,
   ObjectStore,
@@ -29,25 +34,25 @@ import {
   ObjectStorePutOpts,
   ObjectStoreStatus,
   PubAck,
+} from "./types.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
+import { SHA256 } from "../nats-base-client/sha256.js";
+
+import {
+  MsgHdrs,
+  NatsConnection,
+  NatsError,
+  QueuedIterator,
+} from "../nats-base-client/core.ts";
+import {
+  DiscardPolicy,
   PurgeResponse,
   StorageType,
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
-} from "./types.ts";
-import { validateBucket, validateKey } from "./kv.ts";
-import { Base64UrlPaddedCodec } from "./base64.ts";
-import { JSONCodec } from "./codec.ts";
-import { nuid } from "./nuid.ts";
-import { deferred } from "./util.ts";
-import { JetStreamClientImpl } from "./jsclient.ts";
-import { DataBuffer } from "./databuffer.ts";
-import { headers, MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import { consumerOpts } from "./jsconsumeropts.ts";
-import { NatsError } from "./mod.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { SHA256 } from "./sha256.js";
-import { Feature } from "./semver.ts";
+} from "./jsapi_types.ts";
+import { JsMsg } from "./jsmsg.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -315,12 +320,13 @@ export class ObjectStoreImpl implements ObjectStore {
     rs: ReadableStream<Uint8Array> | null,
     opts?: ObjectStorePutOpts,
   ): Promise<ObjectInfo> {
-    const jsi = this.js as JetStreamClientImpl;
-    opts = opts || { timeout: jsi.timeout };
-    opts.timeout = opts.timeout || 1000;
+    const jsopts = this.js.getOptions();
+    opts = opts || { timeout: jsopts.timeout };
+    opts.timeout = opts.timeout || jsopts.timeout;
     opts.previousRevision = opts.previousRevision ?? undefined;
     const { timeout, previousRevision } = opts;
-    const maxPayload = jsi.nc.info?.max_payload || 1024;
+    const si = (this.js as unknown as { nc: NatsConnection }).nc.info;
+    const maxPayload = si?.max_payload || 1024;
     meta = meta || {} as ObjectStoreMeta;
     meta.options = meta.options || {};
     let maxChunk = meta.options?.max_chunk_size || 128 * 1024;
@@ -790,25 +796,7 @@ export class ObjectStoreImpl implements ObjectStore {
     name: string,
     opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
-    // we may not have support in the environment
-    if (typeof crypto?.subtle?.digest !== "function") {
-      return Promise.reject(
-        new Error(
-          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
-        ),
-      );
-    }
-    const jsi = js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`objectstore is only supported on servers ${min} or better`),
-      );
-    }
-    let jsopts = jsi.opts || {} as JetStreamOptions;
-    const to = jsopts.timeout || 2000;
-    jsopts = Object.assign(jsopts, { timeout: to });
-    const jsm = await jsi.nc.jetstreamManager(jsopts);
+    const jsm = await js.jetstreamManager();
     const os = new ObjectStoreImpl(name, jsm, js);
     await os.init(opts);
     return Promise.resolve(os);

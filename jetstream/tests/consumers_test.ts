@@ -12,36 +12,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  cleanup,
-  initStream,
-  jetstreamServerConf,
-  setup,
-} from "./jstest_util.ts";
+import { initStream } from "./jstest_util.ts";
 import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import {
-  AckPolicy,
-  Consumer,
-  ConsumerDebugEvents,
-  ConsumerEvents,
-  ConsumerMessages,
-  ConsumerStatus,
+  deferred,
   Empty,
   NatsConnection,
+  nuid,
+  StringCodec,
+} from "../../nats-base-client/mod.ts";
+import {
+  AckPolicy,
+  Consumer,
+  ConsumerMessages,
+  nanos,
   PubAck,
   PullOptions,
   StorageType,
-} from "../nats-base-client/types.ts";
-import { StringCodec } from "../nats-base-client/codec.ts";
-import { deferred, nanos, nuid } from "../nats-base-client/mod.ts";
-import { NatsServer } from "./helpers/launcher.ts";
-import { connect } from "../src/connect.ts";
-import { PullConsumerMessagesImpl } from "../nats-base-client/consumermessages.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+} from "../mod.ts";
+import { NatsServer } from "../../tests/helpers/launcher.ts";
+import { connect } from "../../src/connect.ts";
+import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+import {
+  cleanup,
+  jetstreamServerConf,
+  setup,
+} from "../../tests/helpers/mod.ts";
+import {
+  ConsumerDebugEvents,
+  ConsumerEvents,
+  ConsumerStatus,
+  PullConsumerMessagesImpl,
+} from "../consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));

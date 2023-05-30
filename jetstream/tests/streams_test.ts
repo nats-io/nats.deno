@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import { NatsServer } from "./helpers/mod.ts";
-import { AckPolicy, connect, JSONCodec } from "../src/mod.ts";
+import { NatsServer } from "../../tests/helpers/mod.ts";
+import { AckPolicy, connect, JSONCodec } from "../../src/mod.ts";
 import {
   assertEquals,
   assertExists,
@@ -23,10 +23,10 @@ import {
 import { assertArrayIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import {
   cleanup,
-  initStream,
   jetstreamServerConf,
   setup,
-} from "./jstest_util.ts";
+} from "../../tests/helpers/mod.ts";
+import { initStream } from "./jstest_util.ts";
 
 Deno.test("streams - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));

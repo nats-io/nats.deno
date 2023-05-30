@@ -14,7 +14,11 @@
  */
 
 import { BufWriter } from "https://deno.land/std@0.177.0/io/mod.ts";
-import { Deferred, deferred } from "../nats-base-client/internal_mod.ts";
+import {
+  Deferred,
+  deferred,
+  TlsOptions,
+} from "../nats-base-client/internal_mod.ts";
 import Conn = Deno.Conn;
 import {
   checkOptions,
@@ -31,9 +35,8 @@ import {
   TE,
   Transport,
 } from "../nats-base-client/internal_mod.ts";
-import type { TlsOptions } from "../nats-base-client/types.ts";
 
-const VERSION = "1.14.0";
+const VERSION = "1.15.0";
 const LANG = "nats.deno";
 
 // if trying to simply write to the connection for some reason

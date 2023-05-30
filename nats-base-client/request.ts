@@ -13,19 +13,17 @@
  * limitations under the License.
  */
 import { Deferred, deferred, Timeout, timeout } from "./util.ts";
-import type { Msg, RequestManyOptions, RequestOptions } from "./types.ts";
-import { RequestStrategy } from "./types.ts";
-import { ErrorCode, NatsError } from "./error.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
 import { nuid } from "./nuid.ts";
-
-export interface Request {
-  token: string;
-  requestSubject: string;
-  received: number;
-  resolver(err: Error | null, msg: Msg): void;
-  cancel(err?: NatsError): void;
-}
+import {
+  ErrorCode,
+  Msg,
+  NatsError,
+  Request,
+  RequestManyOptions,
+  RequestOptions,
+  RequestStrategy,
+} from "./core.ts";
 
 export class BaseRequest {
   token: string;

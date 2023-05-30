@@ -12,10 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { createInbox } from "../nats-base-client/protocol.ts";
-import { Empty, Events, RequestStrategy } from "../nats-base-client/types.ts";
+import { Empty } from "../nats-base-client/types.ts";
 
 import {
   assert,
@@ -25,6 +24,12 @@ import {
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 import { StringCodec } from "../nats-base-client/codec.ts";
 import { deferred, delay } from "../nats-base-client/util.ts";
+
+import {
+  createInbox,
+  Events,
+  RequestStrategy,
+} from "../nats-base-client/core.ts";
 
 async function requestManyCount(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});

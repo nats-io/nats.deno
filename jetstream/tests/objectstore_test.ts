@@ -13,28 +13,27 @@
  * limitations under the License.
  */
 
-import { cleanup, jetstreamServerConf, setup } from "./jstest_util.ts";
-import { notCompatible } from "./helpers/mod.ts";
+import {
+  cleanup,
+  jetstreamServerConf,
+  notCompatible,
+  setup,
+} from "../../tests/helpers/mod.ts";
 import {
   assert,
   assertEquals,
   assertExists,
+  assertRejects,
   equal,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { DataBuffer } from "../nats-base-client/databuffer.ts";
+import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.177.0/crypto/mod.ts";
-import {
-  Empty,
-  headers,
-  StorageType,
-  StringCodec,
-} from "../nats-base-client/mod.ts";
-import { assertRejects } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
+import { Empty, headers, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.177.0/bytes/mod.ts";
-import { ObjectInfo, ObjectStoreMeta } from "../nats-base-client/types.ts";
-import { SHA256 } from "../nats-base-client/sha256.js";
-import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
-import { digestType } from "../nats-base-client/objectstore.ts";
+import { SHA256 } from "../../nats-base-client/sha256.js";
+import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
+import { digestType } from "../objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({

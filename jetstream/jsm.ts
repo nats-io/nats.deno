@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2021-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,23 +12,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { StreamAPIImpl } from "./jsmstream_api.ts";
+import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import {
+  Advisory,
+  AdvisoryKind,
   DirectMsg,
   DirectMsgHeaders,
-  DirectMsgRequest,
   DirectStreamAPI,
-  Empty,
-  JetStreamOptions,
-  LastForMsgRequest,
-  Msg,
-  NatsConnection,
+  JetStreamClient,
+  JetStreamManager,
   StoredMsg,
+  StreamAPI,
 } from "./types.ts";
+import {
+  JetStreamOptions,
+  Msg,
+  MsgHdrs,
+  NatsConnection,
+} from "../nats-base-client/core.ts";
+import {
+  AccountInfoResponse,
+  ApiResponse,
+  DirectMsgRequest,
+  JetStreamAccountStats,
+  LastForMsgRequest,
+} from "./jsapi_types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
-import { MsgHdrs } from "./headers.ts";
-import { Codec, JSONCodec } from "./codec.ts";
-import { TD } from "./encoders.ts";
+import { Empty, TD } from "../nats-base-client/encoders.ts";
+import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
 
 export class DirectStreamAPIImpl extends BaseApiClient
   implements DirectStreamAPI {
@@ -113,5 +128,48 @@ export class DirectMsgImpl implements DirectMsg {
 
   string(): string {
     return TD.decode(this.data);
+  }
+}
+
+export class JetStreamManagerImpl extends BaseApiClient
+  implements JetStreamManager {
+  streams: StreamAPI;
+  consumers: ConsumerAPI;
+  direct: DirectStreamAPI;
+  constructor(nc: NatsConnection, opts?: JetStreamOptions) {
+    super(nc, opts);
+    this.streams = new StreamAPIImpl(nc, opts);
+    this.consumers = new ConsumerAPIImpl(nc, opts);
+    this.direct = new DirectStreamAPIImpl(nc, opts);
+  }
+
+  async getAccountInfo(): Promise<JetStreamAccountStats> {
+    const r = await this._request(`${this.prefix}.INFO`);
+    return r as AccountInfoResponse;
+  }
+
+  jetstream(): JetStreamClient {
+    return this.nc.jetstream(this.getOptions());
+  }
+
+  advisories(): AsyncIterable<Advisory> {
+    const iter = new QueuedIteratorImpl<Advisory>();
+    this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
+      callback: (err, msg) => {
+        if (err) {
+          throw err;
+        }
+        try {
+          const d = this.parseJsResponse(msg) as ApiResponse;
+          const chunks = d.type.split(".");
+          const kind = chunks[chunks.length - 1];
+          iter.push({ kind: kind as AdvisoryKind, data: d });
+        } catch (err) {
+          iter.stop(err);
+        }
+      },
+    });
+
+    return iter;
   }
 }

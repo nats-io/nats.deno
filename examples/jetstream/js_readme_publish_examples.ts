@@ -1,5 +1,4 @@
-import { connect, Empty } from "../../src/mod.ts";
-import { PubAck } from "../../nats-base-client/types.ts";
+import { connect, Empty, PubAck } from "../../src/mod.ts";
 
 const nc = await connect();
 const jsm = await nc.jetstreamManager();

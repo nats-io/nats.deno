@@ -7,7 +7,7 @@ import {
   credsAuthenticator,
   StringCodec,
 } from "../src/mod.ts";
-import { delay } from "../nats-base-client/internal_mod.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 const argv = parse(
   Deno.args,

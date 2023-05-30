@@ -35,17 +35,23 @@ import {
   NatsError,
   StringCodec,
 } from "../src/mod.ts";
-import { assertErrorCode, disabled, Lock, NatsServer } from "./helpers/mod.ts";
+import {
+  assertErrorCode,
+  cleanup,
+  disabled,
+  Lock,
+  NatsServer,
+  setup,
+} from "./helpers/mod.ts";
 import {
   deferred,
   delay,
   headers,
   isIP,
   NatsConnectionImpl,
+  RequestStrategy,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
-import { RequestStrategy } from "../nats-base-client/types.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import NetAddr = Deno.NetAddr;
 

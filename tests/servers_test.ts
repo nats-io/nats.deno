@@ -14,8 +14,10 @@
  */
 import { isIPV4OrHostname, Servers } from "../nats-base-client/servers.ts";
 import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import type { ServerInfo } from "../nats-base-client/types.ts";
-import { setTransportFactory } from "../nats-base-client/internal_mod.ts";
+import {
+  ServerInfo,
+  setTransportFactory,
+} from "../nats-base-client/internal_mod.ts";
 
 Deno.test("servers - single", () => {
   const servers = new Servers(["127.0.0.1:4222"], { randomize: false });

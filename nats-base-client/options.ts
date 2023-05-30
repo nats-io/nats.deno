@@ -14,21 +14,31 @@
  */
 
 import { extend } from "./util.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import { defaultPort, getResolveFn } from "./transport.ts";
+import { createInbox, ServerInfo } from "./core.ts";
 import {
+  multiAuthenticator,
+  noAuthFn,
+  tokenAuthenticator,
+  usernamePasswordAuthenticator,
+} from "./authenticator.ts";
+import {
+  Authenticator,
   ConnectionOptions,
   DEFAULT_HOST,
-  DEFAULT_JITTER,
-  DEFAULT_JITTER_TLS,
-  DEFAULT_MAX_PING_OUT,
-  DEFAULT_MAX_RECONNECT_ATTEMPTS,
-  DEFAULT_PING_INTERVAL,
-  DEFAULT_RECONNECT_TIME_WAIT,
-  ServerInfo,
-} from "./types.ts";
-import { buildAuthenticator } from "./authenticator.ts";
-import { defaultPort, getResolveFn } from "./transport.ts";
-import { createInbox } from "./mod.ts";
+  ErrorCode,
+  NatsError,
+} from "./core.ts";
+
+export const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
+export const DEFAULT_JITTER = 100;
+export const DEFAULT_JITTER_TLS = 1000;
+// Ping interval
+export const DEFAULT_PING_INTERVAL = 2 * 60 * 1000; // 2 minutes
+export const DEFAULT_MAX_PING_OUT = 2;
+
+// DISCONNECT Parameters, 2 sec wait, 10 tries
+export const DEFAULT_RECONNECT_TIME_WAIT = 2 * 1000;
 
 export function defaultOptions(): ConnectionOptions {
   return {
@@ -46,6 +56,28 @@ export function defaultOptions(): ConnectionOptions {
     waitOnFirstConnect: false,
     ignoreAuthErrorAbort: false,
   } as ConnectionOptions;
+}
+
+export function buildAuthenticator(
+  opts: ConnectionOptions,
+): Authenticator {
+  const buf: Authenticator[] = [];
+  // jwtAuthenticator is created by the user, since it
+  // will require possibly reading files which
+  // some of the clients are simply unable to do
+  if (typeof opts.authenticator === "function") {
+    buf.push(opts.authenticator);
+  }
+  if (Array.isArray(opts.authenticator)) {
+    buf.push(...opts.authenticator);
+  }
+  if (opts.token) {
+    buf.push(tokenAuthenticator(opts.token));
+  }
+  if (opts.user) {
+    buf.push(usernamePasswordAuthenticator(opts.user, opts.pass));
+  }
+  return buf.length === 0 ? noAuthFn() : multiAuthenticator(buf);
 }
 
 export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {

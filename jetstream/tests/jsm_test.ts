@@ -22,56 +22,56 @@ import {
   fail,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
+import { NatsConnectionImpl } from "../../nats-base-client/internal_mod.ts";
 import {
-  AckPolicy,
-  AdvisoryKind,
-  ConsumerConfig,
-  ConsumerInfo,
   deferred,
-  DiscardPolicy,
   Empty,
   ErrorCode,
   headers,
   JSONCodec,
   jwtAuthenticator,
-  Lister,
-  nanos,
   NatsConnection,
-  NatsConnectionImpl,
   NatsError,
   nkeys,
   nuid,
+  StringCodec,
+} from "../../nats-base-client/mod.ts";
+import {
+  AckPolicy,
+  AdvisoryKind,
+  ConsumerConfig,
+  ConsumerInfo,
+  DiscardPolicy,
+  Lister,
+  nanos,
   PubAck,
   RetentionPolicy,
   StorageType,
   StreamConfig,
   StreamInfo,
   StreamSource,
-  StringCodec,
-} from "../nats-base-client/internal_mod.ts";
-import {
-  cleanup,
-  initStream,
-  jetstreamExportServerConf,
-  jetstreamServerConf,
-  setup,
-} from "./jstest_util.ts";
-import { connect } from "../src/mod.ts";
+  StreamUpdateConfig,
+} from "../mod.ts";
+import { initStream } from "./jstest_util.ts";
+import { connect } from "../../src/mod.ts";
 import {
   assertThrowsAsyncErrorCode,
+  cleanup,
+  jetstreamExportServerConf,
+  jetstreamServerConf,
   NatsServer,
   notCompatible,
-} from "./helpers/mod.ts";
-import { validateName } from "../nats-base-client/jsutil.ts";
+  setup,
+} from "../../tests/helpers/mod.ts";
+import { validateName } from "../jsutil.ts";
 import {
   encodeAccount,
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { StreamUpdateConfig } from "../nats-base-client/types.ts";
-import { JetStreamManagerImpl } from "../nats-base-client/jsm.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { convertStreamSourceDomain } from "../nats-base-client/jsmstream_api.ts";
+import { JetStreamManagerImpl } from "../jsm.ts";
+import { Feature } from "../../nats-base-client/semver.ts";
+import { convertStreamSourceDomain } from "../jsmstream_api.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";

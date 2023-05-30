@@ -15,7 +15,7 @@
 
 import { createInbox, Subscription } from "../src/mod.ts";
 import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("queues - deliver to single queue", async () => {
   const { ns, nc } = await setup();

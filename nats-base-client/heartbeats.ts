@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 import { Deferred, deferred } from "./util.ts";
-import { DebugEvents, Status } from "./types.ts";
+
+import { DebugEvents, Status } from "./core.ts";
 
 export interface PH {
   flush(p?: Deferred<void>): Promise<void>;

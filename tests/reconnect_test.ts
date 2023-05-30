@@ -32,7 +32,7 @@ import {
   delay,
   NatsConnectionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 import { deadline } from "https://deno.land/std@0.177.0/async/deadline.ts";
 import Conn = Deno.Conn;
 

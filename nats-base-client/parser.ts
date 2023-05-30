@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { Dispatcher } from "./queued_iterator.ts";
 import { DenoBuffer } from "./denobuffer.ts";
 import { TD } from "./encoders.ts";
+import { Dispatcher } from "./core.ts";
 
 export enum Kind {
   OK,

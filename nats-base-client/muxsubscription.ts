@@ -12,11 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { Request } from "./request.ts";
-import type { Msg } from "./types.ts";
-import { ErrorCode, NatsError } from "./error.ts";
-import { createInbox } from "./protocol.ts";
 import { isRequestError } from "./msg.ts";
+import { createInbox, ErrorCode, Msg, NatsError, Request } from "./core.ts";
 
 export class MuxSubscription {
   baseInbox!: string;

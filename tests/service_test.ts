@@ -12,19 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "./jstest_util.ts";
-import {
-  Service,
-  ServiceConfig,
-  ServiceError,
-  ServiceErrorCodeHeader,
-  ServiceErrorHeader,
-  ServiceIdentity,
-  ServiceImpl,
-  ServiceInfo,
-  ServiceResponseType,
-  ServiceStats,
-} from "../nats-base-client/service.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
+import { ServiceImpl } from "../nats-base-client/service.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -46,6 +35,15 @@ import {
   NatsError,
   nuid,
   QueuedIterator,
+  Service,
+  ServiceConfig,
+  ServiceError,
+  ServiceErrorCodeHeader,
+  ServiceErrorHeader,
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceResponseType,
+  ServiceStats,
   ServiceVerb,
   StringCodec,
 } from "../src/mod.ts";

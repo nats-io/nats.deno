@@ -19,17 +19,18 @@ import type {
   IngestionFilterFn,
   ProtocolFilterFn,
 } from "./queued_iterator.ts";
-import type {
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import {
+  ErrorCode,
   Msg,
   NatsConnection,
+  NatsError,
   Sub,
   SubOpts,
   Subscription,
   SubscriptionOptions,
-} from "./types.ts";
-import { QueuedIteratorImpl } from "./queued_iterator.ts";
-import { ErrorCode, NatsError } from "./error.ts";
-import { SubscriptionImpl } from "./subscription.ts";
+} from "./core.ts";
+import { SubscriptionImpl } from "./protocol.ts";
 
 /**
  * Converts a NATS message into some other type. Implementers are expected to:

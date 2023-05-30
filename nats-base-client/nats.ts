@@ -13,45 +13,48 @@
  * limitations under the License.
  */
 
-import { deferred, isUint8Array } from "./util.ts";
-import { createInbox, ProtocolHandler } from "./protocol.ts";
-import { SubscriptionImpl } from "./subscription.ts";
-import { ErrorCode, NatsError } from "./error.ts";
-import {
-  ConnectionOptions,
-  Empty,
-  JetStreamClient,
-  JetStreamManager,
-  JetStreamOptions,
-  Msg,
-  NatsConnection,
-  PublishOptions,
-  RequestManyOptions,
-  RequestOptions,
-  RequestStrategy,
-  ServerInfo,
-  ServicesAPI,
-  Stats,
-  Status,
-  Subscription,
-  SubscriptionOptions,
-} from "./types.ts";
+import { deferred } from "./util.ts";
+import { ProtocolHandler, SubscriptionImpl } from "./protocol.ts";
+import { Empty } from "./encoders.ts";
+import { NatsError, ServiceClient } from "./types.ts";
 
 import type { SemVer } from "./semver.ts";
 import { Features, parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
 import {
   RequestMany,
   RequestManyOptionsInternal,
   RequestOne,
 } from "./request.ts";
 import { isRequestError } from "./msg.ts";
-import { JetStreamManagerImpl } from "./jsm.ts";
-import { JetStreamClientImpl } from "./jsclient.ts";
-import { Service, ServiceConfig, ServiceImpl } from "./service.ts";
-import { ServiceClient, ServiceClientImpl } from "./serviceclient.ts";
+import { JetStreamManagerImpl } from "../jetstream/jsm.ts";
+import { JetStreamClientImpl } from "../jetstream/jsclient.ts";
+import { ServiceImpl } from "./service.ts";
+import { ServiceClientImpl } from "./serviceclient.ts";
+import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
+import {
+  ConnectionOptions,
+  createInbox,
+  ErrorCode,
+  JetStreamOptions,
+  Msg,
+  NatsConnection,
+  PublishOptions,
+  QueuedIterator,
+  RequestManyOptions,
+  RequestOptions,
+  RequestStrategy,
+  ServerInfo,
+  Service,
+  ServiceConfig,
+  ServicesAPI,
+  Stats,
+  Status,
+  Subscription,
+  SubscriptionOptions,
+} from "./core.ts";
 
 export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
@@ -118,7 +121,7 @@ export class NatsConnectionImpl implements NatsConnection {
   ): void {
     this._check(subject, false, true);
     // if argument is not undefined/null and not a Uint8Array, toss
-    if (data && !isUint8Array(data)) {
+    if (data && !(data instanceof Uint8Array)) {
       throw NatsError.errorForCode(ErrorCode.BadPayload);
     }
     this.protocol.publish(subject, data, options);
