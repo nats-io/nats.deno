@@ -926,10 +926,6 @@ export type NamedEndpointStats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
-  /**
-   * Endpoint Metadata
-   */
-  metadata?: Record<string, string>;
 };
 /**
  * Statistics for an endpoint

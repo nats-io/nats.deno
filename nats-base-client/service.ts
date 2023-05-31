@@ -322,7 +322,6 @@ export class ServiceImpl implements Service {
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
-    sv.stats.metadata = h.metadata;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -630,7 +629,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     } = this;
     return {
       name,
@@ -641,7 +639,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     };
   }
 

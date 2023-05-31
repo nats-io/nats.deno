@@ -852,7 +852,6 @@ Deno.test("service - metadata", async () => {
   assertEquals(info.metadata, { service: "1" });
   const stats = await srv.stats();
   assertEquals(stats.endpoints?.length, 1);
-  assertEquals(stats.endpoints?.[0].metadata, { endpoint: "endpoint" });
 
   await cleanup(ns, nc);
 });
