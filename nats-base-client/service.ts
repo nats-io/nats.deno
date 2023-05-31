@@ -22,6 +22,7 @@ import { parseSemVer } from "./semver.ts";
 import { Empty } from "./encoders.ts";
 import {
   Endpoint,
+  EndpointInfo,
   EndpointOptions,
   Msg,
   MsgHdrs,
@@ -47,6 +48,7 @@ import {
   ServiceVerb,
   Sub,
 } from "./core.ts";
+import { ReviverFn } from "../jetstream/types.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -102,8 +104,8 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.respond(data, opts);
   }
 
-  json<T = unknown>(): T {
-    return this.msg.json();
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return this.msg.json(reviver);
   }
 
   string(): string {
@@ -320,7 +322,6 @@ export class ServiceImpl implements Service {
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
-    sv.stats.metadata = h.metadata;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -371,9 +372,16 @@ export class ServiceImpl implements Service {
       id: this.id,
       version: this.version,
       description: this.description,
-      subjects: this.subjects,
       metadata: this.metadata,
+      endpoints: this.endpoints(),
     } as ServiceInfo;
+  }
+
+  endpoints(): EndpointInfo[] {
+    return this.handlers.map((v) => {
+      const { subject, metadata, name } = v;
+      return { subject, metadata, name };
+    });
   }
 
   async stats(): Promise<ServiceStats> {
@@ -621,7 +629,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     } = this;
     return {
       name,
@@ -632,7 +639,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     };
   }
 

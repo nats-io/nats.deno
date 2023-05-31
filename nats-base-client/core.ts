@@ -819,6 +819,12 @@ export type Endpoint = {
 };
 export type EndpointOptions = Partial<Endpoint>;
 
+export type EndpointInfo = {
+  name: string;
+  subject: string;
+  metadata?: Record<string, string>;
+};
+
 export interface Dispatcher<T> {
   push(v: T): void;
 }
@@ -920,10 +926,6 @@ export type NamedEndpointStats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
-  /**
-   * Endpoint Metadata
-   */
-  metadata?: Record<string, string>;
 };
 /**
  * Statistics for an endpoint
@@ -941,13 +943,13 @@ export type ServiceInfo = ServiceIdentity & {
    */
   description: string;
   /**
-   * Subject where the service can be invoked
-   */
-  subjects: string[];
-  /**
    * Service metadata
    */
   metadata?: Record<string, string>;
+  /**
+   * Information about the Endpoints
+   */
+  endpoints: EndpointInfo[];
 };
 export type ServiceConfig = {
   /**

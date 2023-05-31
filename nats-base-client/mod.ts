@@ -39,6 +39,7 @@ export type {
   Deferred,
   DispatchedFn,
   Endpoint,
+  EndpointInfo,
   EndpointOptions,
   EndpointStats,
   IngestionFilterFn,

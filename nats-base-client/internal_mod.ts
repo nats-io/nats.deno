@@ -95,6 +95,7 @@ export type {
   ConnectionOptions,
   Dispatcher,
   Endpoint,
+  EndpointInfo,
   EndpointOptions,
   EndpointStats,
   JwtAuth,
