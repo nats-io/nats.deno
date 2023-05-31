@@ -185,11 +185,14 @@ export class StreamImpl implements Stream {
     }
   }
 
-  info(cached = false): Promise<StreamInfo> {
+  info(
+    cached = false,
+    opts?: Partial<StreamInfoRequestOptions>,
+  ): Promise<StreamInfo> {
     if (cached) {
       return Promise.resolve(this._info);
     }
-    return this.api.info(this.name)
+    return this.api.info(this.name, opts)
       .then((si) => {
         this._info = si;
         return this._info;
@@ -205,6 +208,10 @@ export class StreamImpl implements Stream {
 
   getMessage(query: MsgRequest): Promise<StoredMsg> {
     return this.api.getMessage(this.name, query);
+  }
+
+  deleteMessage(seq: number, erase?: boolean): Promise<boolean> {
+    return this.api.deleteMessage(this.name, seq, erase);
   }
 }
 
