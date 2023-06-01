@@ -155,6 +155,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   servers: Servers;
   server!: ServerImpl;
   features: Features;
+  flusher?: unknown;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
     this._closed = false;
@@ -178,6 +179,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     //@ts-ignore: options.pendingLimit is hidden
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
     this.features = new Features({ major: 0, minor: 0, micro: 0 });
+    this.flusher = null;
 
     const servers = typeof options.servers === "string"
       ? [options.servers]
@@ -603,10 +605,19 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.fill(buf, ...payloads);
 
     if (len === 0) {
-      setTimeout(() => {
+      //@ts-ignore: node types timer
+      this.flusher = setTimeout(() => {
         this.flushPending();
       });
     } else if (this.outbound.size() >= this.pendingLimit) {
+      // if we have a flusher, clear it - otherwise in a bench
+      // type scenario where the main loop is dominated by a publisher
+      // we create many timers.
+      if (this.flusher) {
+        //@ts-ignore: node types timer
+        clearTimeout(this.flusher);
+        this.flusher = null;
+      }
       this.flushPending();
     }
   }
