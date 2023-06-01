@@ -154,10 +154,15 @@ export class Bench {
     if (this.pub && this.sub) {
       this.perf.measure("pubsub", "pubStart", "subStop");
     }
+    if (this.req && this.rep) {
+      this.perf.measure("reqrep", "reqStart", "reqStop");
+    }
 
     const measures = this.perf.getEntries();
     const pubsub = measures.find((m) => m.name === "pubsub");
+    const reqrep = measures.find((m) => m.name === "reqrep");
     const req = measures.find((m) => m.name === "req");
+    const rep = measures.find((m) => m.name === "rep");
     const pub = measures.find((m) => m.name === "pub");
     const sub = measures.find((m) => m.name === "sub");
 
@@ -166,6 +171,17 @@ export class Bench {
     const metrics: Metric[] = [];
     if (pubsub) {
       const { name, duration } = pubsub;
+      const m = new Metric(name, duration);
+      m.msgs = this.msgs * 2;
+      m.bytes = stats.inBytes + stats.outBytes;
+      m.lang = lang;
+      m.version = version;
+      m.payload = this.payload.length;
+      metrics.push(m);
+    }
+
+    if (reqrep) {
+      const { name, duration } = reqrep;
       const m = new Metric(name, duration);
       m.msgs = this.msgs * 2;
       m.bytes = stats.inBytes + stats.outBytes;
@@ -197,10 +213,21 @@ export class Bench {
       metrics.push(m);
     }
 
+    if (rep) {
+      const { name, duration } = rep;
+      const m = new Metric(name, duration);
+      m.msgs = this.msgs;
+      m.bytes = stats.inBytes + stats.outBytes;
+      m.lang = lang;
+      m.version = version;
+      m.payload = this.payload.length;
+      metrics.push(m);
+    }
+
     if (req) {
       const { name, duration } = req;
       const m = new Metric(name, duration);
-      m.msgs = this.msgs * 2;
+      m.msgs = this.msgs;
       m.bytes = stats.inBytes + stats.outBytes;
       m.lang = lang;
       m.version = version;
@@ -213,23 +240,6 @@ export class Bench {
 
   async runCallbacks(): Promise<void> {
     const jobs: Promise<void>[] = [];
-
-    if (this.req) {
-      const d = deferred<void>();
-      jobs.push(d);
-      const sub = this.nc.subscribe(
-        this.subject,
-        {
-          max: this.msgs,
-          callback: (_, m) => {
-            m.respond(this.payload);
-            if (sub.getProcessed() === this.msgs) {
-              d.resolve();
-            }
-          },
-        },
-      );
-    }
 
     if (this.sub) {
       const d = deferred<void>();
@@ -245,6 +255,27 @@ export class Bench {
           if (i === this.msgs) {
             this.perf.mark("subStop");
             this.perf.measure("sub", "subStart", "subStop");
+            d.resolve();
+          }
+        },
+      });
+    }
+
+    if (this.rep) {
+      const d = deferred<void>();
+      jobs.push(d);
+      let i = 0;
+      this.nc.subscribe(this.subject, {
+        max: this.msgs,
+        callback: (_, m) => {
+          m.respond(this.payload);
+          i++;
+          if (i === 1) {
+            this.perf.mark("repStart");
+          }
+          if (i === this.msgs) {
+            this.perf.mark("repStop");
+            this.perf.measure("rep", "repStart", "repStop");
             d.resolve();
           }
         },
@@ -295,12 +326,20 @@ export class Bench {
   async runAsync(): Promise<void> {
     const jobs: Promise<void>[] = [];
 
-    if (this.req) {
+    if (this.rep) {
+      let first = false;
       const sub = this.nc.subscribe(this.subject, { max: this.msgs });
       const job = (async () => {
         for await (const m of sub) {
+          if (!first) {
+            this.perf.mark("repStart");
+            first = true;
+          }
           m.respond(this.payload);
         }
+        await this.nc.flush();
+        this.perf.mark("repStop");
+        this.perf.measure("rep", "repStart", "repStop");
       })();
       jobs.push(job);
     }
