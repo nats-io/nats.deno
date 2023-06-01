@@ -172,7 +172,7 @@ export class Perf {
   }
 
   mark(key: string) {
-    this.timers.set(key, Date.now());
+    this.timers.set(key, performance.now());
   }
 
   measure(key: string, startKey: string, endKey: string) {
