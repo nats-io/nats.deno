@@ -20,7 +20,7 @@ import {
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.179.0/testing/asserts.ts";
-import { assertArrayIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
+import { assertArrayIncludes } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import {
   cleanup,
   jetstreamServerConf,

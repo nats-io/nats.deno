@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { parse } from "https://deno.land/std@0.177.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.190.0/flags/mod.ts";
 import { ObjectStoreImpl } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/objectstore.ts";
 import {
   connect,

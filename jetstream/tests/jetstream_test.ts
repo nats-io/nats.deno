@@ -58,7 +58,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
 import { assert } from "../../nats-base-client/denobuffer.ts";
 import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
