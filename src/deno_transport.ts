@@ -32,7 +32,6 @@ import {
   NatsError,
   render,
   ServerInfo,
-  TE,
   Transport,
 } from "../nats-base-client/internal_mod.ts";
 
@@ -53,12 +52,15 @@ export class DenoTransport implements Transport {
   // @ts-ignore: Deno 1.9.0 broke compatibility by adding generics to this
   private conn!: Conn<NetAddr>;
 
-  private out: DataBuffer;
-  private outProm: Deferred<void>;
+  private frames: Array<Uint8Array>;
+  private microtasks: number;
+  private syncTimer: ReturnType<typeof setTimeout> | null;
+
   constructor() {
     this.buf = new Uint8Array(ReadBufferSize);
-    this.out = new DataBuffer();
-    this.outProm = deferred();
+    this.frames = [];
+    this.microtasks = 0;
+    this.syncTimer = null;
   }
 
   async connect(
@@ -176,53 +178,85 @@ export class DenoTransport implements Transport {
     this._closed(reason).then().catch();
   }
 
-  private enqueue(frame: Uint8Array): Promise<void> {
-    if (this.done) {
+  flusher(): Promise<void> {
+    const data = this.frames.shift();
+    if (!data) {
       return Promise.resolve();
     }
-    const start = this.out.length();
-    this.out.fill(frame);
-    const d = this.outProm;
-    if (start === 0) {
-      this.dequeue();
-    }
-    return d;
-  }
 
-  private dequeue(): void {
-    if (this.out.length() === 0) {
-      return;
-    }
-    const data = this.out.drain();
-    this.out.reset();
-    const p = this.outProm;
-    this.outProm = deferred();
-
+    const d = deferred<void>();
     writeAll(this.conn, data)
       .then(() => {
         if (this.options.debug) {
           console.info(`< ${render(data)}`);
         }
-        p.resolve();
+        d.resolve();
       })
       .catch((err) => {
         if (this.options.debug) {
           console.error(`!!! ${render(data)}: ${err}`);
         }
-        p.reject(err);
+        d.reject(err);
       })
       .finally(() => {
         this.dequeue();
       });
+
+    return d;
+  }
+
+  private dequeue(d?: Deferred<void>): void {
+    // if we don't have data, do nothing
+    if (this.frames.length === 0) {
+      return;
+    }
+
+    // if we have a timer, we reached a limit of microtasks
+    // and we are waiting on a timer
+    if (this.syncTimer) {
+      // do nothing, there's a setTimeoutScheduled
+      return;
+    }
+    // if we have max number of pending microtasks
+    // schedule a timeout
+    if (this.microtasks === 1000) {
+      this.syncTimer = setTimeout(() => {
+        this.flusher()
+          .then(() => {
+            this.syncTimer = null;
+          })
+          .catch(() => {})
+          .finally(() => {
+            d?.resolve();
+          });
+      }, 1);
+      return;
+    }
+
+    // otherwise schedule a microtask
+    this.microtasks++;
+    queueMicrotask(() => {
+      this.flusher()
+        .then(() => {
+          this.microtasks--;
+        }).catch(() => {
+        })
+        .finally(() => {
+          d?.resolve();
+        });
+    });
   }
 
   send(frame: Uint8Array): void {
-    const p = this.enqueue(frame);
-    p.catch((_err) => {
-      // we ignore write errors because client will
-      // fail on a read or when the heartbeat timer
-      // detects a stale connection
-    });
+    // if we are closed, don't do anything
+    if (this.done) {
+      return;
+    }
+    // push the frame
+    this.frames.push(frame);
+    if (this.frames.length === 1) {
+      this.dequeue();
+    }
   }
 
   isEncrypted(): boolean {
@@ -247,7 +281,10 @@ export class DenoTransport implements Transport {
         // this is a noop but gives us a place to hang
         // a close and ensure that we sent all before closing
         // we wait for the operation to fail or succeed
-        await this.enqueue(TE.encode(""));
+        this.frames.push(Empty);
+        const d = deferred<void>();
+        this.dequeue(d);
+        await d;
       } catch (err) {
         if (this.options.debug) {
           console.log("transport close terminated with an error", err);
