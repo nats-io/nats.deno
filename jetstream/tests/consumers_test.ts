@@ -48,6 +48,7 @@ import {
   ConsumerStatus,
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
+import { deadline } from "../../nats-base-client/util.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
@@ -913,5 +914,32 @@ Deno.test("consumers - sub leaks consume()", async () => {
   await done;
   //@ts-ignore: test
   assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume drain", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.consumers.add(stream, {
+    durable_name: stream,
+    ack_policy: AckPolicy.Explicit,
+  });
+  //@ts-ignore: test
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream, stream);
+  const iter = await c.consume({ expires: 30000 });
+  setTimeout(() => {
+    nc.drain();
+  }, 100);
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+
+  await deadline(done, 1000);
+
   await cleanup(ns, nc);
 });

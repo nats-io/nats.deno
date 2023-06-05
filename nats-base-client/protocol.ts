@@ -245,6 +245,7 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
       return Promise.reject(NatsError.errorForCode(ErrorCode.SubClosed));
     }
     if (!this.drained) {
+      this.draining = true;
       this.protocol.unsub(this);
       this.drained = this.protocol.flush(deferred<void>())
         .then(() => {
