@@ -28,7 +28,7 @@ import {
   notCompatible,
   setup,
 } from "../../tests/helpers/mod.ts";
-import { delay } from "../../nats-base-client/util.ts";
+import { deadline, delay } from "../../nats-base-client/util.ts";
 
 Deno.test("ordered - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
@@ -630,5 +630,26 @@ Deno.test("ordered - sub leaks consume()", async () => {
   await done;
   //@ts-ignore: test
   assertEquals(nc.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - consume drain", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream } = await initStream(nc);
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get(stream);
+  const iter = await c.consume({ expires: 30000 });
+  setTimeout(() => {
+    nc.drain();
+  }, 100);
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+
+  await deadline(done, 1000);
+
   await cleanup(ns, nc);
 });
