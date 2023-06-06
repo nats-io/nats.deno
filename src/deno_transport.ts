@@ -39,6 +39,7 @@ const VERSION = "1.15.0";
 const LANG = "nats.deno";
 
 const ReadBufferSize = 1024 * 128;
+const MaxMicrotasks = 1000;
 
 export class DenoTransport implements Transport {
   version: string = VERSION;
@@ -219,7 +220,7 @@ export class DenoTransport implements Transport {
     }
     // if we have max number of pending microtasks
     // schedule a timeout
-    if (this.microtasks === 1000) {
+    if (this.microtasks === MaxMicrotasks) {
       this.syncTimer = setTimeout(() => {
         this.flusher()
           .then(() => {
