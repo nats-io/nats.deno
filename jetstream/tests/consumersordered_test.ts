@@ -18,7 +18,7 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.125.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { DeliverPolicy, JsMsg } from "../mod.ts";
 import { OrderedPullConsumerImpl } from "../consumer.ts";
 import { deferred } from "../../nats-base-client/mod.ts";

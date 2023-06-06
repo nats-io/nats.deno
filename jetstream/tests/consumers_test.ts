@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { initStream } from "./jstest_util.ts";
-import { assertRejects } from "https://deno.land/std@0.125.0/testing/asserts.ts";
+import { assertRejects } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import {
   assertEquals,
   assertExists,
