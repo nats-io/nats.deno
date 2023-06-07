@@ -20,6 +20,7 @@ export {
   nkeys,
   Nuid,
   nuid,
+  RequestStrategy,
   ServiceError,
   ServiceErrorCodeHeader,
   ServiceErrorHeader,
