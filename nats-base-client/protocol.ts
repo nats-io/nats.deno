@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { decode, Empty, encode, TE } from "./encoders.ts";
+import { decode, Empty, encode, fastEncoder, TE } from "./encoders.ts";
 import {
   CR_LF,
   CRLF,
@@ -838,7 +838,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     const len = this.outbound.length();
     let buf: Uint8Array;
     if (typeof cmd === "string") {
-      buf = encode(cmd);
+      buf = fastEncoder(cmd);
     } else {
       buf = cmd as Uint8Array;
     }
