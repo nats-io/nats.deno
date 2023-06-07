@@ -55,12 +55,14 @@ export class DenoTransport implements Transport {
   private frames: Array<Uint8Array>;
   private microtasks: number;
   private syncTimer: ReturnType<typeof setTimeout> | null;
+  private pendingWrite?: Promise<void>;
 
   constructor() {
     this.buf = new Uint8Array(ReadBufferSize);
     this.frames = [];
     this.microtasks = 0;
     this.syncTimer = null;
+    this.pendingWrite = null;
   }
 
   async connect(
@@ -187,6 +189,7 @@ export class DenoTransport implements Transport {
     const d = deferred<void>();
     writeAll(this.conn, data)
       .then(() => {
+        console.log("written");
         if (this.options.debug) {
           console.info(`< ${render(data)}`);
         }
@@ -221,6 +224,7 @@ export class DenoTransport implements Transport {
     // schedule a timeout
     if (this.microtasks === 1000) {
       this.syncTimer = setTimeout(() => {
+        console.log("setTimeout");
         this.flusher()
           .then(() => {
             this.syncTimer = null;
@@ -234,16 +238,34 @@ export class DenoTransport implements Transport {
     }
 
     // otherwise schedule a microtask
+    console.log("microtasks++: %d", this.microtasks);
     this.microtasks++;
     queueMicrotask(() => {
       this.flusher()
         .then(() => {
+          console.log("microtasks--: %d", this.microtasks);
           this.microtasks--;
         }).catch(() => {
         })
         .finally(() => {
           d?.resolve();
         });
+    });
+  }
+
+  maybeWriteFrame(): void {
+    if (this.pendingWrite) {
+      return;
+    }
+
+    const frame = this.frames.shift();
+    if (!frame) {
+      return;
+    }
+
+    this.pendingWrite = writeAll(this.conn, frame).then(() => {
+      this.pendingWrite = null;
+      this.maybeWriteFrame();
     });
   }
 
@@ -254,9 +276,7 @@ export class DenoTransport implements Transport {
     }
     // push the frame
     this.frames.push(frame);
-    if (this.frames.length === 1) {
-      this.dequeue();
-    }
+    this.maybeWriteFrame();
   }
 
   isEncrypted(): boolean {
