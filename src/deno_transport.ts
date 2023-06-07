@@ -265,7 +265,9 @@ export class DenoTransport implements Transport {
 
     this.pendingWrite = writeAll(this.conn, frame).then(() => {
       this.pendingWrite = null;
-      this.maybeWriteFrame();
+      queueMicrotask(() => {
+        this.maybeWriteFrame();
+      });
     });
   }
 
