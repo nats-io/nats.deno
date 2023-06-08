@@ -835,6 +835,10 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   async init(opts: Partial<ObjectStoreOptions> = {}): Promise<void> {
+    const adapters = [
+      new ObjectStoreKeysV1(this.name),
+      new ObjectStoreKeysV2(this.name),
+    ];
     try {
       this.stream = objectStoreStreamName(this.name);
     } catch (err) {
@@ -844,11 +848,6 @@ export class ObjectStoreImpl implements ObjectStore {
       const si = await this.jsm.streams.info(this.name);
       const { subjects } = si.config;
 
-      // if we are here, we could we have different versions
-      const adapters = [
-        new ObjectStoreKeysV1(this.name),
-        new ObjectStoreKeysV2(this.name),
-      ];
       const keys = adapters.find((k) => {
         const a = k.streamSubjectNames();
         return a.includes(subjects[0]) && a.includes(subjects[1]);
@@ -859,6 +858,15 @@ export class ObjectStoreImpl implements ObjectStore {
       this.keys = keys;
     } catch (err) {
       if (err.message === "stream not found") {
+        // honor the version given, if specified - otherwise best version
+        switch (opts.version) {
+          case 1:
+            this.keys = adapters[0];
+            break;
+          case 2:
+            this.keys = adapters[1];
+            break;
+        }
         const sc = Object.assign({}, opts) as StreamConfig;
         sc.name = this.stream;
         sc.allow_rollup_hdrs = true;

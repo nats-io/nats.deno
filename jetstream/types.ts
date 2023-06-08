@@ -1250,6 +1250,7 @@ export type ObjectStoreOptions = {
   replicas: number;
   "max_bytes": number;
   placement: Placement;
+  version: number;
 };
 export type ObjectResult = {
   info: ObjectInfo;
