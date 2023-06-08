@@ -33,7 +33,7 @@ import { Empty, headers, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.190.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
-import { digestType } from "../objectstore.ts";
+import { digestType, ObjectStoreImpl } from "../objectstore.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -314,8 +314,28 @@ Deno.test("objectstore - object names", async () => {
   const os = await js.views.os("test", { storage: StorageType.Memory });
   const sc = StringCodec();
   await os.put({ name: "blob.txt" }, readableStreamFrom(sc.encode("A")));
-  await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
-  await os.put({ name: " " }, readableStreamFrom(sc.encode("A")));
+  if (os.version() === 1) {
+    await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
+  } else {
+    await assertRejects(
+      async () => {
+        await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
+      },
+      Error,
+      "invalid key",
+    );
+  }
+  if (os.version() === 1) {
+    await os.put({ name: " " }, readableStreamFrom(sc.encode("A")));
+  } else {
+    await assertRejects(
+      async () => {
+        await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
+      },
+      Error,
+      "invalid key",
+    );
+  }
 
   await assertRejects(async () => {
     await os.put({ name: "*" }, readableStreamFrom(sc.encode("A")));
@@ -669,26 +689,42 @@ Deno.test("objectstore - sanitize", async () => {
   const js = nc.jetstream();
   const os = await js.views.os("test");
   await os.put({ name: "has.dots.here" }, readableStreamFrom(makeData(1)));
-  await os.put(
-    { name: "the spaces are here" },
-    readableStreamFrom(makeData(1)),
-  );
+  if (os.version() === 1) {
+    await os.put(
+      { name: "the spaces are here" },
+      readableStreamFrom(makeData(1)),
+    );
+  } else {
+    await assertRejects(
+      async () => {
+        await os.put(
+          { name: "the spaces are here" },
+          readableStreamFrom(makeData(1)),
+        );
+      },
+      Error,
+      "invalid key",
+    );
+  }
 
   const info = await os.status({
     subjects_filter: ">",
   });
+  const osi = os as ObjectStoreImpl;
   assertEquals(
     info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has_dots_here")}`],
+      ?.subjects![osi.keys.metaSubject("has.dots.here")],
     1,
   );
-  assertEquals(
-    info.streamInfo.state
-      .subjects![
-        `$O.test.M.${Base64UrlPaddedCodec.encode("the_spaces_are_here")}`
-      ],
-    1,
-  );
+  if (os.version() === 1) {
+    assertEquals(
+      info.streamInfo.state
+        .subjects![
+          osi.keys.metaSubject("the spaces are here")
+        ],
+      1,
+    );
+  }
 
   await cleanup(ns, nc);
 });
@@ -795,6 +831,9 @@ Deno.test("objectstore - no store", async () => {
 Deno.test("objectstore - hashtests", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({
     max_payload: 1024 * 1024,
+    jetstream: {
+      max_file_store: 1024 * 1024 * 2,
+    },
   }, true));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;

@@ -1312,6 +1312,8 @@ export interface ObjectStore {
   update(name: string, meta: Partial<ObjectStoreMeta>): Promise<PubAck>;
 
   destroy(): Promise<boolean>;
+
+  version(): number;
 }
 
 export enum DirectMsgHeaders {
