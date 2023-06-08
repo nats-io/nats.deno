@@ -845,15 +845,16 @@ export class ObjectStoreImpl implements ObjectStore {
       return Promise.reject(err);
     }
     try {
-      const si = await this.jsm.streams.info(this.name);
+      const si = await this.jsm.streams.info(this.stream);
       const { subjects } = si.config;
-
       const keys = adapters.find((k) => {
         const a = k.streamSubjectNames();
         return a.includes(subjects[0]) && a.includes(subjects[1]);
       });
       if (!keys) {
-        return Promise.reject("unknown object store configuration");
+        return Promise.reject(
+          new Error("unknown objectstore version configuration"),
+        );
       }
       this.keys = keys;
     } catch (err) {

@@ -1055,3 +1055,50 @@ Deno.test("objectstore - put/get blob", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - v1/v2", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const v1 = await js.views.os("v1", { description: "testing", version: 1 });
+  assertEquals(v1.version(), 1);
+  await v1.putBlob({ name: "A" }, new Uint8Array(10));
+
+  let { subjects } = (await v1.status()).streamInfo.config;
+  assert(subjects[0].startsWith("$O."));
+
+  let v = await js.views.os("v1");
+  assertEquals(v.version(), 1);
+  let data = await v.getBlob("A");
+  assertEquals(data?.length, 10);
+
+  const v2 = await js.views.os("v2", { version: 2 });
+  assertEquals(v2.version(), 2);
+  await v2.putBlob({ name: "A" }, new Uint8Array(11));
+
+  v = await js.views.os("v2", { version: 1 });
+  assertEquals(v.version(), 2);
+  data = await v.getBlob("A");
+  assertEquals(data?.length, 11);
+
+  let v3 = await js.views.os("v3", { description: "testing" });
+  const sc = (await v3.status()).streamInfo.config;
+  subjects = sc.subjects.map((s) => {
+    return s.replaceAll("$O2.", "$O3.");
+  });
+  const jsm = await js.jetstreamManager();
+  await jsm.streams.update(sc.name, { subjects });
+
+  await assertRejects(
+    async () => {
+      await js.views.os("v3");
+    },
+    Error,
+    "unknown objectstore version configuration",
+  );
+
+  await cleanup(ns, nc);
+});
