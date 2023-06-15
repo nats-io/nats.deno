@@ -33,6 +33,7 @@ import {
   Payload,
   PublishOptions,
   QueuedIterator,
+  ReviverFn,
   Service,
   ServiceConfig,
   ServiceError,
@@ -48,7 +49,6 @@ import {
   ServiceVerb,
   Sub,
 } from "./core.ts";
-import { ReviverFn } from "../jetstream/types.ts";
 
 /**
  * Services have common backplane subject pattern:

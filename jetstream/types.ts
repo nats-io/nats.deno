@@ -21,6 +21,7 @@ import {
   NatsError,
   Payload,
   QueuedIterator,
+  ReviverFn,
   Sub,
 } from "../nats-base-client/core.ts";
 import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
@@ -757,12 +758,6 @@ export interface DirectStreamAPI {
    */
   getMessage(stream: string, query: DirectMsgRequest): Promise<StoredMsg>;
 }
-
-/**
- * A reviver function
- */
-//deno-lint-ignore no-explicit-any
-export type ReviverFn = (key: string, value: any) => any;
 
 /**
  * An interface representing a message that retrieved directly from JetStream.

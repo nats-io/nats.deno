@@ -68,6 +68,7 @@ export type {
   PublishOptions,
   RequestManyOptions,
   RequestOptions,
+  ReviverFn,
   Server,
   ServerInfo,
   ServersChanged,

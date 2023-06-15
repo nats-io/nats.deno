@@ -16,8 +16,14 @@ import { MsgHdrsImpl } from "./headers.ts";
 import type { MsgArg } from "./parser.ts";
 import { Empty, TD } from "./encoders.ts";
 import { Codec, JSONCodec } from "./codec.ts";
-import { ErrorCode, Msg, MsgHdrs, NatsError, Publisher } from "./core.ts";
-import { ReviverFn } from "../jetstream/types.ts";
+import {
+  ErrorCode,
+  Msg,
+  MsgHdrs,
+  NatsError,
+  Publisher,
+  ReviverFn,
+} from "./core.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload
