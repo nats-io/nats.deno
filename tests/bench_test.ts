@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { Bench, connect, createInbox } from "../src/mod.ts";
 import { BenchOpts, Metric } from "../nats-base-client/bench.ts";
 
@@ -57,7 +57,7 @@ function pubSub(m: Metric[]) {
 }
 
 function reqRep(m: Metric[]) {
-  assertEquals(m.length, 1);
+  assertEquals(m.length, 3);
   assertEquals(m[0].payload, 8);
   assert(m[0].lang);
   assert(m[0].version);
@@ -112,6 +112,7 @@ Deno.test(`bench - pubsub async`, async () => {
 Deno.test(`bench - req`, async () => {
   const m = await runBench({
     req: true,
+    rep: true,
     callbacks: true,
     msgs: 5,
     size: 8,
@@ -123,6 +124,7 @@ Deno.test(`bench - req`, async () => {
 Deno.test(`bench - req async`, async () => {
   const m = await runBench({
     req: true,
+    rep: true,
     asyncRequests: true,
     callbacks: true,
     msgs: 5,

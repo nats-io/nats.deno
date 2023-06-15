@@ -12,38 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Empty } from "./encoders.ts";
+import { JSONCodec } from "./codec.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
 import {
-  Empty,
   NatsConnection,
   RequestManyOptions,
-  RequestStrategy,
-} from "./types.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { JSONCodec, ServiceInfo, ServiceStats, ServiceVerb } from "./mod.ts";
-import { ServiceIdentity, ServiceImpl } from "./service.ts";
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceStats,
+  ServiceVerb,
+} from "./core.ts";
+import { ServiceImpl } from "./service.ts";
 
-export interface ServiceClient {
-  /**
-   * Pings services
-   * @param name - optional
-   * @param id - optional
-   */
-  ping(name?: string, id?: string): Promise<QueuedIterator<ServiceIdentity>>;
-
-  /**
-   * Requests all the stats from services
-   * @param name
-   * @param id
-   */
-  stats(name?: string, id?: string): Promise<QueuedIterator<ServiceStats>>;
-
-  /**
-   * Requests info from services
-   * @param name
-   * @param id
-   */
-  info(name?: string, id?: string): Promise<QueuedIterator<ServiceInfo>>;
-}
+import { QueuedIterator, RequestStrategy, ServiceClient } from "./core.ts";
 
 export class ServiceClientImpl implements ServiceClient {
   nc: NatsConnection;

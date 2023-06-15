@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 import {
   Auth,
   Authenticator,
@@ -26,7 +26,7 @@ import {
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "../nats-base-client/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { nkeys } from "../nats-base-client/nkeys.ts";
 import {
   encodeAccount,

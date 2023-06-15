@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   fail,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 import {
   connect,
@@ -27,7 +27,7 @@ import {
 } from "../src/mod.ts";
 
 import { assertThrowsErrorCode, Lock } from "./helpers/mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("drain - connection drains when no subs", async () => {
   const { ns, nc } = await setup();

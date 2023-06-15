@@ -13,16 +13,8 @@
  * limitations under the License.
  */
 // deno-lint-ignore-file no-explicit-any
-import { DataBuffer } from "./databuffer.ts";
-import { ErrorCode, NatsError } from "./error.ts";
 import { TD } from "./encoders.ts";
-import { QueuedIterator } from "./queued_iterator.ts";
-
-export const CR_LF = "\r\n";
-export const CR_LF_LEN = CR_LF.length;
-export const CRLF = DataBuffer.fromAscii(CR_LF);
-export const CR = new Uint8Array(CRLF)[0]; // 13
-export const LF = new Uint8Array(CRLF)[1]; // 10
+import { ErrorCode, NatsError } from "./core.ts";
 
 export type ValueResult<T> = {
   isError: false;
@@ -38,31 +30,6 @@ export type ErrorResult = {
  * Result is a value that may have resulted in an error.
  */
 export type Result<T> = ValueResult<T> | ErrorResult;
-
-export function isUint8Array(a: unknown): boolean {
-  return a instanceof Uint8Array;
-}
-
-export function protoLen(ba: Uint8Array): number {
-  for (let i = 0; i < ba.length; i++) {
-    const n = i + 1;
-    if (ba.byteLength > n && ba[i] === CR && ba[n] === LF) {
-      return n + 1;
-    }
-  }
-  return 0;
-}
-
-export function extractProtocolMessage(a: Uint8Array): string {
-  // protocol messages are ascii, so Uint8Array
-  const len = protoLen(a);
-  if (len > 0) {
-    const ba = new Uint8Array(a);
-    const out = ba.slice(0, len);
-    return TD.decode(out);
-  }
-  return "";
-}
 
 export function extend(a: any, ...b: any[]): any {
   for (let i = 0; i < b.length; i++) {
@@ -187,7 +154,7 @@ export function shuffle<T>(a: T[]): T[] {
   return a;
 }
 
-export async function collect<T>(iter: QueuedIterator<T>): Promise<T[]> {
+export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
   const buf: T[] = [];
   for await (const v of iter) {
     buf.push(v);
@@ -205,7 +172,7 @@ export class Perf {
   }
 
   mark(key: string) {
-    this.timers.set(key, Date.now());
+    this.timers.set(key, performance.now());
   }
 
   measure(key: string, startKey: string, endKey: string) {

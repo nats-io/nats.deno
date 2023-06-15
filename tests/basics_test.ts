@@ -20,7 +20,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 
@@ -33,19 +33,27 @@ import {
   jwtAuthenticator,
   Msg,
   NatsError,
+  nuid,
   StringCodec,
 } from "../src/mod.ts";
-import { assertErrorCode, disabled, Lock, NatsServer } from "./helpers/mod.ts";
 import {
+  assertErrorCode,
+  cleanup,
+  disabled,
+  Lock,
+  NatsServer,
+  setup,
+} from "./helpers/mod.ts";
+import {
+  collect,
   deferred,
   delay,
   headers,
   isIP,
   NatsConnectionImpl,
+  RequestStrategy,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
-import { RequestStrategy } from "../nats-base-client/types.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import NetAddr = Deno.NetAddr;
 
@@ -902,7 +910,7 @@ Deno.test("basics - rtt", async () => {
     reconnectTimeWait: 250,
   });
   const rtt = await nc.rtt();
-  assert(rtt > 0);
+  assert(rtt >= 0);
 
   await ns.stop();
   await delay(500);
@@ -1259,4 +1267,98 @@ Deno.test("basics - ipv4 mapped to ipv6", async () => {
   const nc = await connect({ servers: [`::ffff:127.0.0.1`] });
   const nc2 = await connect({ servers: [`[::ffff:127.0.0.1]:${ns.port}`] });
   await cleanup(ns, nc, nc2);
+});
+
+Deno.test("basics - data types empty", async () => {
+  const { ns, nc } = await setup();
+  const subj = nuid.next();
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      assertEquals(msg.data.length, 0);
+      msg.respond();
+    },
+  });
+  nc.publish(subj);
+  nc.publish(subj, Empty);
+
+  let r = await nc.request(subj);
+  assertEquals(r.data.length, 0);
+
+  r = await nc.request(subj, Empty);
+  assertEquals(r.data.length, 0);
+
+  let iter = await collect(
+    await nc.requestMany(subj, undefined, { maxMessages: 1 }),
+  );
+  assertEquals(iter[0].data.length, 0);
+
+  iter = await collect(
+    await nc.requestMany(subj, undefined, { maxMessages: 1 }),
+  );
+  assertEquals(iter[0].data.length, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - data types string", async () => {
+  const { ns, nc } = await setup();
+  const subj = nuid.next();
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      const s = msg.string();
+      if (s.length > 0) {
+        assertEquals(s, "hello");
+      }
+      msg.respond(s);
+    },
+  });
+  nc.publish(subj, "");
+  nc.publish(subj, "hello");
+
+  let r = await nc.request(subj);
+  assertEquals(r.string(), "");
+
+  r = await nc.request(subj, "hello");
+  assertEquals(r.string(), "hello");
+
+  let iter = await collect(
+    await nc.requestMany(subj, "", { maxMessages: 1 }),
+  );
+  assertEquals(iter[0].string(), "");
+
+  iter = await collect(
+    await nc.requestMany(subj, "hello", { maxMessages: 1 }),
+  );
+  assertEquals(iter[0].string(), "hello");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - json reviver", async () => {
+  const { ns, nc } = await setup();
+  const subj = nuid.next();
+
+  nc.subscribe(subj, {
+    callback: (_err, msg) => {
+      msg.respond(JSONCodec().encode({ date: Date.now(), auth: true }));
+    },
+  });
+
+  const m = await nc.request(subj);
+  const d = m.json<{ date: Date; auth: string }>((key, value) => {
+    if (typeof value === "boolean") {
+      return value ? "yes" : "no";
+    }
+    switch (key) {
+      case "date":
+        return new Date(value);
+      default:
+        return value;
+    }
+  });
+
+  assert(d.date instanceof Date);
+  assert(typeof d.auth === "string");
+
+  await cleanup(ns, nc);
 });

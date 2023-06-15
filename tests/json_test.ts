@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import {
   createInbox,
   ErrorCode,
@@ -24,7 +24,7 @@ import {
 
 import { Lock } from "./helpers/mod.ts";
 import { assertThrowsErrorCode } from "./helpers/asserts.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};

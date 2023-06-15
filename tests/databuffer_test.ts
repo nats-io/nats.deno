@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { DataBuffer } from "../nats-base-client/internal_mod.ts";
 
 Deno.test("databuffer - empty", () => {

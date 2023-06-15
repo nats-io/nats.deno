@@ -15,13 +15,13 @@
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { createInbox, Msg, StringCodec } from "../src/mod.ts";
 import {
   deferred,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const { ns, nc } = await setup();

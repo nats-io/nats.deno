@@ -12,13 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Empty, Msg } from "./types.ts";
-import { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import type { Publisher } from "./protocol.ts";
+import { MsgHdrsImpl } from "./headers.ts";
 import type { MsgArg } from "./parser.ts";
-import { TD } from "./encoders.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+import { Empty, TD } from "./encoders.ts";
 import { Codec, JSONCodec } from "./codec.ts";
+import {
+  ErrorCode,
+  Msg,
+  MsgHdrs,
+  NatsError,
+  Publisher,
+  ReviverFn,
+} from "./core.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload
@@ -101,11 +106,8 @@ export class MsgImpl implements Msg {
     return subj + reply + payloadAndHeaders;
   }
 
-  json<T = unknown>(): T {
-    if (!MsgImpl.jc) {
-      MsgImpl.jc = JSONCodec();
-    }
-    return MsgImpl.jc.decode(this.data) as T;
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return JSONCodec<T>(reviver).decode(this.data);
   }
 
   string(): string {

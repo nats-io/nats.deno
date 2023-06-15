@@ -12,67 +12,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { decode, Empty, encode, TE } from "./encoders.ts";
 import {
+  CR_LF,
+  CRLF,
+  getResolveFn,
+  newTransport,
+  Transport,
+} from "./transport.ts";
+import { Deferred, deferred, delay, extend, Timeout, timeout } from "./util.ts";
+import { DataBuffer } from "./databuffer.ts";
+import { ServerImpl, Servers } from "./servers.ts";
+import {
+  DispatchedFn,
+  IngestionFilterFn,
+  IngestionFilterFnResult,
+  ProtocolFilterFn,
+  QueuedIteratorImpl,
+} from "./queued_iterator.ts";
+import type { MsgHdrsImpl } from "./headers.ts";
+import { MuxSubscription } from "./muxsubscription.ts";
+import { Heartbeat, PH } from "./heartbeats.ts";
+import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
+import { MsgImpl } from "./msg.ts";
+import { Features, parseSemVer } from "./semver.ts";
+import {
+  Base,
   ConnectionOptions,
   DebugEvents,
-  DEFAULT_MAX_PING_OUT,
-  DEFAULT_PING_INTERVAL,
-  DEFAULT_RECONNECT_TIME_WAIT,
-  Empty,
+  Dispatcher,
+  ErrorCode,
   Events,
+  Msg,
+  NatsError,
+  Payload,
+  Publisher,
   PublishOptions,
+  QueuedIterator,
+  Request,
   Server,
   ServerInfo,
   Status,
   Subscription,
-} from "./types.ts";
-import { getResolveFn, newTransport, Transport } from "./transport.ts";
-import { ErrorCode, NatsError } from "./error.ts";
+  SubscriptionOptions,
+} from "./core.ts";
 import {
-  CR_LF,
-  CRLF,
-  Deferred,
-  deferred,
-  delay,
-  extend,
-  timeout,
-} from "./util.ts";
-import { nuid } from "./nuid.ts";
-import { DataBuffer } from "./databuffer.ts";
-import { ServerImpl, Servers } from "./servers.ts";
-import {
-  Dispatcher,
-  QueuedIterator,
-  QueuedIteratorImpl,
-} from "./queued_iterator.ts";
-import type { MsgHdrs, MsgHdrsImpl } from "./headers.ts";
-import { SubscriptionImpl } from "./subscription.ts";
-import { Subscriptions } from "./subscriptions.ts";
-import { MuxSubscription } from "./muxsubscription.ts";
-import type { Request } from "./request.ts";
-import { Heartbeat, PH } from "./heartbeats.ts";
-import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
-import { MsgImpl } from "./msg.ts";
-import { decode, encode } from "./encoders.ts";
-import { Features, parseSemVer } from "./semver.ts";
+  DEFAULT_MAX_PING_OUT,
+  DEFAULT_PING_INTERVAL,
+  DEFAULT_RECONNECT_TIME_WAIT,
+} from "./options.ts";
 
 const FLUSH_THRESHOLD = 1024 * 32;
 
 export const INFO = /^INFO\s+([^\r\n]+)\r\n/i;
-
-export function createInbox(prefix = ""): string {
-  prefix = prefix || "_INBOX";
-  if (typeof prefix !== "string") {
-    throw (new Error("prefix must be a string"));
-  }
-  prefix.split(".")
-    .forEach((v) => {
-      if (v === "*" || v === ">") {
-        throw new Error(`inbox prefixes cannot have wildcards '${prefix}'`);
-      }
-    });
-  return `${prefix}.${nuid.next()}`;
-}
 
 const PONG_CMD = encode("PONG\r\n");
 const PING_CMD = encode("PING\r\n");
@@ -117,12 +109,261 @@ export class Connect {
   }
 }
 
-export interface Publisher {
-  publish(
+export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
+  implements Base, Subscription {
+  sid!: number;
+  queue?: string;
+  draining: boolean;
+  max?: number;
+  subject: string;
+  drained?: Promise<void>;
+  protocol: ProtocolHandler;
+  timer?: Timeout<void>;
+  info?: unknown;
+  cleanupFn?: (sub: Subscription, info?: unknown) => void;
+  closed: Deferred<void>;
+  requestSubject?: string;
+
+  constructor(
+    protocol: ProtocolHandler,
     subject: string,
-    data: Uint8Array,
-    options?: { reply?: string; headers?: MsgHdrs },
-  ): void;
+    opts: SubscriptionOptions = {},
+  ) {
+    super();
+    extend(this, opts);
+    this.protocol = protocol;
+    this.subject = subject;
+    this.draining = false;
+    this.noIterator = typeof opts.callback === "function";
+    this.closed = deferred();
+
+    if (opts.timeout) {
+      this.timer = timeout<void>(opts.timeout);
+      this.timer
+        .then(() => {
+          // timer was cancelled
+          this.timer = undefined;
+        })
+        .catch((err) => {
+          // timer fired
+          this.stop(err);
+          if (this.noIterator) {
+            this.callback(err, {} as Msg);
+          }
+        });
+    }
+    if (!this.noIterator) {
+      // cleanup - they used break or return from the iterator
+      // make sure we clean up, if they didn't call unsub
+      this.iterClosed.then(() => {
+        this.closed.resolve();
+        this.unsubscribe();
+      });
+    }
+  }
+
+  setPrePostHandlers(
+    opts: {
+      ingestionFilterFn?: IngestionFilterFn<Msg>;
+      protocolFilterFn?: ProtocolFilterFn<Msg>;
+      dispatchedFn?: DispatchedFn<Msg>;
+    },
+  ) {
+    if (this.noIterator) {
+      const uc = this.callback;
+
+      const ingestion = opts.ingestionFilterFn
+        ? opts.ingestionFilterFn
+        : (): IngestionFilterFnResult => {
+          return { ingest: true, protocol: false };
+        };
+      const filter = opts.protocolFilterFn ? opts.protocolFilterFn : () => {
+        return true;
+      };
+      const dispatched = opts.dispatchedFn ? opts.dispatchedFn : () => {};
+      this.callback = (err: NatsError | null, msg: Msg) => {
+        const { ingest } = ingestion(msg);
+        if (!ingest) {
+          return;
+        }
+        if (filter(msg)) {
+          uc(err, msg);
+          dispatched(msg);
+        }
+      };
+    } else {
+      this.protocolFilterFn = opts.protocolFilterFn;
+      this.dispatchedFn = opts.dispatchedFn;
+    }
+  }
+
+  callback(err: NatsError | null, msg: Msg) {
+    this.cancelTimeout();
+    err ? this.stop(err) : this.push(msg);
+  }
+
+  close(): void {
+    if (!this.isClosed()) {
+      this.cancelTimeout();
+      const fn = () => {
+        this.stop();
+        if (this.cleanupFn) {
+          try {
+            this.cleanupFn(this, this.info);
+          } catch (_err) {
+            // ignoring
+          }
+        }
+        this.closed.resolve();
+      };
+
+      if (this.noIterator) {
+        fn();
+      } else {
+        //@ts-ignore: schedule the close once all messages are processed
+        this.push(fn);
+      }
+    }
+  }
+
+  unsubscribe(max?: number): void {
+    this.protocol.unsubscribe(this, max);
+  }
+
+  cancelTimeout(): void {
+    if (this.timer) {
+      this.timer.cancel();
+      this.timer = undefined;
+    }
+  }
+
+  drain(): Promise<void> {
+    if (this.protocol.isClosed()) {
+      return Promise.reject(NatsError.errorForCode(ErrorCode.ConnectionClosed));
+    }
+    if (this.isClosed()) {
+      return Promise.reject(NatsError.errorForCode(ErrorCode.SubClosed));
+    }
+    if (!this.drained) {
+      this.draining = true;
+      this.protocol.unsub(this);
+      this.drained = this.protocol.flush(deferred<void>())
+        .then(() => {
+          this.protocol.subscriptions.cancel(this);
+        })
+        .catch(() => {
+          this.protocol.subscriptions.cancel(this);
+        });
+    }
+    return this.drained;
+  }
+
+  isDraining(): boolean {
+    return this.draining;
+  }
+
+  isClosed(): boolean {
+    return this.done;
+  }
+
+  getSubject(): string {
+    return this.subject;
+  }
+
+  getMax(): number | undefined {
+    return this.max;
+  }
+
+  getID(): number {
+    return this.sid;
+  }
+}
+
+export class Subscriptions {
+  mux: SubscriptionImpl | null;
+  subs: Map<number, SubscriptionImpl>;
+  sidCounter: number;
+
+  constructor() {
+    this.sidCounter = 0;
+    this.mux = null;
+    this.subs = new Map<number, SubscriptionImpl>();
+  }
+
+  size(): number {
+    return this.subs.size;
+  }
+
+  add(s: SubscriptionImpl): SubscriptionImpl {
+    this.sidCounter++;
+    s.sid = this.sidCounter;
+    this.subs.set(s.sid, s as SubscriptionImpl);
+    return s;
+  }
+
+  setMux(s: SubscriptionImpl | null): SubscriptionImpl | null {
+    this.mux = s;
+    return s;
+  }
+
+  getMux(): SubscriptionImpl | null {
+    return this.mux;
+  }
+
+  get(sid: number): SubscriptionImpl | undefined {
+    return this.subs.get(sid);
+  }
+
+  resub(s: SubscriptionImpl): SubscriptionImpl {
+    this.sidCounter++;
+    this.subs.delete(s.sid);
+    s.sid = this.sidCounter;
+    this.subs.set(s.sid, s);
+    return s;
+  }
+
+  all(): (SubscriptionImpl)[] {
+    return Array.from(this.subs.values());
+  }
+
+  cancel(s: SubscriptionImpl): void {
+    if (s) {
+      s.close();
+      this.subs.delete(s.sid);
+    }
+  }
+
+  handleError(err?: NatsError): boolean {
+    if (err && err.permissionContext) {
+      const ctx = err.permissionContext;
+      const subs = this.all();
+      let sub;
+      if (ctx.operation === "subscription") {
+        sub = subs.find((s) => {
+          return s.subject === ctx.subject;
+        });
+      }
+      if (ctx.operation === "publish") {
+        // we have a no mux subscription
+        sub = subs.find((s) => {
+          return s.requestSubject === ctx.subject;
+        });
+      }
+      if (sub) {
+        sub.callback(err, {} as Msg);
+        sub.close();
+        this.subs.delete(sub.sid);
+        return sub !== this.mux;
+      }
+    }
+    return false;
+  }
+
+  close() {
+    this.subs.forEach((sub) => {
+      sub.close();
+    });
+  }
 }
 
 export class ProtocolHandler implements Dispatcher<ParserEvent> {
@@ -624,9 +865,18 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
 
   publish(
     subject: string,
-    data: Uint8Array,
+    payload: Payload = Empty,
     options?: PublishOptions,
   ) {
+    let data;
+    if (payload instanceof Uint8Array) {
+      data = payload;
+    } else if (typeof payload === "string") {
+      data = TE.encode(payload);
+    } else {
+      throw NatsError.errorForCode(ErrorCode.BadPayload);
+    }
+
     let len = data.length;
     options = options || {};
     options.reply = options.reply || "";
@@ -652,7 +902,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     let proto: string;
     if (options.headers) {
       if (options.reply) {
-        proto = `HPUB ${subject} ${options.reply} ${hlen} ${len}${CR_LF}`;
+        proto = `HPUB ${subject} ${options.reply} ${hlen} ${len}\r\n`;
       } else {
         proto = `HPUB ${subject} ${hlen} ${len}\r\n`;
       }
@@ -707,9 +957,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return;
     }
     if (max) {
-      this.sendCommand(`UNSUB ${s.sid} ${max}${CR_LF}`);
+      this.sendCommand(`UNSUB ${s.sid} ${max}\r\n`);
     } else {
-      this.sendCommand(`UNSUB ${s.sid}${CR_LF}`);
+      this.sendCommand(`UNSUB ${s.sid}\r\n`);
     }
     s.max = max;
   }

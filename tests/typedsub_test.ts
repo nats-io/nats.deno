@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   assertRejects,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
 import {
   createInbox,
@@ -29,7 +29,7 @@ import {
   TypedSubscriptionOptions,
 } from "../nats-base-client/internal_mod.ts";
 import { checkFn } from "../nats-base-client/typedsub.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("typedsub - rejects no adapter", async () => {
   const { nc, ns } = await setup();

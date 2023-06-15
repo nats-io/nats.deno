@@ -14,21 +14,23 @@
  */
 
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
-import { connect, NatsConnection, StringCodec } from "../../src/mod.ts";
-
-import { collect } from "../../nats-base-client/util.ts";
-import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
-import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
-
-import { parseSemVer } from "../../nats-base-client/semver.ts";
 import {
+  connect,
+  NatsConnection,
   ServiceError,
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
-} from "../../nats-base-client/service.ts";
+  StringCodec,
+} from "../../src/mod.ts";
+
+import { collect } from "../../nats-base-client/util.ts";
+import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
+import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
+
+import { parseSemVer } from "../../nats-base-client/semver.ts";
 
 const ajv = new Ajv();
 
@@ -139,7 +141,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   const infos = await collect(await sc.info(name));
 
   let proms = infos.map((v) => {
-    return nc.request(v.subjects[0]);
+    return nc.request(v.endpoints[0].subject);
   });
   let responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -152,7 +154,7 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
 
   // the service should throw/register an error if "error" is specified as payload
   proms = infos.map((v) => {
-    return nc.request(v.subjects[0], StringCodec().encode("error"));
+    return nc.request(v.endpoints[0].subject, StringCodec().encode("error"));
   });
   responses = await Promise.all(proms);
   responses.forEach((m) => {
@@ -164,7 +166,10 @@ async function invoke(nc: NatsConnection, name: string): Promise<void> {
   });
 
   proms = infos.map((v, idx) => {
-    return nc.request(v.subjects[0], StringCodec().encode(`hello ${idx}`));
+    return nc.request(
+      v.endpoints[0].subject,
+      StringCodec().encode(`hello ${idx}`),
+    );
   });
   responses = await Promise.all(proms);
   responses.forEach((m, idx) => {
@@ -267,10 +272,6 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           processing_time: { type: "number" },
           average_processing_time: { type: "number" },
           data: { type: "string" },
-          metadata: {
-            type: "object",
-            minProperties: 1,
-          },
         },
         required: [
           "num_requests",
@@ -279,7 +280,6 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           "processing_time",
           "average_processing_time",
           "data",
-          "metadata",
         ],
       },
     },
@@ -303,13 +303,23 @@ const infoSchema: JSONSchemaType<ServiceInfo> = {
     id: { type: "string" },
     version: { type: "string" },
     description: { type: "string" },
-    subjects: { type: "array", items: { type: "string" } },
+    endpoints: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          subject: { type: "string" },
+          metadata: { type: "object", minProperties: 1 },
+        },
+      },
+    },
     metadata: {
       type: "object",
       minProperties: 1,
     },
   },
-  required: ["type", "name", "id", "version", "subjects", "metadata"],
+  required: ["type", "name", "id", "version", "metadata", "endpoints"],
   additionalProperties: false,
 };
 

@@ -12,13 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
 import { createInbox, Empty, ErrorCode, Subscription } from "../src/mod.ts";
-import { Lock } from "./helpers/mod.ts";
+import { cleanup, Lock, setup } from "./helpers/mod.ts";
 import type { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
-import { cleanup, setup } from "./jstest_util.ts";
 
 Deno.test("autounsub - max option", async () => {
   const { ns, nc } = await setup();

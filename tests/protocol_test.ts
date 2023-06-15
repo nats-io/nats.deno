@@ -27,8 +27,9 @@ import { assertErrorCode } from "./helpers/mod.ts";
 import {
   assertEquals,
   equal,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { protoLen } from "../nats-base-client/util.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+
+import { protoLen } from "../nats-base-client/transport.ts";
 
 Deno.test("protocol - mux subscription unknown return null", async () => {
   const mux = new MuxSubscription();

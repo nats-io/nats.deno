@@ -17,7 +17,7 @@ import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
 import {
   assert,
   assertEquals,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { deferred } from "../nats-base-client/util.ts";
 
 Deno.test("idleheartbeat - basic", async () => {

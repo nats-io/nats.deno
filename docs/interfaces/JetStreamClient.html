@@ -23,7 +23,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">JetStreamClient</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:969</li></ul></aside>
+<li>Defined in cjs/jetstream/types.ts:329</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -39,6 +39,8 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading">Methods</h3>
 <div class="tsd-index-list"><a href="JetStreamClient.html#fetch" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="#FF4DB8" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="12" id="icon-2048-path"></rect><path d="M9.162 16V7.24H10.578L11.514 10.072C11.602 10.328 11.674 10.584 11.73 10.84C11.794 11.088 11.842 11.28 11.874 11.416C11.906 11.28 11.954 11.088 12.018 10.84C12.082 10.584 12.154 10.324 12.234 10.06L13.122 7.24H14.538V16H13.482V12.82C13.482 12.468 13.49 12.068 13.506 11.62C13.53 11.172 13.558 10.716 13.59 10.252C13.622 9.78 13.654 9.332 13.686 8.908C13.726 8.476 13.762 8.1 13.794 7.78L12.366 12.16H11.334L9.894 7.78C9.934 8.092 9.97 8.456 10.002 8.872C10.042 9.28 10.078 9.716 10.11 10.18C10.142 10.636 10.166 11.092 10.182 11.548C10.206 12.004 10.218 12.428 10.218 12.82V16H9.162Z" fill="var(--color-text)" id="icon-2048-text"></path></svg><span>fetch</span></a>
+<a href="JetStreamClient.html#getOptions" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>get<wbr/>Options</span></a>
+<a href="JetStreamClient.html#jetstreamManager" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>jetstream<wbr/>Manager</span></a>
 <a href="JetStreamClient.html#publish" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>publish</span></a>
 <a href="JetStreamClient.html#pull" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>pull</span></a>
 <a href="JetStreamClient.html#pullSubscribe" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>pull<wbr/>Subscribe</span></a>
@@ -52,7 +54,7 @@
 <div class="tsd-comment tsd-typography"><p>Returns the JS API prefix as processed from the JetStream Options</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1058</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:418</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="consumers" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>consumers</span><a href="#consumers" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">consumers<span class="tsd-signature-symbol">:</span> <a href="Consumers.html" class="tsd-signature-type" data-tsd-kind="Interface">Consumers</a></div>
@@ -61,21 +63,21 @@ allow you to process messages stored in a stream. To create a
 consumer use <a href="JetStreamManager.html">JetStreamManager</a>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1065</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:425</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="streams" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>streams</span><a href="#streams" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">streams<span class="tsd-signature-symbol">:</span> <a href="Streams.html" class="tsd-signature-type" data-tsd-kind="Interface">Streams</a></div>
 <div class="tsd-comment tsd-typography"><p>Returns the interface for accessing <a href="Streams.html">Streams</a>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1070</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:430</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="views" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>views</span><a href="#views" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">views<span class="tsd-signature-symbol">:</span> <a href="Views.html" class="tsd-signature-type" data-tsd-kind="Interface">Views</a></div>
 <div class="tsd-comment tsd-typography"><p>Accessor for the JetStream materialized views API</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1053</li></ul></aside></section></section>
+<li>Defined in cjs/jetstream/types.ts:413</li></ul></aside></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Methods</h2>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="fetch" class="tsd-anchor"></a>
@@ -104,11 +106,30 @@ consumer use <a href="JetStreamManager.html">JetStreamManager</a>.</p>
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="PullOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">PullOptions</a><span class="tsd-signature-symbol">&gt;</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="QueuedIterator.html" class="tsd-signature-type" data-tsd-kind="Interface">QueuedIterator</a><span class="tsd-signature-symbol">&lt;</span><a href="JsMsg.html" class="tsd-signature-type" data-tsd-kind="Interface">JsMsg</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1000</li></ul></aside></li></ul></section>
+<li>Defined in cjs/jetstream/types.ts:360</li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="getOptions" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>get<wbr/>Options</span><a href="#getOptions" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
+<li class="tsd-signature tsd-anchor-link" id="getOptions.getOptions-1">get<wbr/>Options<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="JetStreamOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamOptions</a><a href="#getOptions.getOptions-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-description">
+<h4 class="tsd-returns-title">Returns <a href="JetStreamOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamOptions</a></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs/jetstream/types.ts:438</li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="jetstreamManager" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>jetstream<wbr/>Manager</span><a href="#jetstreamManager" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
+<li class="tsd-signature tsd-anchor-link" id="jetstreamManager.jetstreamManager-1">jetstream<wbr/>Manager<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamManager.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManager</a><span class="tsd-signature-symbol">&gt;</span><a href="#jetstreamManager.jetstreamManager-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Returns a JetStreamManager that uses the same <a href="JetStreamOptions.html">JetStreamOptions</a>
+as the current JetStream context</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamManager.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManager</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs/jetstream/types.ts:436</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="publish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>publish</span><a href="#publish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-<li class="tsd-signature tsd-anchor-link" id="publish.publish-1">publish<span class="tsd-signature-symbol">(</span>subj<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Uint8Array</span>, options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamPublishOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamPublishOptions</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="PubAck.html" class="tsd-signature-type" data-tsd-kind="Interface">PubAck</a><span class="tsd-signature-symbol">&gt;</span><a href="#publish.publish-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-signature tsd-anchor-link" id="publish.publish-1">publish<span class="tsd-signature-symbol">(</span>subj<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, payload<span class="tsd-signature-symbol">?: </span><a href="../types/Payload.html" class="tsd-signature-type" data-tsd-kind="Type alias">Payload</a>, options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamPublishOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamPublishOptions</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="PubAck.html" class="tsd-signature-type" data-tsd-kind="Interface">PubAck</a><span class="tsd-signature-symbol">&gt;</span><a href="#publish.publish-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
 <li class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Publishes a message to a stream. If not stream is configured to store the message, the
 request will fail with <a href="../enums/ErrorCode.html#NoResponders">NoResponders</a> error.</p>
@@ -121,7 +142,7 @@ request will fail with <a href="../enums/ErrorCode.html#NoResponders">NoResponde
 <div class="tsd-comment tsd-typography"><p>the subject for the message</p>
 </div></li>
 <li>
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> data: <span class="tsd-signature-type">Uint8Array</span></h5>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> payload: <a href="../types/Payload.html" class="tsd-signature-type" data-tsd-kind="Type alias">Payload</a></h5>
 <div class="tsd-comment tsd-typography"><p>the message&#39;s data</p>
 </div></li>
 <li>
@@ -130,7 +151,7 @@ request will fail with <a href="../enums/ErrorCode.html#NoResponders">NoResponde
 </div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="PubAck.html" class="tsd-signature-type" data-tsd-kind="Interface">PubAck</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:978</li></ul></aside></li></ul></section>
+<li>Defined in cjs/jetstream/types.ts:338</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="pull" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>pull</span><a href="#pull" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -159,7 +180,7 @@ request will fail with <a href="../enums/ErrorCode.html#NoResponders">NoResponde
 </div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JsMsg.html" class="tsd-signature-type" data-tsd-kind="Interface">JsMsg</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:991</li></ul></aside></li></ul></section>
+<li>Defined in cjs/jetstream/types.ts:351</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="pullSubscribe" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>pull<wbr/>Subscribe</span><a href="#pullSubscribe" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -190,7 +211,7 @@ a single subscription is used between invocations.</p>
 <h5>opts: <a href="ConsumerOptsBuilder.html" class="tsd-signature-type" data-tsd-kind="Interface">ConsumerOptsBuilder</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="ConsumerOpts.html" class="tsd-signature-type" data-tsd-kind="Interface">ConsumerOpts</a><span class="tsd-signature-symbol">&gt;</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/JetStreamPullSubscription.html" class="tsd-signature-type" data-tsd-kind="Type alias">JetStreamPullSubscription</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1024</li></ul></aside></li></ul></section>
+<li>Defined in cjs/jetstream/types.ts:384</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="subscribe" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>subscribe</span><a href="#subscribe" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -220,7 +241,7 @@ the specified subject.</p>
 <h5>opts: <a href="ConsumerOptsBuilder.html" class="tsd-signature-type" data-tsd-kind="Interface">ConsumerOptsBuilder</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="ConsumerOpts.html" class="tsd-signature-type" data-tsd-kind="Interface">ConsumerOpts</a><span class="tsd-signature-symbol">&gt;</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../types/JetStreamSubscription.html" class="tsd-signature-type" data-tsd-kind="Type alias">JetStreamSubscription</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs_src/types.ts:1045</li></ul></aside></li></ul></section></section></div>
+<li>Defined in cjs/jetstream/types.ts:405</li></ul></aside></li></ul></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -251,6 +272,8 @@ the specified subject.</p>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="JetStreamClient.html#streams" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>streams</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="JetStreamClient.html#views" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>views</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#fetch" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>fetch</a></li>
+<li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#getOptions" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>get<wbr/>Options</a></li>
+<li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#jetstreamManager" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>jetstream<wbr/>Manager</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#publish" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>publish</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#pull" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>pull</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="JetStreamClient.html#pullSubscribe" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>pull<wbr/>Subscribe</a></li>

@@ -17,15 +17,12 @@ import {
   assertEquals,
   assertExists,
   assertMatch,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
-import { connect, ConnectionOptions } from "../src/mod.ts";
+import { Authenticator, connect, ConnectionOptions } from "../src/mod.ts";
 import { DenoTransport } from "../src/deno_transport.ts";
 import { Connect } from "../nats-base-client/protocol.ts";
-import {
-  Authenticator,
-  credsAuthenticator,
-} from "../nats-base-client/authenticator.ts";
+import { credsAuthenticator } from "../nats-base-client/authenticator.ts";
 import { extend } from "../nats-base-client/util.ts";
 import { defaultOptions, parseOptions } from "../nats-base-client/options.ts";
 import { Servers } from "../nats-base-client/servers.ts";

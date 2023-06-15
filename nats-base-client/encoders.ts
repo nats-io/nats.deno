@@ -12,8 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { Empty } from "./types.ts";
+export const Empty = new Uint8Array(0);
 
 export const TE = new TextEncoder();
 export const TD = new TextDecoder();

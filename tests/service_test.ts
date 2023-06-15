@@ -12,19 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "./jstest_util.ts";
-import {
-  Service,
-  ServiceConfig,
-  ServiceError,
-  ServiceErrorCodeHeader,
-  ServiceErrorHeader,
-  ServiceIdentity,
-  ServiceImpl,
-  ServiceInfo,
-  ServiceResponseType,
-  ServiceStats,
-} from "../nats-base-client/service.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
+import { ServiceImpl } from "../nats-base-client/service.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -33,7 +22,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.177.0/testing/asserts.ts";
+} from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
 import { collect, delay } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
@@ -46,6 +35,15 @@ import {
   NatsError,
   nuid,
   QueuedIterator,
+  Service,
+  ServiceConfig,
+  ServiceError,
+  ServiceErrorCodeHeader,
+  ServiceErrorHeader,
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceResponseType,
+  ServiceStats,
   ServiceVerb,
   StringCodec,
 } from "../src/mod.ts";
@@ -140,15 +138,20 @@ Deno.test("service - client", async () => {
     const info = infos[0];
     assertEquals(info.type, ServiceResponseType.INFO);
     assertEquals(info.description, srv.description);
-    assertEquals(info.subjects.length, srv.subjects.length);
-    assertArrayIncludes(info.subjects, srv.subjects);
+    assertEquals(info.endpoints.length, srv.endpoints().length);
+    assertArrayIncludes(
+      info.endpoints.map((e) => {
+        return e.subject;
+      }),
+      srv.subjects,
+    );
     const r = info as unknown as Record<string, unknown>;
     delete r.type;
     delete r.version;
     delete r.name;
     delete r.id;
     delete r.description;
-    delete r.subjects;
+    delete r.endpoints;
     assertEquals(Object.keys(r).length, 0, JSON.stringify(r));
   }
 
@@ -607,7 +610,7 @@ Deno.test("service - version must be semver", async () => {
   assertEquals(info.name, srv.name);
   assertEquals(info.version, "v1.2.3-hello");
   assertEquals(info.description, srv.description);
-  assertEquals(info.subjects.length, 0);
+  assertEquals(info.endpoints.length, 0);
 
   await cleanup(ns, nc);
 });
@@ -849,7 +852,6 @@ Deno.test("service - metadata", async () => {
   assertEquals(info.metadata, { service: "1" });
   const stats = await srv.stats();
   assertEquals(stats.endpoints?.length, 1);
-  assertEquals(stats.endpoints?.[0].metadata, { endpoint: "endpoint" });
 
   await cleanup(ns, nc);
 });
@@ -869,6 +871,34 @@ Deno.test("service - schema metadata", async () => {
       endpoint: "endpoint",
     },
   });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("service - json reviver", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    metadata: { service: "1" },
+  });
+  srv.addGroup("group").addEndpoint("endpoint", {
+    handler: (_err, msg) => {
+      const d = msg.json<{ date: Date }>((k, v) => {
+        if (k === "date") {
+          return new Date(v);
+        }
+        return v;
+      });
+      assert(d.date instanceof Date);
+      msg.respond();
+    },
+    metadata: {
+      endpoint: "endpoint",
+    },
+  });
+
+  await nc.request("group.endpoint", JSONCodec().encode({ date: Date.now() }));
 
   await cleanup(ns, nc);
 });

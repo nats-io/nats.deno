@@ -13,22 +13,42 @@
  * limitations under the License.
  */
 import { Deferred, deferred } from "./util.ts";
-import {
-  Empty,
-  Msg,
-  MsgHdrs,
-  Nanos,
-  NatsConnection,
-  NatsError,
-  PublishOptions,
-  Sub,
-} from "./types.ts";
 import { headers } from "./headers.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
-import { QueuedIterator, QueuedIteratorImpl } from "./queued_iterator.ts";
-import { nanos, validateName } from "./jsutil.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import { nanos, validateName } from "../jetstream/jsutil.ts";
 import { parseSemVer } from "./semver.ts";
+import { Empty } from "./encoders.ts";
+import {
+  Endpoint,
+  EndpointInfo,
+  EndpointOptions,
+  Msg,
+  MsgHdrs,
+  NamedEndpointStats,
+  Nanos,
+  NatsConnection,
+  NatsError,
+  Payload,
+  PublishOptions,
+  QueuedIterator,
+  ReviverFn,
+  Service,
+  ServiceConfig,
+  ServiceError,
+  ServiceErrorCodeHeader,
+  ServiceErrorHeader,
+  ServiceGroup,
+  ServiceHandler,
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceMsg,
+  ServiceResponseType,
+  ServiceStats,
+  ServiceVerb,
+  Sub,
+} from "./core.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -40,55 +60,6 @@ import { parseSemVer } from "./semver.ts";
  * Note that <name> and <id> are upper-cased.
  */
 export const ServiceApiPrefix = "$SRV";
-export const ServiceErrorHeader = "Nats-Service-Error";
-export const ServiceErrorCodeHeader = "Nats-Service-Error-Code";
-
-export enum ServiceVerb {
-  PING = "PING",
-  STATS = "STATS",
-  INFO = "INFO",
-}
-
-export enum ServiceResponseType {
-  STATS = "io.nats.micro.v1.stats_response",
-  INFO = "io.nats.micro.v1.info_response",
-  PING = "io.nats.micro.v1.ping_response",
-}
-
-export interface ServiceResponse {
-  /**
-   * Response type schema
-   */
-  type: ServiceResponseType;
-}
-
-export type ServiceMetadata = {
-  metadata?: Record<string, string>;
-};
-
-export type ServiceIdentity = ServiceResponse & ServiceMetadata & {
-  /**
-   * The kind of the service reporting the stats
-   */
-  name: string;
-  /**
-   * The unique ID of the service reporting the stats
-   */
-  id: string;
-  /**
-   * A version for the service
-   */
-  version: string;
-};
-
-export interface ServiceMsg extends Msg {
-  respondError(
-    code: number,
-    description: string,
-    data?: Uint8Array,
-    opts?: PublishOptions,
-  ): boolean;
-}
 
 export class ServiceMsgImpl implements ServiceMsg {
   msg: Msg;
@@ -116,7 +87,7 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.headers;
   }
 
-  respond(data?: Uint8Array, opts?: PublishOptions): boolean {
+  respond(data?: Payload, opts?: PublishOptions): boolean {
     return this.msg.respond(data, opts);
   }
 
@@ -133,34 +104,13 @@ export class ServiceMsgImpl implements ServiceMsg {
     return this.msg.respond(data, opts);
   }
 
-  json<T = unknown>(): T {
-    return this.msg.json();
+  json<T = unknown>(reviver?: ReviverFn): T {
+    return this.msg.json(reviver);
   }
 
   string(): string {
     return this.msg.string();
   }
-}
-
-export interface ServiceGroup {
-  /**
-   * The name of the endpoint must be a simple subject token with no wildcards
-   * @param name
-   * @param opts is either a handler or a more complex options which allows a
-   *  subject, handler, and/or schema
-   */
-  addEndpoint(
-    name: string,
-    opts?: ServiceHandler | EndpointOptions,
-  ): QueuedIterator<ServiceMsg>;
-
-  /**
-   * A group is a subject prefix from which endpoints can be added.
-   * Can be empty to allow for prefixes or tokens that are set at runtime
-   * without requiring editing of the service.
-   * @param subject
-   */
-  addGroup(subject?: string): ServiceGroup;
 }
 
 export class ServiceGroupImpl implements ServiceGroup {
@@ -239,185 +189,6 @@ function validInternalToken(context: string, subj: string) {
   });
 }
 
-export interface Service extends ServiceGroup {
-  /**
-   * A promise that gets resolved to null or Error once the service ends.
-   * If an error, then service exited because of an error.
-   */
-  stopped: Promise<null | Error>;
-  /**
-   * True if the service is stopped
-   */
-  // FIXME: this would be better as stop - but the queued iterator may be an issue perhaps call it `isStopped`
-  isStopped: boolean;
-  /**
-   * Returns the stats for the service.
-   */
-  stats(): Promise<ServiceStats>;
-
-  /**
-   * Returns a service info for the service
-   */
-  info(): ServiceInfo;
-
-  /**
-   * Returns the identity used by this service
-   */
-  ping(): ServiceIdentity;
-
-  /**
-   * Resets all the stats
-   */
-  reset(): void;
-  /**
-   * Stop the service returning a promise once the service completes.
-   * If the service was stopped due to an error, that promise resolves to
-   * the specified error
-   */
-  stop(err?: Error): Promise<null | Error>;
-}
-
-export type NamedEndpointStats = {
-  /**
-   * The name of the endpoint
-   */
-  name: string;
-  /**
-   * The subject the endpoint is listening on
-   */
-  subject: string;
-  /**
-   * The number of requests received by the endpoint
-   */
-  num_requests: number;
-  /**
-   * Number of errors that the endpoint has raised
-   */
-  num_errors: number;
-  /**
-   * If set, the last error triggered by the endpoint
-   */
-  last_error?: string;
-  /**
-   * A field that can be customized with any data as returned by stats handler see {@link ServiceConfig}
-   */
-  data?: unknown;
-  /**
-   * Total processing_time for the service
-   */
-  processing_time: Nanos;
-  /**
-   * Average processing_time is the total processing_time divided by the num_requests
-   */
-  average_processing_time: Nanos;
-  /**
-   * Endpoint Metadata
-   */
-  metadata?: Record<string, string>;
-};
-
-/**
- * Statistics for an endpoint
- */
-export type EndpointStats = ServiceIdentity & {
-  endpoints?: NamedEndpointStats[];
-  /**
-   * ISO Date string when the service started
-   */
-  started: string;
-};
-
-export type ServiceSchema = ServiceIdentity & {
-  endpoints: EndpointSchema[];
-};
-
-export type EndpointSchema = {
-  /**
-   * Endpoint Name
-   */
-  name: string;
-  /**
-   * Subject the endpoint receiving requests on
-   */
-  subject: string;
-  /*
-   * Service metadata
-   */
-  metadata?: Record<string, string>;
-};
-
-export type ServiceInfo = ServiceIdentity & {
-  /**
-   * Description for the service
-   */
-  description: string;
-  /**
-   * Subject where the service can be invoked
-   */
-  subjects: string[];
-  /**
-   * Service metadata
-   */
-  metadata?: Record<string, string>;
-};
-
-export type ServiceConfig = {
-  /**
-   * A type for a service
-   */
-  name: string;
-  /**
-   * A version identifier for the service
-   */
-  version: string;
-  /**
-   * Description for the service
-   */
-  description?: string;
-  /**
-   * A customized handler for the stats of an endpoint. The
-   * data returned by the endpoint will be serialized as is
-   * @param endpoint
-   */
-  statsHandler?: (
-    endpoint: Endpoint,
-  ) => Promise<unknown | null>;
-
-  /**
-   * Optional metadata about the service
-   */
-  metadata?: Record<string, string>;
-};
-
-export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
-
-/**
- * A service Endpoint
- */
-export type Endpoint = {
-  /**
-   * Subject where the endpoint listens
-   */
-  subject: string;
-  /**
-   * An optional handler - if not set the service is an iterator
-   * @param err
-   * @param msg
-   */
-  handler?: ServiceHandler;
-  /**
-   * Optional metadata about the endpoint
-   */
-  metadata?: Record<string, string>;
-};
-
-export type EndpointOptions = Partial<Endpoint>;
-
-/**
- * The stats of a service
- */
-export type ServiceStats = ServiceIdentity & EndpointStats;
-
 type NamedEndpoint = {
   name: string;
 } & Endpoint;
@@ -431,26 +202,6 @@ type ServiceSubscription<T = unknown> =
     stats: NamedEndpointStatsImpl;
     metadata?: Record<string, string>;
   };
-
-export class ServiceError extends Error {
-  code: number;
-  constructor(code: number, message: string) {
-    super(message);
-    this.code = code;
-  }
-  static isServiceError(msg: Msg): boolean {
-    return ServiceError.toServiceError(msg) !== null;
-  }
-  static toServiceError(msg: Msg): ServiceError | null {
-    const scode = msg?.headers?.get(ServiceErrorCodeHeader) || "";
-    if (scode !== "") {
-      const code = parseInt(scode) || 400;
-      const description = msg?.headers?.get(ServiceErrorHeader) || "";
-      return new ServiceError(code, description.length ? description : scode);
-    }
-    return null;
-  }
-}
 
 export class ServiceImpl implements Service {
   nc: NatsConnection;
@@ -571,7 +322,6 @@ export class ServiceImpl implements Service {
       this.internal.push(sv);
     }
     sv.stats = new NamedEndpointStatsImpl(name, subject);
-    sv.stats.metadata = h.metadata;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -622,9 +372,16 @@ export class ServiceImpl implements Service {
       id: this.id,
       version: this.version,
       description: this.description,
-      subjects: this.subjects,
       metadata: this.metadata,
+      endpoints: this.endpoints(),
     } as ServiceInfo;
+  }
+
+  endpoints(): EndpointInfo[] {
+    return this.handlers.map((v) => {
+      const { subject, metadata, name } = v;
+      return { subject, metadata, name };
+    });
   }
 
   async stats(): Promise<ServiceStats> {
@@ -872,7 +629,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     } = this;
     return {
       name,
@@ -883,7 +639,6 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
-      metadata,
     };
   }
 

@@ -1,14 +1,15 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.177.0/flags/mod.ts";
+import { parse } from "https://deno.land/std@0.190.0/flags/mod.ts";
 import {
   connect,
   ConnectionOptions,
   credsAuthenticator,
+  headers,
+  MsgHdrs,
   StringCodec,
 } from "../src/mod.ts";
-import { headers, MsgHdrs } from "../nats-base-client/mod.ts";
-import { delay } from "../nats-base-client/internal_mod.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 const argv = parse(
   Deno.args,

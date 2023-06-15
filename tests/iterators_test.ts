@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 import { connect, createInbox, ErrorCode } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { cleanup, setup } from "./jstest_util.ts";
+import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const { ns, nc } = await setup();
