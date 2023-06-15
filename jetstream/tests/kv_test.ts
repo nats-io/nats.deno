@@ -42,6 +42,7 @@ import {
   assert,
   assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertRejects,
   assertThrows,
 } from "https://deno.land/std@0.190.0/testing/asserts.ts";
@@ -1741,5 +1742,28 @@ Deno.test("kv - create after delete", async () => {
   await kv.create("a", Empty);
   await kv.purge("a");
   await kv.create("a", Empty);
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - string payloads", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+  await kv.create("a", "b");
+  let entry = await kv.get("a");
+  assertExists(entry);
+  assertEquals(entry?.string(), "b");
+
+  await kv.put("a", "c");
+  entry = await kv.get("a");
+  assertExists(entry);
+  assertEquals(entry?.string(), "c");
+
+  await kv.update("a", "d", entry!.revision);
+  entry = await kv.get("a");
+  assertExists(entry);
+  assertEquals(entry?.string(), "d");
+
   await cleanup(ns, nc);
 });

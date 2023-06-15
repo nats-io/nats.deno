@@ -17,6 +17,7 @@ import {
   MsgHdrs,
   NatsConnection,
   NatsError,
+  Payload,
 } from "../nats-base-client/core.ts";
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
@@ -435,7 +436,7 @@ export class Bucket implements KV, KvRemove {
     return new KvJsMsgEntryImpl(this.bucket, key, jm);
   }
 
-  async create(k: string, data: Uint8Array): Promise<number> {
+  async create(k: string, data: Payload): Promise<number> {
     let firstErr;
     try {
       const n = await this.put(k, data, { previousSeq: 0 });
@@ -460,7 +461,7 @@ export class Bucket implements KV, KvRemove {
     }
   }
 
-  update(k: string, data: Uint8Array, version: number): Promise<number> {
+  update(k: string, data: Payload, version: number): Promise<number> {
     if (version <= 0) {
       throw new Error("version must be greater than 0");
     }
@@ -469,7 +470,7 @@ export class Bucket implements KV, KvRemove {
 
   async put(
     k: string,
-    data: Uint8Array,
+    data: Payload,
     opts: Partial<KvPutOptions> = {},
   ): Promise<number> {
     const ek = this.encodeKey(k);

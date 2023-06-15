@@ -1132,7 +1132,7 @@ export interface KV extends RoKV {
    * @param k
    * @param data
    */
-  create(k: string, data: Uint8Array): Promise<number>;
+  create(k: string, data: Payload): Promise<number>;
 
   /**
    * Updates the existing entry provided that the previous sequence
@@ -1142,7 +1142,7 @@ export interface KV extends RoKV {
    * @param data
    * @param version
    */
-  update(k: string, data: Uint8Array, version: number): Promise<number>;
+  update(k: string, data: Payload, version: number): Promise<number>;
 
   /**
    * Sets or updates the value stored under the specified key.
@@ -1152,7 +1152,7 @@ export interface KV extends RoKV {
    */
   put(
     k: string,
-    data: Uint8Array,
+    data: Payload,
     opts?: Partial<KvPutOptions>,
   ): Promise<number>;
 
