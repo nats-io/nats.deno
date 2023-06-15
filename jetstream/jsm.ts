@@ -25,7 +25,6 @@ import {
   DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
-  ReviverFn,
   StoredMsg,
   StreamAPI,
 } from "./types.ts";
@@ -34,6 +33,7 @@ import {
   Msg,
   MsgHdrs,
   NatsConnection,
+  ReviverFn,
 } from "../nats-base-client/core.ts";
 import {
   AccountInfoResponse,

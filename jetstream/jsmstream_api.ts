@@ -29,13 +29,16 @@ import {
   kvPrefix,
   KvStatus,
   ObjectStoreStatus,
-  ReviverFn,
   StoredMsg,
   Stream,
   StreamAPI,
   Streams,
 } from "./types.ts";
-import { JetStreamOptions, NatsConnection } from "../nats-base-client/core.ts";
+import {
+  JetStreamOptions,
+  NatsConnection,
+  ReviverFn,
+} from "../nats-base-client/core.ts";
 import {
   ApiPagedRequest,
   ExternalStream,

@@ -13,11 +13,7 @@
  * limitations under the License.
  */
 
-import {
-  JetStreamClient,
-  JetStreamManager,
-  ReviverFn,
-} from "../jetstream/types.ts";
+import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
 import { nuid } from "./nuid.ts";
 
 /**
@@ -648,6 +644,12 @@ export interface NatsConnection {
 
   services: ServicesAPI;
 }
+
+/**
+ * A reviver function
+ */
+//deno-lint-ignore no-explicit-any
+export type ReviverFn = (key: string, value: any) => any;
 
 /**
  * Represents a message delivered by NATS. This interface is used by

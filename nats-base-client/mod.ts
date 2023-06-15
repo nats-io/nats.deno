@@ -61,6 +61,7 @@ export type {
   QueuedIterator,
   RequestManyOptions,
   RequestOptions,
+  ReviverFn,
   ServerInfo,
   ServersChanged,
   Service,
