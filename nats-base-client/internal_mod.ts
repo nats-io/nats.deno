@@ -111,6 +111,7 @@ export type {
   ServiceHandler,
   ServiceIdentity,
   ServiceInfo,
+  ServiceMetadata,
   ServiceMsg,
   ServiceResponse,
   ServicesAPI,
