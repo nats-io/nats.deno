@@ -31,12 +31,15 @@ export {
 
 export type {
   Advisory,
+  Closed,
   ConsumerInfoable,
   ConsumerOpts,
   ConsumerOptsBuilder,
+  Consumers,
   Destroyable,
   JetStreamClient,
   JetStreamManager,
+  JetStreamOptions,
   JetStreamPublishOptions,
   JetStreamPullSubscription,
   JetStreamSubscription,
@@ -64,7 +67,9 @@ export type {
   Pullable,
   RoKV,
   StoredMsg,
+  Stream,
   StreamAPI,
+  Streams,
   Views,
 } from "./types.ts";
 
@@ -102,6 +107,7 @@ export type {
   StreamSourceInfo,
   StreamState,
   StreamUpdateConfig,
+  SubjectTransformConfig,
 } from "./jsapi_types.ts";
 
 export type { JsMsg } from "./jsmsg.ts";
@@ -119,5 +125,24 @@ export {
 export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
 
-export type { Consumer, ConsumerMessages } from "./consumer.ts";
-export { ConsumerEvents } from "./consumer.ts";
+export type {
+  ConsumeBytes,
+  ConsumeCallback,
+  ConsumeMessages,
+  ConsumeOptions,
+  Consumer,
+  ConsumerCallbackFn,
+  ConsumerMessages,
+  ConsumerStatus,
+  Expires,
+  FetchBytes,
+  FetchMessages,
+  FetchOptions,
+  IdleHeartbeat,
+  MaxBytes,
+  MaxMessages,
+  OrderedConsumerOptions,
+  ThresholdBytes,
+  ThresholdMessages,
+} from "./consumer.ts";
+export { ConsumerDebugEvents, ConsumerEvents } from "./consumer.ts";

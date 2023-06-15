@@ -24,6 +24,9 @@ import {
   ReviverFn,
   Sub,
 } from "../nats-base-client/core.ts";
+
+export type { JetStreamOptions } from "../nats-base-client/core.ts";
+
 import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
 import {
   AckPolicy,

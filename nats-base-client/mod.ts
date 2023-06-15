@@ -32,6 +32,7 @@ export {
 } from "./internal_mod.ts";
 
 export type {
+  ApiError,
   Auth,
   Authenticator,
   BenchOpts,
