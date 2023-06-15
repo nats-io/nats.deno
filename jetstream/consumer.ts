@@ -98,7 +98,7 @@ export type ThresholdMessages = {
   /**
    * Threshold message count on which the client will auto-trigger additional requests
    * from the server. This is only applicable to `consume`.
-   * @default  75% of {@link max_messages}.
+   * @default  75% of {@link MaxMessages}.
    */
   threshold_messages?: number;
 };
@@ -106,7 +106,7 @@ export type ThresholdBytes = {
   /**
    * Threshold bytes on which the client wil auto-trigger additional message requests
    * from the server. This is only applicable to `consume`.
-   * @default 75% of {@link max_bytes}.
+   * @default 75% of {@link MaxBytes}.
    */
   threshold_bytes?: number;
 };
