@@ -263,6 +263,9 @@ export class Bucket implements KV, KvRemove {
     } else {
       sc.subjects = [this.subjectForBucket()];
     }
+    if (opts.metadata) {
+      sc.metadata = opts.metadata;
+    }
 
     const nci = (this.js as unknown as { nc: NatsConnectionImpl }).nc;
     const have = nci.getServerVersion();
@@ -916,6 +919,10 @@ export class KvStatusImpl implements KvStatus {
 
   get size(): number {
     return this.si.state.bytes;
+  }
+
+  get metadata(): Record<string, string> | undefined {
+    return this.si.config.metadata;
   }
 }
 

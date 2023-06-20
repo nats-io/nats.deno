@@ -1030,6 +1030,12 @@ export interface KvStatus extends KvLimits {
    * Size of the bucket in bytes
    */
   size: number;
+  /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 export interface KvOptions extends KvLimits {
@@ -1055,6 +1061,12 @@ export interface KvOptions extends KvLimits {
    * but has the possibility of inconsistency during a read.
    */
   allow_direct: boolean;
+  /**
+   * Metadata field to store additional information about the kv. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 /**
