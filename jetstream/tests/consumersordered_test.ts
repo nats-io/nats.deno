@@ -653,3 +653,18 @@ Deno.test("ordered - consume drain", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("ordered - headers only", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const oc = await js.consumers.get("test", { headers_only: true });
+  const ci = await oc.info();
+  assertExists(ci);
+  assertEquals(ci.config.headers_only, true);
+
+  await cleanup(ns, nc);
+});

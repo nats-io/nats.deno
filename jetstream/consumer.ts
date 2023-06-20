@@ -770,6 +770,7 @@ export type OrderedConsumerOptions = {
   opt_start_time: string;
   replay_policy: ReplayPolicy;
   inactive_threshold: number;
+  headers_only: boolean;
 };
 
 export class OrderedPullConsumerImpl implements Consumer {
@@ -823,6 +824,9 @@ export class OrderedPullConsumerImpl implements Consumer {
       num_replicas: 1,
     } as ConsumerConfig;
 
+    if (this.consumerOpts.headers_only === true) {
+      config.headers_only = true;
+    }
     if (Array.isArray(this.consumerOpts.filterSubjects)) {
       config.filter_subjects = this.consumerOpts.filterSubjects;
     }
