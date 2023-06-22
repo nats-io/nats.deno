@@ -452,6 +452,10 @@ export class NatsConnectionImpl implements NatsConnection {
 
   status(): AsyncIterable<Status> {
     const iter = new QueuedIteratorImpl<Status>();
+    iter.iterClosed.then(() => {
+      const idx = this.listeners.indexOf(iter);
+      this.listeners.splice(idx, 1);
+    });
     this.listeners.push(iter);
     return iter;
   }

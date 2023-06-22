@@ -23,6 +23,7 @@ import {
   MsgHdrs,
   NatsError,
   QueuedIterator,
+  Status,
   Subscription,
 } from "../nats-base-client/core.ts";
 import * as core from "../nats-base-client/idleheartbeat.ts";
@@ -228,6 +229,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   timeout: Timeout<unknown> | null;
   cleanupHandler?: () => void;
   listeners: QueuedIterator<ConsumerStatus>[];
+  statusIterator?: QueuedIteratorImpl<Status>;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -400,7 +402,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     // now if we disconnect, the consumer could be gone
     // or we were slow consumer'ed by the server
     (async () => {
-      for await (const s of c.api.nc.status()) {
+      const status = c.api.nc.status();
+      this.statusIterator = status as QueuedIteratorImpl<Status>;
+      for await (const s of status) {
         switch (s.type) {
           case Events.Disconnect:
             // don't spam hb errors if we are disconnected
@@ -552,6 +556,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   stop(err?: Error) {
     this.sub?.unsubscribe();
     this.clearTimers();
+    this.statusIterator?.stop();
     //@ts-ignore: fn
     this._push(() => {
       super.stop(err);
@@ -770,6 +775,7 @@ export type OrderedConsumerOptions = {
   opt_start_time: string;
   replay_policy: ReplayPolicy;
   inactive_threshold: number;
+  headers_only: boolean;
 };
 
 export class OrderedPullConsumerImpl implements Consumer {
@@ -823,6 +829,9 @@ export class OrderedPullConsumerImpl implements Consumer {
       num_replicas: 1,
     } as ConsumerConfig;
 
+    if (this.consumerOpts.headers_only === true) {
+      config.headers_only = true;
+    }
     if (Array.isArray(this.consumerOpts.filterSubjects)) {
       config.filter_subjects = this.consumerOpts.filterSubjects;
     }
