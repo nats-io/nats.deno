@@ -921,7 +921,7 @@ export class KvStatusImpl implements KvStatus {
     return this.si.state.bytes;
   }
 
-  get metadata(): Record<string, string> | undefined {
+  get metadata(): Record<string, string> {
     return this.si.config.metadata;
   }
 }
