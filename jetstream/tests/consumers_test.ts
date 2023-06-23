@@ -29,6 +29,7 @@ import {
   AckPolicy,
   Consumer,
   ConsumerMessages,
+  DeliverPolicy,
   nanos,
   PubAck,
   PullOptions,
@@ -48,7 +49,7 @@ import {
   ConsumerStatus,
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
-import { deadline } from "../../nats-base-client/util.ts";
+import { deadline, delay } from "../../nats-base-client/util.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
@@ -940,6 +941,82 @@ Deno.test("consumers - consume drain", async () => {
   })().then();
 
   await deadline(done, 1000);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - fetch listener leaks", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "myconsumer",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const nci = nc as NatsConnectionImpl;
+  const base = nci.protocol.listeners.length;
+
+  const consumer = await js.consumers.get("messages", "myconsumer");
+
+  let done = false;
+  while (!done) {
+    const iter = await consumer.fetch({
+      max_messages: 1,
+    }) as PullConsumerMessagesImpl;
+    for await (const m of iter) {
+      assertEquals(nci.protocol.listeners.length, base);
+      m?.nak();
+      if (m.info.redeliveryCount > 100) {
+        done = true;
+      }
+    }
+  }
+
+  assertEquals(nci.protocol.listeners.length, base);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - next listener leaks", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "myconsumer",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const nci = nc as NatsConnectionImpl;
+  const base = nci.protocol.listeners.length;
+
+  const consumer = await js.consumers.get("messages", "myconsumer");
+
+  let done = false;
+  while (true) {
+    const m = await consumer.next();
+    if (m) {
+      m.nak();
+      if (m.info?.redeliveryCount > 100) {
+        break;
+      }
+    }
+  }
+  assertEquals(nci.protocol.listeners.length, base);
 
   await cleanup(ns, nc);
 });
