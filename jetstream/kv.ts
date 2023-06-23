@@ -922,7 +922,7 @@ export class KvStatusImpl implements KvStatus {
   }
 
   get metadata(): Record<string, string> {
-    return this.si.config.metadata;
+    return this.si.config.metadata ?? {};
   }
 }
 
