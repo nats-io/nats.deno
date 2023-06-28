@@ -592,9 +592,16 @@ export interface PurgeResponse extends Success {
   purged: number;
 }
 
+export enum ConsumerApiAction {
+  CreateOrUpdate = "",
+  Update = "update",
+  Create = "create",
+}
+
 export interface CreateConsumerRequest {
   "stream_name": string;
   config: Partial<ConsumerConfig>;
+  action?: ConsumerApiAction;
 }
 
 export interface StreamMsgResponse extends ApiResponse {

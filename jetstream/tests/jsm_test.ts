@@ -72,6 +72,8 @@ import {
 import { JetStreamManagerImpl } from "../jsm.ts";
 import { Feature } from "../../nats-base-client/semver.ts";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
+import { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
+import { ConsumerApiAction } from "../jsapi_types.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -2160,6 +2162,46 @@ Deno.test("jsm - stream/consumer metadata", async () => {
     },
     Error,
     "consumer 'metadata' requires server 2.10.0",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - consumer api action", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "stream", subjects: ["a"] });
+
+  const config = {
+    ack_policy: AckPolicy.Explicit,
+    durable_name: "hello",
+  } as ConsumerConfig;
+
+  // testing the app, consumer update does an info
+  // so testing the underlying API
+  const api = jsm.consumers as ConsumerAPIImpl;
+  await assertRejects(
+    async () => {
+      await api.add("stream", config, ConsumerApiAction.Update);
+    },
+    Error,
+    "server PR is broken",
+  );
+
+  await api.add("stream", config);
+
+  // this should fail if options on the consumer changed
+  config.inactive_threshold = nanos(60 * 1000);
+  await assertRejects(
+    async () => {
+      await api.add("stream", config, ConsumerApiAction.Create);
+    },
+    Error,
+    "server PR is broken",
   );
 
   await cleanup(ns, nc);

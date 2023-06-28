@@ -23,6 +23,7 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { JetStreamOptions, NatsConnection } from "../nats-base-client/core.ts";
 import {
+  ConsumerApiAction,
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
@@ -81,6 +82,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   async add(
     stream: string,
     cfg: ConsumerConfig,
+    action = ConsumerApiAction.Create,
   ): Promise<ConsumerInfo> {
     validateStreamName(stream);
 
@@ -98,6 +100,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     const cr = {} as CreateConsumerRequest;
     cr.config = cfg;
     cr.stream_name = stream;
+    cr.action = action;
 
     if (cr.config.durable_name) {
       validateDurableName(cr.config.durable_name);
@@ -153,6 +156,8 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
         ? `${this.prefix}.CONSUMER.DURABLE.CREATE.${stream}.${cfg.durable_name}`
         : `${this.prefix}.CONSUMER.CREATE.${stream}`;
     }
+
+    console.log(cr);
     const r = await this._request(subj, cr);
     return r as ConsumerInfo;
   }
@@ -164,7 +169,11 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
   ): Promise<ConsumerInfo> {
     const ci = await this.info(stream, durable);
     const changable = cfg as ConsumerConfig;
-    return this.add(stream, Object.assign(ci.config, changable));
+    return this.add(
+      stream,
+      Object.assign(ci.config, changable),
+      ConsumerApiAction.Update,
+    );
   }
 
   async info(stream: string, name: string): Promise<ConsumerInfo> {
