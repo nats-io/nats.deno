@@ -895,6 +895,10 @@ export enum JsHeaders {
   RollupValueSubject = "sub",
   // value for rollup header when rolling up all subjects
   RollupValueAll = "all",
+
+  PendingMessagesHdr = "Nats-Pending-Messages",
+
+  PendingBytesHdr = "Nats-Pending-Bytes",
 }
 
 export interface KvEntry {

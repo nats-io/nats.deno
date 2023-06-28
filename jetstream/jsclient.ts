@@ -95,7 +95,7 @@ import {
   ReplayPolicy,
 } from "./jsapi_types.ts";
 
-enum PubHeaders {
+export enum PubHeaders {
   MsgIdHdr = "Nats-Msg-Id",
   ExpectedStreamHdr = "Nats-Expected-Stream",
   ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",

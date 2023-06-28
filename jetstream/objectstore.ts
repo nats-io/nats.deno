@@ -53,6 +53,7 @@ import {
   StreamInfoRequestOptions,
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
+import { PubHeaders } from "./jsclient.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -386,7 +387,10 @@ export class ObjectStoreImpl implements ObjectStore {
           // trailing md for the object
           const h = headers();
           if (typeof previousRevision === "number") {
-            h.set("Nats-Expected-Last-Subject-Sequence", `${previousRevision}`);
+            h.set(
+              PubHeaders.ExpectedLastSubjectSequenceHdr,
+              `${previousRevision}`,
+            );
           }
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
 
