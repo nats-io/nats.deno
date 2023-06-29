@@ -2189,7 +2189,7 @@ Deno.test("jsm - consumer api action", async () => {
       await api.add("stream", config, ConsumerApiAction.Update);
     },
     Error,
-    "server PR is broken",
+    "consumer does not exist",
   );
 
   await api.add("stream", config);
@@ -2201,7 +2201,7 @@ Deno.test("jsm - consumer api action", async () => {
       await api.add("stream", config, ConsumerApiAction.Create);
     },
     Error,
-    "server PR is broken",
+    "consumer already exists",
   );
 
   await cleanup(ns, nc);
