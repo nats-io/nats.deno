@@ -768,6 +768,10 @@ export class PullConsumerImpl implements Consumer {
   }
 }
 
+/**
+ * These options are a subset of {@link ConsumerConfig} and
+ * {@link ConsumerUpdateConfig}
+ */
 export type OrderedConsumerOptions = {
   filterSubjects: string[] | string;
   deliver_policy: DeliverPolicy;
