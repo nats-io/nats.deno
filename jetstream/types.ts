@@ -455,7 +455,8 @@ export interface Consumers {
    *
    * {@link Consumer}.
    * @param stream
-   * @param name or OrderedConsumer options - if not specified an ordered consumer is returned.
+   * @param name or OrderedConsumerOptions - if not specified an ordered consumer is created
+   *  with the specified options.
    */
   get(
     stream: string,
