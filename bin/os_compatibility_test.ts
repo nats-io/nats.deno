@@ -17,7 +17,6 @@ import { connect, millis, Msg } from "../src/mod.ts";
 
 const nc = await connect({ servers: "demo.nats.io" });
 const js = nc.jetstream();
-const jsm = await js.jetstreamManager();
 
 const sub = nc.subscribe("tests.object_store.>");
 
@@ -39,7 +38,7 @@ const customized = async function (m: Msg): Promise<void> {
 const entry = async function (m: Msg): Promise<void> {
   const t = m.json<{
     bucket: string;
-    config: { description: string; link: null; name: string };
+    config: { description: string; name: string };
     url: string;
   }>();
 
@@ -55,22 +54,25 @@ const entry = async function (m: Msg): Promise<void> {
   m.respond();
 };
 
+const done = async function (_: Msg): Promise<void> {
+  console.log("object store test done");
+};
+
 const opts = [
   create,
   customized,
   entry,
+  done,
 ];
 
 let i = 0;
 for await (const m of sub) {
-  const r = m.json<{ bucket: string }>();
-  // if (r.bucket) {
-  //   try {
-  //     await jsm.streams.delete(`OBJ_${r.bucket as string}`);
-  //   } catch (err) {
-  //     // ignore
-  //   }
-  // }
-  console.log(r);
+  if (m.headers) {
+    for (const [key, value] of m.headers) {
+      console.log(`${key}=${value}`);
+    }
+    throw new Error(`object store failed`);
+  }
+  console.log(m);
   await opts[i++](m);
 }
