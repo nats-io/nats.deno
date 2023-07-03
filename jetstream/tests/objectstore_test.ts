@@ -29,7 +29,7 @@ import {
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
-import { Empty, headers, StringCodec } from "../../src/mod.ts";
+import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.190.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
@@ -316,13 +316,8 @@ Deno.test("objectstore - object names", async () => {
   await os.put({ name: "blob.txt" }, readableStreamFrom(sc.encode("A")));
   await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
   await os.put({ name: " " }, readableStreamFrom(sc.encode("A")));
-
-  await assertRejects(async () => {
-    await os.put({ name: "*" }, readableStreamFrom(sc.encode("A")));
-  });
-  await assertRejects(async () => {
-    await os.put({ name: ">" }, readableStreamFrom(sc.encode("A")));
-  });
+  await os.put({ name: "*" }, readableStreamFrom(sc.encode("A")));
+  await os.put({ name: ">" }, readableStreamFrom(sc.encode("A")));
   await assertRejects(async () => {
     await os.put({ name: "" }, readableStreamFrom(sc.encode("A")));
   });
@@ -679,13 +674,13 @@ Deno.test("objectstore - sanitize", async () => {
   });
   assertEquals(
     info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has_dots_here")}`],
+      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has.dots.here")}`],
     1,
   );
   assertEquals(
     info.streamInfo.state
       .subjects![
-        `$O.test.M.${Base64UrlPaddedCodec.encode("the_spaces_are_here")}`
+        `$O.test.M.${Base64UrlPaddedCodec.encode("the spaces are here")}`
       ],
     1,
   );
@@ -1013,6 +1008,33 @@ Deno.test("objectstore - put/get blob", async () => {
   assertExists(bg);
   assertEquals(bg.length, payload.length);
   assertEquals(bg, payload);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - ttl", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const ttl = nanos(60 * 1000);
+  const os = await js.views.os("OBJS", { ttl });
+  const status = await os.status();
+  assertEquals(status.ttl, ttl);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - allow direct", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS");
+  const status = await os.status();
+  assertEquals(status.streamInfo.config.allow_direct, true);
 
   await cleanup(ns, nc);
 });
