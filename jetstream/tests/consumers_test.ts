@@ -1006,7 +1006,6 @@ Deno.test("consumers - next listener leaks", async () => {
 
   const consumer = await js.consumers.get("messages", "myconsumer");
 
-  let done = false;
   while (true) {
     const m = await consumer.next();
     if (m) {
