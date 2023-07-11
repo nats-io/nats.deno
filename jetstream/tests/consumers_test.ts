@@ -49,7 +49,7 @@ import {
   ConsumerStatus,
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
-import { deadline, delay } from "../../nats-base-client/util.ts";
+import { deadline } from "../../nats-base-client/util.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));

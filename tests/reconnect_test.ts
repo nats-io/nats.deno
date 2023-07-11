@@ -34,7 +34,6 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./helpers/mod.ts";
 import { deadline } from "https://deno.land/std@0.190.0/async/deadline.ts";
-import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
@@ -337,7 +336,7 @@ Deno.test("reconnect - close stops reconnects", async () => {
 Deno.test("reconnect - stale connections don't close", async () => {
   const listener = Deno.listen({ port: 0, transport: "tcp" });
   const { port } = listener.addr as Deno.NetAddr;
-  const connections: Conn[] = [];
+  const connections: Deno.Conn[] = [];
 
   const TE = new TextEncoder();
   const INFO = TE.encode(
@@ -353,7 +352,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const CONNECT = { re: /^CONNECT\s+([^\r\n]+)\r\n/im, out: TE.encode("") };
   const CMDS = [PING, CONNECT];
 
-  const startReading = (conn: Conn) => {
+  const startReading = (conn: Deno.Conn) => {
     const buf = new Uint8Array(1024 * 8);
     const inbound = new DataBuffer();
     (async () => {
