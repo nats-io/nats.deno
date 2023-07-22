@@ -369,7 +369,7 @@ Note that it is possible to do an automatic version of `next()` by simply
 setting the maximum number of messages to buffer to `1`:
 
 ```typescript
-const msgs = await c.consume({ max_messages: 1 });
+const messages = await c.consume({ max_messages: 1 });
 for await (const m of messages) {
   console.log(m.seq);
   m.ack();
