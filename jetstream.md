@@ -187,7 +187,7 @@ messages:
 
 In NATS core, you are presented with a message whenever a message is published
 to a subject that you have subscribed to. When you process a stream you can
-filter messages found ton a stream to those matching subjects that interest you,
+filter messages found on a stream to those matching subjects that interest you,
 but the rate of delivery can be much higher, as the stream could store many more
 messages that match your consumer than you would normally receive in a core NATS
 subscription. When processing a stream, you can simulate the original rate at
