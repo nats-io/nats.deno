@@ -896,6 +896,8 @@ export class OrderedPullConsumerImpl implements Consumer {
     // reset the consumer sequence as JetStream will renumber from 1
     this.cursor.deliver_seq = 0;
     const config = this.getConsumerOpts(seq);
+    config.max_deliver = 1;
+    config.mem_storage = true;
     let ci;
     // FIXME: replace with general jetstream retry logic
     while (true) {
