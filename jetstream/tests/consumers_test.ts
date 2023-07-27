@@ -144,8 +144,11 @@ Deno.test("consumers - info", async () => {
   const c = await js.consumers.get(stream, "b");
   // retrieve the cached consumer - no messages
   const cached = await c.info(false);
+  cached.ts = "";
   assertEquals(cached.num_pending, 0);
-  assertEquals(await jsm.consumers.info(stream, "b"), cached);
+  const updated = await jsm.consumers.info(stream, "b");
+  updated.ts = "";
+  assertEquals(updated, cached);
 
   // add a message, retrieve the cached one - still not updated
   await js.publish(subj);

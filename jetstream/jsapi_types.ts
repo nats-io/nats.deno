@@ -84,6 +84,11 @@ export interface StreamInfo extends ApiPaged {
    * closer and faster to access.
    */
   alternates?: StreamAlternate[];
+  /**
+   * The ISO timestamp when the StreamInfo was generated. This field is only available
+   * on servers 2.10.x or better
+   */
+  "ts"?: string;
 }
 
 export interface SubjectTransformConfig {
@@ -125,6 +130,13 @@ export interface StreamConfig extends StreamUpdateConfig {
    * Can only be set on already created streams via the Update API
    */
   sealed: boolean;
+
+  /**
+   * Sets the first sequence number used by the stream. This property can only be
+   * specified when creating the stream, and likely is not valid on mirrors etc,
+   * as it may disrupt the synchronization logic.
+   */
+  "first_seq": number;
 }
 
 /**
@@ -623,9 +635,9 @@ export interface ConsumerInfo {
    */
   name: string;
   /**
-   * The time the Consumer was created
+   * The ISO timestamp when the Consumer was created
    */
-  created: Nanos;
+  created: string;
   /**
    * The consumer configuration
    */
@@ -663,6 +675,11 @@ export interface ConsumerInfo {
    * Indicates if any client is connected and receiving messages from a push consumer
    */
   "push_bound": boolean;
+  /**
+   * The ISO timestamp when the ConsumerInfo was generated. This field is only available
+   * on servers 2.10.x or better
+   */
+  "ts"?: string;
 }
 
 export interface ConsumerListResponse extends ApiResponse, ApiPaged {

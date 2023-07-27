@@ -47,6 +47,7 @@ export enum Feature {
   JS_SIMPLIFICATION = "js_simplification",
   JS_STREAM_CONSUMER_METADATA = "js_stream_consumer_metadata",
   JS_CONSUMER_FILTER_SUBJECTS = "js_consumer_filter_subjects",
+  JS_STREAM_FIRST_SEQ = "js_stream_first_seq",
 }
 
 type FeatureVersion = {
@@ -99,6 +100,7 @@ export class Features {
     this.set(Feature.JS_SIMPLIFICATION, "2.9.4");
     this.set(Feature.JS_STREAM_CONSUMER_METADATA, "2.10.0");
     this.set(Feature.JS_CONSUMER_FILTER_SUBJECTS, "2.10.0");
+    this.set(Feature.JS_STREAM_FIRST_SEQ, "2.10.0");
 
     this.disabled.forEach((f) => {
       this.features.delete(f);

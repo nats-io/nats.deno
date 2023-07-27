@@ -231,6 +231,12 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
         throw new Error(`stream 'metadata' requires server ${min}`);
       }
     }
+    if (cfg.first_seq) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_FIRST_SEQ);
+      if (!ok) {
+        throw new Error(`stream 'first_seq' requires server ${min}`);
+      }
+    }
     validateStreamName(cfg.name);
     cfg.mirror = convertStreamSourceDomain(cfg.mirror);
     //@ts-ignore: the sources are either set or not - so no item should be undefined in the list
