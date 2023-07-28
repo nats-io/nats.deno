@@ -397,6 +397,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   server!: ServerImpl;
   features: Features;
   flusher?: unknown;
+  connectPromise: Promise<void> | null;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
     this._closed = false;
@@ -421,6 +422,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
     this.features = new Features({ major: 0, minor: 0, micro: 0 });
     this.flusher = null;
+    this.connectPromise = null;
 
     const servers = typeof options.servers === "string"
       ? [options.servers]
@@ -602,6 +604,19 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   async dialLoop(): Promise<void> {
+    if (this.connectPromise === null) {
+      this.connectPromise = this.dodialLoop();
+      this.connectPromise
+        .then(() => {})
+        .catch(() => {})
+        .finally(() => {
+          this.connectPromise = null;
+        });
+    }
+    return this.connectPromise;
+  }
+
+  async dodialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
       if (this._closed) {
@@ -676,6 +691,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationExpired);
+    } else if (t.indexOf("authentication timeout") !== -1) {
+      return new NatsError(s, ErrorCode.AuthenticationTimeout);
     } else {
       return new NatsError(s, ErrorCode.ProtocolError);
     }
@@ -726,13 +743,15 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   handleError(err: NatsError) {
-    if (err.isAuthError()) {
-      this.handleAuthError(err);
-    }
-    if (err.isProtocolError()) {
+    if (err.isAuthTimeout()) {
       this.lastError = err;
-    }
-    if (!err.isPermissionError()) {
+    } else if (err.isAuthError()) {
+      this.handleAuthError(err);
+    } else if (err.isProtocolError()) {
+      this.lastError = err;
+    } else if (err.isAuthTimeout()) {
+      this.lastError = err;
+    } else if (!err.isPermissionError()) {
       this.lastError = err;
     }
   }
