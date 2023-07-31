@@ -743,15 +743,15 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   handleError(err: NatsError) {
-    if (err.isAuthTimeout()) {
-      this.lastError = err;
-    } else if (err.isAuthError()) {
+    if (err.isAuthError()) {
       this.handleAuthError(err);
     } else if (err.isProtocolError()) {
       this.lastError = err;
     } else if (err.isAuthTimeout()) {
       this.lastError = err;
-    } else if (!err.isPermissionError()) {
+    }
+    // fallthrough here
+    if (!err.isPermissionError()) {
       this.lastError = err;
     }
   }
