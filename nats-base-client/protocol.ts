@@ -469,6 +469,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   private prepare(): Deferred<void> {
+    if(this.transport) {
+      this.transport.discard();
+    }
     this.info = undefined;
     this.resetOutbound();
 
