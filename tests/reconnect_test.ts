@@ -23,6 +23,7 @@ import {
   ErrorCode,
   Events,
   NatsError,
+  tokenAuthenticator,
 } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
@@ -63,6 +64,7 @@ Deno.test("reconnect - events", async () => {
     waitOnFirstConnect: true,
     reconnectTimeWait: 100,
     maxReconnectAttempts: 10,
+    timeout: 1000,
   });
 
   let disconnects = 0;
@@ -452,6 +454,41 @@ Deno.test("reconnect - protocol errors don't close client", async () => {
 
   const err = await nc.closed();
   assertEquals(err, undefined);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("reconnect - authentication timeout reconnects", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      timeout: 0.001,
+      token: "hello",
+    },
+  });
+
+  let counter = 4;
+  const authenticator = tokenAuthenticator(() => {
+    if (counter-- <= 0) {
+      return "hello";
+    }
+    const start = Date.now();
+    while (true) {
+      if (Date.now() > start + 150) {
+        break;
+      }
+    }
+    return "hello";
+  });
+
+  const nc = await connect({
+    port: ns.port,
+    token: "hello",
+    waitOnFirstConnect: true,
+    timeout: 2000,
+    authenticator,
+  });
+
+  assert(!nc.isClosed());
 
   await cleanup(ns, nc);
 });
