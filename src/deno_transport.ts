@@ -254,7 +254,7 @@ export class DenoTransport implements Transport {
     return this.closedNotification;
   }
 
-  discard () {
+  discard() {
     // ignored - this is not required, as there's no throttling
   }
 }
