@@ -1079,6 +1079,10 @@ export type KvWatchOptions = {
    * @deprecated
    */
   initializedFn?: () => void;
+  /**
+    * Notification should include the last value of all existing keys
+    */
+  includeHistory?: boolean;
 };
 
 export interface RoKV {

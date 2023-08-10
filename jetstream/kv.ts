@@ -711,6 +711,7 @@ export class Bucket implements KV, KvRemove {
       key?: string;
       headers_only?: boolean;
       initializedFn?: () => void;
+      includeHistory?: boolean;
     } = {},
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
@@ -721,7 +722,7 @@ export class Bucket implements KV, KvRemove {
     let fn = opts.initializedFn;
     let count = 0;
 
-    const cc = this._buildCC(k, false, co);
+    const cc = this._buildCC(k, opts.includeHistory, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);
