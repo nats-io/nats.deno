@@ -868,10 +868,13 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.fill(buf, ...payloads);
 
     if (len === 0) {
-      //@ts-ignore: node types timer
-      this.flusher = setTimeout(() => {
-        this.flushPending();
-      });
+      queueMicrotask(() => {
+        this.flushPending()
+      })
+      // //@ts-ignore: node types timer
+      // this.flusher = setTimeout(() => {
+      //   this.flushPending();
+      // });
     } else if (this.outbound.size() >= this.pendingLimit) {
       // if we have a flusher, clear it - otherwise in a bench
       // type scenario where the main loop is dominated by a publisher
