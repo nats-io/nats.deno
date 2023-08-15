@@ -253,6 +253,10 @@ export class DenoTransport implements Transport {
   closed(): Promise<void | Error> {
     return this.closedNotification;
   }
+
+  discard() {
+    // ignored - this is not required, as there's no throttling
+  }
 }
 
 export async function denoResolveHost(s: string): Promise<string[]> {
