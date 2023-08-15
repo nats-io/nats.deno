@@ -604,7 +604,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     throw lastErr;
   }
 
-  async dialLoop(): Promise<void> {
+  dialLoop(): Promise<void> {
     if (this.connectPromise === null) {
       this.connectPromise = this.dodialLoop();
       this.connectPromise
