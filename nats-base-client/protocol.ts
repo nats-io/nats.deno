@@ -396,7 +396,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   servers: Servers;
   server!: ServerImpl;
   features: Features;
-  flusher?: unknown;
+  flusher?: ReturnType<typeof setTimeout> | null;
   connectPromise: Promise<void> | null;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
@@ -606,7 +606,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     throw lastErr;
   }
 
-  async dialLoop(): Promise<void> {
+  dialLoop(): Promise<void> {
     if (this.connectPromise === null) {
       this.connectPromise = this.dodialLoop();
       this.connectPromise
@@ -868,7 +868,6 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.fill(buf, ...payloads);
 
     if (len === 0) {
-      //@ts-ignore: node types timer
       this.flusher = setTimeout(() => {
         this.flushPending();
       });
@@ -876,13 +875,16 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       // if we have a flusher, clear it - otherwise in a bench
       // type scenario where the main loop is dominated by a publisher
       // we create many timers.
-      if (this.flusher) {
-        //@ts-ignore: node types timer
-        clearTimeout(this.flusher);
-        this.flusher = null;
-      }
-      this.flushPending();
+      this.forceFlush();
     }
+  }
+
+  forceFlush() {
+    if (this.flusher) {
+      clearTimeout(this.flusher);
+      this.flusher = null;
+    }
+    this.flushPending();
   }
 
   publish(
@@ -936,6 +938,10 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         proto = `PUB ${subject} ${len}\r\n`;
       }
       this.sendCommand(proto, data, CRLF);
+    }
+
+    if (options.autoFlush === false) {
+      this.forceFlush();
     }
   }
 
@@ -1003,6 +1009,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
     this.pongs.push(p);
     this.sendCommand(PING_CMD);
+    // flush should trigger send immediately
+    this.forceFlush();
     return p;
   }
 

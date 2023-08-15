@@ -405,6 +405,12 @@ export interface RequestOptions {
    * The subject where the response should be sent to. Requires {@link noMux}
    */
   reply?: string;
+  /**
+   * By default, this is set to true, if set to false, the client will perform an
+   * immediate send of the network buffer, this improves latency but reduces throughput,
+   * as more OS calls will be created.
+   */
+  autoFlush?: boolean;
 }
 
 export enum RequestStrategy {
@@ -421,6 +427,12 @@ export interface RequestManyOptions {
   maxMessages?: number;
   noMux?: boolean;
   jitter?: number;
+  /**
+   * By default, this is set to true, if set to false, the client will perform an
+   * immediate send of the network buffer, this improves latency but reduces throughput,
+   * as more OS calls will be created.
+   */
+  autoFlush?: boolean;
 }
 
 export interface Stats {
@@ -784,6 +796,12 @@ export interface PublishOptions {
    * Optional headers to include with the message.
    */
   headers?: MsgHdrs;
+  /**
+   * By default, this is set to true, if set to false, the client will perform an
+   * immediate send of the network buffer, this improves latency but reduces throughput,
+   * as more OS calls will be created.
+   */
+  autoFlush?: boolean;
 }
 
 // JetStream Server Types

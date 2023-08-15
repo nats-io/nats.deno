@@ -34,6 +34,7 @@ import {
   Msg,
   NatsError,
   nuid,
+  RequestStrategy,
   StringCodec,
 } from "../src/mod.ts";
 import {
@@ -51,7 +52,7 @@ import {
   headers,
   isIP,
   NatsConnectionImpl,
-  RequestStrategy,
+  Sub,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { Feature } from "../nats-base-client/semver.ts";
@@ -1359,5 +1360,130 @@ Deno.test("basics - json reviver", async () => {
   assert(d.date instanceof Date);
   assert(typeof d.auth === "string");
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - publish autoflush", async () => {
+  const { ns, nc } = await setup();
+
+  const maxMessages = 5000;
+
+  function t(autoFlush = true): Sub<Msg> {
+    let count = 0;
+    function send() {
+      count++;
+      nc.publish("q", `hello ${count}`, { autoFlush: autoFlush });
+    }
+
+    const sub = nc.subscribe("q", {
+      max: maxMessages,
+      callback: (err, _msg) => {
+        if (!err) send();
+      },
+    });
+    send();
+    return sub;
+  }
+
+  let start = performance.now();
+  let sub = t(true);
+  await sub.closed;
+  const buffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  start = performance.now();
+  sub = t(false);
+  await sub.closed;
+  const unbuffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  assert(buffered > unbuffered, `${buffered} > ${unbuffered}`);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - requests autoflush", async () => {
+  const { ns, nc } = await setup();
+
+  const maxMessages = 5000;
+
+  function t(autoFlush = true): Sub<Msg> {
+    async function send() {
+      for (let i = 0; i < maxMessages; i++) {
+        await nc.request("q", `hello ${i}`, {
+          autoFlush: autoFlush,
+          timeout: 1000,
+        });
+      }
+      sub.unsubscribe();
+    }
+
+    const sub = nc.subscribe("q", {
+      callback: (_err, msg) => {
+        msg?.respond();
+      },
+    });
+    send();
+    return sub;
+  }
+
+  let start = performance.now();
+  let sub = t(true);
+  await sub.closed;
+  const buffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  start = performance.now();
+  sub = t(false);
+  await sub.closed;
+  const unbuffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  assert(buffered > unbuffered, `${buffered} > ${unbuffered}`);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - requestmany autoflush", async () => {
+  const { ns, nc } = await setup();
+
+  const maxMessages = 5000;
+
+  function t(autoFlush = true): Sub<Msg> {
+    async function send() {
+      for (let i = 0; i < maxMessages; i++) {
+        const iter = await nc.requestMany("q", `hello ${i}`, {
+          autoFlush: autoFlush,
+          strategy: RequestStrategy.Count,
+          maxMessages: 1,
+        });
+
+        for await (const _m of iter) {
+          // nothing
+        }
+      }
+      sub.unsubscribe();
+    }
+
+    const sub = nc.subscribe("q", {
+      callback: (_err, msg) => {
+        msg?.respond();
+      },
+    });
+    send();
+    return sub;
+  }
+
+  let start = performance.now();
+  let sub = t(true);
+  await sub.closed;
+  const buffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  start = performance.now();
+  sub = t(false);
+  await sub.closed;
+  const unbuffered = (performance.now() - start) / maxMessages;
+  assertEquals(sub.getProcessed(), maxMessages);
+
+  assert(buffered > unbuffered, `${buffered} > ${unbuffered}`);
   await cleanup(ns, nc);
 });

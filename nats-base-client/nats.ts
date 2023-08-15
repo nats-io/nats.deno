@@ -147,7 +147,7 @@ export class NatsConnectionImpl implements NatsConnection {
     if (max) {
       // we cannot auto-unsub, because we don't know the
       // number of messages we processed vs received
-      // allow the auto-unsub on processMsg to work if they
+      // allow the auto-unsub on processMsg to work if
       // we were called with a new max
       si.max = max + si.received;
     }
@@ -164,7 +164,7 @@ export class NatsConnectionImpl implements NatsConnection {
   requestMany(
     subject: string,
     data: Payload = Empty,
-    opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
+    opts?: RequestManyOptions,
   ): Promise<QueuedIterator<Msg>> {
     try {
       this._check(subject, true, true);
@@ -172,9 +172,14 @@ export class NatsConnectionImpl implements NatsConnection {
       return Promise.reject(err);
     }
 
-    opts.strategy = opts.strategy || RequestStrategy.Timer;
-    opts.maxWait = opts.maxWait || 1000;
-    if (opts.maxWait < 1) {
+    const _opts = Object.assign({
+      strategy: RequestStrategy.Timer,
+      maxWait: 1000,
+      maxMessages: -1,
+      autoFlush: true,
+    }, opts) as RequestManyOptions;
+
+    if (_opts.maxWait < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
     }
 
@@ -197,11 +202,11 @@ export class NatsConnectionImpl implements NatsConnection {
       }
     }
 
-    if (opts.noMux) {
+    if (_opts.noMux) {
       // we setup a subscription and manage it
       const stack = new Error().stack;
-      let max = typeof opts.maxMessages === "number" && opts.maxMessages > 0
-        ? opts.maxMessages
+      let max = typeof _opts.maxMessages === "number" && _opts.maxMessages > 0
+        ? _opts.maxMessages
         : -1;
 
       const sub = this.subscribe(createInbox(this.options.inboxPrefix), {
@@ -223,19 +228,19 @@ export class NatsConnectionImpl implements NatsConnection {
           // push the message
           callback(null, msg);
           // see if the m request is completed
-          if (opts.strategy === RequestStrategy.Count) {
+          if (_opts.strategy === RequestStrategy.Count) {
             max--;
             if (max === 0) {
               cancel();
             }
           }
-          if (opts.strategy === RequestStrategy.JitterTimer) {
+          if (_opts.strategy === RequestStrategy.JitterTimer) {
             clearTimers();
             timer = setTimeout(() => {
               cancel();
             }, 300);
           }
-          if (opts.strategy === RequestStrategy.SentinelMsg) {
+          if (_opts.strategy === RequestStrategy.SentinelMsg) {
             if (msg && msg.data.length === 0) {
               cancel();
             }
@@ -279,14 +284,17 @@ export class NatsConnectionImpl implements NatsConnection {
         });
 
       try {
-        this.publish(subject, data, { reply: sub.getSubject() });
+        this.publish(subject, data, {
+          reply: sub.getSubject(),
+          autoFlush: _opts.autoFlush,
+        });
       } catch (err) {
         cancel(err);
       }
 
       let timer = setTimeout(() => {
         cancel();
-      }, opts.maxWait);
+      }, _opts.maxWait);
 
       const clearTimers = () => {
         if (timer) {
@@ -295,7 +303,7 @@ export class NatsConnectionImpl implements NatsConnection {
       };
     } else {
       // the ingestion is the RequestMany
-      const rmo = opts as RequestManyOptionsInternal;
+      const rmo = _opts as RequestManyOptionsInternal;
       rmo.callback = callback;
 
       qi.iterClosed.then(() => {
@@ -313,7 +321,8 @@ export class NatsConnectionImpl implements NatsConnection {
           data,
           {
             reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
-            headers: opts.headers,
+            headers: _opts.headers,
+            autoFlush: _opts.autoFlush,
           },
         );
       } catch (err) {
@@ -327,14 +336,17 @@ export class NatsConnectionImpl implements NatsConnection {
   request(
     subject: string,
     data?: Payload,
-    opts: RequestOptions = { timeout: 1000, noMux: false },
+    opts?: RequestOptions,
   ): Promise<Msg> {
     try {
       this._check(subject, true, true);
     } catch (err) {
       return Promise.reject(err);
     }
-    opts.timeout = opts.timeout || 1000;
+    opts = Object.assign(
+      { timeout: 1000, noMux: false, autoFlush: true },
+      opts,
+    );
     if (opts.timeout < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
     }
@@ -382,6 +394,7 @@ export class NatsConnectionImpl implements NatsConnection {
       this.protocol.publish(subject, data, {
         reply: inbox,
         headers: opts.headers,
+        autoFlush: opts.autoFlush,
       });
       return d;
     } else {
@@ -395,6 +408,7 @@ export class NatsConnectionImpl implements NatsConnection {
           {
             reply: `${this.protocol.muxSubscriptions.baseInbox}${r.token}`,
             headers: opts.headers,
+            autoFlush: opts.autoFlush,
           },
         );
       } catch (err) {
