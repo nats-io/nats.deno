@@ -896,6 +896,16 @@ export enum JsHeaders {
   RollupValueSubject = "sub",
   // value for rollup header when rolling up all subjects
   RollupValueAll = "all",
+  /**
+   * Set on protocol messages to indicate pull request message count that
+   * was not honored.
+   */
+  PendingMessagesHdr = "Nats-Pending-Messages",
+  /**
+   * Set on protocol messages to indicate pull request byte count that
+   * was not honored
+   */
+  PendingBytesHdr = "Nats-Pending-Bytes",
 }
 
 export interface KvEntry {

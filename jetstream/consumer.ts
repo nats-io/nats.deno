@@ -37,6 +37,7 @@ import {
   PullOptions,
   ReplayPolicy,
 } from "./jsapi_types.ts";
+import { JsHeaders } from "./types.ts";
 import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
 
 enum PullConsumerType {
@@ -517,11 +518,11 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       msgsLeft: 0,
       bytesLeft: 0,
     };
-    const msgsLeft = headers?.get("Nats-Pending-Messages");
+    const msgsLeft = headers?.get(JsHeaders.PendingMessagesHdr);
     if (msgsLeft) {
       discard.msgsLeft = parseInt(msgsLeft);
     }
-    const bytesLeft = headers?.get("Nats-Pending-Bytes");
+    const bytesLeft = headers?.get(JsHeaders.PendingBytesHdr);
     if (bytesLeft) {
       discard.bytesLeft = parseInt(bytesLeft);
     }

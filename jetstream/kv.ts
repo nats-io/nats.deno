@@ -64,6 +64,7 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { PubHeaders } from "./jsclient.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -480,7 +481,7 @@ export class Bucket implements KV, KvRemove {
     if (opts.previousSeq !== undefined) {
       const h = headers();
       o.headers = h;
-      h.set("Nats-Expected-Last-Subject-Sequence", `${opts.previousSeq}`);
+      h.set(PubHeaders.ExpectedLastSubjectSequenceHdr, `${opts.previousSeq}`);
     }
     try {
       const pa = await this.js.publish(this.subjectForKey(ek, true), data, o);
