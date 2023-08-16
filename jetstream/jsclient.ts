@@ -263,7 +263,7 @@ export class JetStreamClientImpl extends BaseApiClient
     );
     const err = checkJsError(msg);
     if (err) {
-      throw (err);
+      throw err;
     }
     return toJsMsg(msg);
   }

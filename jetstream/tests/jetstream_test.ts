@@ -4609,22 +4609,3 @@ Deno.test("jetstream - pullSub iter consumer deleted", async () => {
 
   await cleanup(ns, nc);
 });
-Deno.bench("jetstream - pub perf", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const name = nuid.next();
-  const jsm = await nc.jetstreamManager();
-  await jsm.streams.add({
-    name,
-    subjects: [name],
-    storage: StorageType.Memory,
-  });
-
-  const js = nc.jetstream();
-  const start = performance.now();
-  for (let i=0; i < 5000; i++) {
-    await js.publish(name, `${i}`);
-  }
-  const time = performance.now() - start;
-  console.log(time / 5000);
-  await cleanup(ns, nc);
-})
