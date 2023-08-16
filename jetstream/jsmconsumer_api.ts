@@ -157,7 +157,6 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
         : `${this.prefix}.CONSUMER.CREATE.${stream}`;
     }
 
-    console.log(cr);
     const r = await this._request(subj, cr);
     return r as ConsumerInfo;
   }
