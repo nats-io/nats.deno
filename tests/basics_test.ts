@@ -55,7 +55,6 @@ import {
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { Feature } from "../nats-base-client/semver.ts";
-import NetAddr = Deno.NetAddr;
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1144,7 +1143,7 @@ Deno.test("basics - info", async () => {
 
 Deno.test("basics - initial connect error", async () => {
   const listener = Deno.listen({ port: 0 });
-  const port = (listener.addr as NetAddr).port;
+  const port = (listener.addr as Deno.NetAddr).port;
   const sc = StringCodec();
   const INFO = sc.encode(
     `INFO {"server_id":"FAKE","server_name":"FAKE","version":"2.9.4","proto":1,"go":"go1.19.2","host":"127.0.0.1","port":${port},"headers":true,"max_payload":1048576,"jetstream":true,"client_id":4,"client_ip":"127.0.0.1"}\r\n`,

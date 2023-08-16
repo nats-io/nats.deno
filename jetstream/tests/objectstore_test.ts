@@ -316,13 +316,8 @@ Deno.test("objectstore - object names", async () => {
   await os.put({ name: "blob.txt" }, readableStreamFrom(sc.encode("A")));
   await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
   await os.put({ name: " " }, readableStreamFrom(sc.encode("A")));
-
-  await assertRejects(async () => {
-    await os.put({ name: "*" }, readableStreamFrom(sc.encode("A")));
-  });
-  await assertRejects(async () => {
-    await os.put({ name: ">" }, readableStreamFrom(sc.encode("A")));
-  });
+  await os.put({ name: "*" }, readableStreamFrom(sc.encode("A")));
+  await os.put({ name: ">" }, readableStreamFrom(sc.encode("A")));
   await assertRejects(async () => {
     await os.put({ name: "" }, readableStreamFrom(sc.encode("A")));
   });
@@ -679,13 +674,13 @@ Deno.test("objectstore - sanitize", async () => {
   });
   assertEquals(
     info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has_dots_here")}`],
+      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has.dots.here")}`],
     1,
   );
   assertEquals(
     info.streamInfo.state
       .subjects![
-        `$O.test.M.${Base64UrlPaddedCodec.encode("the_spaces_are_here")}`
+        `$O.test.M.${Base64UrlPaddedCodec.encode("the spaces are here")}`
       ],
     1,
   );

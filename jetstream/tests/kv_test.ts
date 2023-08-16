@@ -1767,3 +1767,16 @@ Deno.test("kv - string payloads", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - metadata", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K", { metadata: { hello: "world" } });
+  const status = await kv.status();
+  assertEquals(status.metadata?.hello, "world");
+  await cleanup(ns, nc);
+});

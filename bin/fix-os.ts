@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { parse } from "https://deno.land/std@0.190.0/flags/mod.ts";
-import { ObjectStoreImpl } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/objectstore.ts";
+import { ObjectStoreImpl, ServerObjectInfo } from "../jetstream/objectstore.ts";
 import {
   connect,
   ConnectionOptions,
@@ -33,7 +33,7 @@ const argv = parse(
       c: 1,
       i: 0,
     },
-    boolean: ["dryrun"],
+    boolean: ["check"],
     string: ["server", "creds", "bucket"],
   },
 );
@@ -56,9 +56,7 @@ if (argv.h || argv.help) {
 }
 
 if (argv.creds) {
-  const f = await Deno.open(argv.creds, { read: true });
-  const data = await Deno.readFile(f);
-  Deno.close(f.rid);
+  const data = await Deno.readFile(argv.creds);
   copts.authenticator = credsAuthenticator(data);
 }
 
@@ -85,64 +83,114 @@ if (!found) {
   Deno.exit(1);
 }
 const os = await js.views.os(argv.bucket) as ObjectStoreImpl;
+await fixHashes(os);
+await metaFix(os);
 
-// `$${osPrefix}${os.name}.M.>`
-const osInfo = await os.status({ subjects_filter: "$O.*.M.*" });
-const entries = Object.getOwnPropertyNames(
-  osInfo.streamInfo.state.subjects || {},
-);
-let fixes = 0;
+async function fixHashes(os: ObjectStoreImpl): Promise<void> {
+  let fixes = 0;
+  // `$${osPrefix}${os.name}.M.>`
+  const osInfo = await os.status({ subjects_filter: "$O.*.M.*" });
+  const entries = Object.getOwnPropertyNames(
+    osInfo.streamInfo.state.subjects || {},
+  );
 
-for (let i = 0; i < entries.length; i++) {
-  const chunks = entries[i].split(".");
-  const key = chunks[3];
-  if (key.endsWith("=")) {
-    // this is already padded
-    continue;
-  }
-  const pad = key.length % 4;
-  if (pad === 0) {
-    continue;
-  }
-  // this entry is incorrect fix it
-  fixes++;
-  if (argv.check) {
-    continue;
-  }
-  const padding = pad > 0 ? "=".repeat(pad) : "";
-  chunks[3] += padding;
-  const fixedKey = chunks.join(".");
+  for (let i = 0; i < entries.length; i++) {
+    const chunks = entries[i].split(".");
+    const key = chunks[3];
+    if (key.endsWith("=")) {
+      // this is already padded
+      continue;
+    }
+    const pad = key.length % 4;
+    if (pad === 0) {
+      continue;
+    }
+    // this entry is incorrect fix it
+    fixes++;
+    if (argv.check) {
+      continue;
+    }
+    const padding = pad > 0 ? "=".repeat(pad) : "";
+    chunks[3] += padding;
+    const fixedKey = chunks.join(".");
 
-  let m;
-  try {
-    m = await jsm.streams.getMessage(os.stream, {
-      last_by_subj: entries[i],
-    });
-  } catch (err) {
-    console.error(`[ERR] failed to update ${entries[i]}: ${err.message}`);
-    continue;
-  }
-  if (m) {
+    let m;
     try {
-      await js.publish(fixedKey, m.data);
+      m = await jsm.streams.getMessage(os.stream, {
+        last_by_subj: entries[i],
+      });
     } catch (err) {
       console.error(`[ERR] failed to update ${entries[i]}: ${err.message}`);
       continue;
     }
-    try {
-      const seq = m.seq;
-      await jsm.streams.deleteMessage(os.stream, seq);
-    } catch (err) {
-      console.error(
-        `[WARN] failed to delete bad entry ${
-          entries[i]
-        }: ${err.message} - new entry was added`,
-      );
+    if (m) {
+      try {
+        await js.publish(fixedKey, m.data);
+      } catch (err) {
+        console.error(`[ERR] failed to update ${entries[i]}: ${err.message}`);
+        continue;
+      }
+      try {
+        const seq = m.seq;
+        await jsm.streams.deleteMessage(os.stream, seq);
+      } catch (err) {
+        console.error(
+          `[WARN] failed to delete bad entry ${
+            entries[i]
+          }: ${err.message} - new entry was added`,
+        );
+      }
     }
   }
+
+  const verb = argv.check ? "are" : "were";
+  console.log(`${fixes} hash fixes ${verb} required on bucket ${argv.bucket}`);
 }
 
-const verb = argv.check ? "are" : "were";
-console.log(`${fixes} fixes ${verb} required on bucket ${argv.bucket}`);
+// metaFix addresses an issue where keys that contained `.` were serialized
+// using a subject meta that replaced the `.` with `_`.
+async function metaFix(os: ObjectStoreImpl): Promise<void> {
+  let fixes = 0;
+  const osInfo = await os.status({ subjects_filter: "$O.*.M.*" });
+  const subjects = Object.getOwnPropertyNames(
+    osInfo.streamInfo.state.subjects || {},
+  );
+  for (let i = 0; i < subjects.length; i++) {
+    const metaSubj = subjects[i];
+    try {
+      const m = await os.jsm.streams.getMessage(os.stream, {
+        last_by_subj: metaSubj,
+      });
+      const soi = m.json<ServerObjectInfo>();
+      const calcMeta = os._metaSubject(soi.name);
+      if (calcMeta !== metaSubj) {
+        fixes++;
+        if (argv.check) {
+          continue;
+        }
+        try {
+          await js.publish(calcMeta, m.data);
+        } catch (err) {
+          console.error(`[ERR] failed to update ${metaSubj}: ${err.message}`);
+          continue;
+        }
+        try {
+          const seq = m.seq;
+          await jsm.streams.deleteMessage(os.stream, seq);
+        } catch (err) {
+          console.error(
+            `[WARN] failed to delete bad entry ${metaSubj}: ${err.message} - new entry was added`,
+          );
+        }
+      }
+    } catch (err) {
+      console.error(`[ERR] failed to update ${metaSubj}: ${err.message}`);
+    }
+  }
+  const verb = argv.check ? "are" : "were";
+  console.log(
+    `${fixes} meta fixes ${verb} required on bucket ${argv.bucket}`,
+  );
+}
 
-await nc.close();
+await nc.drain();

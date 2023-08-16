@@ -64,6 +64,7 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { PubHeaders } from "./jsclient.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -262,6 +263,9 @@ export class Bucket implements KV, KvRemove {
       sc.sources = sources as unknown[] as StreamSource[];
     } else {
       sc.subjects = [this.subjectForBucket()];
+    }
+    if (opts.metadata) {
+      sc.metadata = opts.metadata;
     }
 
     const nci = (this.js as unknown as { nc: NatsConnectionImpl }).nc;
@@ -480,7 +484,7 @@ export class Bucket implements KV, KvRemove {
     if (opts.previousSeq !== undefined) {
       const h = headers();
       o.headers = h;
-      h.set("Nats-Expected-Last-Subject-Sequence", `${opts.previousSeq}`);
+      h.set(PubHeaders.ExpectedLastSubjectSequenceHdr, `${opts.previousSeq}`);
     }
     try {
       const pa = await this.js.publish(this.subjectForKey(ek, true), data, o);
@@ -916,6 +920,10 @@ export class KvStatusImpl implements KvStatus {
 
   get size(): number {
     return this.si.state.bytes;
+  }
+
+  get metadata(): Record<string, string> {
+    return this.si.config.metadata ?? {};
   }
 }
 

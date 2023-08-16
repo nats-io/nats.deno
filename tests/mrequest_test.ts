@@ -35,16 +35,20 @@ async function requestManyCount(noMux = false): Promise<void> {
   const { ns, nc } = await setup({});
   const nci = nc as NatsConnectionImpl;
 
+  let payload = "";
   const subj = createInbox();
   nc.subscribe(subj, {
     callback: (_err, msg) => {
+      if (payload === "") {
+        payload = msg.string();
+      }
       for (let i = 0; i < 5; i++) {
         msg.respond();
       }
     },
   });
 
-  const iter = await nci.requestMany(subj, Empty, {
+  const iter = await nci.requestMany(subj, "hello", {
     strategy: RequestStrategy.Count,
     maxWait: 2000,
     maxMessages: 5,
@@ -58,6 +62,7 @@ async function requestManyCount(noMux = false): Promise<void> {
   }
 
   assertEquals(nci.protocol.subscriptions.size(), noMux ? 1 : 2);
+  assertEquals(payload, "hello");
   assertEquals(iter.getProcessed(), 5);
   await cleanup(ns, nc);
 }
