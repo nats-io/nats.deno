@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { NatsServer } from "../../tests/helpers/mod.ts";
+import { NatsServer, notCompatible } from "../../tests/helpers/mod.ts";
 import { AckPolicy, connect, JSONCodec } from "../../src/mod.ts";
 import {
   assertEquals,
@@ -27,6 +27,7 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
+import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 
 Deno.test("streams - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
@@ -183,6 +184,47 @@ Deno.test("streams - delete message", async () => {
 
   const si = await s.info(false, { deleted_details: true });
   assertEquals(si.state.deleted, [2]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("streams - first_seq", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({
+    name: "test",
+    first_seq: 50,
+    subjects: ["foo"],
+  });
+  assertEquals(si.config.first_seq, 50);
+
+  const pa = await nc.jetstream().publish("foo");
+  assertEquals(pa.seq, 50);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("streams - first_seq fails if wrong server", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const nci = nc as NatsConnectionImpl;
+  nci.features.update("2.9.2");
+
+  const jsm = await nc.jetstreamManager();
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "test",
+        first_seq: 50,
+        subjects: ["foo"],
+      });
+    },
+    Error,
+    "stream 'first_seq' requires server 2.10.0",
+  );
 
   await cleanup(ns, nc);
 });
