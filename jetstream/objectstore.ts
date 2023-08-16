@@ -102,6 +102,9 @@ export class ObjectStoreStatusImpl implements ObjectStoreStatus {
   get streamInfo(): StreamInfo {
     return this.si;
   }
+  get metadata(): Record<string, string> | undefined {
+    return this.si.config.metadata;
+  }
 }
 
 export type ServerObjectStoreMeta = {
@@ -120,6 +123,7 @@ export type ServerObjectInfo = {
   deleted?: boolean;
   mtime: string;
   revision: number;
+  metadata?: Record<string, string>;
 } & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
@@ -167,6 +171,9 @@ class ObjectInfoImpl implements ObjectInfo {
   get revision(): number {
     return this.info.revision;
   }
+  get metadata(): Record<string, string> {
+    return this.info.metadata || {};
+  }
 }
 
 function toServerObjectStoreMeta(
@@ -176,6 +183,7 @@ function toServerObjectStoreMeta(
     name: meta.name,
     description: meta.description ?? "",
     options: meta.options,
+    metadata: meta.metadata,
   } as ServerObjectStoreMeta;
 
   if (meta.headers) {
@@ -776,6 +784,9 @@ export class ObjectStoreImpl implements ObjectStore {
     sc.subjects = [`$O.${this.name}.C.>`, `$O.${this.name}.M.>`];
     if (opts.placement) {
       sc.placement = opts.placement;
+    }
+    if (opts.metadata) {
+      sc.metadata = opts.metadata;
     }
 
     try {

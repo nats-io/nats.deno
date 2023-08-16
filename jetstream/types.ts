@@ -1228,6 +1228,7 @@ export type ObjectStoreMeta = {
   description?: string;
   headers?: MsgHdrs;
   options?: ObjectStoreMetaOptions;
+  metadata?: Record<string, string>;
 };
 
 export interface ObjectInfo extends ObjectStoreMeta {
@@ -1259,6 +1260,7 @@ export type ObjectStoreStatus = {
    * The StreamInfo backing up the ObjectStore
    */
   streamInfo: StreamInfo;
+  metadata?: Record<string, string> | undefined;
 };
 /**
  * @deprecated {@link ObjectStoreStatus}
@@ -1270,7 +1272,12 @@ export type ObjectStoreOptions = {
   storage: StorageType;
   replicas: number;
   "max_bytes": number;
-  placement: Placement;
+  placement: Placement; /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 };
 export type ObjectResult = {
   info: ObjectInfo;

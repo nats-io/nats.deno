@@ -1038,3 +1038,31 @@ Deno.test("objectstore - allow direct", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("objectstore - stream metadata and entry metadata", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const os = await js.views.os("OBJS", {
+    description: "testing",
+    metadata: { hello: "world" },
+  });
+
+  const status = await os.status();
+  assertEquals(status.metadata?.hello, "world");
+
+  const info = await os.putBlob(
+    { name: "hello", metadata: { world: "hello" } },
+    Empty,
+  );
+  assertEquals(info.metadata?.world, "hello");
+
+  const hi = await os.info("hello");
+  assertExists(hi);
+  assertEquals(hi.metadata?.world, "hello");
+
+  await cleanup(ns, nc);
+});
