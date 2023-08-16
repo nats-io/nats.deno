@@ -83,6 +83,10 @@ export interface Transport extends AsyncIterable<Uint8Array> {
   disconnect(): void;
 
   closed(): Promise<void | Error>;
+
+  // this is here for websocket implementations as some implementations
+  // (firefox) throttle connections that then resolve later
+  discard(): void;
 }
 
 export const CR_LF = "\r\n";

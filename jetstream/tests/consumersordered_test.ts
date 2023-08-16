@@ -551,6 +551,44 @@ Deno.test("ordered - start time", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("ordered - start time reset", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("test.a"),
+    js.publish("test.b"),
+  ]);
+
+  await delay(500);
+  const date = new Date().toISOString();
+
+  const oc = await js.consumers.get("test", {
+    deliver_policy: DeliverPolicy.StartTime,
+    opt_start_time: date,
+  });
+
+  await js.publish("test.c");
+
+  const iter = await oc.fetch({ max_messages: 1 });
+  await (async () => {
+    for await (const m of iter) {
+      assertEquals(m.info.streamSequence, 3);
+      assertEquals(m.subject, "test.c");
+
+      // now that we are here
+      const oci = oc as OrderedPullConsumerImpl;
+      const opts = oci.getConsumerOpts(oci.cursor.stream_seq + 1);
+      assertEquals(opts.opt_start_seq, 4);
+      assertEquals(opts.deliver_policy, DeliverPolicy.StartSequence);
+    }
+  })();
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("ordered - next", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const jsm = await nc.jetstreamManager();
@@ -665,6 +703,36 @@ Deno.test("ordered - headers only", async () => {
   const ci = await oc.info();
   assertExists(ci);
   assertEquals(ci.config.headers_only, true);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - max deliver", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const oc = await js.consumers.get("test");
+  const ci = await oc.info();
+  assertExists(ci);
+  assertEquals(ci.config.max_deliver, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - mem", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const oc = await js.consumers.get("test");
+  const ci = await oc.info();
+  assertExists(ci);
+  assertEquals(ci.config.mem_storage, true);
 
   await cleanup(ns, nc);
 });

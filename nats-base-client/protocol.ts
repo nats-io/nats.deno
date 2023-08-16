@@ -396,7 +396,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   servers: Servers;
   server!: ServerImpl;
   features: Features;
-  flusher?: unknown;
+  connectPromise: Promise<void> | null;
 
   constructor(options: ConnectionOptions, publisher: Publisher) {
     this._closed = false;
@@ -420,7 +420,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     //@ts-ignore: options.pendingLimit is hidden
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
     this.features = new Features({ major: 0, minor: 0, micro: 0 });
-    this.flusher = null;
+    this.connectPromise = null;
 
     const servers = typeof options.servers === "string"
       ? [options.servers]
@@ -467,6 +467,9 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   private prepare(): Deferred<void> {
+    if (this.transport) {
+      this.transport.discard();
+    }
     this.info = undefined;
     this.resetOutbound();
 
@@ -601,7 +604,20 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     throw lastErr;
   }
 
-  async dialLoop(): Promise<void> {
+  dialLoop(): Promise<void> {
+    if (this.connectPromise === null) {
+      this.connectPromise = this.dodialLoop();
+      this.connectPromise
+        .then(() => {})
+        .catch(() => {})
+        .finally(() => {
+          this.connectPromise = null;
+        });
+    }
+    return this.connectPromise;
+  }
+
+  async dodialLoop(): Promise<void> {
     let lastError: Error | undefined;
     while (true) {
       if (this._closed) {
@@ -676,6 +692,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationExpired);
+    } else if (t.indexOf("authentication timeout") !== -1) {
+      return new NatsError(s, ErrorCode.AuthenticationTimeout);
     } else {
       return new NatsError(s, ErrorCode.ProtocolError);
     }
@@ -728,10 +746,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   handleError(err: NatsError) {
     if (err.isAuthError()) {
       this.handleAuthError(err);
-    }
-    if (err.isProtocolError()) {
+    } else if (err.isProtocolError()) {
+      this.lastError = err;
+    } else if (err.isAuthTimeout()) {
       this.lastError = err;
     }
+    // fallthrough here
     if (!err.isPermissionError()) {
       this.lastError = err;
     }
@@ -846,19 +866,11 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.outbound.fill(buf, ...payloads);
 
     if (len === 0) {
-      //@ts-ignore: node types timer
-      this.flusher = setTimeout(() => {
+      queueMicrotask(() => {
         this.flushPending();
       });
     } else if (this.outbound.size() >= this.pendingLimit) {
-      // if we have a flusher, clear it - otherwise in a bench
-      // type scenario where the main loop is dominated by a publisher
-      // we create many timers.
-      if (this.flusher) {
-        //@ts-ignore: node types timer
-        clearTimeout(this.flusher);
-        this.flusher = null;
-      }
+      // flush inline
       this.flushPending();
     }
   }
@@ -980,7 +992,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       p = deferred<void>();
     }
     this.pongs.push(p);
-    this.sendCommand(PING_CMD);
+    this.outbound.fill(PING_CMD);
+    this.flushPending();
     return p;
   }
 

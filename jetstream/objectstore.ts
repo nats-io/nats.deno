@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { validateBucket, validateKey } from "./kv.ts";
+import { validateBucket } from "./kv.ts";
 import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
 import { JSONCodec } from "../nats-base-client/codec.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
@@ -53,6 +53,7 @@ import {
   StreamInfoRequestOptions,
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
+import { PubHeaders } from "./jsclient.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -101,16 +102,19 @@ export class ObjectStoreStatusImpl implements ObjectStoreStatus {
   get streamInfo(): StreamInfo {
     return this.si;
   }
+  get metadata(): Record<string, string> | undefined {
+    return this.si.config.metadata;
+  }
 }
 
-type ServerObjectStoreMeta = {
+export type ServerObjectStoreMeta = {
   name: string;
   description?: string;
   headers?: Record<string, string[]>;
   options?: ObjectStoreMetaOptions;
 };
 
-type ServerObjectInfo = {
+export type ServerObjectInfo = {
   bucket: string;
   nuid: string;
   size: number;
@@ -119,6 +123,7 @@ type ServerObjectInfo = {
   deleted?: boolean;
   mtime: string;
   revision: number;
+  metadata?: Record<string, string>;
 } & ServerObjectStoreMeta;
 
 class ObjectInfoImpl implements ObjectInfo {
@@ -166,6 +171,9 @@ class ObjectInfoImpl implements ObjectInfo {
   get revision(): number {
     return this.info.revision;
   }
+  get metadata(): Record<string, string> {
+    return this.info.metadata || {};
+  }
 }
 
 function toServerObjectStoreMeta(
@@ -175,6 +183,7 @@ function toServerObjectStoreMeta(
     name: meta.name,
     description: meta.description ?? "",
     options: meta.options,
+    metadata: meta.metadata,
   } as ServerObjectStoreMeta;
 
   if (meta.headers) {
@@ -214,22 +223,11 @@ export class ObjectStoreImpl implements ObjectStore {
     this.js = js;
   }
 
-  _sanitizeName(name: string): { name: string; error?: Error } {
+  _checkNotEmpty(name: string): { name: string; error?: Error } {
     if (!name || name.length === 0) {
       return { name, error: new Error("name cannot be empty") };
     }
-    // cannot use replaceAll - node until node 16 is min
-    // name = name.replaceAll(".", "_");
-    // name = name.replaceAll(" ", "_");
-    name = name.replace(/[. ]/g, "_");
-
-    let error = undefined;
-    try {
-      validateKey(name);
-    } catch (err) {
-      error = err;
-    }
-    return { name, error };
+    return { name };
   }
 
   async info(name: string): Promise<ObjectInfo | null> {
@@ -255,7 +253,7 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   async rawInfo(name: string): Promise<ServerObjectInfo | null> {
-    const { name: obj, error } = this._sanitizeName(name);
+    const { name: obj, error } = this._checkNotEmpty(name);
     if (error) {
       return Promise.reject(error);
     }
@@ -334,7 +332,7 @@ export class ObjectStoreImpl implements ObjectStore {
     meta.options.max_chunk_size = maxChunk;
 
     const old = await this.info(meta.name);
-    const { name: n, error } = this._sanitizeName(meta.name);
+    const { name: n, error } = this._checkNotEmpty(meta.name);
     if (error) {
       return Promise.reject(error);
     }
@@ -386,7 +384,10 @@ export class ObjectStoreImpl implements ObjectStore {
           // trailing md for the object
           const h = headers();
           if (typeof previousRevision === "number") {
-            h.set("Nats-Expected-Last-Subject-Sequence", `${previousRevision}`);
+            h.set(
+              PubHeaders.ExpectedLastSubjectSequenceHdr,
+              `${previousRevision}`,
+            );
           }
           h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
 
@@ -590,7 +591,7 @@ export class ObjectStoreImpl implements ObjectStore {
       return Promise.reject("bucket required");
     }
     const osi = bucket as ObjectStoreImpl;
-    const { name: n, error } = this._sanitizeName(name);
+    const { name: n, error } = this._checkNotEmpty(name);
     if (error) {
       return Promise.reject(error);
     }
@@ -606,7 +607,7 @@ export class ObjectStoreImpl implements ObjectStore {
     if (info.deleted) {
       return Promise.reject(new Error("object is deleted"));
     }
-    const { name: n, error } = this._sanitizeName(name);
+    const { name: n, error } = this._checkNotEmpty(name);
     if (error) {
       return Promise.reject(error);
     }
@@ -670,7 +671,7 @@ export class ObjectStoreImpl implements ObjectStore {
     //  effectively making the object available under 2 names, but it doesn't remove the
     //  older one.
     meta.name = meta.name ?? info.name;
-    const { name: n, error } = this._sanitizeName(meta.name);
+    const { name: n, error } = this._checkNotEmpty(meta.name);
     if (error) {
       return Promise.reject(error);
     }
@@ -773,13 +774,19 @@ export class ObjectStoreImpl implements ObjectStore {
     } catch (err) {
       return Promise.reject(err);
     }
-    const sc = Object.assign({}, opts) as StreamConfig;
+    const max_age = opts?.ttl || 0;
+    delete opts.ttl;
+    const sc = Object.assign({ max_age }, opts) as StreamConfig;
     sc.name = this.stream;
+    sc.allow_direct = true;
     sc.allow_rollup_hdrs = true;
     sc.discard = DiscardPolicy.New;
     sc.subjects = [`$O.${this.name}.C.>`, `$O.${this.name}.M.>`];
     if (opts.placement) {
       sc.placement = opts.placement;
+    }
+    if (opts.metadata) {
+      sc.metadata = opts.metadata;
     }
 
     try {

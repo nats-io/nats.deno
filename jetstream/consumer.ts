@@ -37,6 +37,7 @@ import {
   PullOptions,
   ReplayPolicy,
 } from "./jsapi_types.ts";
+import { JsHeaders } from "./types.ts";
 import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
 
 enum PullConsumerType {
@@ -517,11 +518,11 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       msgsLeft: 0,
       bytesLeft: 0,
     };
-    const msgsLeft = headers?.get("Nats-Pending-Messages");
+    const msgsLeft = headers?.get(JsHeaders.PendingMessagesHdr);
     if (msgsLeft) {
       discard.msgsLeft = parseInt(msgsLeft);
     }
-    const bytesLeft = headers?.get("Nats-Pending-Bytes");
+    const bytesLeft = headers?.get(JsHeaders.PendingBytesHdr);
     if (bytesLeft) {
       discard.bytesLeft = parseInt(bytesLeft);
     }
@@ -768,6 +769,10 @@ export class PullConsumerImpl implements Consumer {
   }
 }
 
+/**
+ * These options are a subset of {@link ConsumerConfig} and
+ * {@link ConsumerUpdateConfig}
+ */
 export type OrderedConsumerOptions = {
   filterSubjects: string[] | string;
   deliver_policy: DeliverPolicy;
@@ -892,6 +897,8 @@ export class OrderedPullConsumerImpl implements Consumer {
     // reset the consumer sequence as JetStream will renumber from 1
     this.cursor.deliver_seq = 0;
     const config = this.getConsumerOpts(seq);
+    config.max_deliver = 1;
+    config.mem_storage = true;
     let ci;
     // FIXME: replace with general jetstream retry logic
     while (true) {

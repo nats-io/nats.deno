@@ -23,6 +23,7 @@ import {
   ErrorCode,
   Events,
   NatsError,
+  tokenAuthenticator,
 } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import {
@@ -34,7 +35,6 @@ import {
 } from "../nats-base-client/internal_mod.ts";
 import { cleanup, setup } from "./helpers/mod.ts";
 import { deadline } from "https://deno.land/std@0.190.0/async/deadline.ts";
-import Conn = Deno.Conn;
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
   const lock = Lock(1);
@@ -64,6 +64,7 @@ Deno.test("reconnect - events", async () => {
     waitOnFirstConnect: true,
     reconnectTimeWait: 100,
     maxReconnectAttempts: 10,
+    timeout: 1000,
   });
 
   let disconnects = 0;
@@ -337,7 +338,7 @@ Deno.test("reconnect - close stops reconnects", async () => {
 Deno.test("reconnect - stale connections don't close", async () => {
   const listener = Deno.listen({ port: 0, transport: "tcp" });
   const { port } = listener.addr as Deno.NetAddr;
-  const connections: Conn[] = [];
+  const connections: Deno.Conn[] = [];
 
   const TE = new TextEncoder();
   const INFO = TE.encode(
@@ -353,7 +354,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
   const CONNECT = { re: /^CONNECT\s+([^\r\n]+)\r\n/im, out: TE.encode("") };
   const CMDS = [PING, CONNECT];
 
-  const startReading = (conn: Conn) => {
+  const startReading = (conn: Deno.Conn) => {
     const buf = new Uint8Array(1024 * 8);
     const inbound = new DataBuffer();
     (async () => {
@@ -453,6 +454,41 @@ Deno.test("reconnect - protocol errors don't close client", async () => {
 
   const err = await nc.closed();
   assertEquals(err, undefined);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("reconnect - authentication timeout reconnects", async () => {
+  const ns = await NatsServer.start({
+    authorization: {
+      timeout: 0.001,
+      token: "hello",
+    },
+  });
+
+  let counter = 4;
+  const authenticator = tokenAuthenticator(() => {
+    if (counter-- <= 0) {
+      return "hello";
+    }
+    const start = Date.now();
+    while (true) {
+      if (Date.now() > start + 150) {
+        break;
+      }
+    }
+    return "hello";
+  });
+
+  const nc = await connect({
+    port: ns.port,
+    token: "hello",
+    waitOnFirstConnect: true,
+    timeout: 2000,
+    authenticator,
+  });
+
+  assert(!nc.isClosed());
 
   await cleanup(ns, nc);
 });

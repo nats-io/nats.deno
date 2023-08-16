@@ -61,7 +61,11 @@ import {
 } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 
 import { assert } from "../../nats-base-client/denobuffer.ts";
-import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
+import {
+  JetStreamClientImpl,
+  JetStreamSubscriptionImpl,
+  PubHeaders,
+} from "../jsclient.ts";
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
 import { connect } from "../../src/connect.ts";
 import {
@@ -207,7 +211,7 @@ Deno.test("jetstream - publish id", async () => {
 
   const jsm = await nc.jetstreamManager();
   const sm = await jsm.streams.getMessage(stream, { seq: 1 });
-  assertEquals(sm.header.get("Nats-Msg-Id"), "a");
+  assertEquals(sm.header.get(PubHeaders.MsgIdHdr), "a");
 
   await cleanup(ns, nc);
 });

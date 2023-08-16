@@ -95,7 +95,7 @@ import {
   ReplayPolicy,
 } from "./jsapi_types.ts";
 
-enum PubHeaders {
+export enum PubHeaders {
   MsgIdHdr = "Nats-Msg-Id",
   ExpectedStreamHdr = "Nats-Expected-Stream",
   ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
@@ -263,7 +263,7 @@ export class JetStreamClientImpl extends BaseApiClient
     );
     const err = checkJsError(msg);
     if (err) {
-      throw (err);
+      throw err;
     }
     return toJsMsg(msg);
   }

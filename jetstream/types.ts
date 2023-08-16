@@ -455,7 +455,8 @@ export interface Consumers {
    *
    * {@link Consumer}.
    * @param stream
-   * @param name or OrderedConsumer options - if not specified an ordered consumer is returned.
+   * @param name or OrderedConsumerOptions - if not specified an ordered consumer is created
+   *  with the specified options.
    */
   get(
     stream: string,
@@ -895,6 +896,16 @@ export enum JsHeaders {
   RollupValueSubject = "sub",
   // value for rollup header when rolling up all subjects
   RollupValueAll = "all",
+  /**
+   * Set on protocol messages to indicate pull request message count that
+   * was not honored.
+   */
+  PendingMessagesHdr = "Nats-Pending-Messages",
+  /**
+   * Set on protocol messages to indicate pull request byte count that
+   * was not honored
+   */
+  PendingBytesHdr = "Nats-Pending-Bytes",
 }
 
 export interface KvEntry {
@@ -1030,6 +1041,12 @@ export interface KvStatus extends KvLimits {
    * Size of the bucket in bytes
    */
   size: number;
+  /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 export interface KvOptions extends KvLimits {
@@ -1055,6 +1072,12 @@ export interface KvOptions extends KvLimits {
    * but has the possibility of inconsistency during a read.
    */
   allow_direct: boolean;
+  /**
+   * Metadata field to store additional information about the kv. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 }
 
 /**
@@ -1205,6 +1228,7 @@ export type ObjectStoreMeta = {
   description?: string;
   headers?: MsgHdrs;
   options?: ObjectStoreMetaOptions;
+  metadata?: Record<string, string>;
 };
 
 export interface ObjectInfo extends ObjectStoreMeta {
@@ -1236,6 +1260,7 @@ export type ObjectStoreStatus = {
    * The StreamInfo backing up the ObjectStore
    */
   streamInfo: StreamInfo;
+  metadata?: Record<string, string> | undefined;
 };
 /**
  * @deprecated {@link ObjectStoreStatus}
@@ -1247,7 +1272,12 @@ export type ObjectStoreOptions = {
   storage: StorageType;
   replicas: number;
   "max_bytes": number;
-  placement: Placement;
+  placement: Placement; /**
+   * Metadata field to store additional information about the stream. Note that
+   * keys starting with `_nats` are reserved. This feature only supported on servers
+   * 2.10.x and better.
+   */
+  metadata?: Record<string, string>;
 };
 export type ObjectResult = {
   info: ObjectInfo;
