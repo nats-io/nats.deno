@@ -706,3 +706,33 @@ Deno.test("ordered - headers only", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("ordered - max deliver", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const oc = await js.consumers.get("test");
+  const ci = await oc.info();
+  assertExists(ci);
+  assertEquals(ci.config.max_deliver, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - mem", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
+
+  const oc = await js.consumers.get("test");
+  const ci = await oc.info();
+  assertExists(ci);
+  assertEquals(ci.config.mem_storage, true);
+
+  await cleanup(ns, nc);
+});
