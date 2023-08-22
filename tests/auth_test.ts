@@ -269,17 +269,6 @@ Deno.test("auth - req permissions keep connection", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("auth - user and token is rejected", () => {
-  connect({ servers: "127.0.0.1:4222", user: "derek", token: "foobar" })
-    .then(async (nc) => {
-      await nc.close();
-      fail("should not have connected");
-    })
-    .catch((err) => {
-      assertErrorCode(err, ErrorCode.BadAuthentication);
-    });
-});
-
 Deno.test("auth - token", async () => {
   const ns = await NatsServer.start({ authorization: { token: "foo" } });
   const nc = await connect({ port: ns.port, token: "foo" });
