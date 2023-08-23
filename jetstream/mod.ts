@@ -85,6 +85,7 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
+  KvWatchInclude,
   KvWatchOptions,
   LastForMsgRequest,
   Lister,

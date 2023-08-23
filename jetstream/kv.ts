@@ -14,10 +14,12 @@
  */
 
 import {
+  ErrorCode,
   MsgHdrs,
   NatsConnection,
   NatsError,
   Payload,
+  QueuedIterator,
 } from "../nats-base-client/core.ts";
 import { millis, nanos } from "./jsutil.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
@@ -39,12 +41,13 @@ import {
   KvPutOptions,
   KvRemove,
   KvStatus,
+  KvWatchInclude,
+  KvWatchOptions,
   StoredMsg,
 } from "./types.ts";
 import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
 import { deferred } from "../nats-base-client/util.ts";
 import { Empty } from "../nats-base-client/encoders.ts";
-import { ErrorCode, QueuedIterator } from "../nats-base-client/core.ts";
 import {
   AckPolicy,
   ConsumerConfig,
@@ -612,16 +615,22 @@ export class Bucket implements KV, KvRemove {
 
   _buildCC(
     k: string,
-    history = false,
+    content: KvWatchInclude,
     opts: Partial<ConsumerConfig> = {},
   ): Partial<ConsumerConfig> {
     const ek = this.encodeKey(k);
     this.validateSearchKey(k);
 
+    let deliver_policy = DeliverPolicy.LastPerSubject;
+    if (content === KvWatchInclude.AllHistory) {
+      deliver_policy = DeliverPolicy.All;
+    }
+    if (content === KvWatchInclude.UpdatesOnly) {
+      deliver_policy = DeliverPolicy.New;
+    }
+
     return Object.assign({
-      "deliver_policy": history
-        ? DeliverPolicy.All
-        : DeliverPolicy.LastPerSubject,
+      deliver_policy,
       "ack_policy": AckPolicy.None,
       "filter_subject": this.fullKeyName(ek),
       "flow_control": true,
@@ -647,7 +656,7 @@ export class Bucket implements KV, KvRemove {
     };
     let count = 0;
 
-    const cc = this._buildCC(k, true, co);
+    const cc = this._buildCC(k, KvWatchInclude.AllHistory, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);
@@ -711,21 +720,25 @@ export class Bucket implements KV, KvRemove {
   }
 
   async watch(
-    opts: {
-      key?: string;
-      headers_only?: boolean;
-      initializedFn?: () => void;
-    } = {},
+    opts: KvWatchOptions = {},
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
     const co = {} as Partial<ConsumerConfig>;
     co.headers_only = opts.headers_only || false;
 
+    let content = KvWatchInclude.LastValue;
+    if (opts.include === KvWatchInclude.AllHistory) {
+      content = KvWatchInclude.AllHistory;
+    } else if (opts.include === KvWatchInclude.UpdatesOnly) {
+      content = KvWatchInclude.UpdatesOnly;
+    }
+    const ignoreDeletes = opts.ignoreDeletes === true;
+
     let fn = opts.initializedFn;
     let count = 0;
 
-    const cc = this._buildCC(k, false, co);
+    const cc = this._buildCC(k, content, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);
@@ -738,6 +751,9 @@ export class Bucket implements KV, KvRemove {
       }
       if (jm) {
         const e = this.jmToEntry(jm);
+        if (ignoreDeletes && e.operation === "DEL") {
+          return;
+        }
         qi.push(e);
         qi.received++;
 
@@ -793,7 +809,9 @@ export class Bucket implements KV, KvRemove {
 
   async keys(k = ">"): Promise<QueuedIterator<string>> {
     const keys = new QueuedIteratorImpl<string>();
-    const cc = this._buildCC(k, false, { headers_only: true });
+    const cc = this._buildCC(k, KvWatchInclude.LastValue, {
+      headers_only: true,
+    });
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);

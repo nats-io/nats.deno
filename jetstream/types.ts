@@ -1087,6 +1087,22 @@ export interface KvRemove {
   remove(k: string): Promise<void>;
 }
 
+export enum KvWatchInclude {
+  /**
+   * Include the last value for all the keys
+   */
+  LastValue = "",
+  /**
+   * Include all available history for all keys
+   */
+  AllHistory = "history",
+  /**
+   * Don't include history or last values, only notify
+   * of updates
+   */
+  UpdatesOnly = "updates",
+}
+
 export type KvWatchOptions = {
   /**
    * A key or wildcarded key following keys as if they were NATS subject names.
@@ -1099,9 +1115,17 @@ export type KvWatchOptions = {
   /**
    * A callback that notifies when the watch has yielded all the initial values.
    * Subsequent notifications are updates since the initial watch was established.
-   * @deprecated
    */
   initializedFn?: () => void;
+  /**
+   * Skips notifying deletes.
+   * @default: false
+   */
+  ignoreDeletes?: boolean;
+  /**
+   * Specify what to include in the watcher, by default all last values.
+   */
+  include?: KvWatchInclude;
 };
 
 export interface RoKV {
