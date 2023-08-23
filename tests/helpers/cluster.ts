@@ -16,7 +16,6 @@
 import { NatsServer } from "./mod.ts";
 import { parse } from "https://deno.land/std@0.190.0/flags/mod.ts";
 import { rgb24 } from "https://deno.land/std@0.190.0/fmt/colors.ts";
-import { setTimeout } from "https://deno.land/std@0.190.0/node/timers.ts";
 
 const defaults = {
   c: 3,
