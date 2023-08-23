@@ -43,6 +43,7 @@ export type {
   JetStreamPublishOptions,
   JetStreamPullSubscription,
   JetStreamSubscription,
+  JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsMsgCallback,
   KV,
