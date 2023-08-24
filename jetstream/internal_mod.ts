@@ -54,6 +54,7 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
+  KvWatchInclude,
   KvWatchOptions,
   ObjectInfo,
   ObjectResult,
