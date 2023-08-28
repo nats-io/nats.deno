@@ -15,7 +15,7 @@
 
 import { cleanup, setup } from "./helpers/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { assertEquals } from "https://deno.land/std@0.190.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.200.0/testing/asserts.ts";
 import { createInbox, Msg } from "../nats-base-client/core.ts";
 
 Deno.test("resub - iter", async () => {

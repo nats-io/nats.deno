@@ -25,12 +25,12 @@ import {
   assertExists,
   assertRejects,
   equal,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/testing/asserts.ts";
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
-import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
 import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
-import { equals } from "https://deno.land/std@0.190.0/bytes/mod.ts";
+import { equals } from "https://deno.land/std@0.200.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
 import { digestType } from "../objectstore.ts";

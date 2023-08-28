@@ -16,11 +16,11 @@
 import { NatsServer, notCompatible } from "../../tests/helpers/mod.ts";
 import { AckPolicy, connect, JSONCodec } from "../../src/mod.ts";
 import {
+  assertArrayIncludes,
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.179.0/testing/asserts.ts";
-import { assertArrayIncludes } from "https://deno.land/std@0.190.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/testing/asserts.ts";
 import {
   cleanup,
   jetstreamServerConf,
