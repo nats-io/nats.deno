@@ -24,7 +24,6 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: "SIGQUIT",
