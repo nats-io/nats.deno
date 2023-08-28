@@ -25,7 +25,7 @@ import {
 import {
   assertArrayIncludes,
   assertEquals,
-} from "https://deno.land/std@0.200.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { extend } from "../nats-base-client/util.ts";
 import { join, resolve } from "https://deno.land/std@0.200.0/path/mod.ts";
 

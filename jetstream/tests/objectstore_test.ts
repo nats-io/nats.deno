@@ -25,7 +25,7 @@ import {
   assertExists,
   assertRejects,
   equal,
-} from "https://deno.land/std@0.200.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";

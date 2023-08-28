@@ -24,7 +24,7 @@ import {
   nuid,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
-import { assert } from "https://deno.land/std@0.200.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: "SIGQUIT",
@@ -133,7 +133,7 @@ export class NatsServer implements PortInfo {
   cluster?: number;
   monitoring?: number;
   websocket?: number;
-  process: Deno.Process;
+  process: Deno.ChildProcess;
   logBuffer: string[] = [];
   stopped = false;
   done!: Deferred<void>;
@@ -144,7 +144,7 @@ export class NatsServer implements PortInfo {
 
   constructor(opts: {
     info: PortInfo;
-    process: Deno.Process;
+    process: Deno.ChildProcess;
     debug?: boolean;
     config: any;
     configFile: string;
@@ -168,17 +168,18 @@ export class NatsServer implements PortInfo {
     this.rgb = { r, g, b };
 
     (async () => {
-      assert(process.stderr != null);
       const td = new TextDecoder();
-      const buf = new Uint8Array(1024 * 8);
+      const reader = process.stderr.getReader();
+
       while (true) {
         try {
-          const c = await process.stderr.read(buf);
-          if (c === null) {
+          const results = await reader.read();
+          if (results.done) {
             break;
           }
-          if (c) {
-            const t = td.decode(buf.slice(0, c));
+
+          if (results.value) {
+            const t = td.decode(results.value);
             this.logBuffer.push(t);
             if (debug) {
               console.log(rgb24(t.slice(0, t.length - 1), this!.rgb));
@@ -220,9 +221,9 @@ export class NatsServer implements PortInfo {
   async stop(): Promise<void> {
     if (!this.stopped) {
       this.stopped = true;
-      this.process.stderr?.close();
+      this.process.stderr?.cancel().catch(() => {});
       this.process.kill("SIGKILL");
-      this.process.close();
+      await this.process.status;
     }
     await this.done;
   }
@@ -539,18 +540,19 @@ export class NatsServer implements PortInfo {
     if (debug) {
       console.info(`${exe} -c ${confFile}`);
     }
-    const srv = await Deno.run(
-      {
-        cmd: [exe, "-c", confFile],
-        stderr: "piped",
-        stdout: "null",
-        stdin: "null",
-      },
-    );
+    const cmd = new Deno.Command(exe, {
+      args: ["-c", confFile],
+      stderr: "piped",
+      stdout: "null",
+      stdin: "null",
+    });
 
-    if (debug) {
-      console.info(`config: ${confFile}`);
-      console.info(`[${srv.pid}] - launched`);
+    const srv = cmd.spawn();
+    if (srv.pid) {
+      if (debug) {
+        console.info(`config: ${confFile}`);
+        console.info(`[${srv.pid}] - launched`);
+      }
     }
 
     const portsFile = path.resolve(
@@ -612,7 +614,7 @@ export class NatsServer implements PortInfo {
     } catch (err) {
       console.error(`failed to start config: ${confFile}`);
       try {
-        const d = await srv.stderrOutput();
+        const { stderr: d } = await cmd.output();
         console.error(new TextDecoder().decode(d));
       } catch (err) {
         console.error("unable to read server output:", err);

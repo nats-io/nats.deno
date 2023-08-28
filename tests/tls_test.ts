@@ -15,15 +15,15 @@
 import {
   assertEquals,
   fail,
-} from "https://deno.land/std@0.200.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
 import { join, resolve } from "https://deno.land/std@0.200.0/path/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { cleanup } from "./helpers/mod.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/testing/asserts.ts";
-import { assertStringIncludes } from "https://deno.land/std@0.200.0/testing/asserts.ts";
+import { assertRejects } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assertStringIncludes } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
