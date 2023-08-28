@@ -17,6 +17,7 @@ import { assertRejects } from "https://deno.land/std@0.190.0/testing/asserts.ts"
 import {
   assertEquals,
   assertExists,
+  assertStringIncludes,
 } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 import {
   deferred,
@@ -1020,5 +1021,33 @@ Deno.test("consumers - next listener leaks", async () => {
   }
   assertEquals(nci.protocol.listeners.length, base);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - inboxPrefix is respected", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const consumer = await js.consumers.get("messages", "c");
+  const iter = await consumer.consume() as PullConsumerMessagesImpl;
+  const done = (async () => {
+    for await (const m of iter) {
+      // nothing
+    }
+  })().catch();
+  assertStringIncludes(iter.inbox, "x.");
+  iter.stop();
+  await done;
   await cleanup(ns, nc);
 });
