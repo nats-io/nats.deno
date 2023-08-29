@@ -18,7 +18,7 @@ import {
   deferred,
   TlsOptions,
 } from "../nats-base-client/internal_mod.ts";
-import { writeAll } from "https://deno.land/std@0.190.0/streams/write_all.ts";
+import { writeAll } from "https://deno.land/std@0.200.0/streams/write_all.ts";
 import {
   checkOptions,
   checkUnsupportedOption,

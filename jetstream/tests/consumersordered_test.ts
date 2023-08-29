@@ -18,7 +18,8 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+  assertStringIncludes,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { AckPolicy, DeliverPolicy, JsMsg, nanos } from "../mod.ts";
 import {
   OrderedConsumerMessages,
@@ -33,7 +34,6 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { deadline, delay } from "../../nats-base-client/util.ts";
-import { assertStringIncludes } from "https://deno.land/std@0.75.0/testing/asserts.ts";
 
 Deno.test("ordered - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
