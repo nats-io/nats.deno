@@ -2356,7 +2356,7 @@ Deno.test("jsm - validate consumer name", async () => {
       if (v === "\r") v = "\\r";
       if (v === "\n") v = "\\n";
       if (v === "\t") v = "\\t";
-      const m = `invalid name name - name name cannot contain '${v}'`;
+      const m = `consumer 'name' cannot contain '${v}'`;
       assertEquals(err.message, m);
     }
   }
