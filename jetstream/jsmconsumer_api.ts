@@ -15,9 +15,9 @@
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import {
+  minValidation,
   validateDurableName,
   validateStreamName,
-  validName,
 } from "./jsutil.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Feature } from "../nats-base-client/semver.ts";
@@ -116,7 +116,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       throw new Error(`consumer 'name' requires server ${min}`);
     }
     if (name) {
-      const m = validName(name);
+      const m = minValidation("name", name);
       if (m.length) {
         throw new Error(`consumer 'name' ${m}`);
       }

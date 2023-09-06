@@ -824,6 +824,40 @@ Deno.test("jsm - validate name", () => {
   });
 });
 
+Deno.test("jsm - minValidation", () => {
+  type t = [string, boolean];
+  const tests: t[] = [
+    ["", false],
+    [".", false],
+    ["*", false],
+    [">", false],
+    ["hello.", false],
+    ["hello\r", false],
+    ["hello\n", false],
+    ["hello\t", false],
+    ["hello ", false],
+    ["hello.*", false],
+    ["hello.>", false],
+    ["one.two", false],
+    ["one*two", false],
+    ["one>two", false],
+    ["stream", true],
+  ];
+
+  tests.forEach((v, idx) => {
+    try {
+      validateName(`${idx}`, v[0]);
+      if (!v[1]) {
+        fail(`${v[0]} should have been rejected`);
+      }
+    } catch (_err) {
+      if (v[1]) {
+        fail(`${v[0]} should have been valid`);
+      }
+    }
+  });
+});
+
 Deno.test("jsm - cross account streams", async () => {
   const { ns, nc } = await setup(
     jetstreamExportServerConf(),
@@ -2204,5 +2238,179 @@ Deno.test("jsm - consumer api action", async () => {
     "consumer already exists",
   );
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - validate stream name in operations", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  const names = ["", ".", "*", ">", "\r", "\n", "\t", " "];
+  type fn = (name: string) => Promise<unknown>;
+  type t = { name: string; fn: fn };
+  const tests = [
+    {
+      name: "add stream",
+      fn: (name: string) => {
+        return jsm.streams.add({ name, subjects: ["a"] });
+      },
+    },
+    {
+      name: "stream info",
+      fn: (name: string) => {
+        return jsm.streams.info(name);
+      },
+    },
+    {
+      name: "stream update",
+      fn: (name: string) => {
+        return jsm.streams.update(name, { subjects: ["a", "b"] });
+      },
+    },
+    {
+      name: "stream purge",
+      fn: (name: string) => {
+        return jsm.streams.purge(name);
+      },
+    },
+    {
+      name: "stream delete",
+      fn: (name: string) => {
+        return jsm.streams.delete(name);
+      },
+    },
+    {
+      name: "getMessage",
+      fn: (name: string) => {
+        return jsm.streams.getMessage(name, { seq: 1 });
+      },
+    },
+    {
+      name: "deleteMessage",
+      fn: (name: string) => {
+        return jsm.streams.deleteMessage(name, 1);
+      },
+    },
+  ];
+
+  for (let j = 0; j < tests.length; j++) {
+    const test = tests[j];
+    for (let idx = 0; idx < names.length; idx++) {
+      let v = names[idx];
+      try {
+        await test.fn(v[0]);
+        if (!v[1]) {
+          fail(`${test.name} - ${v} should have been rejected`);
+        }
+      } catch (err) {
+        if (v === "\r") v = "\\r";
+        if (v === "\n") v = "\\n";
+        if (v === "\t") v = "\\t";
+        const m = v === ""
+          ? "stream name required"
+          : `invalid stream name - stream name cannot contain '${v}'`;
+        assertEquals(err.message, m, `${test.name} - ${m}`);
+      }
+    }
+  }
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - validate consumer name", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  const stream = nuid.next();
+  await jsm.streams.add({ name: stream, subjects: [stream] });
+
+  // we don't test for empty, because consumer validation will
+  // not test durable or name unless set - default is for server
+  // to set name
+  const tests = [".", "*", ">", "\r", "\n", "\t", " "];
+
+  for (let idx = 0; idx < tests.length; idx++) {
+    let v = tests[idx];
+    try {
+      await jsm.consumers.add(stream, {
+        durable_name: v,
+        ack_policy: AckPolicy.None,
+      });
+      fail(`${v} should have been rejected`);
+    } catch (err) {
+      if (v === "\r") v = "\\r";
+      if (v === "\n") v = "\\n";
+      if (v === "\t") v = "\\t";
+      const m = `invalid durable name - durable name cannot contain '${v}'`;
+      assertEquals(err.message, m);
+    }
+  }
+
+  for (let idx = 0; idx < tests.length; idx++) {
+    let v = tests[idx];
+    try {
+      await jsm.consumers.add(stream, {
+        name: v,
+        ack_policy: AckPolicy.None,
+      });
+      fail(`${v} should have been rejected`);
+    } catch (err) {
+      if (v === "\r") v = "\\r";
+      if (v === "\n") v = "\\n";
+      if (v === "\t") v = "\\t";
+      const m = `invalid name name - name name cannot contain '${v}'`;
+      assertEquals(err.message, m);
+    }
+  }
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - validate consumer name in operations", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  const names = ["", ".", "*", ">", "\r", "\n", "\t", " "];
+  type fn = (name: string) => Promise<unknown>;
+  type t = { name: string; fn: fn };
+  const tests = [
+    {
+      name: "consumer info",
+      fn: (name: string) => {
+        return jsm.consumers.info("foo", name);
+      },
+    },
+    {
+      name: "consumer delete",
+      fn: (name: string) => {
+        return jsm.consumers.delete("foo", name);
+      },
+    },
+    {
+      name: "consumer update",
+      fn: (name: string) => {
+        return jsm.consumers.update("foo", name, { description: "foo" });
+      },
+    },
+  ];
+
+  for (let j = 0; j < tests.length; j++) {
+    const test = tests[j];
+    for (let idx = 0; idx < names.length; idx++) {
+      let v = names[idx];
+      try {
+        await test.fn(v[0]);
+        if (!v[1]) {
+          fail(`${test.name} - ${v} should have been rejected`);
+        }
+      } catch (err) {
+        if (v === "\r") v = "\\r";
+        if (v === "\n") v = "\\n";
+        if (v === "\t") v = "\\t";
+        const m = v === ""
+          ? "durable name required"
+          : `invalid durable name - durable name cannot contain '${v}'`;
+        assertEquals(err.message, m, `${test.name} - ${m}`);
+      }
+    }
+  }
   await cleanup(ns, nc);
 });

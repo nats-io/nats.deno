@@ -1042,7 +1042,7 @@ Deno.test("consumers - inboxPrefix is respected", async () => {
   const consumer = await js.consumers.get("messages", "c");
   const iter = await consumer.consume() as PullConsumerMessagesImpl;
   const done = (async () => {
-    for await (const m of iter) {
+    for await (const _m of iter) {
       // nothing
     }
   })().catch();

@@ -20,11 +20,10 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { AckPolicy, DeliverPolicy, JsMsg, nanos } from "../mod.ts";
+import { DeliverPolicy, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
-  PullConsumerMessagesImpl,
 } from "../consumer.ts";
 import { deferred } from "../../nats-base-client/mod.ts";
 import {
@@ -752,7 +751,7 @@ Deno.test("ordered - inboxPrefix is respected", async () => {
   const consumer = await js.consumers.get("messages");
   const iter = await consumer.consume() as OrderedConsumerMessages;
   const done = (async () => {
-    for await (const m of iter) {
+    for await (const _m of iter) {
       // nothing
     }
   })().catch();
