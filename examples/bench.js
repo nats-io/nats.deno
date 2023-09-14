@@ -40,7 +40,7 @@ const argv = parse(
 
 if (argv.h || argv.help || (!argv.sub && !argv.pub && !argv.req && !argv.rep)) {
   console.log(
-    "usage: bench.ts [--json] [--csv] [--csvheader] [--callbacks] [--iterations <#loop: 1>] [--pub] [--sub] [--req  (--asyncRequests)] [--rep] [--count messages:1M] [--payload <#bytes>=128] [--server server] [--subject <subj>]\n",
+    "usage: bench.ts [--json] [--csv] [--csvheader] [--pendingLimit bytes (32K default)]  [--callbacks] [--iterations <#loop: 1>] [--pub] [--sub] [--req  (--asyncRequests)] [--rep] [--count messages:1M] [--payload <#bytes>=128] [--server server] [--subject <subj>]\n",
   );
   Deno.exit(0);
 }
