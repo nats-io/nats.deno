@@ -902,3 +902,63 @@ Deno.test("service - json reviver", async () => {
 
   await cleanup(ns, nc);
 });
+
+async function testQueueName(queue?: string) {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    metadata: { service: "1" },
+    queue,
+  });
+
+  srv.addEndpoint("hello", {
+    handler: (_err, msg) => {
+      msg.respond();
+    },
+  });
+
+  const nci = nc as NatsConnectionImpl;
+  const sub = nci.protocol.subscriptions.all().find((s) => {
+    return s.subject === "hello";
+  });
+  assertExists(sub);
+  assertEquals(sub.queue, queue ? queue : "q");
+  await cleanup(ns, nc);
+}
+
+Deno.test("service - custom queue group", async () => {
+  await testQueueName();
+  await testQueueName("one");
+});
+
+Deno.test("service - custom queue group name", async () => {
+  const { ns, nc } = await setup();
+  await assertRejects(
+    async () => {
+      await nc.services.add({
+        name: "example",
+        version: "0.0.1",
+        metadata: { service: "1" },
+        queue: "",
+      });
+    },
+    Error,
+    "queue name required",
+  );
+
+  await assertRejects(
+    async () => {
+      await nc.services.add({
+        name: "example",
+        version: "0.0.1",
+        metadata: { service: "1" },
+        queue: "hello world",
+      });
+    },
+    Error,
+    "invalid queue name - queue name cannot contain ' '",
+  );
+
+  await cleanup(ns, nc);
+});

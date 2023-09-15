@@ -984,6 +984,11 @@ export type ServiceConfig = {
    * Optional metadata about the service
    */
   metadata?: Record<string, string>;
+  /**
+   * Optional queue group to run the service in. By default,
+   * then queue name is "q".
+   */
+  queue?: string;
 };
 /**
  * The stats of a service

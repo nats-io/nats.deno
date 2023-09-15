@@ -244,9 +244,12 @@ export class ServiceImpl implements Service {
     config: ServiceConfig = { name: "", version: "" },
   ) {
     this.nc = nc;
-    this.config = config;
+    this.config = Object.assign({}, { queue: "q" }, config);
+
     // this will throw if no name
     validateName("name", this.config.name);
+    validateName("queue", this.config.queue);
+
     // this will throw if not semver
     parseSemVer(this.config.version);
     this._id = nuid.next();
@@ -314,7 +317,7 @@ export class ServiceImpl implements Service {
     internal = false,
   ): ServiceSubscription {
     // internals don't use a queue
-    const queue = internal ? "" : "q";
+    const queue = internal ? "" : this.config.queue;
     const { name, subject, handler } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
