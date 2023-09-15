@@ -244,7 +244,10 @@ export class ServiceImpl implements Service {
     config: ServiceConfig = { name: "", version: "" },
   ) {
     this.nc = nc;
-    this.config = Object.assign({}, { queue: "q" }, config);
+    this.config = Object.assign({}, config);
+    if (!this.config.queue) {
+      this.config.queue = "q";
+    }
 
     // this will throw if no name
     validateName("name", this.config.name);

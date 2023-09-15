@@ -32,6 +32,7 @@ import {
   ErrorCode,
   JSONCodec,
   Msg,
+  NatsConnection,
   NatsError,
   nuid,
   QueuedIterator,
@@ -903,16 +904,15 @@ Deno.test("service - json reviver", async () => {
   await cleanup(ns, nc);
 });
 
-async function testQueueName(queue?: string) {
-  const { ns, nc } = await setup();
+async function testQueueName(nc: NatsConnection, subj: string, q?: string) {
   const srv = await nc.services.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
-    queue,
+    queue: q,
   });
 
-  srv.addEndpoint("hello", {
+  srv.addEndpoint(subj, {
     handler: (_err, msg) => {
       msg.respond();
     },
@@ -920,41 +920,26 @@ async function testQueueName(queue?: string) {
 
   const nci = nc as NatsConnectionImpl;
   const sub = nci.protocol.subscriptions.all().find((s) => {
-    return s.subject === "hello";
+    return s.subject === subj;
   });
   assertExists(sub);
-  assertEquals(sub.queue, queue ? queue : "q");
-  await cleanup(ns, nc);
+  assertEquals(sub.queue, q !== undefined ? q : "q");
 }
 
 Deno.test("service - custom queue group", async () => {
-  await testQueueName();
-  await testQueueName("one");
-});
-
-Deno.test("service - custom queue group name", async () => {
   const { ns, nc } = await setup();
+  await testQueueName(nc, "a");
+  await testQueueName(nc, "b", "q1");
   await assertRejects(
     async () => {
-      await nc.services.add({
-        name: "example",
-        version: "0.0.1",
-        metadata: { service: "1" },
-        queue: "",
-      });
+      await testQueueName(nc, "c", "one two");
     },
     Error,
-    "queue name required",
+    "invalid queue name - queue name cannot contain ' '",
   );
-
   await assertRejects(
     async () => {
-      await nc.services.add({
-        name: "example",
-        version: "0.0.1",
-        metadata: { service: "1" },
-        queue: "hello world",
-      });
+      await testQueueName(nc, "d", "  ");
     },
     Error,
     "invalid queue name - queue name cannot contain ' '",
