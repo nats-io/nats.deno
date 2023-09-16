@@ -300,9 +300,16 @@ export interface StreamSource {
   domain?: string;
   /**
    * Apply a subject transform to sourced messages before doing anything else.
+   * This option is exclusive of {@link subject_transforms}.
    * This feature only supported on 2.10.x and better.
    */
   subject_transform_dest?: string;
+  /**
+   * Apply a subject transforms to sourced messages before doing anything else.
+   * This option is exclusive of {@link subject_transform_dest}.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transforms?: SubjectTransformConfig[];
 }
 
 export interface Placement {
@@ -567,6 +574,18 @@ export interface StreamSourceInfo {
    * A possible error
    */
   error?: ApiError;
+  /**
+   * Subject transform configuration to sourced messages before doing anything else.
+   * This option is exclusive of {@link subject_transforms}.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transform_dest?: string;
+  /**
+   * Apply a subject transforms to sourced messages before doing anything else.
+   * This option is exclusive of {@link subject_transform_dest}.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transforms?: SubjectTransformConfig[];
 }
 
 export type PurgeOpts = PurgeBySeq | PurgeTrimOpts | PurgeBySubject;
@@ -894,7 +913,7 @@ export interface ConsumerUpdateConfig {
    */
   "max_waiting"?: number;
   /**
-   * Delivers only the headers of messages in the stream and not the bodies. Additionally
+   * Delivers only the headers of messages in the stream and not the bodies. Additionally,
    * adds Nats-Msg-Size {@link JsHeaders#MessageSizeHdr} header to indicate the size of
    * the removed payload
    */

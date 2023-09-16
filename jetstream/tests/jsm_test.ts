@@ -2414,3 +2414,150 @@ Deno.test("jsm - validate consumer name in operations", async () => {
   }
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - source transforms", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({
+    name,
+    subjects: ["foo", "bar"],
+    storage: StorageType.Memory,
+  });
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("foo"),
+    js.publish("bar"),
+  ]);
+
+  const mi = await jsm.streams.add({
+    name: name + 2,
+    storage: StorageType.Memory,
+    mirror: {
+      name,
+      subject_transforms: [
+        {
+          src: "foo",
+          dest: "foo-transformed",
+        },
+        {
+          src: "bar",
+          dest: "bar-transformed",
+        },
+      ],
+    },
+  });
+
+  assertEquals(mi.config.mirror?.subject_transforms?.length, 2);
+  const transforms = mi.config.mirror?.subject_transforms?.map((v) => {
+    return v.dest;
+  });
+  assertExists(transforms);
+  assertArrayIncludes(transforms, ["foo-transformed", "bar-transformed"]);
+
+  const subjects = [];
+  const c = await js.consumers.get(name + 2);
+  const iter = await c.fetch({ max_messages: 2 });
+  for await (const m of iter) {
+    subjects.push(m.subject);
+  }
+  assertArrayIncludes(transforms, ["foo-transformed", "bar-transformed"]);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - source transforms rejected on old servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const nci = nc as NatsConnectionImpl;
+  nci.features.update("2.8.0");
+  nci.info!.version = "2.8.0";
+
+  const jsm = await nc.jetstreamManager();
+
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "n",
+        subjects: ["foo"],
+        storage: StorageType.Memory,
+        subject_transform: {
+          src: "foo",
+          dest: "transformed-foo",
+        },
+      });
+    },
+    Error,
+    "stream 'subject_transform' requires server 2.10.0",
+  );
+
+  await jsm.streams.add({
+    name: "src",
+    subjects: ["foo", "bar"],
+    storage: StorageType.Memory,
+  });
+
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "n",
+        storage: StorageType.Memory,
+        mirror: {
+          name: "src",
+          subject_transforms: [
+            {
+              src: "foo",
+              dest: "foo-transformed",
+            },
+          ],
+        },
+      });
+    },
+    Error,
+    "stream mirror 'subject_transforms' requires server 2.10.0",
+  );
+
+  await assertRejects(
+    async () => {
+      await jsm.streams.add(
+        {
+          name: "n",
+          storage: StorageType.Memory,
+          sources: [{
+            name: "src",
+            subject_transform_dest: "foo-transformed.>",
+          }],
+        },
+      );
+    },
+    Error,
+    "stream sources 'subject_transform_dest' requires server 2.10.0",
+  );
+
+  await assertRejects(
+    async () => {
+      await jsm.streams.add(
+        {
+          name: "n",
+          storage: StorageType.Memory,
+          sources: [{
+            name: "src",
+            subject_transforms: [
+              {
+                src: "foo",
+                dest: "foo-transformed",
+              },
+            ],
+          }],
+        },
+      );
+    },
+    Error,
+    "stream sources 'subject_transforms' requires server 2.10.0",
+  );
+
+  await cleanup(ns, nc);
+});
