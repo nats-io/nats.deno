@@ -1306,7 +1306,7 @@ export type ObjectStoreOptions = {
 export type ObjectResult = {
   info: ObjectInfo;
   data: ReadableStream<Uint8Array>;
-  error: Promise<Error | null>;
+  error: Promise<Error | undefined>;
 };
 export type ObjectStorePutOpts = {
   /**
