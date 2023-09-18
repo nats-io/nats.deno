@@ -567,7 +567,7 @@ export class ObjectStoreImpl implements ObjectStore {
       }
     })()
       .then(() => {
-        d.resolve();
+        d.resolve(null);
       })
       .catch((err) => {
         controller!.error(err);
