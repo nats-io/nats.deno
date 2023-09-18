@@ -823,6 +823,11 @@ export type Endpoint = {
    * Optional metadata about the endpoint
    */
   metadata?: Record<string, string>;
+  /**
+   * Optional queue group to run this particular endpoint in. The service's configuration
+   * queue configuration will be used. See {@link ServiceConfig.queue}.
+   */
+  queue?: string;
 };
 export type EndpointOptions = Partial<Endpoint>;
 
@@ -830,6 +835,7 @@ export type EndpointInfo = {
   name: string;
   subject: string;
   metadata?: Record<string, string>;
+  queue_group?: string;
 };
 
 export interface Dispatcher<T> {
@@ -864,9 +870,13 @@ export interface ServiceGroup {
    * A group is a subject prefix from which endpoints can be added.
    * Can be empty to allow for prefixes or tokens that are set at runtime
    * without requiring editing of the service.
+   * Note that an optional queue can be specified, all endpoints added to
+   * the group, will use the specified queue unless the endpoint overrides it.
+   * see {@link EndpointOptions.queue} and {@link ServiceConfig.queue}.
    * @param subject
+   * @param queue
    */
-  addGroup(subject?: string): ServiceGroup;
+  addGroup(subject?: string, queue?: string): ServiceGroup;
 }
 
 export type ServiceMetadata = {
@@ -933,6 +943,10 @@ export type NamedEndpointStats = {
    * Average processing_time is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
+  /**
+   * The queue group the endpoint is listening on
+   */
+  queue_group?: string;
 };
 /**
  * Statistics for an endpoint
@@ -986,7 +1000,8 @@ export type ServiceConfig = {
   metadata?: Record<string, string>;
   /**
    * Optional queue group to run the service in. By default,
-   * then queue name is "q".
+   * then queue name is "q". Note that this configuration will
+   * be the default for all endpoints and groups.
    */
   queue?: string;
 };

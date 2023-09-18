@@ -29,6 +29,7 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
   connect,
   createInbox,
+  EndpointInfo,
   ErrorCode,
   JSONCodec,
   Msg,
@@ -48,6 +49,7 @@ import {
   ServiceVerb,
   StringCodec,
 } from "../src/mod.ts";
+import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -944,6 +946,71 @@ Deno.test("service - custom queue group", async () => {
     Error,
     "invalid queue name - queue name cannot contain ' '",
   );
+
+  await cleanup(ns, nc);
+});
+
+function getSubscriptionBySubject(
+  nc: NatsConnection,
+  subject: string,
+): SubscriptionImpl | undefined {
+  const nci = nc as NatsConnectionImpl;
+  return nci.protocol.subscriptions.all().find((v) => {
+    return v.subject === subject;
+  });
+}
+
+function getEndpointInfo(
+  srv: ServiceImpl,
+  subject: string,
+): EndpointInfo | undefined {
+  return srv.endpoints().find((v) => {
+    return v.subject === subject;
+  });
+}
+
+function checkQueueGroup(srv: Service, subj: string, queue: string) {
+  const service = srv as ServiceImpl;
+  const si = getSubscriptionBySubject(service.nc, subj);
+  assertExists(si);
+  assertEquals(si.queue, queue);
+  const ei = getEndpointInfo(service, subj);
+  assertExists(ei);
+  assertEquals(ei.queue_group, queue);
+}
+
+Deno.test("service - endpoint default queue group", async () => {
+  const { ns, nc } = await setup();
+  const srv = await nc.services.add({
+    name: "example",
+    version: "0.0.1",
+    metadata: { service: "1" },
+  }) as ServiceImpl;
+
+  // svc config doesn't specify a queue group so we expect q
+  srv.addEndpoint("a");
+  checkQueueGroup(srv, "a", "q");
+
+  // we add another group, no queue
+  const dg = srv.addGroup("G");
+  dg.addEndpoint("a");
+  checkQueueGroup(srv, "G.a", "q");
+
+  // now a group with a queue - we expect endpoints/and subgroups
+  // to use this unless they override
+  const g = srv.addGroup("g", "qq");
+  g.addEndpoint("a");
+  checkQueueGroup(srv, "g.a", "qq");
+  // override
+  g.addEndpoint("b", { queue: "bb" });
+  checkQueueGroup(srv, "g.b", "bb");
+  // add a subgroup without, should inherit
+  const g2 = g.addGroup("g");
+  g2.addEndpoint("a");
+  checkQueueGroup(srv, "g.g.a", "qq");
+  // and override
+  g2.addEndpoint("b", { queue: "bb" });
+  checkQueueGroup(srv, "g.g.b", "bb");
 
   await cleanup(ns, nc);
 });
