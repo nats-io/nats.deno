@@ -240,6 +240,11 @@ export interface StreamUpdateConfig {
    * This feature only supported on 2.10.x and better.
    */
   subject_transform?: SubjectTransformConfig;
+  /**
+   * Sets the compression level of the stream. This feature is only supported in
+   * servers 2.10.x and better.
+   */
+  compression?: StoreCompression;
 }
 
 export interface Republish {
@@ -408,6 +413,17 @@ export enum ReplayPolicy {
    * Replays messages following the original delay between messages
    */
   Original = "original",
+}
+
+export enum StoreCompression {
+  /**
+   * No compression
+   */
+  None = "none",
+  /**
+   * S2 compression
+   */
+  S2 = "s2",
 }
 
 /**
