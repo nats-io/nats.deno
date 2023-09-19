@@ -272,6 +272,7 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           processing_time: { type: "number" },
           average_processing_time: { type: "number" },
           data: { type: "string" },
+          queue_group: { type: "string" },
         },
         required: [
           "num_requests",
@@ -280,6 +281,7 @@ const statsSchema: JSONSchemaType<ServiceStats> = {
           "processing_time",
           "average_processing_time",
           "data",
+          "queue_group",
         ],
       },
     },
