@@ -299,14 +299,7 @@ export interface StreamSource {
    */
   domain?: string;
   /**
-   * Apply a subject transform to sourced messages before doing anything else.
-   * This option is exclusive of {@link subject_transforms}.
-   * This feature only supported on 2.10.x and better.
-   */
-  subject_transform_dest?: string;
-  /**
    * Apply a subject transforms to sourced messages before doing anything else.
-   * This option is exclusive of {@link subject_transform_dest}.
    * This feature only supported on 2.10.x and better.
    */
   subject_transforms?: SubjectTransformConfig[];
@@ -575,14 +568,7 @@ export interface StreamSourceInfo {
    */
   error?: ApiError;
   /**
-   * Subject transform configuration to sourced messages before doing anything else.
-   * This option is exclusive of {@link subject_transforms}.
-   * This feature only supported on 2.10.x and better.
-   */
-  subject_transform_dest?: string;
-  /**
    * Apply a subject transforms to sourced messages before doing anything else.
-   * This option is exclusive of {@link subject_transform_dest}.
    * This feature only supported on 2.10.x and better.
    */
   subject_transforms?: SubjectTransformConfig[];

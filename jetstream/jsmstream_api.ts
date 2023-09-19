@@ -242,16 +242,6 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
       context: string,
       src: Partial<StreamSource>,
     ): void {
-      if (src.subject_transform_dest) {
-        const { min, ok } = nci.features.get(
-          Feature.JS_STREAM_SUBJECT_TRANSFORM,
-        );
-        if (!ok) {
-          throw new Error(
-            `${context} 'subject_transform_dest' requires server ${min}`,
-          );
-        }
-      }
       const count = src.subject_transforms?.length || 0;
       if (count > 0) {
         const { min, ok } = nci.features.get(

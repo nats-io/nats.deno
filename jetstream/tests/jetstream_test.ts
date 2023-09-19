@@ -4429,7 +4429,7 @@ Deno.test("jetstream - input transform", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - source transform", async () => {
+Deno.test("jetstream - source transforms", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
@@ -4456,7 +4456,7 @@ Deno.test("jetstream - source transform", async () => {
     name: "sourced",
     storage: StorageType.Memory,
     sources: [
-      { name: "foo", subject_transform_dest: "foo2.>" },
+      { name: "foo", subject_transforms: [{ src: ">", dest: "foo2.>" }] },
       { name: "bar" },
       { name: "baz" },
     ],

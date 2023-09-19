@@ -2528,23 +2528,6 @@ Deno.test("jsm - source transforms rejected on old servers", async () => {
           storage: StorageType.Memory,
           sources: [{
             name: "src",
-            subject_transform_dest: "foo-transformed.>",
-          }],
-        },
-      );
-    },
-    Error,
-    "stream sources 'subject_transform_dest' requires server 2.10.0",
-  );
-
-  await assertRejects(
-    async () => {
-      await jsm.streams.add(
-        {
-          name: "n",
-          storage: StorageType.Memory,
-          sources: [{
-            name: "src",
             subject_transforms: [
               {
                 src: "foo",
