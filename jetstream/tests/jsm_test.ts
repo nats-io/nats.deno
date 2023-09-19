@@ -73,7 +73,7 @@ import { JetStreamManagerImpl } from "../jsm.ts";
 import { Feature } from "../../nats-base-client/semver.ts";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
 import { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
-import { ConsumerApiAction } from "../jsapi_types.ts";
+import { ConsumerApiAction, StoreCompression } from "../jsapi_types.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -2541,6 +2541,51 @@ Deno.test("jsm - source transforms rejected on old servers", async () => {
     Error,
     "stream sources 'subject_transforms' requires server 2.10.0",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - stream compression not supported", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const nci = nc as NatsConnectionImpl;
+  nci.features.update("2.9.0");
+  nci.info!.version = "2.9.0";
+
+  const jsm = await nc.jetstreamManager();
+
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "n",
+        subjects: ["foo"],
+        storage: StorageType.File,
+        compression: StoreCompression.S2,
+      });
+    },
+    Error,
+    "stream 'compression' requires server 2.10.0",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - stream compression", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  let si = await jsm.streams.add({
+    name: "n",
+    subjects: ["foo"],
+    storage: StorageType.File,
+    compression: StoreCompression.S2,
+  });
+  assertEquals(si.config.compression, StoreCompression.S2);
+
+  si = await jsm.streams.update("n", { compression: StoreCompression.None });
+  assertEquals(si.config.compression, StoreCompression.None);
 
   await cleanup(ns, nc);
 });

@@ -237,6 +237,12 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
         throw new Error(`stream 'subject_transform' requires server ${min}`);
       }
     }
+    if (cfg.compression) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_COMPRESSION);
+      if (!ok) {
+        throw new Error(`stream 'compression' requires server ${min}`);
+      }
+    }
 
     function validateStreamSource(
       context: string,
