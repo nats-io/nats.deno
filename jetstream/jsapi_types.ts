@@ -133,7 +133,7 @@ export interface StreamConfig extends StreamUpdateConfig {
 
   /**
    * Sets the first sequence number used by the stream. This property can only be
-   * specified when creating the stream, and likely is not valid on mirrors etc,
+   * specified when creating the stream, and likely is not valid on mirrors etc.,
    * as it may disrupt the synchronization logic.
    */
   "first_seq": number;
@@ -530,7 +530,7 @@ export interface PeerInfo {
    */
   name: string;
   /**
-   * Indicates if the server is up to date and synchronised
+   * Indicates if the server is up-to-date and synchronised
    */
   current: boolean;
   /**
@@ -847,7 +847,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   "flow_control"?: boolean;
   /**
-   * If the Consumer is idle for more than this many nano seconds a empty message with
+   * If the Consumer is idle for more than this many nanoseconds an empty message with
    * Status header 100 will be sent indicating the consumer is still alive
    */
   "idle_heartbeat"?: Nanos;
@@ -862,7 +862,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   "opt_start_time"?: string;
   /**
-   * The rate at which messages will be delivered to clients, expressed in bit per second
+   * The rate at which messages will be delivered to clients, expressed in bytes per second
    */
   "rate_limit_bps"?: number;
   /**
@@ -918,11 +918,11 @@ export interface ConsumerUpdateConfig {
    */
   "max_expires"?: Nanos;
   /**
-   * Duration that instructs the server to cleanup ephemeral consumers that are inactive for that long
+   * Duration that instructs the server to clean up ephemeral consumers that are inactive for that long
    */
   "inactive_threshold"?: Nanos;
   /**
-   * List of durations in nanoseconds format that represents a retry time scale for
+   * List of durations in nanoseconds format that represents a retry timescale for
    * NaK'd messages or those being normally retried
    */
   "backoff"?: Nanos[];
