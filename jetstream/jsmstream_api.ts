@@ -243,6 +243,12 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
         throw new Error(`stream 'compression' requires server ${min}`);
       }
     }
+    if (cfg.consumer_limits) {
+      const { min, ok } = nci.features.get(Feature.JS_DEFAULT_CONSUMER_LIMITS);
+      if (!ok) {
+        throw new Error(`stream 'consumer_limits' requires server ${min}`);
+      }
+    }
 
     function validateStreamSource(
       context: string,
