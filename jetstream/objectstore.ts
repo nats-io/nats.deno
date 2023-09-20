@@ -196,15 +196,6 @@ function toServerObjectStoreMeta(
   return v;
 }
 
-function meta(oi: ObjectInfo): ObjectStoreMeta {
-  return {
-    name: oi.name,
-    description: oi.description,
-    headers: oi.headers,
-    options: oi.options,
-  };
-}
-
 function emptyReadableStream(): ReadableStream {
   return new ReadableStream({
     pull(c) {

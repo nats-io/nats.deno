@@ -2609,7 +2609,7 @@ Deno.test("jsm - stream consumer limits", async () => {
   assertEquals(si.config.consumer_limits?.max_ack_pending, 20);
   assertEquals(si.config.consumer_limits?.inactive_threshold, nanos(60_000));
 
-  let ci = await jsm.consumers.add("map", { durable_name: "map" });
+  const ci = await jsm.consumers.add("map", { durable_name: "map" });
   assertEquals(ci.config.max_ack_pending, 20);
   assertEquals(ci.config.inactive_threshold, nanos(60_000));
 
@@ -2654,7 +2654,7 @@ Deno.test("jsm - stream consumer limits override", async () => {
 
   await assertRejects(
     async () => {
-      const ci = await jsm.consumers.add("map", {
+      await jsm.consumers.add("map", {
         durable_name: "map",
         max_ack_pending: 100,
       });
