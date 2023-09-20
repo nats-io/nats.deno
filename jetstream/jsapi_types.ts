@@ -102,6 +102,25 @@ export interface SubjectTransformConfig {
   dest: string;
 }
 
+/**
+ * Sets default consumer limits for inactive_threshold and max_ack_pending
+ * to consumers of this stream that don't specify specific values.
+ * This functionality requires a server 2.10.x or better.
+ */
+export interface StreamConsumerLimits {
+  /**
+   * The default `inactive_threshold` applied to consumers.
+   * This value is specified in nanoseconds. Pleause use the `nanos()`
+   * function to convert between millis and nanoseconds. Or `millis()`
+   * to convert a nanosecond value to millis.
+   */
+  "inactive_threshold"?: Nanos;
+  /**
+   * The default `max_ack_pending` applied to consumers of the stream.
+   */
+  "max_ack_pending"?: number;
+}
+
 export interface StreamConfig extends StreamUpdateConfig {
   /**
    * A unique name for the Stream
@@ -239,12 +258,17 @@ export interface StreamUpdateConfig {
    * Apply a subject transform to incoming messages before doing anything else.
    * This feature only supported on 2.10.x and better.
    */
-  subject_transform?: SubjectTransformConfig;
+  "subject_transform"?: SubjectTransformConfig;
   /**
    * Sets the compression level of the stream. This feature is only supported in
    * servers 2.10.x and better.
    */
   compression?: StoreCompression;
+  /**
+   * The default consumer limits applied to consumers that don't specify limits
+   * for `inactive_threshold` or `max_ack_pending`.
+   */
+  "consumer_limits"?: StreamConsumerLimits;
 }
 
 export interface Republish {
