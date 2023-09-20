@@ -2625,6 +2625,47 @@ Deno.test("jsm - stream consumer limits", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - stream consumer limits override", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.10.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  const si = await jsm.streams.add({
+    name: "map",
+    subjects: ["foo"],
+    storage: StorageType.Memory,
+    consumer_limits: {
+      max_ack_pending: 20,
+      inactive_threshold: nanos(60_000),
+    },
+  });
+  assertEquals(si.config.consumer_limits?.max_ack_pending, 20);
+  assertEquals(si.config.consumer_limits?.inactive_threshold, nanos(60_000));
+
+  const ci = await jsm.consumers.add("map", {
+    durable_name: "map",
+    max_ack_pending: 19,
+    inactive_threshold: nanos(59_000),
+  });
+  assertEquals(ci.config.max_ack_pending, 19);
+  assertEquals(ci.config.inactive_threshold, nanos(59_000));
+
+  await assertRejects(
+    async () => {
+      const ci = await jsm.consumers.add("map", {
+        durable_name: "map",
+        max_ack_pending: 100,
+      });
+    },
+    Error,
+    "consumer max ack pending exceeds system limit of 20",
+  );
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("jsm - stream consumer limits rejected on old servers", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const nci = nc as NatsConnectionImpl;

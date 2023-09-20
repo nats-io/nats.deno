@@ -265,8 +265,9 @@ export interface StreamUpdateConfig {
    */
   compression?: StoreCompression;
   /**
-   * The default consumer limits applied to consumers that don't specify limits
-   * for `inactive_threshold` or `max_ack_pending`.
+   * The consumer limits applied to consumers that don't specify limits
+   * for `inactive_threshold` or `max_ack_pending`. Note that these limits
+   * become an upper bound for all clients.
    */
   "consumer_limits"?: StreamConsumerLimits;
 }
