@@ -127,7 +127,6 @@ class ViewsImpl implements Views {
     name: string,
     opts: Partial<ObjectStoreOptions> = {},
   ): Promise<ObjectStore> {
-    jetstreamPreview(this.js.nc);
     if (typeof crypto?.subtle?.digest !== "function") {
       return Promise.reject(
         new Error(
@@ -1027,22 +1026,3 @@ function autoAckJsMsg(data: JsMsg | null) {
     data.ack();
   }
 }
-
-const jetstreamPreview = (() => {
-  let once = false;
-  return (nci: NatsConnectionImpl) => {
-    if (!once) {
-      once = true;
-      const { lang } = nci?.protocol?.transport;
-      if (lang) {
-        console.log(
-          `\u001B[33m >> jetstream's materialized views object store functionality in ${lang} is beta functionality \u001B[0m`,
-        );
-      } else {
-        console.log(
-          `\u001B[33m >> jetstream's materialized views object store functionality is beta functionality \u001B[0m`,
-        );
-      }
-    }
-  };
-})();
