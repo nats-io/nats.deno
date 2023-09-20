@@ -42,7 +42,6 @@ import {
 import { delay, Timeout, timeout } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
 import { Bucket } from "./kv.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
