@@ -15,23 +15,30 @@
 
 import { connect, millis, Msg } from "../src/mod.ts";
 
-const nc = await connect({ servers: "demo.nats.io" });
+const nc = await connect({ servers: "localhost:4222" });
 const js = nc.jetstream();
+console.log("connected");
 
-const sub = nc.subscribe("tests.object_store.>");
+const sub = nc.subscribe("tests.object-store.>");
 
-const create = async function (m: Msg): Promise<void> {
-  const config = m.json<{ bucket: string }>();
-  await js.views.os(config.bucket);
+const default_bucket = async function (m: Msg): Promise<void> {
+  console.log(`raw data received: ${m}`)
+  const config = m.json<{
+    config: {
+      bucket: string;
+    };
+  }>();
+  await js.views.os(config.config.bucket);
   m.respond();
 };
 
-const customized = async function (m: Msg): Promise<void> {
-  const config = m.json<Record<string, unknown>>();
-  const name = config.bucket as string || "";
-  delete config.bucket;
-  config.millis = millis(config.max_age as number || 0);
-  await js.views.os(name, config);
+const custom_bucket = async function (m: Msg): Promise<void> {
+  const config = m.json< { config:Record<string, unknown> } >();
+  console.log(`custom  config: ${JSON.stringify(config)}`);
+  const name = config.config.bucket as string || "";
+  delete config.config.bucket;
+  config.config.millis = millis(config.config.max_age as number || 0);
+  await js.views.os(name, config.config);
   m.respond();
 };
 
@@ -54,25 +61,28 @@ const entry = async function (m: Msg): Promise<void> {
   m.respond();
 };
 
-const done = async function (_: Msg): Promise<void> {
-  console.log("object store test done");
+const result = function (message: Msg): Promise<void> {
+  if (message.headers) {
+    console.log("test failed");
+    return Promise.reject("test failed");
+  } else {
+    console.log("object store test done");
+    return Promise.resolve();
+  }
 };
 
 const opts = [
-  create,
-  customized,
-  entry,
-  done,
+  default_bucket,
+  result,
+  custom_bucket,
+  result,
+  // customized,
+  // entry,
+  // done,
 ];
 
+console.log("waiting for tests");
 let i = 0;
 for await (const m of sub) {
-  if (m.headers) {
-    for (const [key, value] of m.headers) {
-      console.log(`${key}=${value}`);
-    }
-    throw new Error(`object store failed`);
-  }
-  console.log(m);
   await opts[i++](m);
 }
