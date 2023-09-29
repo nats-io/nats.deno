@@ -825,7 +825,7 @@ export type Endpoint = {
   metadata?: Record<string, string>;
   /**
    * Optional queue group to run this particular endpoint in. The service's configuration
-   * queue configuration will be used. See {@link ServiceConfig.queue}.
+   * queue configuration will be used. See {@link ServiceConfig}.
    */
   queue?: string;
 };
@@ -872,7 +872,7 @@ export interface ServiceGroup {
    * without requiring editing of the service.
    * Note that an optional queue can be specified, all endpoints added to
    * the group, will use the specified queue unless the endpoint overrides it.
-   * see {@link EndpointOptions.queue} and {@link ServiceConfig.queue}.
+   * see {@link EndpointOptions} and {@link ServiceConfig}.
    * @param subject
    * @param queue
    */
