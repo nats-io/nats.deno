@@ -22,7 +22,7 @@
 <ul class="tsd-hierarchy">
 <li><a href="Service.html" class="tsd-signature-type" data-tsd-kind="Interface">Service</a></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:851</li></ul></aside>
+<li>Defined in cjs/nats-base-client/core.ts:857</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -54,24 +54,29 @@
 </div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="QueuedIterator.html" class="tsd-signature-type" data-tsd-kind="Interface">QueuedIterator</a><span class="tsd-signature-symbol">&lt;</span><a href="ServiceMsg.html" class="tsd-signature-type" data-tsd-kind="Interface">ServiceMsg</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:858</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:864</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="addGroup" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>add<wbr/>Group</span><a href="#addGroup" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-<li class="tsd-signature tsd-anchor-link" id="addGroup.addGroup-1">add<wbr/>Group<span class="tsd-signature-symbol">(</span>subject<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="ServiceGroup.html" class="tsd-signature-type" data-tsd-kind="Interface">ServiceGroup</a><a href="#addGroup.addGroup-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-signature tsd-anchor-link" id="addGroup.addGroup-1">add<wbr/>Group<span class="tsd-signature-symbol">(</span>subject<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span>, queue<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="ServiceGroup.html" class="tsd-signature-type" data-tsd-kind="Interface">ServiceGroup</a><a href="#addGroup.addGroup-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
 <li class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>A group is a subject prefix from which endpoints can be added.
 Can be empty to allow for prefixes or tokens that are set at runtime
-without requiring editing of the service.</p>
+without requiring editing of the service.
+Note that an optional queue can be specified, all endpoints added to
+the group, will use the specified queue unless the endpoint overrides it.
+see <a href="../types/EndpointOptions.html">EndpointOptions</a> and <a href="../types/ServiceConfig.html">ServiceConfig</a>.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li>
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> subject: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> subject: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> queue: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="ServiceGroup.html" class="tsd-signature-type" data-tsd-kind="Interface">ServiceGroup</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:869</li></ul></aside></li></ul></section></section></div>
+<li>Defined in cjs/nats-base-client/core.ts:879</li></ul></aside></li></ul></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">

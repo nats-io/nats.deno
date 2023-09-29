@@ -33,6 +33,7 @@ export {
   RepublishHeaders,
   RetentionPolicy,
   StorageType,
+  StoreCompression,
 } from "./internal_mod.ts";
 
 export type {
@@ -123,6 +124,7 @@ export type {
   StreamAlternate,
   StreamAPI,
   StreamConfig,
+  StreamConsumerLimits,
   StreamInfo,
   StreamInfoRequestOptions,
   StreamNames,

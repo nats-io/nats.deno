@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">StreamConfig</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:105</li></ul></aside>
+<li>Defined in cjs/jetstream/jsapi_types.ts:124</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -35,6 +35,8 @@
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="StreamConfig.html#allow_direct" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="#FF984D" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="12" id="icon-1024-path"></rect><path d="M9.354 16V7.24H12.174C12.99 7.24 13.638 7.476 14.118 7.948C14.606 8.412 14.85 9.036 14.85 9.82C14.85 10.604 14.606 11.232 14.118 11.704C13.638 12.168 12.99 12.4 12.174 12.4H10.434V16H9.354ZM10.434 11.428H12.174C12.646 11.428 13.022 11.284 13.302 10.996C13.59 10.7 13.734 10.308 13.734 9.82C13.734 9.324 13.59 8.932 13.302 8.644C13.022 8.356 12.646 8.212 12.174 8.212H10.434V11.428Z" fill="var(--color-text)" id="icon-1024-text"></path></svg><span>allow_<wbr/>direct</span></a>
 <a href="StreamConfig.html#allow_rollup_hdrs" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>allow_<wbr/>rollup_<wbr/>hdrs</span></a>
+<a href="StreamConfig.html#compression" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>compression?</span></a>
+<a href="StreamConfig.html#consumer_limits" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>consumer_<wbr/>limits?</span></a>
 <a href="StreamConfig.html#deny_delete" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>deny_<wbr/>delete</span></a>
 <a href="StreamConfig.html#deny_purge" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>deny_<wbr/>purge</span></a>
 <a href="StreamConfig.html#description" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>description?</span></a>
@@ -72,7 +74,7 @@
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#allow_direct">allow_direct</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:222</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:241</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="allow_rollup_hdrs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>allow_<wbr/>rollup_<wbr/>hdrs</span><a href="#allow_rollup_hdrs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">allow_<wbr/>rollup_<wbr/>hdrs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -81,7 +83,26 @@ or subject in a stream, with a single new message</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#allow_rollup_hdrs">allow_rollup_hdrs</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:200</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:219</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="compression" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>compression</span><a href="#compression" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">compression<span class="tsd-signature-symbol">?:</span> <a href="../enums/StoreCompression.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StoreCompression</a></div>
+<div class="tsd-comment tsd-typography"><p>Sets the compression level of the stream. This feature is only supported in
+servers 2.10.x and better.</p>
+</div><aside class="tsd-sources">
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#compression">compression</a></p>
+<ul>
+<li>Defined in cjs/jetstream/jsapi_types.ts:266</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="consumer_limits" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>consumer_<wbr/>limits</span><a href="#consumer_limits" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">consumer_<wbr/>limits<span class="tsd-signature-symbol">?:</span> <a href="StreamConsumerLimits.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamConsumerLimits</a></div>
+<div class="tsd-comment tsd-typography"><p>The consumer limits applied to consumers that don&#39;t specify limits
+for <code>inactive_threshold</code> or <code>max_ack_pending</code>. Note that these limits
+become an upper bound for all clients.</p>
+</div><aside class="tsd-sources">
+<p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#consumer_limits">consumer_limits</a></p>
+<ul>
+<li>Defined in cjs/jetstream/jsapi_types.ts:272</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="deny_delete" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>delete</span><a href="#deny_delete" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>delete<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -90,7 +111,7 @@ Cannot be changed once set to true</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#deny_delete">deny_delete</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:213</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:232</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="deny_purge" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>deny_<wbr/>purge</span><a href="#deny_purge" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">deny_<wbr/>purge<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -99,7 +120,7 @@ Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#deny_purge">deny_purge</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:218</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:237</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="description" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>description</span><a href="#description" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">description<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
@@ -107,7 +128,7 @@ Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#description">description</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:153</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:172</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="discard" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>discard</span><a href="#discard" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">discard<span class="tsd-signature-symbol">:</span> <a href="../enums/DiscardPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">DiscardPolicy</a></div>
@@ -115,7 +136,7 @@ Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#discard">discard</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:177</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:196</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="discard_new_per_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>discard_<wbr/>new_<wbr/>per_<wbr/>subject</span><a href="#discard_new_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">discard_<wbr/>new_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -124,7 +145,7 @@ Cannot be change once set to true</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#discard_new_per_subject">discard_new_per_subject</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:182</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:201</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="duplicate_window" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>duplicate_<wbr/>window</span><a href="#duplicate_window" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">duplicate_<wbr/>window<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -133,16 +154,16 @@ Set <a href="JetStreamPublishOptions.html#msgID">msgID</a> to enable duplicate d
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#duplicate_window">duplicate_window</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:191</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:210</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="first_seq" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>first_<wbr/>seq</span><a href="#first_seq" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">first_<wbr/>seq<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Sets the first sequence number used by the stream. This property can only be
-specified when creating the stream, and likely is not valid on mirrors etc,
+specified when creating the stream, and likely is not valid on mirrors etc.,
 as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:139</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:158</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_age" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>age</span><a href="#max_age" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>age<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -150,7 +171,7 @@ as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_age">max_age</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:165</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:184</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -158,14 +179,14 @@ as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_bytes">max_bytes</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:169</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:188</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="max_consumers" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>consumers</span><a href="#max_consumers" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>consumers<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many Consumers can be defined for a given Stream. -1 for unlimited.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:121</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:140</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msg_size" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msg_<wbr/>size</span><a href="#max_msg_size" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msg_<wbr/>size<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -173,7 +194,7 @@ as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msg_size">max_msg_size</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:173</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:192</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msgs" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs</span><a href="#max_msgs" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -181,7 +202,7 @@ as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msgs">max_msgs</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:161</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:180</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_msgs_per_subject" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>msgs_<wbr/>per_<wbr/>subject</span><a href="#max_msgs_per_subject" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>msgs_<wbr/>per_<wbr/>subject<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -189,7 +210,7 @@ as it may disrupt the synchronization logic.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#max_msgs_per_subject">max_msgs_per_subject</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:157</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:176</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="metadata" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>metadata</span><a href="#metadata" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">metadata<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
@@ -199,7 +220,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#metadata">metadata</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:237</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:256</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="mirror" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>mirror</span><a href="#mirror" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a></div>
@@ -207,7 +228,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:126</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:145</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="mirror_direct" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>mirror_<wbr/>direct</span><a href="#mirror_direct" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror_<wbr/>direct<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -215,14 +236,14 @@ When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#mirror_direct">mirror_direct</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:226</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:245</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="name" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>A unique name for the Stream</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:109</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:128</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="no_ack" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>no_<wbr/>ack</span><a href="#no_ack" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">no_<wbr/>ack<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -230,7 +251,7 @@ When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#no_ack">no_ack</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:186</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:205</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="num_replicas" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>num_<wbr/>replicas</span><a href="#num_replicas" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">num_<wbr/>replicas<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -238,7 +259,7 @@ When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#num_replicas">num_replicas</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:204</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:223</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="placement" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>placement</span><a href="#placement" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">placement<span class="tsd-signature-symbol">?:</span> <a href="Placement.html" class="tsd-signature-type" data-tsd-kind="Interface">Placement</a></div>
@@ -246,7 +267,7 @@ When a mirror is configured subjects and sources must be empty.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#placement">placement</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:208</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:227</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="republish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>republish</span><a href="#republish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">republish<span class="tsd-signature-symbol">?:</span> <a href="Republish.html" class="tsd-signature-type" data-tsd-kind="Interface">Republish</a></div>
@@ -255,14 +276,14 @@ onto new subjects for partitioning and more</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#republish">republish</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:231</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:250</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="retention" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>retention</span><a href="#retention" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">retention<span class="tsd-signature-symbol">:</span> <a href="../enums/RetentionPolicy.html" class="tsd-signature-type" data-tsd-kind="Enumeration">RetentionPolicy</a></div>
 <div class="tsd-comment tsd-typography"><p>How messages are retained in the Stream, once this is exceeded old messages are removed.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:113</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:132</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="sealed" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>sealed</span><a href="#sealed" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sealed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -271,7 +292,7 @@ sealed streams can not be unsealed via configuration update.
 Can only be set on already created streams via the Update API</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:132</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:151</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="sources" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>sources</span><a href="#sources" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sources<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a><span class="tsd-signature-symbol">[]</span></div>
@@ -279,14 +300,14 @@ Can only be set on already created streams via the Update API</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#sources">sources</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:195</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:214</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="storage" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>storage</span><a href="#storage" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">storage<span class="tsd-signature-symbol">:</span> <a href="../enums/StorageType.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StorageType</a></div>
 <div class="tsd-comment tsd-typography"><p>The storage backend to use for the Stream.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:117</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:136</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="subject_transform" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>subject_<wbr/>transform</span><a href="#subject_transform" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">subject_<wbr/>transform<span class="tsd-signature-symbol">?:</span> <a href="SubjectTransformConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">SubjectTransformConfig</a></div>
@@ -295,7 +316,7 @@ This feature only supported on 2.10.x and better.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#subject_transform">subject_transform</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:242</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:261</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="subjects" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>subjects</span><a href="#subjects" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">subjects<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
@@ -303,7 +324,7 @@ This feature only supported on 2.10.x and better.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="StreamUpdateConfig.html">StreamUpdateConfig</a>.<a href="StreamUpdateConfig.html#subjects">subjects</a></p>
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:149</li></ul></aside></section></section></div>
+<li>Defined in cjs/jetstream/jsapi_types.ts:168</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -331,6 +352,8 @@ This feature only supported on 2.10.x and better.</p>
 <ul>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#allow_direct" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>allow_<wbr/>direct</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#allow_rollup_hdrs" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>allow_<wbr/>rollup_<wbr/>hdrs</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#compression" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>compression?</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#consumer_limits" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>consumer_<wbr/>limits?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#deny_delete" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>deny_<wbr/>delete</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#deny_purge" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>deny_<wbr/>purge</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="StreamConfig.html#description" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>description?</a></li>
