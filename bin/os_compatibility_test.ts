@@ -14,6 +14,7 @@
  */
 
 import { connect, millis, Msg } from "../src/mod.ts";
+import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 
 const nc = await connect({ servers: "localhost:4222" });
 const js = nc.jetstream();
@@ -21,8 +22,7 @@ console.log("connected");
 
 const sub = nc.subscribe("tests.object-store.>");
 
-const default_bucket = async function (m: Msg): Promise<void> {
-  console.log(`raw data received: ${m}`)
+const defaultBucket = async function (m: Msg): Promise<void> {
   const config = m.json<{
     config: {
       bucket: string;
@@ -32,34 +32,82 @@ const default_bucket = async function (m: Msg): Promise<void> {
   m.respond();
 };
 
-const custom_bucket = async function (m: Msg): Promise<void> {
-  const config = m.json< { config:Record<string, unknown> } >();
-  console.log(`custom  config: ${JSON.stringify(config)}`);
-  const name = config.config.bucket as string || "";
-  delete config.config.bucket;
-  config.config.millis = millis(config.config.max_age as number || 0);
-  await js.views.os(name, config.config);
+const customBucket = async function (m: Msg): Promise<void> {
+  const testRequest = m.json<{ config: Record<string, unknown> }>();
+  console.log(`custom  config: ${JSON.stringify(testRequest)}`);
+  const name = testRequest.config.bucket as string || "";
+  delete testRequest.config.bucket;
+  testRequest.config.millis = millis(testRequest.config.max_age as number || 0);
+  await js.views.os(name, testRequest.config);
   m.respond();
 };
 
-const entry = async function (m: Msg): Promise<void> {
-  const t = m.json<{
+const putObject = async function (m: Msg): Promise<void> {
+  const testRequest = m.json<{
     bucket: string;
-    config: { description: string; name: string };
     url: string;
+    config: {
+      description: string;
+      name: string;
+    };
+  }>();
+  console.log(`put object config: ${JSON.stringify(testRequest)}`);
+
+  const file = await fetch(testRequest.url);
+
+  if (!file.body) {
+    throw new Error("Failed to fetch body");
+  }
+  const bucket = await js.views.os(testRequest.bucket);
+
+  await bucket.put(testRequest.config, file.body);
+  m.respond();
+};
+
+const getObject = async function (m: Msg): Promise<void> {
+  const testRequest = m.json<
+    {
+      bucket: string;
+      object: string;
+    }
+  >();
+  console.log(`get object config: ${JSON.stringify(testRequest)}`);
+
+  const bucket = await js.views.os(testRequest.bucket);
+  const object = await bucket.getBlob(testRequest.object);
+
+  if (!object) {
+    throw new Error("Failed to get object");
+  }
+
+  const hash = sha256(object);
+  m.respond(hash);
+};
+
+const updateMetadata = async function (m: Msg): Promise<void> {
+ const testRequest  = m.json<
+  {
+    bucket: string;
+    object: string;
+    config: {
+      description: string;
+      name: string;
+    }
+  }
+  >(); 
+  const bucket = await js.views.os(testRequest.bucket);
+  await bucket.update(testRequest.object, testRequest.config);
+  m.respond();
+}
+
+const watchUpdates = async function (m: Msg): Promise<void> {
+  const testRequest = m.json<{
+    bucket: string;
   }>();
 
-  const name = t.bucket as string || "";
-  const os = await js.views.os(name);
-  const d = await fetch(t.url);
-  if (d.ok && d.body) {
-    await os.put(
-      { name: t.config.name, description: t.config.description },
-      d.body,
-    );
-  }
-  m.respond();
-};
+  const bucket = await js.views.os(testRequest.bucket);
+  const iter = bucket.watch();
+}
 
 const result = function (message: Msg): Promise<void> {
   if (message.headers) {
@@ -72,13 +120,18 @@ const result = function (message: Msg): Promise<void> {
 };
 
 const opts = [
-  default_bucket,
+  defaultBucket,
   result,
-  custom_bucket,
+  customBucket,
   result,
-  // customized,
-  // entry,
-  // done,
+  putObject,
+  result,
+  getObject,
+  result,
+  updateMetadata,
+  result,
+  watchUpdates,
+  result,
 ];
 
 console.log("waiting for tests");
