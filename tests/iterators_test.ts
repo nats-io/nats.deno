@@ -12,13 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { connect, createInbox, ErrorCode } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { connect, createInbox, ErrorCode, syncIterator } from "../src/mod.ts";
+import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { cleanup, setup } from "./helpers/mod.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
+import { delay } from "../nats-base-client/util.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const { ns, nc } = await setup();
@@ -208,6 +213,53 @@ Deno.test("iterators - break cleans up", async () => {
 
   assertEquals(sub.isClosed(), true);
   assertEquals(nci.protocol.subscriptions.subs.size, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("iterators - sync iterator", async () => {
+  const { ns, nc } = await setup();
+  const subj = nuid.next();
+  const sub = nc.subscribe(subj);
+  const sync = syncIterator(sub);
+  nc.publish(subj, "a");
+  let m = await sync.next();
+  assertEquals(m?.string(), "a");
+  nc.publish(subj, "b");
+  m = await sync.next();
+  assertEquals(m?.string(), "b");
+  const p = sync.next();
+  // blocks until next message
+  const v = await Promise.race([
+    delay(250).then(() => {
+      return "timer";
+    }),
+    p,
+  ]);
+  assertEquals(v, "timer");
+  await assertRejects(
+    async () => {
+      for await (const _m of sub) {
+        // should fail
+      }
+    },
+    Error,
+    "already yielding",
+  );
+
+  const sub2 = nc.subscribe("foo", {
+    callback: () => {
+    },
+  });
+  await assertRejects(
+    async () => {
+      for await (const _m of sub2) {
+        // should fail
+      }
+    },
+    Error,
+    "unsupported iterator",
+  );
 
   await cleanup(ns, nc);
 });
