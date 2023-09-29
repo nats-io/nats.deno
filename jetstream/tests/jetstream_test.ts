@@ -83,6 +83,7 @@ import {
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
 } from "../types.ts";
+import { syncIterator } from "../../nats-base-client/core.ts";
 
 function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
@@ -4606,6 +4607,95 @@ Deno.test("jetstream - pullSub iter consumer deleted", async () => {
 
   const err = await d;
   assertEquals(err?.message, "consumer deleted");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - fetch sync", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+
+  await js.publish(name);
+  await js.publish(name);
+
+  const iter = js.fetch(name, name, { batch: 2, no_wait: true });
+  const sync = syncIterator(iter);
+  assertExists(await sync.next());
+  assertExists(await sync.next());
+  assertEquals(await sync.next(), null);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - push sync", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+    deliver_subject: "here",
+  });
+
+  const js = nc.jetstream();
+
+  await js.publish(name);
+  await js.publish(name);
+
+  const sub = await js.subscribe(name, consumerOpts().bind(name, name));
+  const sync = syncIterator(sub);
+  assertExists(await sync.next());
+  assertExists(await sync.next());
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - pull sync", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const name = nuid.next();
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name,
+    subjects: [name],
+    storage: StorageType.Memory,
+  });
+  await jsm.consumers.add(name, {
+    durable_name: name,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+
+  await js.publish(name);
+  await js.publish(name);
+
+  const sub = await js.pullSubscribe(name, consumerOpts().bind(name, name));
+  sub.pull({ batch: 2, no_wait: true });
+  const sync = syncIterator(sub);
+
+  assertExists(await sync.next());
+  assertExists(await sync.next());
+  // if don't unsubscribe, the call will hang because
+  // we are waiting for the sub.pull() to happen
+  sub.unsubscribe();
+  assertEquals(await sync.next(), null);
 
   await cleanup(ns, nc);
 });

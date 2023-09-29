@@ -66,6 +66,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   _data?: unknown; //data is for use by extenders in any way they like
   err?: Error;
   time: number;
+  yielding: boolean;
 
   constructor() {
     this.inflight = 0;
@@ -79,6 +80,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     this.yields = [];
     this.iterClosed = deferred<void>();
     this.time = 0;
+    this.yielding = false;
   }
 
   [Symbol.asyncIterator]() {
@@ -111,6 +113,10 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     if (this.noIterator) {
       throw new NatsError("unsupported iterator", ErrorCode.ApiError);
     }
+    if (this.yielding) {
+      throw new NatsError("already yielding", ErrorCode.ApiError);
+    }
+    this.yielding = true;
     try {
       while (true) {
         if (this.yields.length === 0) {

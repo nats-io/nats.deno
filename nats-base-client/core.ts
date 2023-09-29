@@ -705,6 +705,29 @@ export interface Msg {
   string(): string;
 }
 
+export type SyncIterator<T> = {
+  next(): Promise<T | null>;
+};
+
+/**
+ * syncIterator is a utility function that allows an AsyncIterator to be triggered
+ * by calling next() - the utility will yield null if the underlying iterator is closed.
+ * Note it is possibly an error to call use this function on an AsyncIterable that has
+ * already been started (Symbol.asyncIterator() has been called) from a looping construct.
+ */
+export function syncIterator<T>(src: AsyncIterable<T>): SyncIterator<T> {
+  const iter = src[Symbol.asyncIterator]();
+  return {
+    async next(): Promise<T | null> {
+      const m = await iter.next();
+      if (m.done) {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(m.value);
+    },
+  };
+}
+
 /**
  * Basic interface to a Subscription type
  */
