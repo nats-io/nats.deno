@@ -30,13 +30,13 @@ export {
 export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
 export * from "./nkeys.ts";
-export type { DispatchedFn } from "./queued_iterator.ts";
-export { QueuedIteratorImpl } from "./queued_iterator.ts";
 export type {
+  DispatchedFn,
   IngestionFilterFn,
   IngestionFilterFnResult,
   ProtocolFilterFn,
 } from "./queued_iterator.ts";
+export { QueuedIteratorImpl } from "./queued_iterator.ts";
 export type { ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
@@ -61,35 +61,6 @@ export { Empty } from "./types.ts";
 export { extractProtocolMessage } from "./transport.ts";
 
 export type {
-  Msg,
-  Nanos,
-  NatsConnection,
-  Payload,
-  PublishOptions,
-  RequestManyOptions,
-  RequestOptions,
-  ReviverFn,
-  Server,
-  ServerInfo,
-  ServersChanged,
-  Stats,
-  Status,
-  Sub,
-  SubOpts,
-  Subscription,
-  SubscriptionOptions,
-} from "./core.ts";
-
-export {
-  DebugEvents,
-  Events,
-  RequestStrategy,
-  ServiceResponseType,
-} from "./core.ts";
-
-export { ServiceErrorCodeHeader, ServiceErrorHeader } from "./core.ts";
-
-export type {
   ApiError,
   Auth,
   Authenticator,
@@ -100,12 +71,23 @@ export type {
   EndpointOptions,
   EndpointStats,
   JwtAuth,
+  Msg,
   MsgHdrs,
   NamedEndpointStats,
+  Nanos,
+  NatsConnection,
   NKeyAuth,
   NoAuth,
+  Payload,
+  PublishOptions,
   QueuedIterator,
   Request,
+  RequestManyOptions,
+  RequestOptions,
+  ReviverFn,
+  Server,
+  ServerInfo,
+  ServersChanged,
   Service,
   ServiceConfig,
   ServiceGroup,
@@ -117,18 +99,31 @@ export type {
   ServiceResponse,
   ServicesAPI,
   ServiceStats,
+  Stats,
+  Status,
+  Sub,
+  SubOpts,
+  Subscription,
+  SubscriptionOptions,
+  SyncIterator,
   TlsOptions,
   TokenAuth,
   UserPass,
 } from "./core.ts";
 export {
   createInbox,
+  DebugEvents,
   ErrorCode,
+  Events,
   isNatsError,
   Match,
   NatsError,
+  RequestStrategy,
   ServiceError,
+  ServiceErrorCodeHeader,
+  ServiceErrorHeader,
+  ServiceResponseType,
+  ServiceVerb,
+  syncIterator,
 } from "./core.ts";
-export { SubscriptionImpl } from "./protocol.ts";
-export { Subscriptions } from "./protocol.ts";
-export { ServiceVerb } from "./core.ts";
+export { SubscriptionImpl, Subscriptions } from "./protocol.ts";

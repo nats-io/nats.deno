@@ -27,6 +27,7 @@ export {
   ServiceResponseType,
   ServiceVerb,
   StringCodec,
+  syncIterator,
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "./internal_mod.ts";
@@ -83,6 +84,7 @@ export type {
   SubOpts,
   Subscription,
   SubscriptionOptions,
+  SyncIterator,
   TlsOptions,
   TokenAuth,
   TypedCallback,
