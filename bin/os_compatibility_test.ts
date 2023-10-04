@@ -94,7 +94,7 @@ const updateMetadata = async function (m: Msg): Promise<void> {
       name: string;
     }
   }
-  >(); 
+  >();
   const bucket = await js.views.os(testRequest.bucket);
   await bucket.update(testRequest.object, testRequest.config);
   m.respond();
@@ -106,32 +106,96 @@ const watchUpdates = async function (m: Msg): Promise<void> {
   }>();
 
   const bucket = await js.views.os(testRequest.bucket);
-  const iter = bucket.watch();
+  const iter = await bucket.watch({ includeHistory: false});
+
+  for await (const object of iter) {
+    m.respond(object?.digest);
+    break;
+  }
 }
 
-const result = function (message: Msg): Promise<void> {
+const watch = async function (m: Msg): Promise<void> {
+  const testRequest = m.json<{
+    bucket: string;
+  }>();
+
+  const bucket = await js.views.os(testRequest.bucket);
+  const iter = await bucket.watch({ includeHistory: true});
+
+  let values: string[] = [];
+    for await (const object of iter) {
+      if (object) {
+        values.push(object.digest);
+    }
+    if (values.length == 2) {
+      break;  // Exit the loop once two values have been collected
+    }
+  }
+  const result = values.join(',');
+  m.respond(result);
+}
+
+const getLink = async function (m: Msg): Promise<void> {
+    const testRequest = m.json<{
+        object: string;
+        bucket: string;
+    }>();
+
+   const bucket = await js.views.os(testRequest.bucket);
+   const object = await bucket.getBlob(testRequest.object);
+
+  const hash = sha256(object);
+  m.respond(hash);
+}
+
+const putLink = async function (m: Msg): Promise<void> {
+    const testRequest = m.json<{
+        object: string;
+        bucket: string;
+        link_name: string;
+    }>();
+
+    const bucket = await js.views.os(testRequest.bucket);
+    const object = await bucket.get(testRequest.object);
+
+    if (object) {
+        await  bucket.link(testRequest.link_name, object.info);
+    }
+
+    m.respond();
+
+}
+
+const result = function (test: String) {
+    return function (message: Msg): Promise<void> {
   if (message.headers) {
-    console.log("test failed");
+    console.log(`test ${test} failed`);
     return Promise.reject("test failed");
   } else {
-    console.log("object store test done");
+    console.log(`object store test ${test} done`);
     return Promise.resolve();
-  }
+  }}
 };
 
 const opts = [
   defaultBucket,
-  result,
+  result("defaultBucket"),
   customBucket,
-  result,
+  result("customBucket"),
   putObject,
-  result,
+  result("putObject"),
   getObject,
-  result,
+  result("getObject"),
   updateMetadata,
-  result,
+  result("updateMetadata"),
   watchUpdates,
-  result,
+  result("watchUpdates"),
+  watch,
+  result("watch"),
+  getLink,
+  result("getLink"),
+  putLink,
+  result("putLink"),
 ];
 
 console.log("waiting for tests");
@@ -139,3 +203,4 @@ let i = 0;
 for await (const m of sub) {
   await opts[i++](m);
 }
+console.log("all tests done");
