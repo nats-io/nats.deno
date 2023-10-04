@@ -175,7 +175,7 @@ class ObjectInfoImpl implements ObjectInfo {
     return this.info.metadata || {};
   }
   isLink() {
-    return this.info.options?.link !== undefined;
+    return (this.info.options?.link !== undefined) && (this.info.options?.link !== null);
   }
 }
 
