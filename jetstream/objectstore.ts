@@ -620,6 +620,7 @@ export class ObjectStoreImpl implements ObjectStore {
     const link = { bucket: info.bucket, name: info.name };
     const mm = {
       name: n,
+      bucket: info.bucket,
       options: { link: link },
     } as ObjectStoreMeta;
     await this.js.publish(this._metaSubject(name), JSON.stringify(mm));
