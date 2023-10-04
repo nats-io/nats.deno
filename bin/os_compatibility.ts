@@ -144,8 +144,10 @@ const getLink = async function (m: Msg): Promise<void> {
   const bucket = await js.views.os(testRequest.bucket);
   const object = await bucket.getBlob(testRequest.object);
 
-  const hash = sha256(object);
-  m.respond(hash);
+  if (object) {
+    const hash = sha256(object);
+    m.respond(hash);
+  }
 };
 
 const putLink = async function (m: Msg): Promise<void> {
@@ -164,7 +166,7 @@ const putLink = async function (m: Msg): Promise<void> {
   m.respond();
 };
 
-const result = function (test: String) {
+const result = function (test: string) {
   return function (message: Msg): Promise<void> {
     if (message.headers) {
       console.log(`test ${test} failed`);
