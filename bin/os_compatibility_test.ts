@@ -85,20 +85,20 @@ const getObject = async function (m: Msg): Promise<void> {
 };
 
 const updateMetadata = async function (m: Msg): Promise<void> {
- const testRequest  = m.json<
-  {
-    bucket: string;
-    object: string;
-    config: {
-      description: string;
-      name: string;
+  const testRequest = m.json<
+    {
+      bucket: string;
+      object: string;
+      config: {
+        description: string;
+        name: string;
+      };
     }
-  }
   >();
   const bucket = await js.views.os(testRequest.bucket);
   await bucket.update(testRequest.object, testRequest.config);
   m.respond();
-}
+};
 
 const watchUpdates = async function (m: Msg): Promise<void> {
   const testRequest = m.json<{
@@ -106,13 +106,13 @@ const watchUpdates = async function (m: Msg): Promise<void> {
   }>();
 
   const bucket = await js.views.os(testRequest.bucket);
-  const iter = await bucket.watch({ includeHistory: false});
+  const iter = await bucket.watch({ includeHistory: false });
 
   for await (const object of iter) {
     m.respond(object?.digest);
     break;
   }
-}
+};
 
 const watch = async function (m: Msg): Promise<void> {
   const testRequest = m.json<{
@@ -120,61 +120,60 @@ const watch = async function (m: Msg): Promise<void> {
   }>();
 
   const bucket = await js.views.os(testRequest.bucket);
-  const iter = await bucket.watch({ includeHistory: true});
+  const iter = await bucket.watch({ includeHistory: true });
 
-  let values: string[] = [];
-    for await (const object of iter) {
-      if (object) {
-        values.push(object.digest);
+  const values: string[] = [];
+  for await (const object of iter) {
+    if (object) {
+      values.push(object.digest);
     }
     if (values.length == 2) {
-      break;  // Exit the loop once two values have been collected
+      break; // Exit the loop once two values have been collected
     }
   }
-  const result = values.join(',');
+  const result = values.join(",");
   m.respond(result);
-}
+};
 
 const getLink = async function (m: Msg): Promise<void> {
-    const testRequest = m.json<{
-        object: string;
-        bucket: string;
-    }>();
+  const testRequest = m.json<{
+    object: string;
+    bucket: string;
+  }>();
 
-   const bucket = await js.views.os(testRequest.bucket);
-   const object = await bucket.getBlob(testRequest.object);
+  const bucket = await js.views.os(testRequest.bucket);
+  const object = await bucket.getBlob(testRequest.object);
 
   const hash = sha256(object);
   m.respond(hash);
-}
+};
 
 const putLink = async function (m: Msg): Promise<void> {
-    const testRequest = m.json<{
-        object: string;
-        bucket: string;
-        link_name: string;
-    }>();
+  const testRequest = m.json<{
+    object: string;
+    bucket: string;
+    link_name: string;
+  }>();
 
-    const bucket = await js.views.os(testRequest.bucket);
-    const object = await bucket.get(testRequest.object);
+  const bucket = await js.views.os(testRequest.bucket);
+  const object = await bucket.get(testRequest.object);
 
-    if (object) {
-        await  bucket.link(testRequest.link_name, object.info);
-    }
-
-    m.respond();
-
-}
+  if (object) {
+    await bucket.link(testRequest.link_name, object.info);
+  }
+  m.respond();
+};
 
 const result = function (test: String) {
-    return function (message: Msg): Promise<void> {
-  if (message.headers) {
-    console.log(`test ${test} failed`);
-    return Promise.reject("test failed");
-  } else {
-    console.log(`object store test ${test} done`);
-    return Promise.resolve();
-  }}
+  return function (message: Msg): Promise<void> {
+    if (message.headers) {
+      console.log(`test ${test} failed`);
+      return Promise.reject("test failed");
+    } else {
+      console.log(`test ${test} ok`);
+      return Promise.resolve();
+    }
+  };
 };
 
 const opts = [
