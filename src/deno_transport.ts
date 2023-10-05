@@ -18,7 +18,7 @@ import {
   deferred,
   TlsOptions,
 } from "../nats-base-client/internal_mod.ts";
-import { writeAll } from "https://deno.land/std@0.190.0/streams/write_all.ts";
+import { writeAll } from "https://deno.land/std@0.200.0/streams/write_all.ts";
 import {
   checkOptions,
   checkUnsupportedOption,
@@ -34,7 +34,7 @@ import {
   Transport,
 } from "../nats-base-client/internal_mod.ts";
 
-const VERSION = "1.16.0";
+const VERSION = "1.17.0";
 const LANG = "nats.deno";
 
 const ReadBufferSize = 1024 * 256;

@@ -33,6 +33,7 @@ export {
   RepublishHeaders,
   RetentionPolicy,
   StorageType,
+  StoreCompression,
 } from "./internal_mod.ts";
 
 export type {
@@ -85,6 +86,7 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
+  KvWatchInclude,
   KvWatchOptions,
   LastForMsgRequest,
   Lister,
@@ -122,6 +124,7 @@ export type {
   StreamAlternate,
   StreamAPI,
   StreamConfig,
+  StreamConsumerLimits,
   StreamInfo,
   StreamInfoRequestOptions,
   StreamNames,

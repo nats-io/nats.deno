@@ -23,7 +23,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">StreamSourceInfo</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:541</li></ul></aside>
+<li>Defined in cjs/jetstream/jsapi_types.ts:594</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -35,6 +35,7 @@
 <a href="StreamSourceInfo.html#error" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>error?</span></a>
 <a href="StreamSourceInfo.html#lag" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>lag</span></a>
 <a href="StreamSourceInfo.html#name" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>name</span></a>
+<a href="StreamSourceInfo.html#subject_transforms" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>subject_<wbr/>transforms?</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
@@ -44,28 +45,36 @@
 <div class="tsd-comment tsd-typography"><p>When last the mirror had activity, in nanoseconds. Value will be -1 when there has been no activity.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:553</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:606</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="error" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>error</span><a href="#error" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">error<span class="tsd-signature-symbol">?:</span> <a href="ApiError.html" class="tsd-signature-type" data-tsd-kind="Interface">ApiError</a></div>
 <div class="tsd-comment tsd-typography"><p>A possible error</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:557</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:610</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="lag" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>lag</span><a href="#lag" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">lag<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How many messages behind the mirror operation is</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:549</li></ul></aside></section>
+<li>Defined in cjs/jetstream/jsapi_types.ts:602</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="name" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>The name of the Stream being replicated</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/jsapi_types.ts:545</li></ul></aside></section></section></div>
+<li>Defined in cjs/jetstream/jsapi_types.ts:598</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="subject_transforms" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>subject_<wbr/>transforms</span><a href="#subject_transforms" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">subject_<wbr/>transforms<span class="tsd-signature-symbol">?:</span> <a href="SubjectTransformConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">SubjectTransformConfig</a><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-comment tsd-typography"><p>Apply a subject transforms to sourced messages before doing anything else.
+This feature only supported on 2.10.x and better.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs/jetstream/jsapi_types.ts:615</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -94,7 +103,8 @@
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#active" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>active</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#error" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>error?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#lag" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>lag</a></li>
-<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#name" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>name</a></li></ul></li></ul></nav></div></div>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#name" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>name</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface"><a href="StreamSourceInfo.html#subject_transforms" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>subject_<wbr/>transforms?</a></li></ul></li></ul></nav></div></div>
 <div class="container tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
 <div class="overlay"></div><script src="../assets/main.js"></script></body></html>

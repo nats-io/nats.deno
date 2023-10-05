@@ -25,12 +25,12 @@ import {
   assertExists,
   assertRejects,
   equal,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
-import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
 import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
-import { equals } from "https://deno.land/std@0.190.0/bytes/mod.ts";
+import { equals } from "https://deno.land/std@0.200.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
 import { digestType } from "../objectstore.ts";
@@ -546,7 +546,7 @@ Deno.test("objectstore - watch history", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("objectstore - self link", async () => {
+Deno.test("objectstore - same store link", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -560,13 +560,42 @@ Deno.test("objectstore - self link", async () => {
     readableStreamFrom(sc.encode("a")),
   );
   const oi = await os.link("ref", src);
-  assertEquals(oi.options?.link, undefined);
-  assertEquals(oi.nuid, src.nuid);
+  assertEquals(oi.options?.link?.bucket, src.bucket);
+  assertEquals(oi.options?.link?.name, "a");
 
   const a = await os.list();
   assertEquals(a.length, 2);
   assertEquals(a[0].name, "a");
   assertEquals(a[1].name, "ref");
+
+  const data = await os.getBlob("ref");
+  assertEquals(new TextDecoder().decode(data!), "a");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("objectstore - link of link rejected", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const os = await js.views.os("test");
+
+  const sc = StringCodec();
+  const src = await os.put(
+    { name: "a" },
+    readableStreamFrom(sc.encode("a")),
+  );
+  const link = await os.link("ref", src);
+
+  await assertRejects(
+    async () => {
+      await os.link("ref2", link);
+    },
+    Error,
+    "src object is a link",
+  );
 
   await cleanup(ns, nc);
 });
@@ -590,6 +619,9 @@ Deno.test("objectstore - external link", async () => {
   assertExists(io.options?.link);
   assertEquals(io.options?.link?.bucket, "test");
   assertEquals(io.options?.link?.name, "a");
+
+  const data = await os2.getBlob("ref");
+  assertEquals(new TextDecoder().decode(data!), "a");
 
   await cleanup(ns, nc);
 });

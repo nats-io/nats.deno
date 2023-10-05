@@ -18,9 +18,13 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+  assertStringIncludes,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { DeliverPolicy, JsMsg } from "../mod.ts";
-import { OrderedPullConsumerImpl } from "../consumer.ts";
+import {
+  OrderedConsumerMessages,
+  OrderedPullConsumerImpl,
+} from "../consumer.ts";
 import { deferred } from "../../nats-base-client/mod.ts";
 import {
   cleanup,
@@ -734,5 +738,25 @@ Deno.test("ordered - mem", async () => {
   assertExists(ci);
   assertEquals(ci.config.mem_storage, true);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - inboxPrefix is respected", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+
+  const consumer = await js.consumers.get("messages");
+  const iter = await consumer.consume() as OrderedConsumerMessages;
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().catch();
+  assertStringIncludes(iter.src.inbox, "x.");
+  iter.stop();
+  await done;
   await cleanup(ns, nc);
 });

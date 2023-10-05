@@ -217,7 +217,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     super(nc, opts);
   }
 
-  async add(cfg = {} as Partial<StreamConfig>): Promise<StreamInfo> {
+  checkStreamConfigVersions(cfg: Partial<StreamConfig>) {
     const nci = this.nc as NatsConnectionImpl;
     if (cfg.metadata) {
       const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
@@ -231,6 +231,55 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
         throw new Error(`stream 'first_seq' requires server ${min}`);
       }
     }
+    if (cfg.subject_transform) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_SUBJECT_TRANSFORM);
+      if (!ok) {
+        throw new Error(`stream 'subject_transform' requires server ${min}`);
+      }
+    }
+    if (cfg.compression) {
+      const { min, ok } = nci.features.get(Feature.JS_STREAM_COMPRESSION);
+      if (!ok) {
+        throw new Error(`stream 'compression' requires server ${min}`);
+      }
+    }
+    if (cfg.consumer_limits) {
+      const { min, ok } = nci.features.get(Feature.JS_DEFAULT_CONSUMER_LIMITS);
+      if (!ok) {
+        throw new Error(`stream 'consumer_limits' requires server ${min}`);
+      }
+    }
+
+    function validateStreamSource(
+      context: string,
+      src: Partial<StreamSource>,
+    ): void {
+      const count = src.subject_transforms?.length || 0;
+      if (count > 0) {
+        const { min, ok } = nci.features.get(
+          Feature.JS_STREAM_SOURCE_SUBJECT_TRANSFORM,
+        );
+        if (!ok) {
+          throw new Error(
+            `${context} 'subject_transforms' requires server ${min}`,
+          );
+        }
+      }
+    }
+
+    if (cfg.sources) {
+      cfg.sources.forEach((src) => {
+        validateStreamSource("stream sources", src);
+      });
+    }
+
+    if (cfg.mirror) {
+      validateStreamSource("stream mirror", cfg.mirror);
+    }
+  }
+
+  async add(cfg = {} as Partial<StreamConfig>): Promise<StreamInfo> {
+    this.checkStreamConfigVersions(cfg);
     validateStreamName(cfg.name);
     cfg.mirror = convertStreamSourceDomain(cfg.mirror);
     //@ts-ignore: the sources are either set or not - so no item should be undefined in the list
@@ -241,6 +290,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
     );
     const si = r as StreamInfo;
     this._fixInfo(si);
+
     return si;
   }
 
@@ -263,13 +313,7 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
         `\u001B[33m >> streams.update(config: StreamConfig) api changed to streams.update(name: string, config: StreamUpdateConfig) - this shim will be removed - update your code.  \u001B[0m`,
       );
     }
-    const nci = this.nc as NatsConnectionImpl;
-    if (cfg.metadata) {
-      const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
-      if (!ok) {
-        throw new Error(`stream 'metadata' requires server ${min}`);
-      }
-    }
+    this.checkStreamConfigVersions(cfg);
     validateStreamName(name);
     const old = await this.info(name);
     const update = Object.assign(old.config, cfg);

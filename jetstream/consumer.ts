@@ -250,7 +250,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.refilling = refilling;
     this.stack = new Error().stack!.split("\n").slice(1).join("\n");
     this.timeout = null;
-    this.inbox = createInbox();
+    this.inbox = createInbox(c.api.nc.options.inboxPrefix);
     this.listeners = [];
 
     const {

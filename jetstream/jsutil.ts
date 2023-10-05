@@ -32,14 +32,28 @@ export function validateStreamName(name?: string) {
   return minValidation("stream", name);
 }
 
-function minValidation(context: string, name = "") {
+export function minValidation(context: string, name = "") {
   // minimum validation on streams/consumers matches nats cli
   if (name === "") {
     throw Error(`${context} name required`);
   }
-  const bad = [".", "*", ">", "/", "\\"];
+  const bad = [".", "*", ">", "/", "\\", " ", "\t", "\n", "\r"];
   bad.forEach((v) => {
     if (name.indexOf(v) !== -1) {
+      // make the error have a meaningful character
+      switch (v) {
+        case "\n":
+          v = "\\n";
+          break;
+        case "\r":
+          v = "\\r";
+          break;
+        case "\t":
+          v = "\\t";
+          break;
+        default:
+          // nothing
+      }
       throw Error(
         `invalid ${context} name - ${context} name cannot contain '${v}'`,
       );

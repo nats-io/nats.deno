@@ -102,6 +102,25 @@ export interface SubjectTransformConfig {
   dest: string;
 }
 
+/**
+ * Sets default consumer limits for inactive_threshold and max_ack_pending
+ * to consumers of this stream that don't specify specific values.
+ * This functionality requires a server 2.10.x or better.
+ */
+export interface StreamConsumerLimits {
+  /**
+   * The default `inactive_threshold` applied to consumers.
+   * This value is specified in nanoseconds. Pleause use the `nanos()`
+   * function to convert between millis and nanoseconds. Or `millis()`
+   * to convert a nanosecond value to millis.
+   */
+  "inactive_threshold"?: Nanos;
+  /**
+   * The default `max_ack_pending` applied to consumers of the stream.
+   */
+  "max_ack_pending"?: number;
+}
+
 export interface StreamConfig extends StreamUpdateConfig {
   /**
    * A unique name for the Stream
@@ -133,7 +152,7 @@ export interface StreamConfig extends StreamUpdateConfig {
 
   /**
    * Sets the first sequence number used by the stream. This property can only be
-   * specified when creating the stream, and likely is not valid on mirrors etc,
+   * specified when creating the stream, and likely is not valid on mirrors etc.,
    * as it may disrupt the synchronization logic.
    */
   "first_seq": number;
@@ -239,7 +258,18 @@ export interface StreamUpdateConfig {
    * Apply a subject transform to incoming messages before doing anything else.
    * This feature only supported on 2.10.x and better.
    */
-  subject_transform?: SubjectTransformConfig;
+  "subject_transform"?: SubjectTransformConfig;
+  /**
+   * Sets the compression level of the stream. This feature is only supported in
+   * servers 2.10.x and better.
+   */
+  compression?: StoreCompression;
+  /**
+   * The consumer limits applied to consumers that don't specify limits
+   * for `inactive_threshold` or `max_ack_pending`. Note that these limits
+   * become an upper bound for all clients.
+   */
+  "consumer_limits"?: StreamConsumerLimits;
 }
 
 export interface Republish {
@@ -299,10 +329,10 @@ export interface StreamSource {
    */
   domain?: string;
   /**
-   * Apply a subject transform to sourced messages before doing anything else.
+   * Apply a subject transforms to sourced messages before doing anything else.
    * This feature only supported on 2.10.x and better.
    */
-  subject_transform_dest?: string;
+  subject_transforms?: SubjectTransformConfig[];
 }
 
 export interface Placement {
@@ -408,6 +438,17 @@ export enum ReplayPolicy {
    * Replays messages following the original delay between messages
    */
   Original = "original",
+}
+
+export enum StoreCompression {
+  /**
+   * No compression
+   */
+  None = "none",
+  /**
+   * S2 compression
+   */
+  S2 = "s2",
 }
 
 /**
@@ -530,7 +571,7 @@ export interface PeerInfo {
    */
   name: string;
   /**
-   * Indicates if the server is up to date and synchronised
+   * Indicates if the server is up-to-date and synchronised
    */
   current: boolean;
   /**
@@ -567,6 +608,11 @@ export interface StreamSourceInfo {
    * A possible error
    */
   error?: ApiError;
+  /**
+   * Apply a subject transforms to sourced messages before doing anything else.
+   * This feature only supported on 2.10.x and better.
+   */
+  subject_transforms?: SubjectTransformConfig[];
 }
 
 export type PurgeOpts = PurgeBySeq | PurgeTrimOpts | PurgeBySubject;
@@ -842,7 +888,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   "flow_control"?: boolean;
   /**
-   * If the Consumer is idle for more than this many nano seconds a empty message with
+   * If the Consumer is idle for more than this many nanoseconds an empty message with
    * Status header 100 will be sent indicating the consumer is still alive
    */
   "idle_heartbeat"?: Nanos;
@@ -857,7 +903,7 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    */
   "opt_start_time"?: string;
   /**
-   * The rate at which messages will be delivered to clients, expressed in bit per second
+   * The rate at which messages will be delivered to clients, expressed in bytes per second
    */
   "rate_limit_bps"?: number;
   /**
@@ -894,7 +940,7 @@ export interface ConsumerUpdateConfig {
    */
   "max_waiting"?: number;
   /**
-   * Delivers only the headers of messages in the stream and not the bodies. Additionally
+   * Delivers only the headers of messages in the stream and not the bodies. Additionally,
    * adds Nats-Msg-Size {@link JsHeaders#MessageSizeHdr} header to indicate the size of
    * the removed payload
    */
@@ -913,11 +959,11 @@ export interface ConsumerUpdateConfig {
    */
   "max_expires"?: Nanos;
   /**
-   * Duration that instructs the server to cleanup ephemeral consumers that are inactive for that long
+   * Duration that instructs the server to clean up ephemeral consumers that are inactive for that long
    */
   "inactive_threshold"?: Nanos;
   /**
-   * List of durations in nanoseconds format that represents a retry time scale for
+   * List of durations in nanoseconds format that represents a retry timescale for
    * NaK'd messages or those being normally retried
    */
   "backoff"?: Nanos[];

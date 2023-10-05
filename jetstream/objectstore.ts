@@ -174,6 +174,10 @@ class ObjectInfoImpl implements ObjectInfo {
   get metadata(): Record<string, string> {
     return this.info.metadata || {};
   }
+  isLink() {
+    return (this.info.options?.link !== undefined) &&
+      (this.info.options?.link !== null);
+  }
 }
 
 function toServerObjectStoreMeta(
@@ -191,15 +195,6 @@ function toServerObjectStoreMeta(
     v.headers = mhi.toRecord();
   }
   return v;
-}
-
-function meta(oi: ObjectInfo): ObjectStoreMeta {
-  return {
-    name: oi.name,
-    description: oi.description,
-    headers: oi.headers,
-    options: oi.options,
-  };
 }
 
 function emptyReadableStream(): ReadableStream {
@@ -515,10 +510,12 @@ export class ObjectStoreImpl implements ObjectStore {
       if (ln === "") {
         throw new Error("link is a bucket");
       }
-      const os = await ObjectStoreImpl.create(
-        this.js,
-        info.options.link.bucket,
-      );
+      const os = info.options.link.bucket !== this.name
+        ? await ObjectStoreImpl.create(
+          this.js,
+          info.options.link.bucket,
+        )
+        : this;
       return os.get(ln);
     }
 
@@ -604,32 +601,32 @@ export class ObjectStoreImpl implements ObjectStore {
   }
 
   async link(name: string, info: ObjectInfo): Promise<ObjectInfo> {
-    if (info.deleted) {
-      return Promise.reject(new Error("object is deleted"));
-    }
     const { name: n, error } = this._checkNotEmpty(name);
     if (error) {
       return Promise.reject(error);
     }
-
-    // same object store
-    if (this.name === info.bucket) {
-      const copy = Object.assign({}, meta(info)) as ObjectStoreMeta;
-      copy.name = n;
-      try {
-        await this.update(info.name, copy);
-        const ii = await this.info(n);
-        return ii!;
-      } catch (err) {
-        return Promise.reject(err);
-      }
+    if (info.deleted) {
+      return Promise.reject(new Error("src object is deleted"));
     }
+    if ((info as ObjectInfoImpl).isLink()) {
+      return Promise.reject(new Error("src object is a link"));
+    }
+    const dest = await this.rawInfo(name);
+    if (dest !== null && !dest.deleted) {
+      return Promise.reject(
+        new Error("an object already exists with that name"),
+      );
+    }
+
     const link = { bucket: info.bucket, name: info.name };
     const mm = {
       name: n,
+      bucket: info.bucket,
       options: { link: link },
     } as ObjectStoreMeta;
-    return this._put(mm, null);
+    await this.js.publish(this._metaSubject(name), JSON.stringify(mm));
+    const i = await this.info(name);
+    return Promise.resolve(i!);
   }
 
   async delete(name: string): Promise<PurgeResponse> {
@@ -667,9 +664,6 @@ export class ObjectStoreImpl implements ObjectStore {
         new Error("cannot update meta for a deleted object"),
       );
     }
-    // FIXME: Go's implementation doesn't seem correct - it possibly adds a new meta entry
-    //  effectively making the object available under 2 names, but it doesn't remove the
-    //  older one.
     meta.name = meta.name ?? info.name;
     const { name: n, error } = this._checkNotEmpty(meta.name);
     if (error) {
@@ -684,11 +678,18 @@ export class ObjectStoreImpl implements ObjectStore {
       }
     }
     meta.name = n;
-
     const ii = Object.assign({}, info, toServerObjectStoreMeta(meta!));
-    const jc = JSONCodec();
-
-    return this.js.publish(this._metaSubject(ii.name), jc.encode(ii));
+    // if the name changed, delete the old meta
+    const ack = await this.js.publish(
+      this._metaSubject(ii.name),
+      JSON.stringify(ii),
+    );
+    if (name !== meta.name) {
+      await this.jsm.streams.purge(this.stream, {
+        filter: this._metaSubject(name),
+      });
+    }
+    return Promise.resolve(ack);
   }
 
   async watch(opts: Partial<

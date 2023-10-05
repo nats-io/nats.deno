@@ -115,8 +115,9 @@ export class ServiceMsgImpl implements ServiceMsg {
 
 export class ServiceGroupImpl implements ServiceGroup {
   subject: string;
+  queue: string;
   srv: ServiceImpl;
-  constructor(parent: ServiceGroup, name = "") {
+  constructor(parent: ServiceGroup, name = "", queue = "") {
     if (name !== "") {
       validInternalToken("service group", name);
     }
@@ -127,11 +128,15 @@ export class ServiceGroupImpl implements ServiceGroup {
     } else if (parent instanceof ServiceGroupImpl) {
       const sg = parent as ServiceGroupImpl;
       this.srv = sg.srv;
+      if (queue === "" && sg.queue !== "") {
+        queue = sg.queue;
+      }
       root = sg.subject;
     } else {
       throw new Error("unknown ServiceGroup type");
     }
     this.subject = this.calcSubject(root, name);
+    this.queue = queue;
   }
 
   calcSubject(root: string, name = ""): string {
@@ -149,16 +154,18 @@ export class ServiceGroupImpl implements ServiceGroup {
       ? { handler: opts, subject: name }
       : opts;
     validateName("endpoint", name);
-    let { subject, handler, metadata } = args;
+    let { subject, handler, metadata, queue } = args;
     subject = subject || name;
+    queue = queue || this.queue;
     validSubjectName("endpoint subject", subject);
     subject = this.calcSubject(this.subject, subject);
-    const ne = { name, subject, handler, metadata };
+
+    const ne = { name, subject, queue, handler, metadata };
     return this.srv._addEndpoint(ne);
   }
 
-  addGroup(name = ""): ServiceGroup {
-    return new ServiceGroupImpl(this, name);
+  addGroup(name = "", queue = ""): ServiceGroup {
+    return new ServiceGroupImpl(this, name, queue);
   }
 }
 
@@ -244,9 +251,15 @@ export class ServiceImpl implements Service {
     config: ServiceConfig = { name: "", version: "" },
   ) {
     this.nc = nc;
-    this.config = config;
+    this.config = Object.assign({}, config);
+    if (!this.config.queue) {
+      this.config.queue = "q";
+    }
+
     // this will throw if no name
     validateName("name", this.config.name);
+    validateName("queue", this.config.queue);
+
     // this will throw if not semver
     parseSemVer(this.config.version);
     this._id = nuid.next();
@@ -314,14 +327,15 @@ export class ServiceImpl implements Service {
     internal = false,
   ): ServiceSubscription {
     // internals don't use a queue
-    const queue = internal ? "" : "q";
+    const queue = internal ? "" : (h.queue ? h.queue : this.config.queue);
     const { name, subject, handler } = h as NamedEndpoint;
     const sv = h as ServiceSubscription;
     sv.internal = internal;
     if (internal) {
       this.internal.push(sv);
     }
-    sv.stats = new NamedEndpointStatsImpl(name, subject);
+    sv.stats = new NamedEndpointStatsImpl(name, subject, queue);
+    sv.queue = queue;
 
     const callback = handler
       ? (err: NatsError | null, msg: Msg) => {
@@ -379,8 +393,8 @@ export class ServiceImpl implements Service {
 
   endpoints(): EndpointInfo[] {
     return this.handlers.map((v) => {
-      const { subject, metadata, name } = v;
-      return { subject, metadata, name };
+      const { subject, metadata, name, queue } = v;
+      return { subject, metadata, name, queue_group: queue };
     });
   }
 
@@ -541,8 +555,8 @@ export class ServiceImpl implements Service {
     }
   }
 
-  addGroup(name: string): ServiceGroup {
-    return new ServiceGroupImpl(this, name);
+  addGroup(name: string, queue?: string): ServiceGroup {
+    return new ServiceGroupImpl(this, name, queue);
   }
 
   addEndpoint(
@@ -585,14 +599,16 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
   last_error?: string;
   data?: unknown;
   metadata?: Record<string, string>;
+  queue: string;
 
-  constructor(name: string, subject: string) {
+  constructor(name: string, subject: string, queue = "") {
     this.name = name;
     this.subject = subject;
     this.average_processing_time = 0;
     this.num_errors = 0;
     this.num_requests = 0;
     this.processing_time = 0;
+    this.queue = queue;
   }
   reset(qi?: QueuedIterator<unknown>) {
     this.num_requests = 0;
@@ -629,6 +645,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      queue,
     } = this;
     return {
       name,
@@ -639,6 +656,7 @@ class NamedEndpointStatsImpl implements NamedEndpointStats {
       processing_time,
       last_error,
       data,
+      queue_group: queue,
     };
   }
 

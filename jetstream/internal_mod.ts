@@ -43,6 +43,7 @@ export type {
   JetStreamPublishOptions,
   JetStreamPullSubscription,
   JetStreamSubscription,
+  JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsMsgCallback,
   KV,
@@ -53,6 +54,7 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
+  KvWatchInclude,
   KvWatchOptions,
   ObjectInfo,
   ObjectResult,
@@ -102,6 +104,7 @@ export type {
   SequenceInfo,
   StreamAlternate,
   StreamConfig,
+  StreamConsumerLimits,
   StreamInfo,
   StreamSource,
   StreamSourceInfo,
@@ -120,6 +123,7 @@ export {
   ReplayPolicy,
   RetentionPolicy,
   StorageType,
+  StoreCompression,
 } from "./jsapi_types.ts";
 
 export type { ConsumerAPI } from "./jsmconsumer_api.ts";

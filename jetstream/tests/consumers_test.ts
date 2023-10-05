@@ -13,11 +13,12 @@
  * limitations under the License.
  */
 import { initStream } from "./jstest_util.ts";
-import { assertRejects } from "https://deno.land/std@0.190.0/testing/asserts.ts";
 import {
   assertEquals,
   assertExists,
-} from "https://deno.land/std@0.75.0/testing/asserts.ts";
+  assertRejects,
+  assertStringIncludes,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import {
   deferred,
   Empty,
@@ -50,6 +51,7 @@ import {
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
 import { deadline } from "../../nats-base-client/util.ts";
+import { syncIterator } from "../../nats-base-client/core.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
@@ -1020,5 +1022,86 @@ Deno.test("consumers - next listener leaks", async () => {
   }
   assertEquals(nci.protocol.listeners.length, base);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - inboxPrefix is respected", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const consumer = await js.consumers.get("messages", "c");
+  const iter = await consumer.consume() as PullConsumerMessagesImpl;
+  const done = (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().catch();
+  assertStringIncludes(iter.inbox, "x.");
+  iter.stop();
+  await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume sync", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+  await js.publish("hello");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const consumer = await js.consumers.get("messages", "c");
+  const iter = await consumer.consume() as PullConsumerMessagesImpl;
+  const sync = syncIterator(iter);
+  assertExists(await sync.next());
+  assertExists(await sync.next());
+  iter.stop();
+  assertEquals(await sync.next(), null);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - fetch sync", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+  await js.publish("hello");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const consumer = await js.consumers.get("messages", "c");
+  const iter = await consumer.fetch({ max_messages: 2 });
+  const sync = syncIterator(iter);
+  assertExists(await sync.next());
+  assertExists(await sync.next());
+  assertEquals(await sync.next(), null);
   await cleanup(ns, nc);
 });

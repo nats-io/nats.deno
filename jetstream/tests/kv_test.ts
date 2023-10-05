@@ -45,7 +45,7 @@ import {
   assertExists,
   assertRejects,
   assertThrows,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 import {
   Base64KeyCodec,
@@ -66,7 +66,11 @@ import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
 import { connect } from "../../src/mod.ts";
 import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
 import { JetStreamOptions } from "../../nats-base-client/core.ts";
-import { JetStreamSubscriptionInfoable, kvPrefix } from "../types.ts";
+import {
+  JetStreamSubscriptionInfoable,
+  kvPrefix,
+  KvWatchInclude,
+} from "../types.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -1778,5 +1782,115 @@ Deno.test("kv - metadata", async () => {
   const kv = await js.views.kv("K", { metadata: { hello: "world" } });
   const status = await kv.status();
   assertEquals(status.metadata?.hello, "world");
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - watch updates only", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+
+  await kv.put("a", "a");
+  await kv.put("b", "b");
+
+  const d = deferred();
+  const iter = await kv.watch({
+    include: KvWatchInclude.UpdatesOnly,
+    initializedFn: () => {
+      d.resolve();
+    },
+  });
+
+  const notifications: string[] = [];
+  (async () => {
+    for await (const e of iter) {
+      notifications.push(e.key);
+    }
+  })().then();
+  await d;
+  await kv.put("c", "c");
+  await delay(1000);
+
+  assertEquals(notifications.length, 1);
+  assertEquals(notifications[0], "c");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - watch history", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K", { history: 10 });
+
+  await kv.put("a", "a");
+  await kv.put("a", "aa");
+  await kv.put("a", "aaa");
+  await kv.delete("a");
+
+  const iter = await kv.watch({
+    include: KvWatchInclude.AllHistory,
+  });
+
+  const notifications: string[] = [];
+  (async () => {
+    for await (const e of iter) {
+      if (e.operation === "DEL") {
+        notifications.push(`${e.key}=del`);
+      } else {
+        notifications.push(`${e.key}=${e.string()}`);
+      }
+    }
+  })().then();
+  await kv.put("c", "c");
+  await delay(1000);
+
+  assertEquals(notifications.length, 5);
+  assertEquals(notifications[0], "a=a");
+  assertEquals(notifications[1], "a=aa");
+  assertEquals(notifications[2], "a=aaa");
+  assertEquals(notifications[3], "a=del");
+  assertEquals(notifications[4], "c=c");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - watch history no deletes", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K", { history: 10 });
+
+  await kv.put("a", "a");
+  await kv.put("a", "aa");
+  await kv.put("a", "aaa");
+  await kv.delete("a");
+
+  const iter = await kv.watch({
+    include: KvWatchInclude.AllHistory,
+    ignoreDeletes: true,
+  });
+
+  const notifications: string[] = [];
+  (async () => {
+    for await (const e of iter) {
+      if (e.operation === "DEL") {
+        notifications.push(`${e.key}=del`);
+      } else {
+        notifications.push(`${e.key}=${e.string()}`);
+      }
+    }
+  })().then();
+  await kv.put("c", "c");
+  await kv.delete("c");
+  await delay(1000);
+
+  assertEquals(notifications.length, 4);
+  assertEquals(notifications[0], "a=a");
+  assertEquals(notifications[1], "a=aa");
+  assertEquals(notifications[2], "a=aaa");
+  assertEquals(notifications[3], "c=c");
+
   await cleanup(ns, nc);
 });

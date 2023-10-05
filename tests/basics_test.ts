@@ -20,7 +20,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.190.0/testing/asserts.ts";
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 
@@ -55,6 +55,7 @@ import {
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { Feature } from "../nats-base-client/semver.ts";
+import { syncIterator } from "../nats-base-client/core.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1358,6 +1359,24 @@ Deno.test("basics - json reviver", async () => {
 
   assert(d.date instanceof Date);
   assert(typeof d.auth === "string");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - sync subscription", async () => {
+  const { ns, nc } = await setup();
+  const subj = nuid.next();
+
+  const sub = nc.subscribe(subj);
+  const sync = syncIterator(sub);
+  nc.publish(subj);
+
+  let m = await sync.next();
+  assertExists(m);
+
+  sub.unsubscribe();
+  m = await sync.next();
+  assertEquals(m, null);
 
   await cleanup(ns, nc);
 });
