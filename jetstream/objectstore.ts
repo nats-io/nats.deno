@@ -175,7 +175,8 @@ class ObjectInfoImpl implements ObjectInfo {
     return this.info.metadata || {};
   }
   isLink() {
-    return this.info.options?.link !== undefined;
+    return (this.info.options?.link !== undefined) &&
+      (this.info.options?.link !== null);
   }
 }
 
@@ -620,6 +621,7 @@ export class ObjectStoreImpl implements ObjectStore {
     const link = { bucket: info.bucket, name: info.name };
     const mm = {
       name: n,
+      bucket: info.bucket,
       options: { link: link },
     } as ObjectStoreMeta;
     await this.js.publish(this._metaSubject(name), JSON.stringify(mm));
