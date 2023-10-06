@@ -25,7 +25,10 @@ import {
   Sub,
 } from "../nats-base-client/core.ts";
 
-export type { JetStreamOptions } from "../nats-base-client/core.ts";
+export type {
+  JetStreamManagerOptions,
+  JetStreamOptions,
+} from "../nats-base-client/core.ts";
 
 import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
 import {
@@ -433,7 +436,7 @@ export interface JetStreamClient {
    * Returns a JetStreamManager that uses the same {@link JetStreamOptions}
    * as the current JetStream context
    */
-  jetstreamManager(): Promise<JetStreamManager>;
+  jetstreamManager(checkAPI?: boolean): Promise<JetStreamManager>;
 
   getOptions(): JetStreamOptions;
 }

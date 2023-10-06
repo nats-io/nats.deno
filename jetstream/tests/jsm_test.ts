@@ -2690,3 +2690,36 @@ Deno.test("jsm - stream consumer limits rejected on old servers", async () => {
   );
   await cleanup(ns, nc);
 });
+
+Deno.test("jsm - api check not ok", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  let count = 0;
+  nc.subscribe("$JS.API.INFO", {
+    callback: () => {
+      count++;
+    },
+  });
+
+  await nc.jetstreamManager({ checkAPI: false });
+  await nc.jetstream().jetstreamManager(false);
+  assertEquals(count, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - api check ok", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  let count = 0;
+
+  nc.subscribe("$JS.API.INFO", {
+    callback: () => {
+      count++;
+    },
+  });
+  await nc.jetstreamManager({});
+  await nc.jetstreamManager({ checkAPI: true });
+  await nc.jetstream().jetstreamManager();
+
+  assertEquals(count, 3);
+  await cleanup(ns, nc);
+});

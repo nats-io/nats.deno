@@ -39,6 +39,7 @@ export type {
   Destroyable,
   JetStreamClient,
   JetStreamManager,
+  JetStreamManagerOptions,
   JetStreamOptions,
   JetStreamPublishOptions,
   JetStreamPullSubscription,
