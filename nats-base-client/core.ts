@@ -503,6 +503,14 @@ export interface JetStreamOptions {
   domain?: string;
 }
 
+export interface JetStreamManagerOptions extends JetStreamOptions {
+  /**
+   * Allows disabling a check on the account for JetStream enablement see
+   * {@link JetStreamManager.getAccountInfo()}.
+   */
+  checkAPI?: boolean;
+}
+
 export type Payload = Uint8Array | string;
 
 export interface NatsConnection {
@@ -632,7 +640,7 @@ export interface NatsConnection {
    *
    * @param opts
    */
-  jetstreamManager(opts?: JetStreamOptions): Promise<JetStreamManager>;
+  jetstreamManager(opts?: JetStreamManagerOptions): Promise<JetStreamManager>;
 
   /**
    * Returns a {@link JetStreamClient} which allows publishing messages to

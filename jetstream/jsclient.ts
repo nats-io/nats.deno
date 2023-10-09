@@ -76,6 +76,7 @@ import {
   createInbox,
   ErrorCode,
   isNatsError,
+  JetStreamManagerOptions,
   JetStreamOptions,
   Msg,
   NatsConnection,
@@ -158,8 +159,12 @@ export class JetStreamClientImpl extends BaseApiClient
     this.streams = new StreamsImpl(this.streamAPI);
   }
 
-  jetstreamManager(): Promise<JetStreamManager> {
-    return this.nc.jetstreamManager(this.opts);
+  jetstreamManager(checkAPI?: boolean): Promise<JetStreamManager> {
+    const opts = Object.assign(
+      { checkAPI },
+      this.opts,
+    ) as JetStreamManagerOptions;
+    return this.nc.jetstreamManager(opts);
   }
 
   get apiPrefix(): string {

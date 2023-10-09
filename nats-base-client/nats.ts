@@ -38,6 +38,7 @@ import {
   ConnectionOptions,
   createInbox,
   ErrorCode,
+  JetStreamManagerOptions,
   JetStreamOptions,
   Msg,
   NatsConnection,
@@ -474,17 +475,19 @@ export class NatsConnectionImpl implements NatsConnection {
   }
 
   async jetstreamManager(
-    opts: JetStreamOptions = {},
+    opts: JetStreamManagerOptions = {},
   ): Promise<JetStreamManager> {
     const adm = new JetStreamManagerImpl(this, opts);
-    try {
-      await adm.getAccountInfo();
-    } catch (err) {
-      const ne = err as NatsError;
-      if (ne.code === ErrorCode.NoResponders) {
-        ne.code = ErrorCode.JetStreamNotEnabled;
+    if (opts.checkAPI !== false) {
+      try {
+        await adm.getAccountInfo();
+      } catch (err) {
+        const ne = err as NatsError;
+        if (ne.code === ErrorCode.NoResponders) {
+          ne.code = ErrorCode.JetStreamNotEnabled;
+        }
+        throw ne;
       }
-      throw ne;
     }
     return adm;
   }

@@ -70,6 +70,7 @@ export type {
   JetStreamApiStats,
   JetStreamClient,
   JetStreamManager,
+  JetStreamManagerOptions,
   JetStreamOptions,
   JetStreamPublishOptions,
   JetStreamPullSubscription,
