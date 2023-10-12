@@ -60,6 +60,7 @@ try {
       count,
       Object.assign(base, {
         port,
+        http: 8222,
         jetstream: {
           max_file_store: -1,
           max_mem_store: -1,

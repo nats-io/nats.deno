@@ -321,7 +321,7 @@ export class NatsServer implements PortInfo {
       config.cluster.listen = config.cluster.listen.replace("-1", `${cluster}`);
       routes.push(`nats://${config.cluster.listen}`);
       if (conf.monitoring) {
-        config.http = config.http.replace("-1", `${monitoring}`);
+        config.http = monitoring;
       }
       if (websocket) {
         config.websocket = config.websocket || {};
@@ -489,6 +489,7 @@ export class NatsServer implements PortInfo {
     conf = conf || {};
     conf = JSON.parse(JSON.stringify(conf));
     conf.port = -1;
+    conf.http = "127.0.0.1:-1";
     conf.cluster = conf.cluster || {};
     conf.cluster.name = ns.clusterName;
     conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
