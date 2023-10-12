@@ -65,15 +65,15 @@ Deno.test("idleheartbeat - timeout recover", async () => {
     return true;
   }, { maxOut: 5 });
 
-  const interval = setInterval(() => {
-    h.work();
-  }, 1000);
-
   setTimeout(() => {
     h.cancel();
     d.resolve();
     clearInterval(interval);
-  }, 1650);
+  }, 1730);
+
+  const interval = setInterval(() => {
+    h.work();
+  }, 1000);
 
   await d;
   assertEquals(h.missed, 2);

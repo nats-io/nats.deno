@@ -1132,7 +1132,9 @@ Deno.test("jetstream - fetch one - no wait breaks fast", async () => {
 
   await done;
   sw.mark();
-  assert(25 > sw.duration());
+  console.log({ duration: sw.duration() });
+  const duration = sw.duration();
+  assert(25 > duration, `${duration}`);
   assertEquals(batch.getReceived(), 1);
   await cleanup(ns, nc);
 });
@@ -2286,6 +2288,9 @@ Deno.test("jetstream - source", async () => {
       { name: stream, filter_subject: ">" },
     ],
   });
+
+  // source will not process right away?
+  await delay(1000);
 
   const ci = await jsm.consumers.add("work", {
     ack_policy: AckPolicy.Explicit,

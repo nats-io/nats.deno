@@ -284,7 +284,7 @@ Deno.test("consumers - consume", async () => {
   }));
 
   const count = 50_000;
-  const conf = await memStream(nc, count);
+  const conf = await memStream(nc, count, 0, 5000);
 
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(conf.stream, {
