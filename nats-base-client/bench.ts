@@ -402,11 +402,15 @@ export class Bench {
   }
 }
 
-function throughput(bytes: number, seconds: number): string {
-  return humanizeBytes(bytes / seconds);
+export function throughput(bytes: number, seconds: number): string {
+  return `${humanizeBytes(bytes / seconds)}/sec`;
 }
 
-function humanizeBytes(bytes: number, si = false): string {
+export function msgThroughput(msgs: number, seconds: number): string {
+  return `${(Math.floor(msgs / seconds))} msgs/sec`;
+}
+
+export function humanizeBytes(bytes: number, si = false): string {
   const base = si ? 1000 : 1024;
   const pre = si
     ? ["k", "M", "G", "T", "P", "E"]
@@ -414,11 +418,11 @@ function humanizeBytes(bytes: number, si = false): string {
   const post = si ? "iB" : "B";
 
   if (bytes < base) {
-    return `${bytes.toFixed(2)} ${post}/sec`;
+    return `${bytes.toFixed(2)} ${post}`;
   }
   const exp = parseInt(Math.log(bytes) / Math.log(base) + "");
   const index = parseInt((exp - 1) + "");
-  return `${(bytes / Math.pow(base, exp)).toFixed(2)} ${pre[index]}${post}/sec`;
+  return `${(bytes / Math.pow(base, exp)).toFixed(2)} ${pre[index]}${post}`;
 }
 
 function humanizeNumber(n: number) {

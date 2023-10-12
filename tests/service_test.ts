@@ -344,7 +344,7 @@ Deno.test("service - callback error", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("service -service error is headers", async () => {
+Deno.test("service - service error is headers", async () => {
   const { ns, nc } = await setup();
   const srv = await nc.services.add({
     name: "test",

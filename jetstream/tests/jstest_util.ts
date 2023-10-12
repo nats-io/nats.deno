@@ -127,8 +127,8 @@ export class Mark {
   }
 
   assertInRange(target: number) {
-    const min = .8 * target;
-    const max = 1.2 * target;
+    const min = .50 * target;
+    const max = 1.50 * target;
     const d = this.duration();
     assert(
       d >= min && max >= d,

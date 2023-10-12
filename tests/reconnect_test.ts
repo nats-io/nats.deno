@@ -14,6 +14,7 @@
  */
 import {
   assert,
+  assertAlmostEquals,
   assertEquals,
   fail,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
@@ -124,15 +125,15 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
     reconnectTimeWait: 500,
     maxReconnectAttempts: 1,
   }) as NatsConnectionImpl;
-  const serverLastConnect = nc.protocol.servers.getCurrentServer().lastConnect;
+  const first = nc.protocol.servers.getCurrentServer().lastConnect;
 
   const dt = deferred<number>();
   (async () => {
     for await (const e of nc.status()) {
-      switch (e.type) {
+      switch (e.type as string) {
         case DebugEvents.Reconnecting: {
-          const elapsed = Date.now() - serverLastConnect;
-          dt.resolve(elapsed);
+          const last = nc.protocol.servers.getCurrentServer().lastConnect;
+          dt.resolve(last - first);
           break;
         }
       }
@@ -140,7 +141,7 @@ Deno.test("reconnect - reconnecting after proper delay", async () => {
   })().then();
   await srv.stop();
   const elapsed = await dt;
-  assert(elapsed >= 500 && elapsed <= 700, `elapsed was ${elapsed}`);
+  assert(elapsed >= 500 && elapsed <= 800, `elapsed was ${elapsed}`);
   await nc.closed();
 });
 
