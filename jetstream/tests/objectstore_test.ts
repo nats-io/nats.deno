@@ -853,6 +853,7 @@ Deno.test("objectstore - hashtests", async () => {
     const oi = await os.put(
       { name: t.hash, options: { max_chunk_size: 9 } },
       rs.stream(),
+      { timeout: 20_000 },
     );
     assertEquals(oi.digest, `${digestType}${t.hash}`);
   }

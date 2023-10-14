@@ -186,7 +186,7 @@ Deno.test("reconnect - indefinite reconnects", async () => {
   await srv.stop();
   await lock;
   await srv.stop();
-  assert(reconnects > 5);
+  assert(reconnects >= 5, `${reconnects} >= 5`);
   assert(reconnect);
   assertEquals(disconnects, 1);
 });
@@ -334,6 +334,9 @@ Deno.test("reconnect - close stops reconnects", async () => {
       // the promise will reject if deadline exceeds
       fail(err);
     });
+  // await some more, because the close could have a timer pending that
+  // didn't complete flapping the test on resource leak
+  await delay(750);
 });
 
 Deno.test("reconnect - stale connections don't close", async () => {

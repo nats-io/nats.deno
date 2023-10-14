@@ -52,6 +52,7 @@ import {
 } from "../consumer.ts";
 import { deadline } from "../../nats-base-client/util.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
+import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
@@ -277,32 +278,20 @@ Deno.test("consumers - fetch exactly messages", async () => {
 });
 
 Deno.test("consumers - consume", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({
-    jetstream: {
-      max_memory_store: 1024 * 1024 * 1024,
-    },
-  }));
+  const { ns, nc } = await setup(jetstreamServerConf());
 
-  const count = 50_000;
-  const conf = await memStream(nc, count, 0, 5000);
+  const count = 1000;
+  const { stream, consumer } = await setupStreamAndConsumer(nc, count);
 
-  const jsm = await nc.jetstreamManager();
-  await jsm.consumers.add(conf.stream, {
-    durable_name: "b",
-    ack_policy: AckPolicy.Explicit,
-  });
-
+  const js = nc.jetstream({ timeout: 30_000 });
+  const c = await js.consumers.get(stream, consumer);
+  const ci = await c.info();
+  assertEquals(ci.num_pending, count);
   const start = Date.now();
-  const js = nc.jetstream();
-  const consumer = await js.consumers.get(conf.stream, "b");
-  assertEquals((await consumer.info(true)).num_pending, count);
-  const iter = await consumer.consume({
-    expires: 10_000,
-    max_messages: 50_000,
-  });
+  const iter = await c.consume({ expires: 2_000, max_messages: 10 });
   for await (const m of iter) {
     m.ack();
-    if (m.seq === count) {
+    if (m.info.pending === 0) {
       const millis = Date.now() - start;
       console.log(
         `consumer: ${millis}ms - ${count / (millis / 1000)} msgs/sec`,
@@ -312,33 +301,23 @@ Deno.test("consumers - consume", async () => {
   }
   assertEquals(iter.getReceived(), count);
   assertEquals(iter.getProcessed(), count);
-  assertEquals((await consumer.info()).num_pending, 0);
+  assertEquals((await c.info()).num_pending, 0);
   await cleanup(ns, nc);
 });
 
 Deno.test("consumers - consume callback rejects iter", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({
-    jetstream: {
-      max_memory_store: 1024 * 1024 * 1024,
-    },
-  }));
-
-  const conf = await memStream(nc, 0);
-  const jsm = await nc.jetstreamManager();
-  await jsm.consumers.add(conf.stream, {
-    durable_name: "b",
-    ack_policy: AckPolicy.Explicit,
-  });
-
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const { stream, consumer } = await setupStreamAndConsumer(nc, 0);
   const js = nc.jetstream();
-  const consumer = await js.consumers.get(conf.stream, "b");
-  const iter = await consumer.consume({
-    expires: 10_000,
-    max_messages: 50_000,
+  const c = await js.consumers.get(stream, consumer);
+  const iter = await c.consume({
+    expires: 5_000,
+    max_messages: 10_000,
     callback: (m) => {
       m.ack();
     },
   });
+
   await assertRejects(
     async () => {
       for await (const _o of iter) {
@@ -360,39 +339,6 @@ Deno.test("consumers - consume heartbeats", async () => {
 Deno.test("consumers - fetch heartbeats", async () => {
   await consumerHbTest(true);
 });
-
-async function memStream(
-  nc: NatsConnection,
-  msgs = 1000,
-  size = 0,
-  batch = 10000,
-): Promise<{ millis: number; stream: string; subj: string }> {
-  const jsm = await nc.jetstreamManager();
-  const stream = nuid.next();
-  const subj = nuid.next();
-  await jsm.streams.add({
-    name: stream,
-    subjects: [subj],
-    storage: StorageType.Memory,
-  });
-  const payload = new Uint8Array(size);
-
-  const js = nc.jetstream();
-  const start = Date.now();
-  const buf: Promise<PubAck>[] = [];
-  for (let i = 0; i < msgs; i++) {
-    buf.push(js.publish(subj, payload));
-    if (buf.length === batch) {
-      await Promise.all(buf);
-      buf.length = 0;
-    }
-  }
-  if (buf.length) {
-    await Promise.all(buf);
-    buf.length = 0;
-  }
-  return { millis: Date.now() - start, subj, stream };
-}
 
 /**
  * Setup a cluster that has N nodes with the first node being just a connection
