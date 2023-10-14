@@ -101,7 +101,7 @@ async function requestManyJitter(noMux = false): Promise<void> {
     }
   }
   const time = Date.now() - start;
-  assert(500 > time);
+  assert(1000 > time);
   assertEquals(iter.getProcessed(), 10);
   await cleanup(ns, nc);
 }

@@ -102,8 +102,8 @@ Deno.test("idleheartbeat - timeout autocancel", async () => {
   // and resource leaks for a timer if not cleared.
 
   await d;
-  assert(h.count >= 7);
   assertEquals(h.cancelAfter, 2000);
   assertEquals(h.timer, 0);
   assertEquals(h.autoCancelTimer, 0);
+  assert(h.count >= 7, `${h.count} >= 7`);
 });

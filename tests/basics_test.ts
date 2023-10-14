@@ -1175,15 +1175,9 @@ Deno.test("basics - initial connect error", async () => {
 Deno.test("basics - close promise resolves", async () => {
   const ns = await NatsServer.start();
   const nc = await connect({ port: ns.port, reconnect: false });
-  setTimeout(() => {
-    ns.stop();
-  });
-
-  await nc.closed().then((err) => {
-    assertEquals(err, undefined);
-  }).catch((err) => {
-    fail(err);
-  });
+  const results = await Promise.all([nc.closed(), nc.close()]);
+  assertEquals(results[0], undefined);
+  await ns.stop();
 });
 
 Deno.test("basics - inbox prefixes cannot have wildcards", async () => {
