@@ -149,7 +149,7 @@ export class RequestOne extends BaseRequest implements Request {
     } else {
       this.deferred.resolve(msg);
     }
-    this.cancel();
+    this.mux.cancel(this);
   }
 
   cancel(err?: NatsError): void {
