@@ -65,8 +65,6 @@ export interface Timeout<T> extends Promise<T> {
 }
 
 export function timeout<T>(ms: number): Timeout<T> {
-  // by generating the stack here to help identify what timed out
-  const err = NatsError.errorForCode(ErrorCode.Timeout);
   let methods;
   let timer: number;
   const p = new Promise((_resolve, reject) => {
@@ -78,6 +76,7 @@ export function timeout<T>(ms: number): Timeout<T> {
     methods = { cancel };
     // @ts-ignore: node is not a number
     timer = setTimeout(() => {
+      const err = NatsError.errorForCode(ErrorCode.Timeout);
       reject(err);
     }, ms);
   });
@@ -97,7 +96,10 @@ export function deadline<T>(p: Promise<T>, millis = 1000): Promise<T> {
   const err = new Error(`deadline exceeded`);
   const d = deferred<never>();
   const timer = setTimeout(
-    () => d.reject(err),
+    () => {
+      const err = new Error(`deadline exceeded`);
+      d.reject(err);
+    },
     millis,
   );
   return Promise.race([p, d]).finally(() => clearTimeout(timer));
