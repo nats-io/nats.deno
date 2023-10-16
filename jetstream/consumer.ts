@@ -12,7 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { deferred, Timeout, timeout } from "../nats-base-client/util.ts";
+import {
+  backoff,
+  deferred,
+  delay,
+  Timeout,
+  timeout,
+} from "../nats-base-client/util.ts";
 import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
 import { isHeartbeatMsg, nanos } from "./jsutil.ts";
@@ -53,13 +59,13 @@ export type NextOptions = Expires;
 export type ConsumeBytes =
   & MaxBytes
   & Partial<MaxMessages>
-  & ThresholdBytes
+  & Partial<ThresholdBytes>
   & Expires
   & IdleHeartbeat
   & ConsumeCallback;
 export type ConsumeMessages =
   & Partial<MaxMessages>
-  & ThresholdMessages
+  & Partial<ThresholdMessages>
   & Expires
   & IdleHeartbeat
   & ConsumeCallback;
@@ -102,7 +108,7 @@ export type ThresholdMessages = {
    * from the server. This is only applicable to `consume`.
    * @default  75% of {@link MaxMessages}.
    */
-  threshold_messages?: number;
+  threshold_messages: number;
 };
 export type ThresholdBytes = {
   /**
@@ -110,7 +116,7 @@ export type ThresholdBytes = {
    * from the server. This is only applicable to `consume`.
    * @default 75% of {@link MaxBytes}.
    */
-  threshold_bytes?: number;
+  threshold_bytes: number;
 };
 export type Expires = {
   /**
@@ -154,6 +160,21 @@ export enum ConsumerEvents {
    * the client is disconnected.
    */
   HeartbeatsMissed = "heartbeats_missed",
+  /**
+   * Notification that the consumer was not found. Consumers that yielded at least
+   * one message will be retried for more messages regardless of the not being found
+   * or timeouts etc. This notification includes a count of consecutive attempts to
+   * find the consumer. Note that if you get this notification possibly your code should
+   * attempt to recreate the consumer. Note that this notification is only informational
+   * for ordered consumers, as the consumer will be created in those cases automatically.
+   */
+  ConsumerNotFound = "consumer_not_found",
+
+  /**
+   * This notification is specific of ordered consumers and will be notified whenever
+   * the consumer is recreated. The argument is the name of the newly created consumer.
+   */
+  OrderedConsumerRecreated = "ordered_consumer_recreated",
 }
 
 /**
@@ -219,7 +240,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   implements ConsumerMessages {
   consumer: PullConsumerImpl;
   opts: Record<string, number>;
-  sub: Subscription;
+  sub!: Subscription;
   monitor: IdleHeartbeatMonitor | null;
   pending: { msgs: number; bytes: number; requests: number };
   inbox: string;
@@ -231,6 +252,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   cleanupHandler?: () => void;
   listeners: QueuedIterator<ConsumerStatus>[];
   statusIterator?: QueuedIteratorImpl<Status>;
+  forOrderedConsumer: boolean;
+  resetHandler?: () => void;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -252,7 +275,12 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.timeout = null;
     this.inbox = createInbox(c.api.nc.options.inboxPrefix);
     this.listeners = [];
+    this.forOrderedConsumer = false;
 
+    this.start();
+  }
+
+  start(): void {
     const {
       max_messages,
       max_bytes,
@@ -281,7 +309,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       sub.unsubscribe();
     }
 
-    this.sub = c.api.nc.subscribe(this.inbox, {
+    this.sub = this.consumer.api.nc.subscribe(this.inbox, {
       callback: (err, msg) => {
         if (err) {
           // this is possibly only a permissions error which means
@@ -407,7 +435,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     // now if we disconnect, the consumer could be gone
     // or we were slow consumer'ed by the server
     (async () => {
-      const status = c.api.nc.status();
+      const status = this.consumer.api.nc.status();
       this.statusIterator = status as QueuedIteratorImpl<Status>;
       for await (const s of status) {
         switch (s.type) {
@@ -469,10 +497,19 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     }
   }
 
-  resetPending(): Promise<boolean> {
-    // check we exist
-    return this.consumer.info()
-      .then((_ci) => {
+  async resetPending(): Promise<boolean> {
+    let notFound = 0;
+    const bo = backoff();
+    let attempt = 0;
+    while (true) {
+      if (this.consumer.api.nc.isClosed()) {
+        console.error("aborting resetPending - connection is closed");
+        return false;
+      }
+      try {
+        // check we exist
+        await this.consumer.info();
+        notFound = 0;
         // we exist, so effectively any pending state is gone
         // so reset and re-pull
         this.pending.msgs = 0;
@@ -480,14 +517,30 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
         this.pending.requests = 0;
         this.pull(this.pullOptions());
         return true;
-      })
-      .catch((err) => {
+      } catch (err) {
         // game over
         if (err.message === "consumer not found") {
-          this.stop(err);
+          notFound++;
+          this.notify(ConsumerEvents.ConsumerNotFound, notFound);
+          if (this.resetHandler) {
+            try {
+              this.resetHandler();
+            } catch (_) {
+              // ignored
+            }
+          }
+          if (this.forOrderedConsumer) {
+            return false;
+          }
+        } else {
+          notFound = 0;
         }
-        return false;
-      });
+        const to = bo.backoff(attempt);
+        // wait for delay or till the client closes
+        await Promise.race([delay(to), this.consumer.api.nc.closed()]);
+        attempt++;
+      }
+    }
   }
 
   pull(opts: Partial<PullOptions>) {
@@ -630,13 +683,16 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
 export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
   implements ConsumerMessages {
   src!: PullConsumerMessagesImpl;
+  listeners: QueuedIterator<ConsumerStatus>[];
 
   constructor() {
     super();
+    this.listeners = [];
   }
 
   setSource(src: PullConsumerMessagesImpl) {
     if (this.src) {
+      this.src.resetHandler = undefined;
       this.src.setCleanupHandler();
       this.src.stop();
     }
@@ -644,11 +700,32 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
     this.src.setCleanupHandler(() => {
       this.close().catch();
     });
+    (async () => {
+      const status = await this.src.status();
+      for await (const s of status) {
+        this.notify(s.type, s.data);
+      }
+    })().catch(() => {});
+  }
+
+  notify(type: ConsumerEvents | ConsumerDebugEvents, data: unknown) {
+    if (this.listeners.length > 0) {
+      (() => {
+        this.listeners.forEach((l) => {
+          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
+            l.push({ type, data });
+          }
+        });
+      })();
+    }
   }
 
   stop(err?: Error): void {
     this.src?.stop(err);
     super.stop(err);
+    this.listeners.forEach((n) => {
+      n.stop();
+    });
   }
 
   close(): Promise<void> {
@@ -657,9 +734,9 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
   }
 
   status(): Promise<AsyncIterable<ConsumerStatus>> {
-    return Promise.reject(
-      new Error("ordered consumers don't report consumer status"),
-    );
+    const iter = new QueuedIteratorImpl<ConsumerStatus>();
+    this.listeners.push(iter);
+    return Promise.resolve(iter);
   }
 }
 
@@ -884,34 +961,26 @@ export class OrderedPullConsumerImpl implements Consumer {
 
   async resetConsumer(seq = 0): Promise<ConsumerInfo> {
     // try to delete the consumer
-    if (this.consumer) {
-      // FIXME: this needs to be a standard request option to retry
-      while (true) {
-        try {
-          await this.delete();
-          break;
-        } catch (err) {
-          if (err.message !== "TIMEOUT") {
-            throw err;
-          }
-        }
-      }
-    }
+    this.consumer?.delete().catch(() => {});
     seq = seq === 0 ? 1 : seq;
     // reset the consumer sequence as JetStream will renumber from 1
     this.cursor.deliver_seq = 0;
     const config = this.getConsumerOpts(seq);
     config.max_deliver = 1;
     config.mem_storage = true;
+    const bo = backoff();
     let ci;
-    // FIXME: replace with general jetstream retry logic
-    while (true) {
+    for (let i = 0;; i++) {
       try {
         ci = await this.api.add(this.stream, config);
+        this.iter?.notify(ConsumerEvents.OrderedConsumerRecreated, ci.name);
         break;
       } catch (err) {
-        if (err.message !== "TIMEOUT") {
+        if (seq === 0 && i >= 30) {
+          // consumer was never created, so we can fail this
           throw err;
+        } else {
+          await delay(bo.backoff(i + 1));
         }
       }
     }
@@ -951,6 +1020,7 @@ export class OrderedPullConsumerImpl implements Consumer {
       this.iter = new OrderedConsumerMessages();
     }
     this.consumer = new PullConsumerImpl(this.api, this.currentConsumer);
+
     const copts = opts as ConsumeOptions;
     copts.callback = this.internalHandler(this.serial);
     let msgs: ConsumerMessages | null = null;
@@ -962,7 +1032,12 @@ export class OrderedPullConsumerImpl implements Consumer {
     } else {
       return Promise.reject("reset called with unset consumer type");
     }
-    this.iter.setSource(msgs as PullConsumerMessagesImpl);
+    const msgsImpl = msgs as PullConsumerMessagesImpl;
+    msgsImpl.forOrderedConsumer = true;
+    msgsImpl.resetHandler = () => {
+      this.reset(this.opts);
+    };
+    this.iter.setSource(msgsImpl);
     return this.iter;
   }
 
