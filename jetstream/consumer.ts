@@ -26,7 +26,7 @@ import {
   Status,
   Subscription,
 } from "../nats-base-client/core.ts";
-import * as core from "../nats-base-client/idleheartbeat.ts";
+import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { JsMsg, toJsMsg } from "./jsmsg.ts";
 import { MsgImpl } from "../nats-base-client/msg.ts";
 import {
@@ -220,7 +220,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   consumer: PullConsumerImpl;
   opts: Record<string, number>;
   sub: Subscription;
-  monitor: core.IdleHeartbeat | null;
+  monitor: IdleHeartbeatMonitor | null;
   pending: { msgs: number; bytes: number; requests: number };
   inbox: string;
   refilling: boolean;
@@ -386,18 +386,22 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     });
 
     if (idle_heartbeat) {
-      this.monitor = new core.IdleHeartbeat(idle_heartbeat, (data): boolean => {
-        // for the pull consumer - missing heartbeats may be corrected
-        // on the next pull etc - the only assumption here is we should
-        // reset and check if the consumer was deleted from under us
-        this.notify(ConsumerEvents.HeartbeatsMissed, data);
-        this.resetPending()
-          .then(() => {
-          })
-          .catch(() => {
-          });
-        return false;
-      }, { maxOut: 2 });
+      this.monitor = new IdleHeartbeatMonitor(
+        idle_heartbeat,
+        (data): boolean => {
+          // for the pull consumer - missing heartbeats may be corrected
+          // on the next pull etc - the only assumption here is we should
+          // reset and check if the consumer was deleted from under us
+          this.notify(ConsumerEvents.HeartbeatsMissed, data);
+          this.resetPending()
+            .then(() => {
+            })
+            .catch(() => {
+            });
+          return false;
+        },
+        { maxOut: 2 },
+      );
     }
 
     // now if we disconnect, the consumer could be gone
