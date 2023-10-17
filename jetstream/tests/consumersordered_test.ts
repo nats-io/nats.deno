@@ -25,7 +25,7 @@ import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
 } from "../consumer.ts";
-import { deferred } from "../../nats-base-client/mod.ts";
+import { deferred, Events, syncIterator } from "../../nats-base-client/mod.ts";
 import {
   cleanup,
   jetstreamServerConf,
@@ -758,5 +758,47 @@ Deno.test("ordered - inboxPrefix is respected", async () => {
   assertStringIncludes(iter.src.inbox, "x.");
   iter.stop();
   await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered - consume recovers", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf());
+
+  const reconnected = deferred();
+
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["q"] });
+
+  const js = nc.jetstream();
+  await js.publish("q", "1");
+  await js.publish("q", "2");
+
+  const consumer = await js.consumers.get("messages");
+  const iter = await consumer.consume();
+  const sync = syncIterator(iter);
+  let m = await sync.next();
+  assertEquals(m?.string(), "1");
+
+  m = await sync.next();
+  assertEquals(m?.string(), "2");
+
+  await ns.stop();
+  ns = await ns.restart();
+  await reconnected;
+  await js.publish("q", "3");
+
+  m = await sync.next();
+  assertEquals(m?.string(), "3");
+
+  // stop heartbeat timers etc
+  iter.stop();
   await cleanup(ns, nc);
 });

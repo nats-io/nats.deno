@@ -19,7 +19,12 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { deferred, Empty, StringCodec } from "../../nats-base-client/mod.ts";
+import {
+  deferred,
+  Empty,
+  Events,
+  StringCodec,
+} from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
@@ -1041,5 +1046,55 @@ Deno.test("consumers - fetch sync", async () => {
   assertExists(await sync.next());
   assertExists(await sync.next());
   assertEquals(await sync.next(), null);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume recovers", async () => {
+  let { ns, nc } = await setup(jetstreamServerConf());
+
+  const reconnected = deferred();
+
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Reconnect) {
+        reconnected.resolve();
+      }
+    }
+  })().then();
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["q"] });
+
+  const js = nc.jetstream();
+  await js.publish("q", "1");
+  await js.publish("q", "2");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  const consumer = await js.consumers.get("messages", "c");
+  const iter = await consumer.consume();
+  const sync = syncIterator(iter);
+  let m = await sync.next();
+  assertEquals(m?.string(), "1");
+
+  m = await sync.next();
+  assertEquals(m?.string(), "2");
+
+  await ns.stop();
+  ns = await ns.restart();
+  await reconnected;
+  await js.publish("q", "3");
+
+  m = await sync.next();
+  assertEquals(m?.string(), "3");
+
+  // stop heartbeat timers etc
+  iter.stop();
   await cleanup(ns, nc);
 });
