@@ -100,11 +100,11 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get subject(): string {
-    return this.header.get(DirectMsgHeaders.Subject);
+    return this.header.last(DirectMsgHeaders.Subject);
   }
 
   get seq(): number {
-    const v = this.header.get(DirectMsgHeaders.Sequence);
+    const v = this.header.last(DirectMsgHeaders.Sequence);
     return typeof v === "string" ? parseInt(v) : 0;
   }
 
@@ -113,11 +113,11 @@ export class DirectMsgImpl implements DirectMsg {
   }
 
   get timestamp(): string {
-    return this.header.get(DirectMsgHeaders.TimeStamp);
+    return this.header.last(DirectMsgHeaders.TimeStamp);
   }
 
   get stream(): string {
-    return this.header.get(DirectMsgHeaders.Stream);
+    return this.header.last(DirectMsgHeaders.Stream);
   }
 
   json<T = unknown>(reviver?: ReviverFn): T {

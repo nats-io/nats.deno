@@ -384,6 +384,8 @@ export interface MsgHdrs extends Iterable<[string, string[]]> {
   values(k: string, match?: Match): string[];
 
   delete(k: string, match?: Match): void;
+
+  last(k: string, match?: Match): string;
 }
 
 export interface RequestOptions {
