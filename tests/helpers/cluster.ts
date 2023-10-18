@@ -48,6 +48,8 @@ if (argv.h || argv.help) {
 
 const count = argv["count"] as number || 3;
 const port = argv["port"] as number ?? 4222;
+let chaosTimer: number | undefined;
+let cluster: NatsServer[];
 
 try {
   const base = { debug: false };
@@ -55,7 +57,7 @@ try {
   if (serverDebug) {
     base.debug = true;
   }
-  const cluster = argv.jetstream
+  cluster = argv.jetstream
     ? await NatsServer.jetstreamCluster(
       count,
       Object.assign(base, {
@@ -87,7 +89,6 @@ try {
   if (argv.chaos === true && confirm("start chaos?")) {
     chaos(cluster, 0);
   }
-
   waitForStop();
 } catch (err) {
   console.error(err);
@@ -99,7 +100,7 @@ function randomBetween(min: number, max: number): number {
 
 function chaos(cluster: NatsServer[], delay: number) {
   setTimeout(() => {
-    setInterval(() => {
+    chaosTimer = setInterval(() => {
       restart(cluster);
     }, 3000);
   }, delay);
@@ -142,5 +143,25 @@ function waitForStop(): void {
   console.log("control+c to terminate");
   Deno.addSignalListener("SIGTERM", () => {
     Deno.exit();
+  });
+
+  console.log("control+t to stop/restart chaos");
+  Deno.addSignalListener("SIGINFO", () => {
+    if (chaosTimer === undefined) {
+      console.log("restarting chaos...");
+      console.log("control+t to stop chaos");
+      console.log("control+c to terminate");
+
+      chaos(cluster, 0);
+      return;
+    }
+    clearInterval(chaosTimer);
+    chaosTimer = undefined;
+    console.log("control+t to restart chaos");
+    console.log("control+c to terminate");
+    console.log("monitoring can be accessed:");
+    for (const s of cluster) {
+      console.log(`http://127.0.0.1:${s?.monitoring}`);
+    }
   });
 }
