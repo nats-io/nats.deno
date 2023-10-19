@@ -4437,7 +4437,7 @@ Deno.test("jetstream - input transform", async () => {
 
 Deno.test("jetstream - source transforms", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  if (await notCompatible(ns, nc, "2.10.2")) {
+  if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
   const jsm = await nc.jetstreamManager();
@@ -4476,8 +4476,16 @@ Deno.test("jetstream - source transforms", async () => {
     await delay(100);
   }
 
-  const m = await jsm.streams.getMessage("sourced", { seq: 1 });
-  assertEquals(m.subject, "foo2.foo");
+  const map = new Map<string, string>();
+  const oc = await js.consumers.get("sourced");
+  const iter = await oc.fetch({ max_messages: 3 });
+  for await (const m of iter) {
+    map.set(m.subject, m.subject);
+  }
+
+  assert(map.has("foo2.foo"));
+  assert(map.has("bar"));
+  assert(map.has("baz"));
 
   await cleanup(ns, nc);
 });
