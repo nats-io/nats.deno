@@ -217,6 +217,17 @@ export class MsgHdrsImpl implements MsgHdrs {
     return "";
   }
 
+  last(k: string, match = Match.Exact): string {
+    const keys = this.findKeys(k, match);
+    if (keys.length) {
+      const v = this.headers.get(keys[0]);
+      if (v) {
+        return Array.isArray(v) ? v[v.length - 1] : v;
+      }
+    }
+    return "";
+  }
+
   has(k: string, match = Match.Exact): boolean {
     return this.findKeys(k, match).length > 0;
   }

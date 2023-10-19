@@ -19,13 +19,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import {
-  deferred,
-  Empty,
-  NatsConnection,
-  nuid,
-  StringCodec,
-} from "../../nats-base-client/mod.ts";
+import { deferred, Empty, StringCodec } from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,

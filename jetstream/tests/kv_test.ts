@@ -1894,3 +1894,41 @@ Deno.test("kv - watch history no deletes", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - republish header handling", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  const n = nuid.next();
+  await jsm.streams.add({
+    name: n,
+    subjects: ["A.>"],
+    storage: StorageType.Memory,
+    republish: {
+      src: ">",
+      dest: `$KV.${n}.>`,
+    },
+  });
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv(n);
+
+  nc.publish("A.orange", "hey");
+  await js.publish("A.tomato", "hello");
+  await kv.put("A.potato", "yo");
+
+  async function check(allow_direct = false): Promise<void> {
+    const B = await js.views.kv(n, { allow_direct });
+    let e = await B.get("A.orange");
+    assertExists(e);
+
+    e = await B.get("A.tomato");
+    assertExists(e);
+
+    e = await B.get("A.potato");
+    assertExists(e);
+  }
+  await check();
+  await check(true);
+
+  await cleanup(ns, nc);
+});
