@@ -12,8 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { SimpleMutex } from "../nats-base-client/util.ts";
+import {
+  assert,
+  assertEquals,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { backoff, SimpleMutex } from "../nats-base-client/util.ts";
 
 Deno.test("util - simple mutex", () => {
   const r = new SimpleMutex(1);
@@ -30,4 +33,15 @@ Deno.test("util - simple mutex", () => {
   r.unlock();
   assertEquals(r.current, 1);
   assertEquals(r.waiting.length, 0);
+});
+
+Deno.test("util - backoff", () => {
+  const b = backoff([0, 100, 200]);
+  assertEquals(b.backoff(0), 0);
+  let n = b.backoff(1);
+  assert(n >= 50 && 150 >= n, `${n} >= 50 && 150 >= ${n}`);
+  n = b.backoff(2);
+  assert(n >= 100 && 300 >= n, `${n} >= 100 && 300 >= ${n}`);
+  n = b.backoff(3);
+  assert(n >= 100 && 300 >= n, `${n} >= 100 && 300 >= ${n}`);
 });

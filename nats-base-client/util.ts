@@ -237,3 +237,35 @@ export class SimpleMutex {
     d?.resolve();
   }
 }
+
+/**
+ * Returns a new number between  .5*n and 1.5*n.
+ * If the n is 0, returns 0.
+ * @param n
+ */
+export function jitter(n: number): number {
+  if (n === 0) {
+    return 0;
+  }
+  return Math.floor(n / 2 + Math.random() * n);
+}
+
+export interface Backoff {
+  backoff(attempt: number): number;
+}
+
+/**
+ * Returns a Backoff with the specified interval policy set.
+ * @param policy
+ */
+export function backoff(policy = [0, 250, 250, 500, 500, 3000, 5000]): Backoff {
+  if (!Array.isArray(policy)) {
+    policy = [0, 250, 250, 500, 500, 3000, 5000];
+  }
+  const max = policy.length - 1;
+  return {
+    backoff(attempt: number): number {
+      return jitter(attempt > max ? policy[max] : policy[attempt]);
+    },
+  };
+}

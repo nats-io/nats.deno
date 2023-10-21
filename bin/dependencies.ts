@@ -21,7 +21,7 @@ import {
 
 // resolve the specified directories to fq
 // let dirs = ["src", "nats-base-client", "jetstream", "bin"].map((n) => {
-let dirs = ["."].map((n) => {
+const dirs = ["."].map((n) => {
   return resolve(n);
 });
 
@@ -47,9 +47,9 @@ const m = new Map<string, string[]>();
 // process each file - remove extensions from requires/import
 for (const fn of files) {
   const data = await Deno.readFile(fn);
-  let txt = new TextDecoder().decode(data);
+  const txt = new TextDecoder().decode(data);
   const iter = txt.matchAll(/from\s+"(\S+.[t|j]s)"/gim);
-  for (let s of iter) {
+  for (const s of iter) {
     let dep = s[1];
     if (dep.startsWith(`./`) || dep.startsWith(`../`)) {
       // this is local code

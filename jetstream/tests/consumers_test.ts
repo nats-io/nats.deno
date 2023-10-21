@@ -26,9 +26,7 @@ import {
   ConsumerMessages,
   DeliverPolicy,
   nanos,
-  PubAck,
   PullOptions,
-  StorageType,
 } from "../mod.ts";
 import { NatsServer } from "../../tests/helpers/launcher.ts";
 import { connect } from "../../src/connect.ts";

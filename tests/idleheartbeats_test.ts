@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
+import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import {
   assert,
   assertEquals,
@@ -22,7 +22,7 @@ import { deferred } from "../nats-base-client/util.ts";
 
 Deno.test("idleheartbeat - basic", async () => {
   const d = deferred<number>();
-  const h = new IdleHeartbeat(250, () => {
+  const h = new IdleHeartbeatMonitor(250, () => {
     d.reject(new Error("didn't expect to notify"));
     return true;
   });
@@ -42,7 +42,7 @@ Deno.test("idleheartbeat - basic", async () => {
 
 Deno.test("idleheartbeat - timeout", async () => {
   const d = deferred<number>();
-  new IdleHeartbeat(250, (v: number): boolean => {
+  new IdleHeartbeatMonitor(250, (v: number): boolean => {
     d.resolve(v);
     return true;
   }, { maxOut: 1 });
@@ -51,7 +51,7 @@ Deno.test("idleheartbeat - timeout", async () => {
 
 Deno.test("idleheartbeat - timeout maxOut", async () => {
   const d = deferred<number>();
-  new IdleHeartbeat(250, (v: number): boolean => {
+  new IdleHeartbeatMonitor(250, (v: number): boolean => {
     d.resolve(v);
     return true;
   }, { maxOut: 5 });
@@ -60,7 +60,7 @@ Deno.test("idleheartbeat - timeout maxOut", async () => {
 
 Deno.test("idleheartbeat - timeout recover", async () => {
   const d = deferred<void>();
-  const h = new IdleHeartbeat(250, (_v: number): boolean => {
+  const h = new IdleHeartbeatMonitor(250, (_v: number): boolean => {
     d.reject(new Error("didn't expect to fail"));
     return true;
   }, { maxOut: 5 });
@@ -81,7 +81,7 @@ Deno.test("idleheartbeat - timeout recover", async () => {
 
 Deno.test("idleheartbeat - timeout autocancel", async () => {
   const d = deferred();
-  const h = new IdleHeartbeat(250, (_v: number): boolean => {
+  const h = new IdleHeartbeatMonitor(250, (_v: number): boolean => {
     d.reject(new Error("didn't expect to fail"));
     return true;
   }, { maxOut: 4, cancelAfter: 2000 });

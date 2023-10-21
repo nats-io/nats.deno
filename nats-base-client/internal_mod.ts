@@ -7,8 +7,17 @@ export { MsgImpl } from "./msg.ts";
 export { setTransportFactory } from "./transport.ts";
 export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, INFO, ProtocolHandler } from "./protocol.ts";
-export type { Deferred, Perf, Timeout } from "./util.ts";
-export { collect, deferred, delay, extend, render, timeout } from "./util.ts";
+export type { Backoff, Deferred, Perf, Timeout } from "./util.ts";
+export {
+  backoff,
+  collect,
+  deadline,
+  deferred,
+  delay,
+  extend,
+  render,
+  timeout,
+} from "./util.ts";
 export { canonicalMIMEHeaderKey, headers, MsgHdrsImpl } from "./headers.ts";
 export { Heartbeat } from "./heartbeats.ts";
 export type { PH } from "./heartbeats.ts";

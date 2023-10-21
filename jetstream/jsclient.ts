@@ -44,7 +44,7 @@ import { headers } from "../nats-base-client/headers.ts";
 import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
-import { IdleHeartbeat } from "../nats-base-client/idleheartbeat.ts";
+import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import {
   ConsumerInfoable,
@@ -292,7 +292,7 @@ export class JetStreamClientImpl extends BaseApiClient
     const trackBytes = (opts.max_bytes ?? 0) > 0;
     let receivedBytes = 0;
     const max_bytes = trackBytes ? opts.max_bytes! : 0;
-    let monitor: IdleHeartbeat | null = null;
+    let monitor: IdleHeartbeatMonitor | null = null;
 
     const args: Partial<PullOptions> = {};
     args.batch = opts.batch || 1;
@@ -406,7 +406,7 @@ export class JetStreamClientImpl extends BaseApiClient
     (async () => {
       try {
         if (hb) {
-          monitor = new IdleHeartbeat(hb, (v: number): boolean => {
+          monitor = new IdleHeartbeatMonitor(hb, (v: number): boolean => {
             //@ts-ignore: pushing a fn
             qi.push(() => {
               // this will terminate the iterator
@@ -734,7 +734,7 @@ export class JetStreamClientImpl extends BaseApiClient
 export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
   js: BaseApiClient;
-  monitor: IdleHeartbeat | null;
+  monitor: IdleHeartbeatMonitor | null;
 
   constructor(
     js: BaseApiClient,
@@ -844,7 +844,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
       return !sub.noIterator;
     };
     // this only applies for push subscriptions
-    this.monitor = new IdleHeartbeat(millis, handler, opts);
+    this.monitor = new IdleHeartbeatMonitor(millis, handler, opts);
   }
 
   _checkHbOrderConsumer(msg: Msg): boolean {

@@ -33,7 +33,7 @@ export type IdleHeartbeatOptions = {
   cancelAfter: number;
 };
 
-export class IdleHeartbeat {
+export class IdleHeartbeatMonitor {
   interval: number;
   maxOut: number;
   cancelAfter: number;
