@@ -223,7 +223,10 @@ export class JsMsgImpl implements JsMsg {
       if (this.msg.reply) {
         const mi = this.msg as MsgImpl;
         const proto = mi.publisher as unknown as ProtocolHandler;
-        const r = new RequestOne(proto.muxSubscriptions, this.msg.reply);
+        const trace = !(proto.options?.noAsyncTraces || false);
+        const r = new RequestOne(proto.muxSubscriptions, this.msg.reply, {
+          timeout: 1000,
+        }, trace);
         proto.request(r);
         try {
           proto.publish(
