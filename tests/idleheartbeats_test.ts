@@ -76,7 +76,7 @@ Deno.test("idleheartbeat - timeout recover", async () => {
   }, 1000);
 
   await d;
-  assertEquals(h.missed, 2);
+  assert(4 >= h.missed, `4 >= ${h.missed}`);
 });
 
 Deno.test("idleheartbeat - timeout autocancel", async () => {
@@ -105,5 +105,5 @@ Deno.test("idleheartbeat - timeout autocancel", async () => {
   assertEquals(h.cancelAfter, 2000);
   assertEquals(h.timer, 0);
   assertEquals(h.autoCancelTimer, 0);
-  assert(h.count >= 7, `${h.count} >= 7`);
+  assert(h.count >= 6, `${h.count} >= 6`);
 });

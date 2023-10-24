@@ -103,7 +103,21 @@ Deno.test("heartbeat - recovers from missed", async () => {
   await delay(850);
   hb.cancel();
   assertEquals(hb.timer, undefined);
-  assert(status.length >= 6, `${status.length} >= 6`);
+  const missed = status.map((s) => {
+    return s.data as number;
+  });
+  // we expect to have reached a condition where a max of 3 heartbeats were in pending.
+  for (const n of missed) {
+    assert(n <= 3, `${n} <= 3`);
+  }
+  for (let i = 0; i < missed.length; i++) {
+    if (missed[i] === 3) {
+      // expect next one to be 1
+      const next = missed.length > i + 1 ? missed[i + i] : -1;
+      assert(next === 1, `${next} === 1`);
+      break;
+    }
+  }
   // some resources in the test runner are not always cleaned unless we wait a bit
   await delay(500);
 });
