@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 The NATS Authors
+ * Copyright 2018-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -64,9 +64,9 @@ export interface Timeout<T> extends Promise<T> {
   cancel: () => void;
 }
 
-export function timeout<T>(ms: number): Timeout<T> {
+export function timeout<T>(ms: number, asyncTraces = true): Timeout<T> {
   // by generating the stack here to help identify what timed out
-  const err = NatsError.errorForCode(ErrorCode.Timeout);
+  const err = asyncTraces ? NatsError.errorForCode(ErrorCode.Timeout) : null;
   let methods;
   let timer: number;
   const p = new Promise((_resolve, reject) => {
@@ -78,7 +78,11 @@ export function timeout<T>(ms: number): Timeout<T> {
     methods = { cancel };
     // @ts-ignore: node is not a number
     timer = setTimeout(() => {
-      reject(err);
+      if (err === null) {
+        reject(NatsError.errorForCode(ErrorCode.Timeout));
+      } else {
+        reject(err);
+      }
     }, ms);
   });
   // noinspection JSUnusedAssignment

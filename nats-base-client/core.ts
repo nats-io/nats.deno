@@ -1355,6 +1355,12 @@ export interface ConnectionOptions {
    * This option should be used with care as it will disable this behaviour when true
    */
   ignoreAuthErrorAbort?: boolean;
+
+  /**
+   * When true, the client will not augment timeout and other error traces with
+   * additional context as to where the operation was started.
+   */
+  noAsyncTraces?: boolean;
 }
 
 /**

@@ -137,8 +137,10 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
     this.noIterator = typeof opts.callback === "function";
     this.closed = deferred();
 
+    const asyncTraces = !(protocol.options?.noAsyncTraces || false);
+
     if (opts.timeout) {
-      this.timer = timeout<void>(opts.timeout);
+      this.timer = timeout<void>(opts.timeout, asyncTraces);
       this.timer
         .then(() => {
           // timer was cancelled

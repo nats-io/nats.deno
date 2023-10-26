@@ -167,6 +167,8 @@ export class NatsConnectionImpl implements NatsConnection {
     data: Payload = Empty,
     opts: Partial<RequestManyOptions> = { maxWait: 1000, maxMessages: -1 },
   ): Promise<QueuedIterator<Msg>> {
+    const asyncTraces = !(this.protocol.options.noAsyncTraces || false);
+
     try {
       this._check(subject, true, true);
     } catch (err) {
@@ -200,7 +202,7 @@ export class NatsConnectionImpl implements NatsConnection {
 
     if (opts.noMux) {
       // we setup a subscription and manage it
-      const stack = new Error().stack;
+      const stack = asyncTraces ? new Error().stack : null;
       let max = typeof opts.maxMessages === "number" && opts.maxMessages > 0
         ? opts.maxMessages
         : -1;
@@ -217,7 +219,9 @@ export class NatsConnectionImpl implements NatsConnection {
           // augment any error with the current stack to provide context
           // for the error on the suer code
           if (err) {
-            err.stack += `\n\n${stack}`;
+            if (stack) {
+              err.stack += `\n\n${stack}`;
+            }
             cancel(err);
             return;
           }
@@ -335,6 +339,7 @@ export class NatsConnectionImpl implements NatsConnection {
     } catch (err) {
       return Promise.reject(err);
     }
+    const asyncTraces = !(this.protocol.options.noAsyncTraces || false);
     opts.timeout = opts.timeout || 1000;
     if (opts.timeout < 1) {
       return Promise.reject(new NatsError("timeout", ErrorCode.InvalidOption));
@@ -353,7 +358,7 @@ export class NatsConnectionImpl implements NatsConnection {
         ? opts.reply
         : createInbox(this.options.inboxPrefix);
       const d = deferred<Msg>();
-      const errCtx = new Error();
+      const errCtx = asyncTraces ? new Error() : null;
       const sub = this.subscribe(
         inbox,
         {
@@ -362,7 +367,7 @@ export class NatsConnectionImpl implements NatsConnection {
           callback: (err, msg) => {
             if (err) {
               // timeouts from `timeout()` will have the proper stack
-              if (err.code !== ErrorCode.Timeout) {
+              if (errCtx && err.code !== ErrorCode.Timeout) {
                 err.stack += `\n\n${errCtx.stack}`;
               }
               d.reject(err);
@@ -370,7 +375,9 @@ export class NatsConnectionImpl implements NatsConnection {
               err = isRequestError(msg);
               if (err) {
                 // if we failed here, help the developer by showing what failed
-                err.stack += `\n\n${errCtx.stack}`;
+                if (errCtx) {
+                  err.stack += `\n\n${errCtx.stack}`;
+                }
                 d.reject(err);
               } else {
                 d.resolve(msg);
@@ -386,7 +393,12 @@ export class NatsConnectionImpl implements NatsConnection {
       });
       return d;
     } else {
-      const r = new RequestOne(this.protocol.muxSubscriptions, subject, opts);
+      const r = new RequestOne(
+        this.protocol.muxSubscriptions,
+        subject,
+        opts,
+        asyncTraces,
+      );
       this.protocol.request(r);
 
       try {

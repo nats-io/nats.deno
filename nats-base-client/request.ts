@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2023 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,19 +28,22 @@ import {
 export class BaseRequest {
   token: string;
   received: number;
-  ctx: Error;
+  ctx?: Error;
   requestSubject: string;
   mux: MuxSubscription;
 
   constructor(
     mux: MuxSubscription,
     requestSubject: string,
+    asyncTraces = true,
   ) {
     this.mux = mux;
     this.requestSubject = requestSubject;
     this.received = 0;
     this.token = nuid.next();
-    this.ctx = new Error();
+    if (asyncTraces) {
+      this.ctx = new Error();
+    }
   }
 }
 
@@ -96,7 +99,9 @@ export class RequestMany extends BaseRequest implements Request {
 
   resolver(err: Error | null, msg: Msg): void {
     if (err) {
-      err.stack += `\n\n${this.ctx.stack}`;
+      if (this.ctx) {
+        err.stack += `\n\n${this.ctx.stack}`;
+      }
       this.cancel(err as NatsError);
     } else {
       this.callback(null, msg);
@@ -132,11 +137,12 @@ export class RequestOne extends BaseRequest implements Request {
     mux: MuxSubscription,
     requestSubject: string,
     opts: RequestOptions = { timeout: 1000 },
+    asyncTraces = true,
   ) {
-    super(mux, requestSubject);
+    super(mux, requestSubject, asyncTraces);
     // extend(this, opts);
     this.deferred = deferred();
-    this.timer = timeout<Msg>(opts.timeout);
+    this.timer = timeout<Msg>(opts.timeout, asyncTraces);
   }
 
   resolver(err: Error | null, msg: Msg): void {
@@ -144,7 +150,9 @@ export class RequestOne extends BaseRequest implements Request {
       this.timer.cancel();
     }
     if (err) {
-      err.stack += `\n\n${this.ctx.stack}`;
+      if (this.ctx) {
+        err.stack += `\n\n${this.ctx.stack}`;
+      }
       this.deferred.reject(err);
     } else {
       this.deferred.resolve(msg);
