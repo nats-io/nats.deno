@@ -19,7 +19,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { deferred, Empty, StringCodec } from "../../nats-base-client/mod.ts";
+import { deferred } from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
@@ -42,9 +42,6 @@ import {
   ConsumerStatus,
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
-import { deadline } from "../../nats-base-client/util.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
-import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));

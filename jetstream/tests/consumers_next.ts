@@ -23,8 +23,6 @@ import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
 import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
 
 Deno.test("consumers - next", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

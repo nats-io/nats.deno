@@ -14,12 +14,9 @@
  */
 import { NatsServer } from "../../tests/helpers/launcher.ts";
 
-import { initStream, time } from "./jstest_util.ts";
+import { initStream } from "./jstest_util.ts";
 import {
   AckPolicy,
-  checkJsError,
-  ConsumerConfig,
-  ConsumerOpts,
   consumerOpts,
   DeliverPolicy,
   JsHeaders,
@@ -38,11 +35,9 @@ import {
 } from "../../nats-base-client/internal_mod.ts";
 import {
   createInbox,
-  DebugEvents,
   deferred,
   Empty,
   ErrorCode,
-  Events,
   headers,
   JSONCodec,
   NatsError,
@@ -54,7 +49,6 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertExists,
-  assertIsError,
   assertRejects,
   assertThrows,
   fail,
@@ -69,21 +63,13 @@ import {
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
 import { connect } from "../../src/connect.ts";
 import {
-  assertBetween,
   cleanup,
-  disabled,
-  jetstreamExportServerConf,
   jetstreamServerConf,
   Lock,
   notCompatible,
   setup,
 } from "../../tests/helpers/mod.ts";
-import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
-import {
-  ConsumerOptsBuilderImpl,
-  JetStreamSubscriptionInfoable,
-} from "../types.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
+import { ConsumerOptsBuilderImpl } from "../types.ts";
 
 export function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {
