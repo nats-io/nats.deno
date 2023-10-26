@@ -53,7 +53,11 @@ const pendingLimit = parseInt(argv.pendingLimit) * 1024;
 const metrics = [];
 
 for (let i = 0; i < iters; i++) {
-  const nc = await connect({ servers: server, debug: argv.debug });
+  const nc = await connect({
+    servers: server,
+    debug: argv.debug,
+    noAsyncTraces: true,
+  });
   const opts = {
     msgs: count,
     size: bytes,
