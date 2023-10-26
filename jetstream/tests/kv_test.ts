@@ -36,6 +36,7 @@ import {
   KvOptions,
   nanos,
   StorageType,
+  StoreCompression,
 } from "../mod.ts";
 
 import {
@@ -1584,13 +1585,11 @@ Deno.test("kv - mirror cross domain", async () => {
     const buf: KvEntry[] = [];
     m.set(bucket, buf);
 
-    const done = (async () => {
+    return (async () => {
       for await (const e of iter) {
         buf.push(e);
       }
     })().then();
-
-    return done;
   }
 
   watch(kv, "test", "name").then();
@@ -1930,5 +1929,20 @@ Deno.test("kv - republish header handling", async () => {
   await check();
   await check(true);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - compression", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+  const s2 = await js.views.kv("compressed", {
+    compression: StoreCompression.S2,
+  });
+  let status = await s2.status();
+  assertEquals(status.compression, StoreCompression.S2);
+
+  const none = await js.views.kv("none");
+  status = await none.status();
+  assertEquals(status.compression, StoreCompression.None);
   await cleanup(ns, nc);
 });

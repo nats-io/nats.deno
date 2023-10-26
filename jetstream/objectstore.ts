@@ -48,6 +48,7 @@ import {
   DiscardPolicy,
   PurgeResponse,
   StorageType,
+  StoreCompression,
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
@@ -104,6 +105,10 @@ export class ObjectStoreStatusImpl implements ObjectStoreStatus {
   }
   get metadata(): Record<string, string> | undefined {
     return this.si.config.metadata;
+  }
+
+  get compression(): StoreCompression {
+    return this.si.config.compression || StoreCompression.None;
   }
 }
 
@@ -788,6 +793,9 @@ export class ObjectStoreImpl implements ObjectStore {
     }
     if (opts.metadata) {
       sc.metadata = opts.metadata;
+    }
+    if (opts.compression) {
+      sc.compression = opts.compression;
     }
 
     try {

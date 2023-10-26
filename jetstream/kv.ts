@@ -61,6 +61,7 @@ import {
   Republish,
   RetentionPolicy,
   StorageType,
+  StoreCompression,
   StreamConfig,
   StreamInfo,
   StreamSource,
@@ -269,6 +270,9 @@ export class Bucket implements KV, KvRemove {
     }
     if (opts.metadata) {
       sc.metadata = opts.metadata;
+    }
+    if (opts.compression) {
+      sc.compression = opts.compression;
     }
 
     const nci = (this.js as unknown as { nc: NatsConnectionImpl }).nc;
@@ -942,6 +946,10 @@ export class KvStatusImpl implements KvStatus {
 
   get metadata(): Record<string, string> {
     return this.si.config.metadata ?? {};
+  }
+
+  get compression(): StoreCompression {
+    return this.si.config.compression || StoreCompression.None;
   }
 }
 
