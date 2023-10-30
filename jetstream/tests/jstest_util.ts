@@ -13,13 +13,31 @@
  * limitations under the License.
  */
 
-import { AckPolicy, nanos, PubAck, StreamConfig } from "../../src/mod.ts";
+import {
+  AckPolicy,
+  JsMsg,
+  nanos,
+  PubAck,
+  QueuedIterator,
+  StreamConfig,
+} from "../../src/mod.ts";
 import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import {
   Empty,
   NatsConnection,
   nuid,
 } from "../../nats-base-client/internal_mod.ts";
+
+export async function consume(iter: QueuedIterator<JsMsg>): Promise<JsMsg[]> {
+  const buf: JsMsg[] = [];
+  await (async () => {
+    for await (const m of iter) {
+      m.ack();
+      buf.push(m);
+    }
+  })();
+  return buf;
+}
 
 export async function initStream(
   nc: NatsConnection,

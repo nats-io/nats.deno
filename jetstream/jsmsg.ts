@@ -99,8 +99,10 @@ export interface JsMsg {
   /**
    * Indicate to the JetStream server that processing of the message
    * failed and that the message should not be sent to the consumer again.
+   * @param reason is a string describing why the message was termed. Note
+   * that `reason` is only available on servers 2.11.0 or better.
    */
-  term(): void;
+  term(reason?: string): void;
 
   /**
    * Indicate to the JetStream server that the message was processed
@@ -281,8 +283,12 @@ export class JsMsgImpl implements JsMsg {
     this.msg.respond(payload, reqOpts);
   }
 
-  term() {
-    this.doAck(TERM);
+  term(reason = "") {
+    let term = TERM;
+    if (reason?.length > 0) {
+      term = StringCodec().encode(`+TERM ${reason}`);
+    }
+    this.doAck(term);
   }
 
   json<T = unknown>(): T {
