@@ -107,8 +107,11 @@ export class ObjectStoreStatusImpl implements ObjectStoreStatus {
     return this.si.config.metadata;
   }
 
-  get compression(): StoreCompression {
-    return this.si.config.compression || StoreCompression.None;
+  get compression(): boolean {
+    if (this.si.config.compression) {
+      return this.si.config.compression !== StoreCompression.None;
+    }
+    return false;
   }
 }
 
@@ -794,8 +797,10 @@ export class ObjectStoreImpl implements ObjectStore {
     if (opts.metadata) {
       sc.metadata = opts.metadata;
     }
-    if (opts.compression) {
-      sc.compression = opts.compression;
+    if (typeof opts.compression === "boolean") {
+      sc.compression = opts.compression
+        ? StoreCompression.S2
+        : StoreCompression.None;
     }
 
     try {

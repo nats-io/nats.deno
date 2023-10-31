@@ -28,12 +28,7 @@ import {
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.200.0/crypto/mod.ts";
-import {
-  ObjectInfo,
-  ObjectStoreMeta,
-  StorageType,
-  StoreCompression,
-} from "../mod.ts";
+import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
 import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.200.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
@@ -1109,13 +1104,13 @@ Deno.test("os - compression", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const js = nc.jetstream();
   const s2 = await js.views.os("compressed", {
-    compression: StoreCompression.S2,
+    compression: true,
   });
   let status = await s2.status();
-  assertEquals(status.compression, StoreCompression.S2);
+  assertEquals(status.compression, true);
 
   const none = await js.views.os("none");
   status = await none.status();
-  assertEquals(status.compression, StoreCompression.None);
+  assertEquals(status.compression, false);
   await cleanup(ns, nc);
 });

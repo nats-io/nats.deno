@@ -36,7 +36,6 @@ import {
   KvOptions,
   nanos,
   StorageType,
-  StoreCompression,
 } from "../mod.ts";
 
 import {
@@ -1936,13 +1935,13 @@ Deno.test("kv - compression", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const js = nc.jetstream();
   const s2 = await js.views.kv("compressed", {
-    compression: StoreCompression.S2,
+    compression: true,
   });
   let status = await s2.status();
-  assertEquals(status.compression, StoreCompression.S2);
+  assertEquals(status.compression, true);
 
   const none = await js.views.kv("none");
   status = await none.status();
-  assertEquals(status.compression, StoreCompression.None);
+  assertEquals(status.compression, false);
   await cleanup(ns, nc);
 });
