@@ -407,6 +407,8 @@ Deno.test("reconnect - stale connections don't close", async () => {
     pingInterval: 2000,
     reconnectTimeWait: 500,
     ignoreAuthErrorAbort: true,
+    // need a timeout, otherwise the default is 20s and we leak resources
+    timeout: 2000,
   });
 
   let stales = 0;
@@ -427,6 +429,8 @@ Deno.test("reconnect - stale connections don't close", async () => {
     return c.close();
   });
   assert(stales >= 3, `stales ${stales}`);
+  // there could be a redial timer waiting here for 2s
+  await delay(2000);
 });
 
 Deno.test("reconnect - protocol errors don't close client", async () => {

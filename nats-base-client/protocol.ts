@@ -505,6 +505,17 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.transport.disconnect();
   }
 
+  public reconnect(): Promise<void> {
+    if (this.connected) {
+      this.dispatchStatus({
+        type: DebugEvents.ClientInitiatedReconnect,
+        data: "",
+      });
+      this.transport.disconnect();
+    }
+    return Promise.resolve();
+  }
+
   async disconnected(err?: Error): Promise<void> {
     this.dispatchStatus(
       {
