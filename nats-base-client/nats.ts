@@ -534,6 +534,20 @@ export class NatsConnectionImpl implements NatsConnection {
     }
     return this._services;
   }
+
+  reconnect(): Promise<void> {
+    if (this.isClosed()) {
+      return Promise.reject(
+        NatsError.errorForCode(ErrorCode.ConnectionClosed),
+      );
+    }
+    if (this.isDraining()) {
+      return Promise.reject(
+        NatsError.errorForCode(ErrorCode.ConnectionDraining),
+      );
+    }
+    return this.protocol.reconnect();
+  }
 }
 
 export class ServicesFactory implements ServicesAPI {

@@ -41,6 +41,7 @@ export enum DebugEvents {
   Reconnecting = "reconnecting",
   PingTimer = "pingTimer",
   StaleConnection = "staleConnection",
+  ClientInitiatedReconnect = "client initiated reconnect",
 }
 
 export enum ErrorCode {
@@ -657,7 +658,31 @@ export interface NatsConnection {
    */
   rtt(): Promise<number>;
 
+  /**
+   * Returns a {@link ServicesAPI} which allows you to build services
+   * using NATS.
+   */
   services: ServicesAPI;
+
+  /**
+   * Use of this API is experimental, and it is subject to be removed.
+   *
+   * reconnect() enables a client to force a reconnect. A reconnect will disconnect
+   * the client, and possibly initiate a reconnect to the cluster.  Note that all
+   * reconnect caveats apply:
+   *
+   * - If the reconnection policy given to the client doesn't allow reconnects, the
+   * connection will close.
+   *
+   * - Messages that are inbound or outbound could  be lost.
+   *
+   * - All requests that are in flight will be rejected.
+   *
+   * Note that the returned promise will reject if the client is already closed, or if
+   * it is in the process of draining. If the client is currently disconnected,
+   * this API has no effect, as the client is already attempting to reconnect.
+   */
+  reconnect(): Promise<void>;
 }
 
 /**

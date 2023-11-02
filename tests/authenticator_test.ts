@@ -36,6 +36,7 @@ import {
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
 import { assertBetween } from "./helpers/mod.ts";
 import { deadline, delay } from "../nats-base-client/util.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 
 function disconnectReconnect(nc: NatsConnection): Promise<void> {
   const done = deferred<void>();
@@ -67,7 +68,7 @@ async function testAuthenticatorFn(
     return fn(nonce);
   };
   conf = Object.assign({}, conf, { debug });
-  let { ns, nc } = await setup(conf, {
+  const { ns, nc } = await setup(conf, {
     authenticator,
   });
 
@@ -75,9 +76,9 @@ async function testAuthenticatorFn(
 
   await delay(2000);
   called = 0;
-  await ns.stop();
+  const nci = nc as NatsConnectionImpl;
+  nci.reconnect();
   await delay(1000);
-  ns = await deadline(ns.restart(), 4000);
   await deadline(cycle, 4000);
   assertBetween(called, 1, 10);
   await nc.flush();
