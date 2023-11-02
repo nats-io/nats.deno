@@ -785,7 +785,8 @@ export class ObjectStoreImpl implements ObjectStore {
     }
     const max_age = opts?.ttl || 0;
     delete opts.ttl;
-    const sc = Object.assign({ max_age }, opts) as StreamConfig;
+    // pacify the tsc compiler downstream
+    const sc = Object.assign({ max_age }, opts) as unknown as StreamConfig;
     sc.name = this.stream;
     sc.allow_direct = true;
     sc.allow_rollup_hdrs = true;
