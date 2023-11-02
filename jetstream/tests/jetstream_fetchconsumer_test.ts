@@ -38,7 +38,7 @@ import { Js409Errors } from "../jsutil.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 import { deferred } from "../../nats-base-client/util.ts";
 import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
-import { consume } from "./jetstream_test.ts";
+import { consume } from "./jstest_util.ts";
 
 Deno.test("jetstream - fetch expires waits", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));

@@ -17,6 +17,7 @@ import { NatsServer } from "../../tests/helpers/launcher.ts";
 import { initStream } from "./jstest_util.ts";
 import {
   AckPolicy,
+  Advisory,
   consumerOpts,
   DeliverPolicy,
   JsHeaders,
@@ -42,7 +43,6 @@ import {
   JSONCodec,
   NatsError,
   nuid,
-  QueuedIterator,
   StringCodec,
 } from "../../nats-base-client/mod.ts";
 import {
@@ -93,17 +93,6 @@ export function callbackConsume(debug = false): JsMsgCallback {
       jm.ack();
     }
   };
-}
-
-export async function consume(iter: QueuedIterator<JsMsg>): Promise<JsMsg[]> {
-  const buf: JsMsg[] = [];
-  await (async () => {
-    for await (const m of iter) {
-      m.ack();
-      buf.push(m);
-    }
-  })();
-  return buf;
 }
 
 Deno.test("jetstream - default options", () => {
@@ -1623,6 +1612,66 @@ Deno.test("jetstream - source transforms", async () => {
   assert(map.has("foo2.foo"));
   assert(map.has("bar"));
   assert(map.has("baz"));
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jetstream - term reason", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({
+    name: "foos",
+    subjects: ["foo.*"],
+  });
+
+  const js = nc.jetstream();
+
+  await Promise.all(
+    [
+      js.publish("foo.1"),
+      js.publish("foo.2"),
+      js.publish("foo.term"),
+    ],
+  );
+
+  await jsm.consumers.add("foos", {
+    name: "bar",
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const termed = deferred<Advisory>();
+  const advisories = jsm.advisories();
+  (async () => {
+    for await (const a of advisories) {
+      if (a.kind === "terminated") {
+        termed.resolve(a);
+        break;
+      }
+    }
+  })().catch((err) => {
+    console.log(err);
+  });
+
+  const c = await js.consumers.get("foos", "bar");
+  const iter = await c.consume();
+  await (async () => {
+    for await (const m of iter) {
+      if (m.subject.endsWith(".term")) {
+        m.term("requested termination");
+        break;
+      } else {
+        m.ack();
+      }
+    }
+  })().catch();
+
+  const s = await termed;
+  const d = s.data as Record<string, unknown>;
+  assertEquals(d.type, "io.nats.jetstream.advisory.v1.terminated");
+  assertEquals(d.reason, "requested termination");
 
   await cleanup(ns, nc);
 });
