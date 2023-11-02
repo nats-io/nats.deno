@@ -47,7 +47,6 @@ import {
   ReplayPolicy,
   Republish,
   StorageType,
-  StoreCompression,
   StreamAlternate,
   StreamConfig,
   StreamInfo,
@@ -1023,7 +1022,7 @@ export interface KvLimits {
    * Sets the compression level of the KV. This feature is only supported in
    * servers 2.10.x and better.
    */
-  compression?: StoreCompression;
+  compression?: boolean;
 }
 
 export interface KvStatus extends KvLimits {
@@ -1376,7 +1375,7 @@ export type ObjectStoreStatus = {
    * Compression level of the stream. This feature is only supported in
    * servers 2.10.x and better.
    */
-  compression: StoreCompression;
+  compression: boolean;
 };
 /**
  * @deprecated {@link ObjectStoreStatus}
@@ -1418,7 +1417,7 @@ export type ObjectStoreOptions = {
    * Sets the compression level of the stream. This feature is only supported in
    * servers 2.10.x and better.
    */
-  compression?: StoreCompression;
+  compression?: boolean;
 };
 /**
  * An object that allows reading the object stored under a specified name.

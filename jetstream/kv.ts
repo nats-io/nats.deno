@@ -271,8 +271,10 @@ export class Bucket implements KV, KvRemove {
     if (opts.metadata) {
       sc.metadata = opts.metadata;
     }
-    if (opts.compression) {
-      sc.compression = opts.compression;
+    if (typeof opts.compression === "boolean") {
+      sc.compression = opts.compression
+        ? StoreCompression.S2
+        : StoreCompression.None;
     }
 
     const nci = (this.js as unknown as { nc: NatsConnectionImpl }).nc;
@@ -948,8 +950,11 @@ export class KvStatusImpl implements KvStatus {
     return this.si.config.metadata ?? {};
   }
 
-  get compression(): StoreCompression {
-    return this.si.config.compression || StoreCompression.None;
+  get compression(): boolean {
+    if (this.si.config.compression) {
+      return this.si.config.compression !== StoreCompression.None;
+    }
+    return false;
   }
 }
 
