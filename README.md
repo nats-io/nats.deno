@@ -31,6 +31,8 @@ point into the JS Doc is the
 [NatsConnection](https://nats-io.github.io/nats.deno/interfaces/NatsConnection.html)
 all functionality starts with a connection.
 
+**Check out [NATS by example](https://natsbyexample.com) - An evolving collection of runnable, cross-client reference examples for NATS.**
+
 ## Basics
 
 ### Connecting to a nats-server
