@@ -13,7 +13,11 @@
  * limitations under the License.
  */
 
-import { Consumer, OrderedConsumerOptions } from "./consumer.ts";
+import {
+  Consumer,
+  ExportedConsumer,
+  OrderedConsumerOptions,
+} from "./consumer.ts";
 import {
   JetStreamOptions,
   MsgHdrs,
@@ -465,6 +469,17 @@ export interface Consumers {
     stream: string,
     name?: string | Partial<OrderedConsumerOptions>,
   ): Promise<Consumer>;
+
+  /**
+   * Returns a Consumer configured for the specified stream and consumer name. Note there
+   * are no JSAPI lookups or verifications.
+   * @param stream
+   * @param name
+   */
+  bind(
+    stream: string,
+    name: string,
+  ): Promise<ExportedConsumer>;
 }
 
 export interface ConsumerOpts {

@@ -40,6 +40,7 @@ import {
   ConsumerDebugEvents,
   ConsumerEvents,
   ConsumerStatus,
+  PullConsumerImpl,
   PullConsumerMessagesImpl,
 } from "../consumer.ts";
 
@@ -591,5 +592,76 @@ Deno.test("consumers - inboxPrefix is respected", async () => {
   assertStringIncludes(iter.inbox, "x.");
   iter.stop();
   await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - bind", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+  await js.publish("hello");
+
+  await jsm.consumers.add("messages", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  await jsm.consumers.add("messages", {
+    durable_name: "b",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  jsm.consumers.info = () => {
+    throw new Error("exported is not allowed info");
+  };
+
+  let consumer = await js.consumers.bind("messages", "a");
+  let pci = consumer as PullConsumerImpl;
+  pci.info = () => {
+    throw new Error("exported is not allowed to info");
+  };
+  let iter = await consumer.consume({ max_messages: 2 });
+  for await (const m of iter) {
+    m.ack();
+    if (m.info.pending === 0) {
+      break;
+    }
+  }
+
+  consumer = await js.consumers.bind("messages", "b");
+  pci = consumer as PullConsumerImpl;
+  pci.info = () => {
+    throw new Error("exported is not allowed to info");
+  };
+  iter = await consumer.fetch({ max_messages: 2 });
+  for await (const m of iter) {
+    m.ack();
+  }
+
+  consumer = await js.consumers.bind("messages", "c");
+  pci = consumer as PullConsumerImpl;
+  pci.info = () => {
+    throw new Error("exported is not allowed to info");
+  };
+  assertExists(await consumer.next());
+  assertExists(await consumer.next());
+
   await cleanup(ns, nc);
 });

@@ -61,6 +61,7 @@ export type {
   DeliveryInfo,
   Destroyable,
   Expires,
+  ExportedConsumer,
   ExternalStream,
   FetchBytes,
   FetchMessages,
