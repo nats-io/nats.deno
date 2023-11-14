@@ -80,7 +80,7 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
       // offsets are reported in total, so need to count
       // all the entries returned
       const count = this.countResponse(r as ApiResponse);
-      if(count === 0) {
+      if (count === 0) {
         // we are done if we get a null set of infos
         return [];
       }
