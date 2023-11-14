@@ -251,6 +251,16 @@ Deno.test("jsm - no stream lister is empty", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("jsm - stream names is empty", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const jsm = await nc.jetstreamManager();
+  const names = await jsm.streams.names().next();
+  assertEquals(names.length, 0);
+  await cleanup(ns, nc);
+});
+
+
+
 Deno.test("jsm - lister after empty, empty", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));
   const jsm = await nc.jetstreamManager();

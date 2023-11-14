@@ -79,7 +79,12 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
       this.pageInfo = r as ApiPaged;
       // offsets are reported in total, so need to count
       // all the entries returned
-      this.offset += this.countResponse(r as ApiResponse);
+      const count = this.countResponse(r as ApiResponse);
+      if(count === 0) {
+        // we are done if we get a null set of infos
+        return [];
+      }
+      this.offset += count;
       const a = this.filter(r);
       return a;
     } catch (err) {
@@ -92,9 +97,9 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
     switch (r?.type) {
       case "io.nats.jetstream.api.v1.stream_names_response":
       case "io.nats.jetstream.api.v1.stream_list_response":
-        return (r as StreamListResponse).streams.length;
+        return (r as StreamListResponse).streams?.length || 0;
       case "io.nats.jetstream.api.v1.consumer_list_response":
-        return (r as ConsumerListResponse).consumers.length;
+        return (r as ConsumerListResponse).consumers?.length || 0;
       default:
         console.error(
           `jslister.ts: unknown API response for paged output: ${r?.type}`,
