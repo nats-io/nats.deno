@@ -48,7 +48,7 @@ if (argv.h || argv.help) {
 
 // Windows can't handle signals to stop/start chaos
 if (Deno.build.os === "windows" && !argv["chaos"]) {
-  console.log("use --chaos flag to restart cluster servers randomly")
+  console.log("use --chaos flag to restart cluster servers randomly");
 }
 
 const count = argv["count"] as number || 3;

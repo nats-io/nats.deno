@@ -81,7 +81,8 @@ function getTmpFolder() {
   let tmpDir = Deno.env.get("TMPDIR");
   if (!tmpDir) {
     // Unix or Windows home
-    tmpDir = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE")) + "/tmp";
+    tmpDir = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE"))
+        + "/tmp";
   }
   const tmp = pathNorm(`${tmpDir}/nats_launcher`);
   Deno.mkdirSync(tmp, { recursive: true });
@@ -547,11 +548,8 @@ export class NatsServer implements PortInfo {
 
   static async start(conf?: any, debug = false): Promise<NatsServer> {
     const isWindows = Deno.build.os === "windows";
-    const exe = Deno.env.get("CI")
-        ? "nats-server/nats-server"
-        : isWindows
-            ? "nats-server.exe"
-            : "nats-server";
+    const natsServerExe = isWindows ? "nats-server.exe" : "nats-server";
+    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : natsServerExe;
     const tmp = getTmpFolder();
     conf = NatsServer.confDefaults(conf);
     conf.ports_file_dir = tmp;
