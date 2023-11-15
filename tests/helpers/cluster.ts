@@ -46,6 +46,11 @@ if (argv.h || argv.help) {
   Deno.exit(0);
 }
 
+// Windows can't handle signals to stop/start chaos
+if (Deno.build.os === "windows" && !argv["chaos"]) {
+  console.log("use --chaos flag to restart cluster servers randomly")
+}
+
 const count = argv["count"] as number || 3;
 const port = argv["port"] as number ?? 4222;
 let chaosTimer: number | undefined;
@@ -99,6 +104,7 @@ function randomBetween(min: number, max: number): number {
 }
 
 function chaos(cluster: NatsServer[], delay: number) {
+  console.log("starting chaos...")
   setTimeout(() => {
     chaosTimer = setInterval(() => {
       restart(cluster);
@@ -140,28 +146,36 @@ function restart(cluster: NatsServer[]) {
 }
 
 function waitForStop(): void {
+  const isWindows = Deno.build.os === "windows";
+  const isLinux = Deno.build.os === "linux";
   console.log("control+c to terminate");
-  Deno.addSignalListener("SIGTERM", () => {
+  Deno.addSignalListener(isWindows || isLinux ? "SIGINT" : "SIGTERM", () => {
+    console.log("bye");
     Deno.exit();
   });
 
-  console.log("control+t to stop/restart chaos");
-  Deno.addSignalListener("SIGINFO", () => {
-    if (chaosTimer === undefined) {
-      console.log("restarting chaos...");
-      console.log("control+t to stop chaos");
-      console.log("control+c to terminate");
+  // Stop/start signaling isn't working on Windows.
+  // Any signal is cascading to the child processes and killing nats-servers.
+  if (!isWindows) {
+    const key = isLinux ? "z" : "t";
+    console.log(`control+${key} to stop/restart chaos`);
+    Deno.addSignalListener(isLinux ? "SIGTSTP" : "SIGINFO", () => {
+      if (chaosTimer === undefined) {
+        console.log("restarting chaos...");
+        console.log(`control+${key} to stop chaos`);
+        console.log("control+c to terminate");
 
-      chaos(cluster, 0);
-      return;
-    }
-    clearInterval(chaosTimer);
-    chaosTimer = undefined;
-    console.log("control+t to restart chaos");
-    console.log("control+c to terminate");
-    console.log("monitoring can be accessed:");
-    for (const s of cluster) {
-      console.log(`http://127.0.0.1:${s?.monitoring}`);
-    }
-  });
+        chaos(cluster, 0);
+        return;
+      }
+      clearInterval(chaosTimer);
+      chaosTimer = undefined;
+      console.log(`control+${key} to restart chaos`);
+      console.log("control+c to terminate");
+      console.log("monitoring can be accessed:");
+      for (const s of cluster) {
+        console.log(`http://127.0.0.1:${s?.monitoring}`);
+      }
+    });
+  }
 }

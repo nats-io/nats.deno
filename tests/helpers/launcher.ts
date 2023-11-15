@@ -72,6 +72,22 @@ export interface JSZ {
   };
 }
 
+function pathNorm(path) {
+  // win32 apis always work with forward slash
+  return path.replaceAll("\\", "/").trimEnd("/");
+}
+
+function getTmpFolder() {
+  let tmpDir = Deno.env.get("TMPDIR");
+  if (!tmpDir) {
+    // Unix or Windows home
+    tmpDir = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE")) + "/tmp";
+  }
+  const tmp = pathNorm(`${tmpDir}/nats_launcher`)
+  Deno.mkdirSync(tmp, { recursive: true });
+  return tmp;
+}
+
 function parseHostport(s?: string) {
   if (!s) {
     return;
@@ -272,7 +288,7 @@ export class NatsServer implements PortInfo {
       delete serverConf.jetstream;
     }
     // form a cluster with the specified count
-    const servers = await NatsServer.cluster(count, serverConf, false);
+    const servers = await NatsServer.cluster(count, serverConf, debug);
 
     // extract all the configs
     const configs = servers.map((s) => {
@@ -307,7 +323,7 @@ export class NatsServer implements PortInfo {
       // need a server name for a cluster
       const serverName = nuid.next();
       // customize the store dir and make it
-      jetstream.store_dir = path.join("/tmp", "jetstream", serverName);
+      jetstream.store_dir = `${getTmpFolder()}/jetstream/${serverName}`;
       Deno.mkdirSync(jetstream.store_dir, { recursive: true });
 
       config = extend(
@@ -530,12 +546,13 @@ export class NatsServer implements PortInfo {
   }
 
   static async start(conf?: any, debug = false): Promise<NatsServer> {
-    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
-    const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
+    const isWindows = Deno.build.os === "windows";
+    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : isWindows ? "nats-server.exe" : "nats-server";
+    const tmp = getTmpFolder();
     conf = NatsServer.confDefaults(conf);
     conf.ports_file_dir = tmp;
 
-    const confFile = await Deno.makeTempFileSync();
+    const confFile = pathNorm(Deno.makeTempFileSync({ dir: getTmpFolder(), prefix: 'nats_', suffix: ".conf" }));
     await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
     if (debug) {
       console.info(`${exe} -c ${confFile}`);
@@ -555,8 +572,9 @@ export class NatsServer implements PortInfo {
       }
     }
 
+    const exeSuffix = isWindows ? ".exe" : "";
     const portsFile = path.resolve(
-      path.join(tmp, `nats-server_${srv.pid}.ports`),
+      path.join(tmp, `nats-server${exeSuffix}_${srv.pid}.ports`),
     );
 
     const pi = await check(
