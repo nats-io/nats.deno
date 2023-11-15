@@ -74,15 +74,15 @@ export interface JSZ {
 
 function pathNorm(path: string): string {
   // win32 apis always work with forward slash
-  return path.replaceAll("\\", "/").trimEnd("/");
+  return path.replaceAll("\\", "/");
 }
 
 function getTmpFolder() {
   let tmpDir = Deno.env.get("TMPDIR");
   if (!tmpDir) {
     // Unix or Windows home
-    const home = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE"));
-    tmpDir = `${home}/tmp`;
+    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "/tmp";
+    tmpDir = pathNorm(`${home}/tmp`);
   }
   const tmp = pathNorm(`${tmpDir}/nats_launcher`);
   Deno.mkdirSync(tmp, { recursive: true });
