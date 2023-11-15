@@ -72,7 +72,7 @@ export interface JSZ {
   };
 }
 
-function pathNorm(path) {
+function pathNorm(path: string): string {
   // win32 apis always work with forward slash
   return path.replaceAll("\\", "/").trimEnd("/");
 }
