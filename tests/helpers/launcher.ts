@@ -81,8 +81,8 @@ function getTmpFolder() {
   let tmpDir = Deno.env.get("TMPDIR");
   if (!tmpDir) {
     // Unix or Windows home
-    tmpDir = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE"))
-        + "/tmp";
+    tmpDir = pathNorm(Deno.env.get("HOME") || Deno.env.get("USERPROFILE")) +
+        "/tmp";
   }
   const tmp = pathNorm(`${tmpDir}/nats_launcher`);
   Deno.mkdirSync(tmp, { recursive: true });
