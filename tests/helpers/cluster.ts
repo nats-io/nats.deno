@@ -104,7 +104,7 @@ function randomBetween(min: number, max: number): number {
 }
 
 function chaos(cluster: NatsServer[], delay: number) {
-  console.log("starting chaos...")
+  console.log("starting chaos...");
   setTimeout(() => {
     chaosTimer = setInterval(() => {
       restart(cluster);
