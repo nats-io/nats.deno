@@ -282,7 +282,7 @@ export class Servers {
     return this.servers;
   }
 
-  update(info: ServerInfo): ServersChanged {
+  update(info: ServerInfo, encrypted?: boolean): ServersChanged {
     const added: string[] = [];
     let deleted: string[] = [];
 
@@ -290,7 +290,7 @@ export class Servers {
     const discovered = new Map<string, ServerImpl>();
     if (info.connect_urls && info.connect_urls.length > 0) {
       info.connect_urls.forEach((hp) => {
-        hp = urlParseFn ? urlParseFn(hp) : hp;
+        hp = urlParseFn ? urlParseFn(hp, encrypted) : hp;
         const s = new ServerImpl(hp, true);
         discovered.set(hp, s);
       });
