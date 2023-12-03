@@ -179,7 +179,7 @@ export enum ConsumerEvents {
    * for ordered consumers, as the consumer will be created in those cases automatically.
    */
   StreamNotFound = "stream_not_found",
-  
+
   /*
    * Notification that the consumer was deleted. This notification
    * means the consumer will not get messages unless it is recreated. The client
