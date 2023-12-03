@@ -20,7 +20,6 @@ import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 const defaults = {
   c: 3,
   p: 4222,
-  D: false,
   chaos: false,
 };
 
@@ -31,7 +30,6 @@ const argv = parse(
       "p": ["port"],
       "c": ["count"],
       "d": ["debug"],
-      "D": ["server-debug"],
       "j": ["jetstream"],
     },
     default: defaults,
@@ -41,7 +39,7 @@ const argv = parse(
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 3] [--port 4222] [--debug] [--server_debug] [--jetstream] [--chaos]\n",
+    "usage: cluster [--count 3] [--port 4222] [--debug] [--jetstream] [--chaos]\n",
   );
   Deno.exit(0);
 }
@@ -53,7 +51,7 @@ let cluster: NatsServer[];
 
 try {
   const base = { debug: false };
-  const serverDebug = argv["server-debug"];
+  const serverDebug = argv["debug"];
   if (serverDebug) {
     base.debug = true;
   }

@@ -179,6 +179,13 @@ export enum ConsumerEvents {
    * for ordered consumers, as the consumer will be created in those cases automatically.
    */
   StreamNotFound = "stream_not_found",
+  
+  /*
+   * Notification that the consumer was deleted. This notification
+   * means the consumer will not get messages unless it is recreated. The client
+   * will continue to attempt to pull messages. Ordered consumer will recreate it.
+   */
+  ConsumerDeleted = "consumer_deleted",
 
   /**
    * This notification is specific of ordered consumers and will be notified whenever
@@ -368,8 +375,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
                 this.stop(error);
               });
             } else if (code === 409 && description === "consumer deleted") {
-              const error = toErr();
-              this.stop(error);
+              this.notify(
+                ConsumerEvents.ConsumerDeleted,
+                `${code} ${description}`,
+              );
             } else {
               this.notify(
                 ConsumerDebugEvents.DebugEvent,

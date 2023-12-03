@@ -394,6 +394,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   pendingLimit: number;
   lastError?: NatsError;
   abortReconnect: boolean;
+  whyClosed: string;
 
   servers: Servers;
   server!: ServerImpl;
@@ -419,6 +420,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.muxSubscriptions = new MuxSubscription();
     this.outbound = new DataBuffer();
     this.pongs = [];
+    this.whyClosed = "";
     //@ts-ignore: options.pendingLimit is hidden
     this.pendingLimit = options.pendingLimit || this.pendingLimit;
     this.features = new Features({ major: 0, minor: 0, micro: 0 });
@@ -1029,6 +1031,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     if (this._closed) {
       return;
     }
+    this.whyClosed = new Error("close trace").stack || "";
     this.heartbeats.cancel();
     if (this.connectError) {
       this.connectError(err);
