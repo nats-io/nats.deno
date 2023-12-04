@@ -1422,7 +1422,7 @@ export interface Base {
 }
 
 export interface URLParseFn {
-  (u: string): string;
+  (u: string, encrypted?: boolean): string;
 }
 
 export enum ServiceVerb {

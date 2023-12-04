@@ -802,7 +802,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     this.info = info;
     const updates = this.options && this.options.ignoreClusterUpdates
       ? undefined
-      : this.servers.update(info);
+      : this.servers.update(info, this.transport.isEncrypted());
     if (!this.infoReceived) {
       this.features.update(parseSemVer(info.version));
       this.infoReceived = true;
