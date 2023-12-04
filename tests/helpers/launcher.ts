@@ -293,7 +293,10 @@ export class NatsServer implements PortInfo {
       delete serverConf.jetstream;
     }
     // form a cluster with the specified count
-    const servers = await NatsServer.cluster(count, serverConf, false);
+    const servers = await NatsServer.cluster(count, serverConf, debug);
+    servers.forEach((s) => {
+      s.updatePorts();
+    });
 
     // extract all the configs
     const configs = servers.map((s) => {
@@ -312,8 +315,8 @@ export class NatsServer implements PortInfo {
     });
 
     const routes: string[] = [];
-    configs.forEach((conf, idx, arr) => {
-      let { port, cluster, monitoring, websocket, config } = conf;
+    configs.forEach((conf) => {
+      let { port, cluster, config } = conf;
 
       // jetstream defaults
       const { jetstream } = jsopts();
@@ -334,23 +337,12 @@ export class NatsServer implements PortInfo {
       config = extend(
         config,
         { jetstream },
-        { port, server_name: serverName },
-        serverConf || {},
+        { server_name: serverName },
       );
 
       // set the specific ports that we ran on before
       config.cluster.listen = config.cluster.listen.replace("-1", `${cluster}`);
       routes.push(`nats://${config.cluster.listen}`);
-      if (conf.monitoring) {
-        config.http = monitoring;
-      }
-      if (websocket) {
-        config.websocket = config.websocket || {};
-        config.websocket.port = websocket;
-      }
-
-      // replace it
-      arr[idx] = { port, cluster, monitoring, websocket, config };
     });
 
     // update the routes to be explicit
@@ -359,7 +351,6 @@ export class NatsServer implements PortInfo {
         return v.indexOf(c.config.cluster.listen) === -1;
       });
     });
-
     // reconfigure the servers
     servers.forEach((s, idx) => {
       s.config = configs[idx].config;
@@ -507,8 +498,7 @@ export class NatsServer implements PortInfo {
     if (ns.cluster === undefined) {
       return Promise.reject(new Error("no cluster port on server"));
     }
-    conf = conf || {};
-    conf = JSON.parse(JSON.stringify(conf));
+    conf = JSON.parse(JSON.stringify(conf || {}));
     conf.port = -1;
     if (conf.websocket) {
       conf.websocket.port = -1;
@@ -518,7 +508,6 @@ export class NatsServer implements PortInfo {
     conf.cluster.name = ns.clusterName;
     conf.cluster.listen = "127.0.0.1:-1";
     conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
-
     return NatsServer.start(conf, debug);
   }
 
