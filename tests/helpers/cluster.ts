@@ -74,50 +74,57 @@ let chaosTimer: number | undefined;
 let cluster: NatsServer[];
 
 try {
-  const base = {
+  let base = {
+    port,
     debug: false,
-    tls: {},
+    http: 8222,
     websocket: {
       port: wsport,
       no_tls: true,
       compression: true,
-      tls: {},
     },
   };
-
-  if (cert) {
-    base.tls = {
-      cert_file: cert,
-      key_file: key,
-    };
-    base.websocket.no_tls = false;
-    base.websocket.tls = {
-      cert_file: cert,
-      key_file: key,
-    };
-  }
 
   const serverDebug = argv["debug"];
   if (serverDebug) {
     base.debug = true;
   }
+
+  if (cert) {
+    base = Object.assign(base, {
+      tls: {
+        cert_file: cert,
+        key_file: key,
+      },
+      websocket: {
+        port: wsport,
+        no_tls: false,
+        compression: true,
+        tls: {
+          cert_file: cert,
+          key_file: key,
+        },
+      },
+    });
+  }
+
   cluster = argv.jetstream
     ? await NatsServer.jetstreamCluster(
       count,
-      Object.assign(base, {
-        port,
-        http: 8222,
-        jetstream: {
-          max_file_store: -1,
-          max_mem_store: -1,
-        },
-      }),
-      base.debug,
+      Object.assign(
+        base,
+        Object.assign(base, {
+          jetstream: {
+            max_file_store: -1,
+            max_mem_store: -1,
+          },
+        }),
+      ),
     )
     : await NatsServer.cluster(
       count,
-      Object.assign(base, { port }),
-      base.debug,
+      Object.assign(base),
+      serverDebug,
     );
 
   cluster.forEach((s) => {
