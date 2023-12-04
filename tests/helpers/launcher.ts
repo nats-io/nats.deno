@@ -208,7 +208,10 @@ export class NatsServer implements PortInfo {
       this.config.websocket = this.config.websocket || {};
       this.config.websocket.port = this.websocket;
     }
-    return Deno.writeFile(this.configFile, new TextEncoder().encode(toConf(this.config)));
+    return Deno.writeFile(
+      this.configFile,
+      new TextEncoder().encode(toConf(this.config)),
+    );
   }
 
   async restart(): Promise<NatsServer> {
