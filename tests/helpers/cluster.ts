@@ -20,7 +20,10 @@ import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 const defaults = {
   c: 3,
   p: 4222,
+  w: 80,
   chaos: false,
+  cert: "",
+  key: "",
 };
 
 const argv = parse(
@@ -31,6 +34,7 @@ const argv = parse(
       "c": ["count"],
       "d": ["debug"],
       "j": ["jetstream"],
+      "w": ["websocket"],
     },
     default: defaults,
     boolean: ["debug", "jetstream", "server-debug", "chaos"],
@@ -39,18 +43,60 @@ const argv = parse(
 
 if (argv.h || argv.help) {
   console.log(
-    "usage: cluster [--count 3] [--port 4222] [--debug] [--jetstream] [--chaos]\n",
+    "usage: cluster [--count 3] [--port 4222] [--key path] [--cert path] [--websocket 80] [--debug] [--jetstream] [--chaos]\n",
   );
   Deno.exit(0);
 }
 
 const count = argv["count"] as number || 3;
 const port = argv["port"] as number ?? 4222;
+const cert = argv["cert"] as string || undefined;
+const key = argv["key"] as string || undefined;
+
+if (cert?.length) {
+  await Deno.stat(cert).catch((err) => {
+    console.error(`error loading certificate: ${err.message}`);
+    Deno.exit(1);
+  });
+}
+if (key?.length) {
+  await Deno.stat(key).catch((err) => {
+    console.error(`error loading certificate key: ${err.message}`);
+    Deno.exit(1);
+  });
+}
+let wsport = argv["websocket"] as number;
+if (wsport === 80 && cert?.length) {
+  wsport = 443;
+}
+
 let chaosTimer: number | undefined;
 let cluster: NatsServer[];
 
 try {
-  const base = { debug: false };
+  const base = {
+    debug: false,
+    tls: {},
+    websocket: {
+      port: wsport,
+      no_tls: true,
+      compression: true,
+      tls: {},
+    },
+  };
+
+  if (cert) {
+    base.tls = {
+      cert_file: cert,
+      key_file: key,
+    };
+    base.websocket.no_tls = false;
+    base.websocket.tls = {
+      cert_file: cert,
+      key_file: key,
+    };
+  }
+
   const serverDebug = argv["debug"];
   if (serverDebug) {
     base.debug = true;
@@ -76,12 +122,12 @@ try {
 
   cluster.forEach((s) => {
     const pid = rgb24(`[${s.process.pid}]`, s.rgb);
-    console.log(
-      `${pid} ${s.configFile} at nats://${s.hostname}:${s.port}
+    console.log(`${pid} config ${s.configFile}
+\tnats://${s.hostname}:${s.port}
+\tws${cert ? "s" : ""}://${s.hostname}:${s.websocket}
 \tcluster://${s.hostname}:${s.cluster}
 \thttp://127.0.0.1:${s.monitoring}
-\tstore: ${s.config?.jetstream?.store_dir}`,
-    );
+${argv.jetstream ? `\tstore: ${s.config?.jetstream?.store_dir}` : ""}`);
   });
 
   if (argv.chaos === true && confirm("start chaos?")) {
