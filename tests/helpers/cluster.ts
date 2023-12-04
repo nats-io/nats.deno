@@ -83,7 +83,6 @@ try {
       port: wsport,
       no_tls: true,
       compression: true,
-      tls: {},
     },
   };
 
