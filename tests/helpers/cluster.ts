@@ -77,7 +77,6 @@ try {
   let base = {
     port,
     debug: false,
-    tls: {},
     http: 8222,
     websocket: {
       port: wsport,
