@@ -72,7 +72,9 @@ export interface JSZ {
   };
 }
 
-function parseHostport(s?: string) {
+function parseHostport(
+  s?: string,
+): { hostname: string; port: number } | undefined {
   if (!s) {
     return;
   }
@@ -192,12 +194,30 @@ export class NatsServer implements PortInfo {
     })();
   }
 
-  restart(): Promise<NatsServer> {
-    return this.stop().then(() => {
-      const conf = JSON.parse(JSON.stringify(this.config));
-      conf.port = this.port;
-      return NatsServer.start(conf, this.debug);
-    });
+  updatePorts(): Promise<void> {
+    // if we have -1 ports, lets freeze them
+    this.config.port = this.port;
+    if (this.cluster) {
+      this.config.cluster.listen = `${this.hostname}:${this.cluster}`;
+      this.config.cluster.name = this.clusterName;
+    }
+    if (this.monitoring) {
+      this.config.http = this.monitoring;
+    }
+    if (this.websocket) {
+      this.config.websocket = this.config.websocket || {};
+      this.config.websocket.port = this.websocket;
+    }
+    return Deno.writeFile(
+      this.configFile,
+      new TextEncoder().encode(toConf(this.config)),
+    );
+  }
+
+  async restart(): Promise<NatsServer> {
+    await this.stop();
+    const conf = JSON.parse(JSON.stringify(this.config));
+    return await NatsServer.start(conf, this.debug);
   }
 
   pid(): number {
@@ -219,6 +239,7 @@ export class NatsServer implements PortInfo {
 
   async stop(): Promise<void> {
     if (!this.stopped) {
+      await this.updatePorts();
       this.stopped = true;
       this.process.stderr?.cancel().catch(() => {});
       this.process.kill("SIGKILL");
@@ -427,7 +448,7 @@ export class NatsServer implements PortInfo {
     conf = Object.assign({}, conf);
     conf.cluster = conf.cluster || {};
     conf.cluster.name = nuid.next();
-    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
+    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:4225";
 
     const ns = await NatsServer.start(conf, debug);
     const cluster = [ns];
@@ -489,10 +510,13 @@ export class NatsServer implements PortInfo {
     conf = conf || {};
     conf = JSON.parse(JSON.stringify(conf));
     conf.port = -1;
+    if (conf.websocket) {
+      conf.websocket.port = -1;
+    }
     conf.http = "127.0.0.1:-1";
     conf.cluster = conf.cluster || {};
     conf.cluster.name = ns.clusterName;
-    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
+    conf.cluster.listen = "127.0.0.1:-1";
     conf.cluster.routes = [`nats://${ns.hostname}:${ns.cluster}`];
 
     return NatsServer.start(conf, debug);
@@ -513,7 +537,6 @@ export class NatsServer implements PortInfo {
   /**
    * this is only expecting authentication type changes
    * @param conf
-   * @param debug
    */
   async reload(conf?: any): Promise<void> {
     conf = NatsServer.confDefaults(conf);
@@ -535,7 +558,7 @@ export class NatsServer implements PortInfo {
     conf = NatsServer.confDefaults(conf);
     conf.ports_file_dir = tmp;
 
-    const confFile = await Deno.makeTempFileSync();
+    const confFile = Deno.makeTempFileSync();
     await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
     if (debug) {
       console.info(`${exe} -c ${confFile}`);
@@ -584,6 +607,7 @@ export class NatsServer implements PortInfo {
     if (conf.cluster?.name) {
       ports.clusterName = conf.cluster.name;
     }
+
     try {
       await check(
         async () => {
