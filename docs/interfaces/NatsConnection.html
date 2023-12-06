@@ -20,7 +20,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">NatsConnection</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:508</li></ul></aside>
+<li>Defined in cjs/nats-base-client/core.ts:519</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -43,6 +43,7 @@
 <a href="NatsConnection.html#jetstream" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>jetstream</span></a>
 <a href="NatsConnection.html#jetstreamManager" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>jetstream<wbr/>Manager</span></a>
 <a href="NatsConnection.html#publish" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>publish</span></a>
+<a href="NatsConnection.html#reconnect" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>reconnect</span></a>
 <a href="NatsConnection.html#request" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>request</span></a>
 <a href="NatsConnection.html#requestMany" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>request<wbr/>Many</span></a>
 <a href="NatsConnection.html#rtt" class="tsd-index-link tsd-kind-method tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg><span>rtt</span></a>
@@ -58,12 +59,15 @@
 <div class="tsd-comment tsd-typography"><p>ServerInfo to the currently connected server or undefined</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:512</li></ul></aside></section>
+<li>Defined in cjs/nats-base-client/core.ts:523</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="services" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>services</span><a href="#services" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">services<span class="tsd-signature-symbol">:</span> <a href="ServicesAPI.html" class="tsd-signature-type" data-tsd-kind="Interface">ServicesAPI</a></div><aside class="tsd-sources">
+<div class="tsd-signature">services<span class="tsd-signature-symbol">:</span> <a href="ServicesAPI.html" class="tsd-signature-type" data-tsd-kind="Interface">ServicesAPI</a></div>
+<div class="tsd-comment tsd-typography"><p>Returns a <a href="ServicesAPI.html">ServicesAPI</a> which allows you to build services
+using NATS.</p>
+</div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:650</li></ul></aside></section></section>
+<li>Defined in cjs/nats-base-client/core.ts:665</li></ul></aside></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Methods</h2>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="close" class="tsd-anchor"></a>
@@ -77,7 +81,7 @@ the connection closes.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:527</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:538</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="closed" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>closed</span><a href="#closed" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -90,7 +94,7 @@ to the error if there was one.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:520</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:531</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="drain" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>drain</span><a href="#drain" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -106,7 +110,7 @@ sent to the server. Finally, the connection is closed.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:597</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:608</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="flush" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>flush</span><a href="#flush" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -117,7 +121,7 @@ the server. Use of this API is not necessary by clients.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:585</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:596</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="getServer" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>get<wbr/>Server</span><a href="#getServer" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -127,7 +131,7 @@ the server. Use of this API is not necessary by clients.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:612</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:623</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="isClosed" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>is<wbr/>Closed</span><a href="#isClosed" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -137,7 +141,7 @@ the server. Use of this API is not necessary by clients.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:602</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:613</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="isDraining" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>is<wbr/>Draining</span><a href="#isDraining" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -147,7 +151,7 @@ the server. Use of this API is not necessary by clients.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:607</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:618</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="jetstream" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>jetstream</span><a href="#jetstream" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -163,11 +167,11 @@ JetStream or consuming messages from streams.</p>
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <a href="JetStreamOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamOptions</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="JetStreamClient.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamClient</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:643</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:654</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="jetstreamManager" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>jetstream<wbr/>Manager</span><a href="#jetstreamManager" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-<li class="tsd-signature tsd-anchor-link" id="jetstreamManager.jetstreamManager-1">jetstream<wbr/>Manager<span class="tsd-signature-symbol">(</span>opts<span class="tsd-signature-symbol">?: </span><a href="JetStreamOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamManager.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManager</a><span class="tsd-signature-symbol">&gt;</span><a href="#jetstreamManager.jetstreamManager-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-signature tsd-anchor-link" id="jetstreamManager.jetstreamManager-1">jetstream<wbr/>Manager<span class="tsd-signature-symbol">(</span>opts<span class="tsd-signature-symbol">?: </span><a href="JetStreamManagerOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManagerOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamManager.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManager</a><span class="tsd-signature-symbol">&gt;</span><a href="#jetstreamManager.jetstreamManager-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
 <li class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Returns a Promise to a <a href="JetStreamManager.html">JetStreamManager</a> which allows the client
 to access Streams and Consumers information.</p>
@@ -176,10 +180,10 @@ to access Streams and Consumers information.</p>
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li>
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <a href="JetStreamOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamOptions</a></h5></li></ul></div>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <a href="JetStreamManagerOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManagerOptions</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="JetStreamManager.html" class="tsd-signature-type" data-tsd-kind="Interface">JetStreamManager</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:635</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:646</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="publish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>publish</span><a href="#publish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -198,7 +202,32 @@ to access Streams and Consumers information.</p>
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> options: <a href="PublishOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">PublishOptions</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:535</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:546</li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="reconnect" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>reconnect</span><a href="#reconnect" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
+<li class="tsd-signature tsd-anchor-link" id="reconnect.reconnect-1">reconnect<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span><a href="#reconnect.reconnect-1" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Use of this API is experimental, and it is subject to be removed.</p>
+<p>reconnect() enables a client to force a reconnect. A reconnect will disconnect
+the client, and possibly initiate a reconnect to the cluster.  Note that all
+reconnect caveats apply:</p>
+<ul>
+<li><p>If the reconnection policy given to the client doesn&#39;t allow reconnects, the
+connection will close.</p>
+</li>
+<li><p>Messages that are inbound or outbound could  be lost.</p>
+</li>
+<li><p>All requests that are in flight will be rejected.</p>
+</li>
+</ul>
+<p>Note that the returned promise will reject if the client is already closed, or if
+it is in the process of draining. If the client is currently disconnected,
+this API has no effect, as the client is already attempting to reconnect.</p>
+</div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in cjs/nats-base-client/core.ts:685</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="request" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>request</span><a href="#request" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -221,7 +250,7 @@ the request will fail as soon as the server processes it.</p>
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <a href="RequestOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">RequestOptions</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="Msg.html" class="tsd-signature-type" data-tsd-kind="Interface">Msg</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:562</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:573</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="requestMany" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>request<wbr/>Many</span><a href="#requestMany" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -241,7 +270,7 @@ to determine when the request should stop gathering responses.</p>
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="RequestManyOptions.html" class="tsd-signature-type" data-tsd-kind="Interface">RequestManyOptions</a><span class="tsd-signature-symbol">&gt;</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><a href="Msg.html" class="tsd-signature-type" data-tsd-kind="Interface">Msg</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:575</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:586</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="rtt" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>rtt</span><a href="#rtt" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -252,7 +281,7 @@ to determine when the request should stop gathering responses.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:648</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:659</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="stats" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stats</span><a href="#stats" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -263,7 +292,7 @@ sent and recieved by the client.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <a href="Stats.html" class="tsd-signature-type" data-tsd-kind="Interface">Stats</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:627</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:638</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="status" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>status</span><a href="#status" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -277,7 +306,7 @@ reconnects, or receives an update from the cluster among other things.</p>
 </div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><a href="Status.html" class="tsd-signature-type" data-tsd-kind="Interface">Status</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:621</li></ul></aside></li></ul></section>
+<li>Defined in cjs/nats-base-client/core.ts:632</li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface"><a id="subscribe" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>subscribe</span><a href="#subscribe" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
@@ -296,7 +325,7 @@ if specified. Otherwise, the subscription is an async iterator for <a href="Msg.
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> opts: <a href="../types/SubscriptionOptions.html" class="tsd-signature-type" data-tsd-kind="Type alias">SubscriptionOptions</a></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="../types/Subscription.html" class="tsd-signature-type" data-tsd-kind="Type alias">Subscription</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/nats-base-client/core.ts:549</li></ul></aside></li></ul></section></section></div>
+<li>Defined in cjs/nats-base-client/core.ts:560</li></ul></aside></li></ul></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -334,6 +363,7 @@ if specified. Otherwise, the subscription is an async iterator for <a href="Msg.
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#jetstream" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>jetstream</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#jetstreamManager" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>jetstream<wbr/>Manager</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#publish" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>publish</a></li>
+<li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#reconnect" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>reconnect</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#request" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>request</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#requestMany" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>request<wbr/>Many</a></li>
 <li class="tsd-kind-method tsd-parent-kind-interface"><a href="NatsConnection.html#rtt" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-2048-path"></use><use href="#icon-2048-text"></use></svg>rtt</a></li>
