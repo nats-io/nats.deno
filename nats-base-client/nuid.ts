@@ -47,10 +47,11 @@ export class Nuid {
   buf: Uint8Array;
   seq!: number;
   inc!: number;
+  inited: boolean;
 
   constructor() {
     this.buf = new Uint8Array(totalLen);
-    this.init();
+    this.inited = false;
   }
 
   /**
@@ -60,6 +61,7 @@ export class Nuid {
    * @api private
    */
   private init() {
+    this.inited = true;
     this.setPre();
     this.initSeqAndInc();
     this.fillSeq();
@@ -108,6 +110,9 @@ export class Nuid {
    * @api private
    */
   next(): string {
+    if (!this.inited) {
+      this.init();
+    }
     this.seq += this.inc;
     if (this.seq > maxSeq) {
       this.setPre();
