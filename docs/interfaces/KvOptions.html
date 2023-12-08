@@ -22,7 +22,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">KvOptions</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1052</li></ul></aside>
+<li>Defined in cjs/jetstream/types.ts:1061</li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -34,6 +34,7 @@
 <a href="KvOptions.html#backingStore" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>backing<wbr/>Store</span></a>
 <a href="KvOptions.html#bindOnly" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>bind<wbr/>Only</span></a>
 <a href="KvOptions.html#codec" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>codec</span></a>
+<a href="KvOptions.html#compression" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>compression?</span></a>
 <a href="KvOptions.html#description" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>description</span></a>
 <a href="KvOptions.html#history" class="tsd-index-link tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>history</span></a>
 <a href="KvOptions.html#maxBucketSize" class="tsd-index-link deprecated tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg><span>max<wbr/>Bucket<wbr/>Size</span></a>
@@ -61,7 +62,7 @@ retrieves values. This option is significantly faster,
 but has the possibility of inconsistency during a read.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1074</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1083</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="backingStore" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>backing<wbr/>Store</span><a href="#backingStore" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">backing<wbr/>Store<span class="tsd-signature-symbol">:</span> <a href="../enums/StorageType.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StorageType</a></div>
@@ -70,21 +71,30 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#backingStore">backingStore</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1016</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1019</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="bindOnly" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>bind<wbr/>Only</span><a href="#bindOnly" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">bind<wbr/>Only<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Doesn&#39;t attempt to create the KV stream if it doesn&#39;t exist.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1068</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1077</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="codec" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>codec</span><a href="#codec" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">codec<span class="tsd-signature-symbol">:</span> <a href="KvCodecs.html" class="tsd-signature-type" data-tsd-kind="Interface">KvCodecs</a></div>
 <div class="tsd-comment tsd-typography"><p>An encoder/decoder for keys and values</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1064</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1073</li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="compression" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>compression</span><a href="#compression" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
+<div class="tsd-signature">compression<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
+<div class="tsd-comment tsd-typography"><p>Sets the compression level of the KV. This feature is only supported in
+servers 2.10.x and better.</p>
+</div><aside class="tsd-sources">
+<p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#compression">compression</a></p>
+<ul>
+<li>Defined in cjs/jetstream/types.ts:1025</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="description" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>description</span><a href="#description" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">description<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
@@ -92,7 +102,7 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#description">description</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:959</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:962</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="history" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>history</span><a href="#history" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">history<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -100,7 +110,7 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#history">history</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:967</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:970</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="maxBucketSize" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span class="deprecated">max<wbr/>Bucket<wbr/>Size</span><a href="#maxBucketSize" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max<wbr/>Bucket<wbr/>Size<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -109,7 +119,7 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#maxBucketSize">maxBucketSize</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:975</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:978</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="maxValueSize" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max<wbr/>Value<wbr/>Size</span><a href="#maxValueSize" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max<wbr/>Value<wbr/>Size<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -117,7 +127,7 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#maxValueSize">maxValueSize</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:979</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:982</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="max_bytes" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>max_<wbr/>bytes</span><a href="#max_bytes" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">max_<wbr/>bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -125,7 +135,7 @@ FIXME: remove this on 1.8</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#max_bytes">max_bytes</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:971</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:974</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="metadata" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>metadata</span><a href="#metadata" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">metadata<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
@@ -134,7 +144,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 2.10.x and better.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1080</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1089</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="mirror" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>mirror</span><a href="#mirror" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">mirror<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a></div>
@@ -142,7 +152,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#mirror">mirror</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1002</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1005</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="placement" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>placement</span><a href="#placement" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">placement<span class="tsd-signature-symbol">:</span> <a href="Placement.html" class="tsd-signature-type" data-tsd-kind="Interface">Placement</a></div>
@@ -150,7 +160,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#placement">placement</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:994</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:997</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="placementCluster" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>placement<wbr/>Cluster</span><a href="#placementCluster" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">placement<wbr/>Cluster<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
@@ -158,7 +168,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#placementCluster">placementCluster</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1010</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1013</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="replicas" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>replicas</span><a href="#replicas" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">replicas<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -166,7 +176,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#replicas">replicas</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:963</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:966</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="republish" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>republish</span><a href="#republish" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">republish<span class="tsd-signature-symbol">:</span> <a href="Republish.html" class="tsd-signature-type" data-tsd-kind="Interface">Republish</a></div>
@@ -174,7 +184,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#republish">republish</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:998</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1001</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="sources" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>sources</span><a href="#sources" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">sources<span class="tsd-signature-symbol">?:</span> <a href="StreamSource.html" class="tsd-signature-type" data-tsd-kind="Interface">StreamSource</a><span class="tsd-signature-symbol">[]</span></div>
@@ -182,7 +192,7 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#sources">sources</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1006</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1009</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="storage" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>storage</span><a href="#storage" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">storage<span class="tsd-signature-symbol">:</span> <a href="../enums/StorageType.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StorageType</a></div>
@@ -190,21 +200,21 @@ keys starting with <code>_nats</code> are reserved. This feature only supported 
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#storage">storage</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:990</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:993</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="streamName" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>stream<wbr/>Name</span><a href="#streamName" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">stream<wbr/>Name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>The underlying stream name for the KV</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1060</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1069</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="timeout" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>timeout</span><a href="#timeout" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">timeout<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>How long to wait in milliseconds for a response from the KV</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in cjs/jetstream/types.ts:1056</li></ul></aside></section>
+<li>Defined in cjs/jetstream/types.ts:1065</li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="ttl" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>ttl</span><a href="#ttl" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">ttl<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -215,7 +225,7 @@ delete markers are not performed.</p>
 </div><aside class="tsd-sources">
 <p>Inherited from <a href="KvLimits.html">KvLimits</a>.<a href="KvLimits.html#ttl">ttl</a></p>
 <ul>
-<li>Defined in cjs/jetstream/types.ts:986</li></ul></aside></section></section></div>
+<li>Defined in cjs/jetstream/types.ts:989</li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
@@ -245,6 +255,7 @@ delete markers are not performed.</p>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="KvOptions.html#backingStore" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>backing<wbr/>Store</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="KvOptions.html#bindOnly" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>bind<wbr/>Only</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface"><a href="KvOptions.html#codec" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>codec</a></li>
+<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="KvOptions.html#compression" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>compression?</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="KvOptions.html#description" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>description</a></li>
 <li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="KvOptions.html#history" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>history</a></li>
 <li class="deprecated tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="KvOptions.html#maxBucketSize" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-1024-path"></use><use href="#icon-1024-text"></use></svg>max<wbr/>Bucket<wbr/>Size</a></li>
