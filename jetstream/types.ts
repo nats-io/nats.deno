@@ -1135,6 +1135,12 @@ export type KvWatchOptions = {
    * Specify what to include in the watcher, by default all last values.
    */
   include?: KvWatchInclude;
+  /**
+   * Starts watching at the specified revision. This is intended for watchers
+   * that have restarted watching and have maintained some state of where they are
+   * in the watch.
+   */
+  resumeFromRevision?: number;
 };
 
 export interface RoKV {

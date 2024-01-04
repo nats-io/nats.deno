@@ -1945,3 +1945,24 @@ Deno.test("kv - compression", async () => {
   assertEquals(status.compression, false);
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - watch start at", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const js = nc.jetstream();
+  const kv = await js.views.kv("a");
+  await kv.put("a", "1");
+  await kv.put("b", "2");
+  await kv.put("c", "3");
+
+  const iter = await kv.watch({ resumeFromRevision: 2 });
+  await (async () => {
+    for await (const o of iter) {
+      // expect first key to be "b"
+      assertEquals(o.key, "b");
+      assertEquals(o.revision, 2);
+      break;
+    }
+  })();
+
+  await cleanup(ns, nc);
+});
