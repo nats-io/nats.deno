@@ -748,6 +748,9 @@ export class Bucket implements KV, KvRemove {
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);
+    if (opts.resumeFromRevision && opts.resumeFromRevision > 0) {
+      copts.startSequence(opts.resumeFromRevision);
+    }
     copts.orderedConsumer();
     copts.callback((err, jm) => {
       if (err) {
