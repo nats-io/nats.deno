@@ -212,4 +212,25 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     const subj = `${this.prefix}.CONSUMER.LIST.${stream}`;
     return new ListerImpl<ConsumerInfo>(subj, filter, this);
   }
+
+  pause(stream: string, name: string, until?: Date): Promise<boolean> {
+    const subj = `${this.prefix}.CONSUMER.PAUSE.${stream}.${name}`;
+    let payload = undefined
+    if (until) {
+      const opts = {
+        pause_until: until.toISOString()
+      }
+      payload = JSON.stringify(opts)
+    }
+    return this._request(subj, payload).then(() => {
+      return true
+    })
+  }
+
+  resume(stream: string, name: string): Promise<boolean> {
+    const subj = `${this.prefix}.CONSUMER.RESUME.${stream}.${name}`;
+    return this._request(subj).then(() => {
+      return true
+    });
+  }
 }

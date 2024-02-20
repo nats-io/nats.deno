@@ -733,6 +733,19 @@ export interface ConsumerInfo {
    * on servers 2.10.x or better
    */
   "ts"?: string;
+
+  /**
+   * Set to true if the consumer is paused.
+   * This field is only available on servers 2.11.x or better
+   */
+  paused?: boolean;
+
+  /**
+   * If the consumer was paused with a resume date, this field specifies the amount of time
+   * in nanoseconds remaining until the consumer will be automatically resumed. This field
+   * is only available on servers 2.11.x or better
+   */
+  "pause_remaining": Nanos
 }
 
 export interface ConsumerListResponse extends ApiResponse, ApiPaged {
@@ -910,6 +923,12 @@ export interface ConsumerConfig extends ConsumerUpdateConfig {
    * How messages are played back to the Consumer
    */
   "replay_policy": ReplayPolicy;
+
+  /**
+   * Creates a consumer that is initially paused, but will resume at the specified Date and time.
+   * Specified as an ISO date time string (Date#toISOString()).
+   */
+  "pause_until"?: string
 }
 
 export interface ConsumerUpdateConfig {
