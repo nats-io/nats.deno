@@ -948,6 +948,9 @@ export class OrderedPullConsumerImpl implements Consumer {
     if (typeof this.consumerOpts.filterSubjects === "string") {
       config.filter_subject = this.consumerOpts.filterSubjects;
     }
+    if (this.consumerOpts.replay_policy) {
+      config.replay_policy = this.consumerOpts.replay_policy;
+    }
     // this is the initial request - tweak some options
     if (seq === this.startSeq + 1) {
       config.deliver_policy = this.consumerOpts.deliver_policy ||
