@@ -37,6 +37,7 @@ import {
   ConsumerInfo,
   defaultConsumer,
   DeliverPolicy,
+  DirectBatchOptions,
   DirectMsgRequest,
   JetStreamAccountStats,
   MsgRequest,
@@ -764,6 +765,16 @@ export interface DirectStreamAPI {
    * @param query
    */
   getMessage(stream: string, query: DirectMsgRequest): Promise<StoredMsg>;
+
+  /**
+   * Retrieves all last subject messages for the specified subjects
+   * @param stream
+   * @param opts
+   */
+  getBatch(
+    stream: string,
+    opts: DirectBatchOptions,
+  ): Promise<QueuedIterator<StoredMsg>>;
 }
 
 /**

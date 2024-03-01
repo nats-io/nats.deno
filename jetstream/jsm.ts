@@ -33,11 +33,14 @@ import {
   Msg,
   MsgHdrs,
   NatsConnection,
+  QueuedIterator,
+  RequestStrategy,
   ReviverFn,
 } from "../nats-base-client/core.ts";
 import {
   AccountInfoResponse,
   ApiResponse,
+  DirectBatchOptions,
   DirectMsgRequest,
   JetStreamAccountStats,
   LastForMsgRequest,
@@ -83,6 +86,73 @@ export class DirectStreamAPIImpl extends BaseApiClient
     }
     const dm = new DirectMsgImpl(r);
     return Promise.resolve(dm);
+  }
+
+  async getBatch(
+    stream: string,
+    opts: DirectBatchOptions,
+  ): Promise<QueuedIterator<StoredMsg>> {
+    validateStreamName(stream);
+    const pre = this.opts.apiPrefix || "$JS.API";
+    const subj = `${pre}.DIRECT.GET.${stream}`;
+    opts = opts || {};
+    if (!Array.isArray(opts.multi_last) || opts.multi_last.length === 0) {
+      return Promise.reject("multi_last is required");
+    }
+    const payload = JSON.stringify(opts, (key, value) => {
+      if (key === "up_to_time" && value instanceof Date) {
+        return value.toISOString();
+      }
+      return value;
+    });
+
+    const iter = new QueuedIteratorImpl<StoredMsg>();
+
+    const raw = await this.nc.requestMany(
+      subj,
+      payload,
+      {
+        strategy: RequestStrategy.SentinelMsg,
+      },
+    );
+
+    (async () => {
+      let gotFirst = false;
+      let badServer = false;
+      let badRequest: string | undefined;
+      for await (const m of raw) {
+        if (!gotFirst) {
+          gotFirst = true;
+          const code = m.headers?.code || 0;
+          if (code !== 0 && code < 200 || code > 299) {
+            badRequest = m.headers?.description.toLowerCase();
+            break;
+          }
+          // inspect the message and make sure that we have a supported server
+          const v = m.headers?.get("Nats-Num-Pending");
+          if (v === "") {
+            badServer = true;
+            break;
+          }
+        }
+        if (m.data.length === 0) {
+          break;
+        }
+        iter.push(new DirectMsgImpl(m));
+      }
+      //@ts-ignore: term function
+      iter.push((): void => {
+        if (badServer) {
+          throw new Error("batch direct get not supported by the server");
+        }
+        if (badRequest) {
+          throw new Error(`bad request: ${badRequest}`);
+        }
+        iter.stop();
+      });
+    })();
+
+    return Promise.resolve(iter);
   }
 }
 

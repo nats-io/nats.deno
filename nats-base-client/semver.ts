@@ -52,6 +52,7 @@ export enum Feature {
   JS_STREAM_SOURCE_SUBJECT_TRANSFORM = "js_stream_source_subject_transform",
   JS_STREAM_COMPRESSION = "js_stream_compression",
   JS_DEFAULT_CONSUMER_LIMITS = "js_default_consumer_limits",
+  JS_BATCH_DIRECT_GET = "js_batch_direct_get",
 }
 
 type FeatureVersion = {
@@ -109,6 +110,7 @@ export class Features {
     this.set(Feature.JS_STREAM_SOURCE_SUBJECT_TRANSFORM, "2.10.0");
     this.set(Feature.JS_STREAM_COMPRESSION, "2.10.0");
     this.set(Feature.JS_DEFAULT_CONSUMER_LIMITS, "2.10.0");
+    this.set(Feature.JS_BATCH_DIRECT_GET, "2.11.0");
 
     this.disabled.forEach((f) => {
       this.features.delete(f);
