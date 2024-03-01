@@ -1238,15 +1238,17 @@ export interface KV extends RoKV {
    * a key or the soft delete marker to be removed without
    * additional notification on a watch.
    * @param k
+   * @param opts
    */
-  delete(k: string): Promise<void>;
+  delete(k: string, opts?: Partial<KvDeleteOptions>): Promise<void>;
 
   /**
    * Deletes and purges the specified key and any value
    * history.
    * @param k
+   * @param opts
    */
-  purge(k: string): Promise<void>;
+  purge(k: string, opts?: Partial<KvDeleteOptions>): Promise<void>;
 
   /**
    * Destroys the underlying stream used by the KV. This
@@ -1256,6 +1258,14 @@ export interface KV extends RoKV {
 }
 
 export interface KvPutOptions {
+  /**
+   * If set the KV must be at the current sequence or the
+   * put will fail.
+   */
+  previousSeq: number;
+}
+
+export interface KvDeleteOptions {
   /**
    * If set the KV must be at the current sequence or the
    * put will fail.

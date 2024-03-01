@@ -1966,3 +1966,51 @@ Deno.test("kv - watch start at", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - delete key if revision", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next());
+  const seq = await b.create("a", Empty);
+  await assertRejects(
+    async () => {
+      await b.delete("a", { previousSeq: 100 });
+    },
+    Error,
+    "wrong last sequence: 1",
+    undefined,
+  );
+
+  await b.delete("a", { previousSeq: seq });
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - purge key if revision", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const b = await js.views.kv(nuid.next());
+  const seq = await b.create("a", Empty);
+
+  await assertRejects(
+    async () => {
+      await b.purge("a", { previousSeq: 2 });
+    },
+    Error,
+    "wrong last sequence: 1",
+    undefined,
+  );
+
+  await b.purge("a", { previousSeq: seq });
+  await cleanup(ns, nc);
+});

@@ -35,6 +35,7 @@ import {
   KV,
   KvCodec,
   KvCodecs,
+  KvDeleteOptions,
   KvEntry,
   KvOptions,
   kvPrefix,
@@ -545,12 +546,12 @@ export class Bucket implements KV, KvRemove {
     }
   }
 
-  purge(k: string): Promise<void> {
-    return this._deleteOrPurge(k, "PURGE");
+  purge(k: string, opts?: Partial<KvDeleteOptions>): Promise<void> {
+    return this._deleteOrPurge(k, "PURGE", opts);
   }
 
-  delete(k: string): Promise<void> {
-    return this._deleteOrPurge(k, "DEL");
+  delete(k: string, opts?: Partial<KvDeleteOptions>): Promise<void> {
+    return this._deleteOrPurge(k, "DEL", opts);
   }
 
   async purgeDeletes(
@@ -590,9 +591,13 @@ export class Bucket implements KV, KvRemove {
     });
   }
 
-  async _deleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
+  async _deleteOrPurge(
+    k: string,
+    op: "DEL" | "PURGE",
+    opts?: Partial<KvDeleteOptions>,
+  ): Promise<void> {
     if (!this.hasWildcards(k)) {
-      return this._doDeleteOrPurge(k, op);
+      return this._doDeleteOrPurge(k, op, opts);
     }
     const iter = await this.keys(k);
     const buf: Promise<void>[] = [];
@@ -608,13 +613,20 @@ export class Bucket implements KV, KvRemove {
     }
   }
 
-  async _doDeleteOrPurge(k: string, op: "DEL" | "PURGE"): Promise<void> {
+  async _doDeleteOrPurge(
+    k: string,
+    op: "DEL" | "PURGE",
+    opts?: Partial<KvDeleteOptions>,
+  ): Promise<void> {
     const ek = this.encodeKey(k);
     this.validateKey(ek);
     const h = headers();
     h.set(kvOperationHdr, op);
     if (op === "PURGE") {
       h.set(JsHeaders.RollupHdr, JsHeaders.RollupValueSubject);
+    }
+    if (opts?.previousSeq) {
+      h.set(PubHeaders.ExpectedLastSubjectSequenceHdr, `${opts.previousSeq}`);
     }
     await this.js.publish(this.subjectForKey(ek, true), Empty, { headers: h });
   }
