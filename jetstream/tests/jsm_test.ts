@@ -1411,7 +1411,7 @@ async function testConsumerNameAPI(nc: NatsConnection) {
     return Promise.resolve(ci!);
   }
 
-  // an named ephemeral
+  // a named ephemeral
   await assertRejects(
     async () => {
       await addC({
@@ -2729,5 +2729,59 @@ Deno.test("jsm - api check ok", async () => {
   await nc.jetstream().jetstreamManager();
 
   assertEquals(count, 3);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - consumer create paused", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+  });
+
+  const tomorrow = Date.now() + 24 * 60 * 60 * 1000;
+  const ci = await jsm.consumers.add("A", {
+    durable_name: "a",
+    ack_policy: AckPolicy.None,
+    pause_until: new Date(tomorrow).toISOString(),
+  });
+  assertEquals(ci.paused, true);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - pause/unpause", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
+
+  const jsm = await nc.jetstreamManager();
+  jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+  });
+
+  const ci = await jsm.consumers.add("A", {
+    durable_name: "a",
+    ack_policy: AckPolicy.None,
+  });
+  assertEquals(ci.paused, undefined);
+
+  let pi = await jsm.consumers.pause(
+    "A",
+    "a",
+    new Date(Date.now() + 24 * 60 * 60 * 1000),
+  );
+  assertEquals(pi.paused, true);
+
+  pi = await jsm.consumers.resume("A", "a");
+  assertEquals(pi.paused, false);
+
   await cleanup(ns, nc);
 });

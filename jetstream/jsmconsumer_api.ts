@@ -21,7 +21,11 @@ import {
 } from "./jsutil.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Feature } from "../nats-base-client/semver.ts";
-import { JetStreamOptions, NatsConnection } from "../nats-base-client/core.ts";
+import {
+  JetStreamOptions,
+  Nanos,
+  NatsConnection,
+} from "../nats-base-client/core.ts";
 import {
   ConsumerApiAction,
   ConsumerConfig,
@@ -72,6 +76,17 @@ export interface ConsumerAPI {
    * @param stream
    */
   list(stream: string): Lister<ConsumerInfo>;
+
+  pause(
+    stream: string,
+    name: string,
+    until?: Date,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
+
+  resume(
+    stream: string,
+    name: string,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
 }
 
 export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
@@ -211,5 +226,29 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     };
     const subj = `${this.prefix}.CONSUMER.LIST.${stream}`;
     return new ListerImpl<ConsumerInfo>(subj, filter, this);
+  }
+
+  pause(
+    stream: string,
+    name: string,
+    until: Date,
+  ): Promise<{ paused: boolean; pause_until: string; pause_remaining: Nanos }> {
+    const subj = `${this.prefix}.CONSUMER.PAUSE.${stream}.${name}`;
+    let payload = undefined;
+    const opts = {
+      pause_until: until.toISOString(),
+    };
+    return this._request(subj, opts) as Promise<
+      { paused: boolean; pause_until: string; pause_remaining: Nanos }
+    >;
+  }
+
+  resume(
+    stream: string,
+    name: string,
+  ): Promise<{ paused: boolean; pause_until?: string }> {
+    return this.pause(stream, name, new Date(0)) as Promise<
+      { paused: boolean; pause_until?: string; pause_remaining: Nanos }
+    >;
   }
 }
