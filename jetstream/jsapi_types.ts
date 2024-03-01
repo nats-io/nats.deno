@@ -483,6 +483,14 @@ export type DirectMsgRequest =
   | LastForMsgRequest
   | NextMsgRequest;
 
+export type DirectBatchOptions = {
+  batch?: number;
+  max_bytes?: number;
+  multi_last: string[];
+  up_to_seq?: number;
+  up_to_time?: Date | string;
+};
+
 export interface StreamState {
   /**
    * Number of messages stored in the Stream

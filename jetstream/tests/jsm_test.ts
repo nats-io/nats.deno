@@ -22,7 +22,7 @@ import {
   fail,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
-import { NatsConnectionImpl } from "../../nats-base-client/internal_mod.ts";
+import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import {
   deferred,
   Empty,
@@ -2782,6 +2782,75 @@ Deno.test("jsm - pause/unpause", async () => {
 
   pi = await jsm.consumers.resume("A", "a");
   assertEquals(pi.paused, false);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - batch direct get multi_last", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("a.foo", "foo"),
+    js.publish("a.bar", "bar"),
+    js.publish("a.baz", "baz"),
+  ]);
+
+  const iter = await jsm.direct.getBatch("A", {
+    multi_last: ["a.foo", "a.baz"],
+  });
+
+  const keys = [];
+  for await (const m of iter) {
+    keys.push(m.subject);
+  }
+  assertEquals(keys.length, 2);
+  assertArrayIncludes(keys, ["a.foo", "a.baz"]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsm - batch direct get batch", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await Promise.all([
+    js.publish("a.foo", "foo"),
+    js.publish("a.bar", "bar"),
+    js.publish("a.baz", "baz"),
+    js.publish("a.foobar", "foobar"),
+  ]);
+
+  const iter = await jsm.direct.getBatch("A", {
+    batch: 3,
+    multi_last: [">"],
+  });
+
+  const buf = [];
+  for await (const m of iter) {
+    buf.push(m);
+  }
+  assertEquals(buf.length, 3);
 
   await cleanup(ns, nc);
 });
