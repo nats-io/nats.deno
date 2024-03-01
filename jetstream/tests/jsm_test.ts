@@ -2734,6 +2734,9 @@ Deno.test("jsm - api check ok", async () => {
 
 Deno.test("jsm - consumer create paused", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
+  if (await notCompatible(ns, nc, "2.11.0")) {
+    return;
+  }
 
   const jsm = await nc.jetstreamManager();
   jsm.streams.add({
