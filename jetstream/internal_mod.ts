@@ -22,11 +22,12 @@ export {
 
 export {
   AdvisoryKind,
-  consumerOpts,
   DirectMsgHeaders,
-  isConsumerOptsBuilder,
   JsHeaders,
+  KvWatchInclude,
   RepublishHeaders,
+  consumerOpts,
+  isConsumerOptsBuilder,
 } from "./types.ts";
 
 export type {
@@ -55,7 +56,6 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
-  KvWatchInclude,
   KvWatchOptions,
   ObjectInfo,
   ObjectResult,
