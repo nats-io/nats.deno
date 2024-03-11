@@ -6,7 +6,6 @@ import {
   ConnectionOptions,
   credsAuthenticator,
   headers,
-  StringCodec,
 } from "../src/mod.ts";
 
 const argv = parse(
@@ -29,15 +28,13 @@ const argv = parse(
 
 const opts = { servers: argv.s } as ConnectionOptions;
 const subject = argv._[0] ? String(argv._[0]) : "";
-const sc = StringCodec();
-const ps = argv._[1] || "";
-const payload = sc.encode(String(ps));
+const payload = (argv._[1] || "") as string;
 
 if (argv.debug) {
   opts.debug = true;
 }
 
-if (argv.h || argv.help || !subject || (argv._[1] && argv.q)) {
+if (argv.h || argv.help || !subject) {
   console.log(
     "Usage: nats-rep [-s server] [--creds=/path/file.creds] [-q queue] [--headers] [-e echo_payload] subject [payload]",
   );
@@ -45,11 +42,7 @@ if (argv.h || argv.help || !subject || (argv._[1] && argv.q)) {
 }
 
 if (argv.creds) {
-  const f = await Deno.open(argv.creds, { read: true });
-  // FIXME: this needs to be changed when deno releases 2.0
-  // deno-lint-ignore no-deprecated-deno-api
-  const data = await Deno.readAll(f);
-  Deno.close(f.rid);
+  const data = await Deno.readFile(argv.creds);
   opts.authenticator = credsAuthenticator(data);
 }
 
@@ -63,15 +56,17 @@ nc.closed()
   });
 
 const hdrs = argv.headers ? headers() : undefined;
-const sub = nc.subscribe(subject, { queue: argv.q });
-console.info(`${argv.q !== "" ? "queue " : ""}listening to ${subject}`);
+
+const queue = argv.q as string;
+const sub = nc.subscribe(subject, { queue });
+console.info(`${queue !== "" ? "queue " : ""}listening to ${subject}`);
 for await (const m of sub) {
   if (hdrs) {
     hdrs.set("sequence", sub.getProcessed().toString());
     hdrs.set("time", Date.now().toString());
   }
   if (m.respond(argv.e ? m.data : payload, { headers: hdrs })) {
-    console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.data}`);
+    console.log(`[${sub.getProcessed()}]: ${m.reply}: ${m.string()}`);
   } else {
     console.log(`[${sub.getProcessed()}]: ignored - no reply subject`);
   }
