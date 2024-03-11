@@ -22,12 +22,12 @@ export {
 
 export {
   AdvisoryKind,
+  consumerOpts,
   DirectMsgHeaders,
+  isConsumerOptsBuilder,
   JsHeaders,
   KvWatchInclude,
   RepublishHeaders,
-  consumerOpts,
-  isConsumerOptsBuilder,
 } from "./types.ts";
 
 export type {
