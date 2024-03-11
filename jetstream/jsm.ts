@@ -95,7 +95,6 @@ export class DirectStreamAPIImpl extends BaseApiClient
     validateStreamName(stream);
     const pre = this.opts.apiPrefix || "$JS.API";
     const subj = `${pre}.DIRECT.GET.${stream}`;
-    opts = opts || {};
     if (!Array.isArray(opts.multi_last) || opts.multi_last.length === 0) {
       return Promise.reject("multi_last is required");
     }
