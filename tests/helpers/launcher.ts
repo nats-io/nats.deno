@@ -316,7 +316,7 @@ export class NatsServer implements PortInfo {
 
     const routes: string[] = [];
     configs.forEach((conf) => {
-      let { port, cluster, config } = conf;
+      let { cluster, config } = conf;
 
       // jetstream defaults
       const { jetstream } = jsopts();

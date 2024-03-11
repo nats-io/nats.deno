@@ -234,7 +234,6 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
     until: Date,
   ): Promise<{ paused: boolean; pause_until: string; pause_remaining: Nanos }> {
     const subj = `${this.prefix}.CONSUMER.PAUSE.${stream}.${name}`;
-    let payload = undefined;
     const opts = {
       pause_until: until.toISOString(),
     };

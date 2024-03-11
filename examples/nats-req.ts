@@ -33,8 +33,9 @@ const argv = parse(
 const opts = { servers: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
 const payload = String(argv._[1]) || "";
-const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
-const interval = argv.i;
+const count =
+  ((argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1) as number;
+const interval = (argv.i || 0) as number;
 
 if (argv.debug) {
   opts.debug = true;
@@ -49,11 +50,7 @@ if (argv.h || argv.help || !subject) {
 }
 
 if (argv.creds) {
-  const f = await Deno.open(argv.creds, { read: true });
-  // FIXME: this needs to be changed when deno releases 2.0
-  // deno-lint-ignore no-deprecated-deno-api
-  const data = await Deno.readAll(f);
-  Deno.close(f.rid);
+  const data = await Deno.readFile(argv.creds);
   opts.authenticator = credsAuthenticator(data);
 }
 
@@ -67,7 +64,7 @@ nc.closed()
   });
 
 for (let i = 1; i <= count; i++) {
-  await nc.request(subject, sc.encode(payload), { timeout: argv.t })
+  await nc.request(subject, sc.encode(payload), { timeout: argv.t as number })
     .then((m) => {
       console.log(`[${i}]: ${sc.decode(m.data)}`);
       if (argv.headers && m.headers) {

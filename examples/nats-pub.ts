@@ -7,7 +7,6 @@ import {
   credsAuthenticator,
   headers,
   MsgHdrs,
-  StringCodec,
 } from "../src/mod.ts";
 import { delay } from "../nats-base-client/util.ts";
 
@@ -32,9 +31,10 @@ const argv = parse(
 
 const copts = { servers: argv.s } as ConnectionOptions;
 const subject = String(argv._[0]);
-const payload = argv._[1] || "";
-const count = (argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1;
-const interval = argv.i || 0;
+const payload = (argv._[1] || "") as string;
+const count =
+  ((argv.c == -1 ? Number.MAX_SAFE_INTEGER : argv.c) || 1) as number;
+const interval = (argv.i || 0) as number;
 
 if (argv.debug) {
   copts.debug = true;
@@ -49,11 +49,7 @@ if (argv.h || argv.help || !subject) {
 }
 
 if (argv.creds) {
-  const f = await Deno.open(argv.creds, { read: true });
-  // FIXME: this needs to be changed when deno releases 2.0
-  // deno-lint-ignore no-deprecated-deno-api
-  const data = await Deno.readAll(f);
-  Deno.close(f.rid);
+  const data = await Deno.readFile(argv.creds);
   copts.authenticator = credsAuthenticator(data);
 }
 
@@ -75,10 +71,8 @@ if (argv.headers) {
   pubopts.headers = hdrs;
 }
 
-const sc = StringCodec();
-
 for (let i = 1; i <= count; i++) {
-  nc.publish(subject, sc.encode(String(payload)), pubopts);
+  nc.publish(subject, payload, pubopts);
   console.log(`[${i}] ${subject}: ${payload}`);
   if (interval) {
     await delay(interval);

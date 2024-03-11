@@ -704,16 +704,15 @@ Deno.test("objectstore - sanitize", async () => {
   const info = await os.status({
     subjects_filter: ">",
   });
+  const subjects = info.streamInfo.state?.subjects || {};
   assertEquals(
-    info.streamInfo.state
-      ?.subjects![`$O.test.M.${Base64UrlPaddedCodec.encode("has.dots.here")}`],
+    subjects[`$O.test.M.${Base64UrlPaddedCodec.encode("has.dots.here")}`],
     1,
   );
   assertEquals(
-    info.streamInfo.state
-      .subjects![
-        `$O.test.M.${Base64UrlPaddedCodec.encode("the spaces are here")}`
-      ],
+    subjects[
+      `$O.test.M.${Base64UrlPaddedCodec.encode("the spaces are here")}`
+    ],
     1,
   );
 
