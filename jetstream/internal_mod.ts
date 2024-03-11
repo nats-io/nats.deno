@@ -26,6 +26,7 @@ export {
   DirectMsgHeaders,
   isConsumerOptsBuilder,
   JsHeaders,
+  KvWatchInclude,
   RepublishHeaders,
 } from "./types.ts";
 
@@ -55,7 +56,6 @@ export type {
   KvOptions,
   KvPutOptions,
   KvStatus,
-  KvWatchInclude,
   KvWatchOptions,
   ObjectInfo,
   ObjectResult,
