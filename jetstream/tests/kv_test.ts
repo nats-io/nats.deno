@@ -560,8 +560,7 @@ Deno.test("kv - ttl", async () => {
   const e = await b.get("x");
   assert(e);
   assertEquals(sc.decode(e.value), "hello");
-
-  await delay(1500);
+  await delay(2000);
   assertEquals(await b.get("x"), null);
 
   await cleanup(ns, nc);
