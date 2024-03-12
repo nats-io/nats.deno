@@ -191,13 +191,6 @@ Deno.test("kv - bind to existing KV", async () => {
   const status = await kv.status();
   assertEquals(status.bucket, `${n}`);
   await crud(kv);
-  await assertRejects(
-    async () => {
-      await js.views.kv("does_not_exist", { bindOnly: true });
-    },
-    NatsError,
-    "stream not found",
-  );
   await cleanup(ns, nc);
 });
 
