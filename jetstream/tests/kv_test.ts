@@ -2048,13 +2048,6 @@ Deno.test("kv - watcher will name and filter", async () => {
 
   const js = nc.jetstream();
   const kv = await js.views.kv("A");
-  await Promise.all([
-    kv.put("a.b", "2"),
-    kv.put("a.cc", "3"),
-    kv.put("b.a", "3"),
-    kv.put("b.b", "3"),
-    kv.put("b.c", "3"),
-  ]);
 
   const sub = syncIterator(nc.subscribe("$JS.API.>"));
   const iter = await kv.watch({ key: "a.>" });
