@@ -2060,7 +2060,6 @@ Deno.test("kv - watcher will name and filter", async () => {
   const iter = await kv.watch({ key: "a.>" });
 
   const m = await sub.next();
-  console.log(m?.subject);
   assert(m?.subject.startsWith("$JS.API.CONSUMER.CREATE.KV_A."));
   assert(m?.subject.endsWith("$KV.A.a.>"));
 
