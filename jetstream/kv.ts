@@ -69,7 +69,8 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { PubHeaders } from "./jsclient.ts";
+import { JetStreamClientImpl, PubHeaders } from "./jsclient.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -743,6 +744,15 @@ export class Bucket implements KV, KvRemove {
     return qi;
   }
 
+  canSetWatcherName(): boolean {
+    const jsi = this.js as JetStreamClientImpl;
+    const nci = jsi.nc as NatsConnectionImpl;
+    const { ok } = nci.features.get(
+      Feature.JS_NEW_CONSUMER_CREATE_API,
+    );
+    return ok;
+  }
+
   async watch(
     opts: KvWatchOptions = {},
   ): Promise<QueuedIterator<KvEntry>> {
@@ -765,6 +775,10 @@ export class Bucket implements KV, KvRemove {
     const cc = this._buildCC(k, content, co);
     const subj = cc.filter_subject!;
     const copts = consumerOpts(cc);
+
+    if (this.canSetWatcherName()) {
+      copts.consumerName(nuid.next());
+    }
     copts.bindStream(this.stream);
     if (opts.resumeFromRevision && opts.resumeFromRevision > 0) {
       copts.startSequence(opts.resumeFromRevision);

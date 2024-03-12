@@ -26,6 +26,7 @@ import {
   parseSemVer,
   QueuedIterator,
   StringCodec,
+  syncIterator,
 } from "../../nats-base-client/internal_mod.ts";
 
 import {
@@ -2033,6 +2034,37 @@ Deno.test("kv - bind no info", async () => {
   d.resolve();
   // shouldn't have rejected earlier
   await d;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - watcher will name and filter", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("A");
+  await Promise.all([
+    kv.put("a.b", "2"),
+    kv.put("a.cc", "3"),
+    kv.put("b.a", "3"),
+    kv.put("b.b", "3"),
+    kv.put("b.c", "3"),
+  ]);
+
+  const sub = syncIterator(nc.subscribe("$JS.API.>"));
+  const iter = await kv.watch({ key: "a.>" });
+
+  const m = await sub.next();
+  console.log(m?.subject);
+  assert(m?.subject.startsWith("$JS.API.CONSUMER.CREATE.KV_A."));
+  assert(m?.subject.endsWith("$KV.A.a.>"));
+
+  iter.stop();
 
   await cleanup(ns, nc);
 });
