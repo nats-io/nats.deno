@@ -207,13 +207,19 @@ export class Bucket implements KV, KvRemove {
   static async bind(
     js: JetStreamClient,
     name: string,
-    opts: Partial<{ codec: KvCodecs }> = {},
+    opts: Partial<KvOptions> = {},
   ): Promise<KV> {
     const jsm = await js.jetstreamManager();
-    const info = await jsm.streams.info(`${kvPrefix}${name}`);
-    validateBucket(info.config.name);
+    const info = {
+      config: {
+        allow_direct: opts.allow_direct,
+      },
+    } as StreamInfo;
+    validateBucket(name);
     const bucket = new Bucket(name, js, jsm);
+    info.config.name = opts.streamName ?? bucket.bucketName();
     Object.assign(bucket, info);
+    bucket.stream = info.config.name;
     bucket.codec = opts.codec || NoopKvCodecs();
     bucket.direct = info.config.allow_direct ?? false;
     bucket.initializePrefixes(info);

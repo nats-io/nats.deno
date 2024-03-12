@@ -118,7 +118,7 @@ class ViewsImpl implements Views {
       );
     }
     if (opts.bindOnly) {
-      return Bucket.bind(this.js, name);
+      return Bucket.bind(this.js, name, opts);
     }
 
     return Bucket.create(this.js, name, opts);

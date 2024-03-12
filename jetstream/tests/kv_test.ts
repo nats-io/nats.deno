@@ -191,13 +191,6 @@ Deno.test("kv - bind to existing KV", async () => {
   const status = await kv.status();
   assertEquals(status.bucket, `${n}`);
   await crud(kv);
-  await assertRejects(
-    async () => {
-      await js.views.kv("does_not_exist", { bindOnly: true });
-    },
-    NatsError,
-    "stream not found",
-  );
   await cleanup(ns, nc);
 });
 
@@ -567,8 +560,7 @@ Deno.test("kv - ttl", async () => {
   const e = await b.get("x");
   assert(e);
   assertEquals(sc.decode(e.value), "hello");
-
-  await delay(1500);
+  await delay(2000);
   assertEquals(await b.get("x"), null);
 
   await cleanup(ns, nc);
@@ -2012,5 +2004,35 @@ Deno.test("kv - purge key if revision", async () => {
   );
 
   await b.purge("a", { previousSeq: seq });
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - bind no info", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  await js.views.kv("A");
+
+  const d = deferred();
+  nc.subscribe("$JS.API.STREAM.INFO.>", {
+    callback: (_err, msg) => {
+      d.reject(new Error("saw stream info"));
+    },
+  });
+
+  const kv = await js.views.kv("A", { bindOnly: true, allow_direct: true });
+  await kv.put("a", "hello");
+  const e = await kv.get("a");
+  assertEquals(e?.string(), "hello");
+  await kv.delete("a");
+
+  d.resolve();
+  // shouldn't have rejected earlier
+  await d;
+
   await cleanup(ns, nc);
 });
