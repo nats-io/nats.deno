@@ -131,6 +131,48 @@ Deno.test("events - ldm", async () => {
   await NatsServer.stopAll(cluster);
 });
 
+Deno.test("events - kick", async () => {
+  const cluster = await NatsServer.cluster(2, {
+    system_account: "SYS",
+    no_auth_user: "a",
+    accounts: {
+      A: {
+        users: [{ user: "a", password: "a" }],
+      },
+      SYS: {
+        users: [{ user: "sys", password: "sys" }],
+      },
+    },
+  });
+
+  if (await cluster[0].notCompatible("2.10.0")) {
+    await NatsServer.stopAll(cluster);
+  }
+
+  const a = await connect(
+    {
+      servers: `127.0.0.1:${cluster[0].port}`,
+      user: "a",
+      pass: "a",
+      reconnect: false,
+    },
+  );
+  const sys = await connect(
+    { servers: `127.0.0.1:${cluster[0].port}`, user: "sys", pass: "sys" },
+  );
+
+  await sys.request(
+    `$SYS.REQ.SERVER.${a.info?.server_id}.KICK`,
+    JSON.stringify(
+      { CID: a.info?.client_id },
+    ),
+  );
+
+  await a.closed();
+  await sys.close();
+  await NatsServer.stopAll(cluster);
+});
+
 Deno.test("events - ignore server updates", async () => {
   const cluster = await NatsServer.cluster(1);
   const nc = await connect(

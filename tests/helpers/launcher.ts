@@ -14,14 +14,16 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import * as path from "https://deno.land/std@0.200.0/path/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
+import { rgb24, yellow } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 import { check, jsopts } from "./mod.ts";
 import {
+  compare,
   Deferred,
   deferred,
   delay,
   extend,
   nuid,
+  parseSemVer,
   timeout,
 } from "../../nats-base-client/internal_mod.ts";
 
@@ -634,6 +636,19 @@ export class NatsServer implements PortInfo {
       }
       throw err;
     }
+  }
+
+  async notCompatible(version = "2.3.3"): Promise<boolean> {
+    const varz = await this.varz() as unknown as Record<string, string>;
+    const sv = parseSemVer(varz.version);
+    if (compare(sv, parseSemVer(version)) < 0) {
+      const m = new TextEncoder().encode(yellow(
+        `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
+      ));
+      await Deno.stdout.write(m);
+      return true;
+    }
+    return false;
   }
 }
 
