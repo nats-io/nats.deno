@@ -105,7 +105,6 @@ export enum PubHeaders {
 
 class ViewsImpl implements Views {
   js: JetStreamClientImpl;
-  jsm?: JetStreamManager;
   constructor(js: JetStreamClientImpl) {
     this.js = js;
   }

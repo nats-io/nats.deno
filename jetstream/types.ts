@@ -749,6 +749,12 @@ export interface ConsumerOptsBuilder {
    * When set do not inherit the replica count from the stream but specifically set it to this amount
    */
   numReplicas(n: number): this;
+
+  /**
+   * The name of the consumer
+   * @param n
+   */
+  consumerName(n: string): this;
 }
 
 /**
@@ -1893,6 +1899,11 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
 
   numReplicas(n: number) {
     this.config.num_replicas = n;
+    return this;
+  }
+
+  consumerName(n: string) {
+    this.config.name = n;
     return this;
   }
 }
