@@ -642,8 +642,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   }
 
   stop(err?: Error) {
-    if(this.done) {
-      return
+    if (this.done) {
+      return;
     }
     this.sub?.unsubscribe();
     this.clearTimers();
