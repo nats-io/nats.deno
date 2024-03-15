@@ -1,12 +1,14 @@
 .PHONY: build test bundle lint
 
+DENO_JOBS=4
+
 build: test
 
 lint:
 	deno lint --unstable --ignore=docs/
 
 test: clean
-	deno test --allow-all --unstable --reload --quiet --parallel --coverage=coverage --fail-fast tests/ jetstream/tests
+	deno test --allow-all --unstable --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
 
 
 testw: clean

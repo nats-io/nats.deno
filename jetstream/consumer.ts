@@ -522,6 +522,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     const bo = backoff();
     let attempt = 0;
     while (true) {
+      if (this.done) {
+        return false;
+      }
       if (this.consumer.api.nc.isClosed()) {
         console.error("aborting resetPending - connection is closed");
         return false;
@@ -561,7 +564,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
         }
         const to = bo.backoff(attempt);
         // wait for delay or till the client closes
-        await Promise.race([delay(to), this.consumer.api.nc.closed()]);
+        const de = delay(to);
+        await Promise.race([de, this.consumer.api.nc.closed()]);
+        de.cancel();
         attempt++;
       }
     }

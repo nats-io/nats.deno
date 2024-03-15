@@ -89,12 +89,24 @@ export function timeout<T>(ms: number, asyncTraces = true): Timeout<T> {
   return Object.assign(p, methods) as Timeout<T>;
 }
 
-export function delay(ms = 0): Promise<void> {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => {
+export interface Delay extends Promise<void> {
+  cancel: () => void;
+}
+
+export function delay(ms = 0): Delay {
+  let methods;
+  const p = new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
       resolve();
     }, ms);
+    const cancel = (): void => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+    methods = { cancel };
   });
+  return Object.assign(p, methods) as Delay;
 }
 
 export function deadline<T>(p: Promise<T>, millis = 1000): Promise<T> {

@@ -26,7 +26,7 @@ import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import { deadline, deferred } from "../../nats-base-client/util.ts";
 import { nanos } from "../jsutil.ts";
-import { PullConsumerMessagesImpl } from "../consumer.ts";
+import { ConsumerEvents, PullConsumerMessagesImpl } from "../consumer.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
 import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
 
@@ -101,24 +101,42 @@ Deno.test("consumers - consume deleted consumer", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get(stream, "a");
   const iter = await c.consume({
-    expires: 30000,
+    expires: 3000,
   });
-  const dr = deferred();
+
+  const deleted = deferred();
+  let notFound = 0;
+  const done = deferred<number>();
+  (async () => {
+    const status = await iter.status();
+    for await (const s of status) {
+      console.log(s);
+      if (s.type === ConsumerEvents.ConsumerDeleted) {
+        deleted.resolve();
+      }
+      if (s.type === ConsumerEvents.ConsumerNotFound) {
+        notFound++;
+        if (notFound > 1) {
+          done.resolve();
+        }
+      }
+    }
+  })().then();
+
+  (async () => {
+    for await (const _m of iter) {
+      // nothing
+    }
+  })().then();
+
   setTimeout(() => {
-    jsm.consumers.delete(stream, "a").then(() => dr.resolve());
+    jsm.consumers.delete(stream, "a");
   }, 1000);
 
-  await assertRejects(
-    async () => {
-      for await (const _m of iter) {
-        // nothing
-      }
-    },
-    Error,
-    "consumer deleted",
-  );
+  await deleted;
+  await done;
+  await iter.close();
 
-  await dr;
   await cleanup(ns, nc);
 });
 
