@@ -110,7 +110,6 @@ Deno.test("consumers - consume deleted consumer", async () => {
   (async () => {
     const status = await iter.status();
     for await (const s of status) {
-      console.log(s);
       if (s.type === ConsumerEvents.ConsumerDeleted) {
         deleted.resolve();
       }

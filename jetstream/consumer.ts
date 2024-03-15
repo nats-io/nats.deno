@@ -246,7 +246,8 @@ export interface Consumer extends ExportedConsumer {
 }
 
 export interface Close {
-  close(): Promise<void>;
+  close(): Promise<void | Error>;
+  closed(): Promise<void | Error>;
 }
 
 export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
@@ -620,12 +621,12 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.timeout = t;
   }
 
-  close(): Promise<void> {
+  close(): Promise<void | Error> {
     this.stop();
     return this.iterClosed;
   }
 
-  closed(): Promise<void> {
+  closed(): Promise<void | Error> {
     return this.iterClosed;
   }
 
@@ -641,6 +642,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   }
 
   stop(err?: Error) {
+    if (this.done) {
+      return;
+    }
     this.sub?.unsubscribe();
     this.clearTimers();
     this.statusIterator?.stop();
@@ -757,8 +761,12 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
     });
   }
 
-  close(): Promise<void> {
+  close(): Promise<void | Error> {
     this.stop();
+    return this.iterClosed;
+  }
+
+  closed(): Promise<void | Error> {
     return this.iterClosed;
   }
 

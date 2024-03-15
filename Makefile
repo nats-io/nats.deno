@@ -1,6 +1,6 @@
 .PHONY: build test bundle lint
 
-DENO_JOBS=4
+export DENO_JOBS=4
 
 build: test
 
