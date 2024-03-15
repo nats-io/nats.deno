@@ -37,6 +37,8 @@ import {
   KvOptions,
   nanos,
   StorageType,
+  StreamSource,
+  SubjectTransformConfig,
 } from "../mod.ts";
 
 import {
@@ -2057,6 +2059,34 @@ Deno.test("kv - watcher will name and filter", async () => {
   assert(m?.subject.endsWith("$KV.A.a.>"));
 
   iter.stop();
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - mirror check", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("A");
+
+  await Promise.all([
+    kv.put("a", "hello"),
+    kv.put("b", "hi"),
+    kv.put("c", "done"),
+  ]);
+
+  const kv2 = await js.views.kv("B", Bucket.mirror({}, "A", "B", "a", "c"));
+
+  // have to wait for the mirror to catch up
+  await delay(1000);
+  let s2 = await kv2.status();
+  assertEquals(s2.streamInfo.state.messages, 2);
+
+  assertExists(await kv2.get("a"));
+  assertEquals(await kv2.get("b"), null);
+  assertExists(await kv2.get("c"));
 
   await cleanup(ns, nc);
 });
