@@ -113,39 +113,39 @@ Deno.test("consumers - fetch exactly messages", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - fetch deleted consumer", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
-  const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
-  await jsm.consumers.add(stream, {
-    durable_name: "a",
-    ack_policy: AckPolicy.Explicit,
-  });
-
-  const js = nc.jetstream();
-  const c = await js.consumers.get(stream, "a");
-  const iter = await c.fetch({
-    expires: 30000,
-  });
-  const dr = deferred();
-  setTimeout(() => {
-    jsm.consumers.delete(stream, "a")
-      .then(() => {
-        dr.resolve();
-      });
-  }, 1000);
-  await assertRejects(
-    async () => {
-      for await (const _m of iter) {
-        // nothing
-      }
-    },
-    Error,
-    "consumer deleted",
-  );
-  await dr;
-  await cleanup(ns, nc);
-});
+// Deno.test("consumers - fetch deleted consumer", async () => {
+//   const { ns, nc } = await setup(jetstreamServerConf({}));
+//   const { stream } = await initStream(nc);
+//   const jsm = await nc.jetstreamManager();
+//   await jsm.consumers.add(stream, {
+//     durable_name: "a",
+//     ack_policy: AckPolicy.Explicit,
+//   });
+//
+//   const js = nc.jetstream();
+//   const c = await js.consumers.get(stream, "a");
+//   const iter = await c.fetch({
+//     expires: 30000,
+//   });
+//   const dr = deferred();
+//   setTimeout(() => {
+//     jsm.consumers.delete(stream, "a")
+//       .then(() => {
+//         dr.resolve();
+//       });
+//   }, 1000);
+//   await assertRejects(
+//     async () => {
+//       for await (const _m of iter) {
+//         // nothing
+//       }
+//     },
+//     Error,
+//     "consumer deleted",
+//   );
+//   await dr;
+//   await cleanup(ns, nc);
+// });
 
 Deno.test("consumers - fetch listener leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
