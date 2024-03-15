@@ -522,9 +522,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     const bo = backoff();
     let attempt = 0;
     while (true) {
-      console.log("PullConsumerMessages.resetPending()");
       if (this.done) {
-        console.log("PullConsumerMessages is done");
         return false;
       }
       if (this.consumer.api.nc.isClosed()) {
