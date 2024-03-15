@@ -53,7 +53,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   // FIXME: this is updated by the protocol
   received: number;
   noIterator: boolean;
-  iterClosed: Deferred<void>;
+  iterClosed: Deferred<void | Error>;
   done: boolean;
   signal: Deferred<void>;
   yields: T[];
@@ -78,7 +78,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     this.done = false;
     this.signal = deferred<void>();
     this.yields = [];
-    this.iterClosed = deferred<void>();
+    this.iterClosed = deferred<void | Error>();
     this.time = 0;
     this.yielding = false;
   }
@@ -185,7 +185,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     this.err = err;
     this.done = true;
     this.signal.resolve();
-    this.iterClosed.resolve();
+    this.iterClosed.resolve(err);
   }
 
   getProcessed(): number {
