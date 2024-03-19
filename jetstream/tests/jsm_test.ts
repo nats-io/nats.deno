@@ -2710,6 +2710,8 @@ Deno.test("jsm - api check not ok", async () => {
 
   await nc.jetstreamManager({ checkAPI: false });
   await nc.jetstream().jetstreamManager(false);
+  await nc.jetstream({ checkAPI: false }).jetstreamManager();
+  await nc.jetstream({ checkAPI: false }).jetstreamManager(true);
   assertEquals(count, 0);
 
   await cleanup(ns, nc);
@@ -2727,6 +2729,8 @@ Deno.test("jsm - api check ok", async () => {
   await nc.jetstreamManager({});
   await nc.jetstreamManager({ checkAPI: true });
   await nc.jetstream().jetstreamManager();
+  await nc.jetstream({ checkAPI: true }).jetstreamManager();
+  await nc.jetstream({ checkAPI: true }).jetstreamManager(false);
 
   assertEquals(count, 3);
   await cleanup(ns, nc);
