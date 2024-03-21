@@ -733,7 +733,6 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
     }
     this.src = src;
     this.src.setCleanupHandler((err) => {
-      console.log("cleanup handler");
       this.stop(err || undefined);
     });
     (async () => {
