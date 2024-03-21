@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -263,11 +263,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   pending: { msgs: number; bytes: number; requests: number };
   inbox: string;
   refilling: boolean;
-  stack: string;
   pong!: Promise<void> | null;
   callback: ConsumerCallbackFn | null;
   timeout: Timeout<unknown> | null;
-  cleanupHandler?: () => void;
+  cleanupHandler?: (err: void | Error) => void;
   listeners: QueuedIterator<ConsumerStatus>[];
   statusIterator?: QueuedIteratorImpl<Status>;
   forOrderedConsumer: boolean;
@@ -289,7 +288,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.pong = null;
     this.pending = { msgs: 0, bytes: 0, requests: 0 };
     this.refilling = refilling;
-    this.stack = new Error().stack!.split("\n").slice(1).join("\n");
     this.timeout = null;
     this.inbox = createInbox(c.api.nc.options.inboxPrefix);
     this.listeners = [];
@@ -312,10 +310,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     // close is called, the pull consumer will emit a close
     // which will close the ordered consumer, by registering
     // the close with a handler, we can replace it.
-    this.closed().then(() => {
+    this.closed().then((err) => {
       if (this.cleanupHandler) {
         try {
-          this.cleanupHandler();
+          this.cleanupHandler(err);
         } catch (_err) {
           // nothing
         }
@@ -334,7 +332,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
           // that the server rejected (eliminating the sub)
           // or the client never had permissions to begin with
           // so this is terminal
-          this.stop();
+          this.stop(err);
           return;
         }
         this.monitor?.work();
@@ -362,24 +360,20 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
             // FIXME: 400 bad request Invalid Heartbeat or Unmarshalling Fails
             //  these are real bad values - so this is bad request
             //  fail on this
-            const toErr = (): Error => {
-              const err = new NatsError(description, `${code}`);
-              err.stack += `\n\n${this.stack}`;
-              return err;
-            };
-
             // we got a bad request - no progress here
             if (code === 400) {
-              const error = toErr();
-              //@ts-ignore: fn
-              this._push(() => {
-                this.stop(error);
-              });
+              this.stop(new NatsError(description, `${code}`));
+              return;
             } else if (code === 409 && description === "consumer deleted") {
               this.notify(
                 ConsumerEvents.ConsumerDeleted,
                 `${code} ${description}`,
               );
+              if (!this.refilling) {
+                const error = new NatsError(description, `${code}`);
+                this.stop(error);
+                return;
+              }
             } else {
               this.notify(
                 ConsumerDebugEvents.DebugEvent,
@@ -546,6 +540,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
         if (err.message === "stream not found") {
           streamNotFound++;
           this.notify(ConsumerEvents.StreamNotFound, streamNotFound);
+          if (!this.refilling) {
+            this.stop(err);
+            return false;
+          }
         } else if (err.message === "consumer not found") {
           notFound++;
           this.notify(ConsumerEvents.ConsumerNotFound, notFound);
@@ -555,6 +553,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
             } catch (_) {
               // ignored
             }
+          }
+          if (!this.refilling) {
+            this.stop(err);
+            return false;
           }
           if (this.forOrderedConsumer) {
             return false;
@@ -637,7 +639,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.timeout = null;
   }
 
-  setCleanupHandler(fn?: () => void) {
+  setCleanupHandler(fn?: (err?: void | Error) => void) {
     this.cleanupHandler = fn;
   }
 
@@ -730,8 +732,9 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
       this.src.stop();
     }
     this.src = src;
-    this.src.setCleanupHandler(() => {
-      this.close().catch();
+    this.src.setCleanupHandler((err) => {
+      console.log("cleanup handler");
+      this.stop(err || undefined);
     });
     (async () => {
       const status = await this.src.status();
@@ -754,6 +757,9 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
   }
 
   stop(err?: Error): void {
+    if (this.done) {
+      return;
+    }
     this.src?.stop(err);
     super.stop(err);
     this.listeners.forEach((n) => {
@@ -809,7 +815,8 @@ export class PullConsumerImpl implements Consumer {
     // FIXME: need some way to pad this correctly
     const to = Math.round(m.opts.expires * 1.05);
     const timer = timeout(to);
-    m.closed().then(() => {
+    m.closed().catch(() => {
+    }).finally(() => {
       timer.cancel();
     });
     timer.catch(() => {
@@ -852,13 +859,17 @@ export class PullConsumerImpl implements Consumer {
         d.resolve(m);
         break;
       }
-    })().catch();
+    })().catch(() => {
+      // iterator is going to throw, but we ignore it
+      // as it is handled by the closed promise
+    });
     const timer = timeout(to);
-    iter.closed().then(() => {
-      d.resolve(null);
-      timer.cancel();
+    iter.closed().then((err) => {
+      err ? d.reject(err) : d.resolve(null);
     }).catch((err) => {
       d.reject(err);
+    }).finally(() => {
+      timer.cancel();
     });
     timer.catch((_err) => {
       d.resolve(null);
@@ -1016,6 +1027,16 @@ export class OrderedPullConsumerImpl implements Consumer {
         this.iter?.notify(ConsumerEvents.OrderedConsumerRecreated, ci.name);
         break;
       } catch (err) {
+        if (err.message === "stream not found") {
+          // we are not going to succeed
+          this.iter?.notify(ConsumerEvents.StreamNotFound, i);
+          // if we are not consume - fail it
+          if (this.type === PullConsumerType.Fetch) {
+            this.iter?.stop(err);
+            return Promise.reject(err);
+          }
+        }
+
         if (seq === 0 && i >= 30) {
           // consumer was never created, so we can fail this
           throw err;
@@ -1144,7 +1165,10 @@ export class OrderedPullConsumerImpl implements Consumer {
       copts as FetchMessages,
     ) as OrderedConsumerMessages;
     iter.iterClosed
-      .then(() => {
+      .then((err) => {
+        if (err) {
+          d.reject(err);
+        }
         d.resolve(null);
       })
       .catch((err) => {

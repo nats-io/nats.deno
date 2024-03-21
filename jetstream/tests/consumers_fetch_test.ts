@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,7 +23,7 @@ import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { StringCodec } from "../../nats-base-client/codec.ts";
-import { deferred } from "../../nats-base-client/util.ts";
+import { delay } from "../../nats-base-client/util.ts";
 import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
@@ -113,39 +113,106 @@ Deno.test("consumers - fetch exactly messages", async () => {
   await cleanup(ns, nc);
 });
 
-// Deno.test("consumers - fetch deleted consumer", async () => {
-//   const { ns, nc } = await setup(jetstreamServerConf({}));
-//   const { stream } = await initStream(nc);
-//   const jsm = await nc.jetstreamManager();
-//   await jsm.consumers.add(stream, {
-//     durable_name: "a",
-//     ack_policy: AckPolicy.Explicit,
-//   });
-//
-//   const js = nc.jetstream();
-//   const c = await js.consumers.get(stream, "a");
-//   const iter = await c.fetch({
-//     expires: 30000,
-//   });
-//   const dr = deferred();
-//   setTimeout(() => {
-//     jsm.consumers.delete(stream, "a")
-//       .then(() => {
-//         dr.resolve();
-//       });
-//   }, 1000);
-//   await assertRejects(
-//     async () => {
-//       for await (const _m of iter) {
-//         // nothing
-//       }
-//     },
-//     Error,
-//     "consumer deleted",
-//   );
-//   await dr;
-//   await cleanup(ns, nc);
-// });
+Deno.test("consumers - fetch consumer not found", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["hello"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+
+  await c.delete();
+
+  const iter = await c.fetch({
+    expires: 3000,
+  });
+
+  const exited = assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer not found",
+  );
+
+  await exited;
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - fetch deleted consumer", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+
+  const iter = await c.fetch({
+    expires: 3000,
+  });
+
+  const exited = assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer deleted",
+  );
+
+  await delay(1000);
+  await c.delete();
+
+  await exited;
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - fetch stream not found", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["hello"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  const iter = await c.fetch({
+    expires: 3000,
+  });
+  await jsm.streams.delete("A");
+
+  await assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "stream not found",
+  );
+
+  await cleanup(ns, nc);
+});
 
 Deno.test("consumers - fetch listener leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
