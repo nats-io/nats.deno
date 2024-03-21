@@ -33,7 +33,6 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { deadline, delay } from "../../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
