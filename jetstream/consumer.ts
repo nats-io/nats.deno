@@ -317,7 +317,6 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       idle_heartbeat,
       threshold_bytes,
       threshold_messages,
-      abort_on_missing_resource,
     } = this.opts;
 
     // ordered consumer requires the ability to reset the
