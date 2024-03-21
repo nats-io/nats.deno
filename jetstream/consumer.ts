@@ -923,7 +923,6 @@ export type OrderedConsumerOptions = {
   replay_policy: ReplayPolicy;
   inactive_threshold: number;
   headers_only: boolean;
-  abort_on_missing_resource: boolean;
 };
 
 export class OrderedPullConsumerImpl implements Consumer {

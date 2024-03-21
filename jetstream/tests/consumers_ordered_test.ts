@@ -865,7 +865,7 @@ Deno.test("ordered consumers - consume stream not found request abort", async ()
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   const js = nc.jetstream();
-  const c = await js.consumers.get("A", { abort_on_missing_resource: true });
+  const c = await js.consumers.get("A");
   await jsm.streams.delete("A");
 
   await assertRejects(
@@ -888,14 +888,8 @@ Deno.test("ordered consumers - consume consumer deleted request abort", async ()
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
-  await jsm.consumers.add("A", {
-    durable_name: "a",
-    deliver_policy: DeliverPolicy.All,
-    ack_policy: AckPolicy.Explicit,
-  });
-
   const js = nc.jetstream();
-  const c = await js.consumers.get("A", "a");
+  const c = await js.consumers.get("A");
   const iter = await c.consume({
     expires: 3000,
     abort_on_missing_resource: true,
@@ -914,40 +908,6 @@ Deno.test("ordered consumers - consume consumer deleted request abort", async ()
   await delay(1000);
   await c.delete();
   await done;
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("ordered consumers - consume consumer not found request abort", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-
-  const jsm = await nc.jetstreamManager();
-  await jsm.streams.add({ name: "A", subjects: ["a"] });
-
-  await jsm.consumers.add("A", {
-    durable_name: "a",
-    deliver_policy: DeliverPolicy.All,
-    ack_policy: AckPolicy.Explicit,
-  });
-
-  const js = nc.jetstream();
-  const c = await js.consumers.get("A", "a");
-  await c.delete();
-
-  const iter = await c.consume({
-    expires: 3000,
-    abort_on_missing_resource: true,
-  });
-
-  await assertRejects(
-    async () => {
-      for await (const _ of iter) {
-        // nothing
-      }
-    },
-    Error,
-    "consumer not found",
-  );
 
   await cleanup(ns, nc);
 });
