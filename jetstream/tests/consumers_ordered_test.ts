@@ -20,7 +20,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { DeliverPolicy, JsMsg } from "../mod.ts";
+import { AckPolicy, DeliverPolicy, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
@@ -853,6 +853,100 @@ Deno.test("ordered consumers - fetch stream not found", async () => {
     },
     Error,
     "stream not found",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - consume stream not found request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", { abort_on_missing_resource: true });
+  await jsm.streams.delete("A");
+
+  await assertRejects(
+    () => {
+      return c.consume({
+        expires: 3000,
+        abort_on_missing_resource: true,
+      });
+    },
+    Error,
+    "stream not found",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - consume consumer deleted request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  const iter = await c.consume({
+    expires: 3000,
+    abort_on_missing_resource: true,
+  });
+
+  const done = assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer deleted",
+  );
+
+  await delay(1000);
+  await c.delete();
+  await done;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - consume consumer not found request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  await c.delete();
+
+  const iter = await c.consume({
+    expires: 3000,
+    abort_on_missing_resource: true,
+  });
+
+  await assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer not found",
   );
 
   await cleanup(ns, nc);

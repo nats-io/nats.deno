@@ -62,13 +62,15 @@ export type ConsumeBytes =
   & Partial<ThresholdBytes>
   & Expires
   & IdleHeartbeat
-  & ConsumeCallback;
+  & ConsumeCallback
+  & AbortOnMissingResource;
 export type ConsumeMessages =
   & Partial<MaxMessages>
   & Partial<ThresholdMessages>
   & Expires
   & IdleHeartbeat
-  & ConsumeCallback;
+  & ConsumeCallback
+  & AbortOnMissingResource;
 export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 /**
  * Options for fetching
@@ -129,6 +131,15 @@ export type Expires = {
    */
   expires?: number;
 };
+
+export type AbortOnMissingResource = {
+  /**
+   * If true, consume will abort if the stream or consumer is not found. Default is to recover
+   * once the stream/consumer is restored.
+   */
+  abort_on_missing_resource?: boolean;
+};
+
 export type IdleHeartbeat = {
   /**
    * Number of milliseconds to wait for a server heartbeat when not actively receiving
@@ -271,6 +282,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   statusIterator?: QueuedIteratorImpl<Status>;
   forOrderedConsumer: boolean;
   resetHandler?: () => void;
+  abortOnMissingResource?: boolean;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -292,6 +304,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.inbox = createInbox(c.api.nc.options.inboxPrefix);
     this.listeners = [];
     this.forOrderedConsumer = false;
+    this.abortOnMissingResource =
+      (opts as ConsumeOptions).abort_on_missing_resource === true;
 
     this.start();
   }
@@ -303,6 +317,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       idle_heartbeat,
       threshold_bytes,
       threshold_messages,
+      abort_on_missing_resource,
     } = this.opts;
 
     // ordered consumer requires the ability to reset the
@@ -369,7 +384,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
                 ConsumerEvents.ConsumerDeleted,
                 `${code} ${description}`,
               );
-              if (!this.refilling) {
+              if (!this.refilling || this.abortOnMissingResource) {
                 const error = new NatsError(description, `${code}`);
                 this.stop(error);
                 return;
@@ -540,7 +555,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
         if (err.message === "stream not found") {
           streamNotFound++;
           this.notify(ConsumerEvents.StreamNotFound, streamNotFound);
-          if (!this.refilling) {
+          if (!this.refilling || this.abortOnMissingResource) {
             this.stop(err);
             return false;
           }
@@ -554,7 +569,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
               // ignored
             }
           }
-          if (!this.refilling) {
+          if (!this.refilling || this.abortOnMissingResource) {
             this.stop(err);
             return false;
           }
@@ -909,6 +924,7 @@ export type OrderedConsumerOptions = {
   replay_policy: ReplayPolicy;
   inactive_threshold: number;
   headers_only: boolean;
+  abort_on_missing_resource: boolean;
 };
 
 export class OrderedPullConsumerImpl implements Consumer {
@@ -1030,7 +1046,10 @@ export class OrderedPullConsumerImpl implements Consumer {
           // we are not going to succeed
           this.iter?.notify(ConsumerEvents.StreamNotFound, i);
           // if we are not consume - fail it
-          if (this.type === PullConsumerType.Fetch) {
+          if (
+            this.type === PullConsumerType.Fetch ||
+            (this.opts as ConsumeOptions).abort_on_missing_resource === true
+          ) {
             this.iter?.stop(err);
             return Promise.reject(err);
           }
