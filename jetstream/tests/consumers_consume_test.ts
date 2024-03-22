@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,7 +24,7 @@ import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejec
 import { consumerHbTest } from "./consumers_test.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
-import { deadline, deferred } from "../../nats-base-client/util.ts";
+import { deadline, deferred, delay } from "../../nats-base-client/util.ts";
 import { nanos } from "../jsutil.ts";
 import { ConsumerEvents, PullConsumerMessagesImpl } from "../consumer.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
@@ -219,5 +219,108 @@ Deno.test("consumers - consume sync", async () => {
   assertExists(await sync.next());
   iter.stop();
   assertEquals(await sync.next(), null);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume stream not found request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  const iter = await c.consume({
+    expires: 3000,
+    abort_on_missing_resource: true,
+  });
+  await jsm.streams.delete("A");
+
+  await assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "stream not found",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume consumer deleted request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  const iter = await c.consume({
+    expires: 3000,
+    abort_on_missing_resource: true,
+  });
+
+  const done = assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer deleted",
+  );
+
+  await delay(1000);
+  await c.delete();
+  await done;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume consumer not found request abort", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  await c.delete();
+
+  const iter = await c.consume({
+    expires: 3000,
+    abort_on_missing_resource: true,
+  });
+
+  await assertRejects(
+    async () => {
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "consumer not found",
+  );
+
   await cleanup(ns, nc);
 });
