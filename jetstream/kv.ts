@@ -900,6 +900,31 @@ export class Bucket implements KV, KvRemove {
     const si = await this.jsm.streams.info(bn);
     return new KvStatusImpl(si, cluster);
   }
+
+  static mirror(
+    opts: Partial<KvOptions>,
+    srcBucket: string,
+    destBucket: string,
+    ...filter: string[]
+  ): Partial<KvOptions> {
+    opts = opts ?? {};
+    if (opts.mirror) {
+      throw new Error("mirror already set");
+    }
+    const mirror = {} as Partial<StreamSource>;
+    mirror.name = `KV_${srcBucket}`;
+
+    filter = filter ?? [];
+    if (filter.length === 0) {
+      filter.push(">");
+    }
+
+    mirror.subject_transforms = filter.map((f) => {
+      return { src: `$KV.${srcBucket}.${f}`, dest: `$KV.${destBucket}.${f}` };
+    });
+
+    return Object.assign(opts, { mirror });
+  }
 }
 
 export class KvStatusImpl implements KvStatus {
