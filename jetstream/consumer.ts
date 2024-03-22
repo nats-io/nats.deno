@@ -139,7 +139,7 @@ export type Expires = {
 
 export type Bind = {
   /**
-   * If set to false the client will not try to check on its consumer by issuing consumer info
+   * If set to true the client will not try to check on its consumer by issuing consumer info
    * requests. This means that the client may not report consumer not found, etc., and will simply
    * fail request for messages due to missed heartbeats. This option is exclusive of abort_on_missing_resource.
    *
