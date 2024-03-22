@@ -45,6 +45,7 @@ import {
 } from "./jsapi_types.ts";
 import { JsHeaders } from "./types.ts";
 import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
+import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 
 enum PullConsumerType {
   Unset = -1,
@@ -55,7 +56,7 @@ enum PullConsumerType {
 export type Ordered = {
   ordered: true;
 };
-export type NextOptions = Expires;
+export type NextOptions = Expires & Bind;
 export type ConsumeBytes =
   & MaxBytes
   & Partial<MaxMessages>
@@ -63,30 +64,34 @@ export type ConsumeBytes =
   & Expires
   & IdleHeartbeat
   & ConsumeCallback
-  & AbortOnMissingResource;
+  & AbortOnMissingResource
+  & Bind;
 export type ConsumeMessages =
   & Partial<MaxMessages>
   & Partial<ThresholdMessages>
   & Expires
   & IdleHeartbeat
   & ConsumeCallback
-  & AbortOnMissingResource;
+  & AbortOnMissingResource
+  & Bind;
 export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
 /**
- * Options for fetching
+ * Options for fetching bytes
  */
 export type FetchBytes =
   & MaxBytes
   & Partial<MaxMessages>
   & Expires
-  & IdleHeartbeat;
+  & IdleHeartbeat
+  & Bind;
 /**
- * Options for a c
+ * Options for fetching messages
  */
 export type FetchMessages =
   & Partial<MaxMessages>
   & Expires
-  & IdleHeartbeat;
+  & IdleHeartbeat
+  & Bind;
 export type FetchOptions = FetchBytes | FetchMessages;
 export type PullConsumerOptions = FetchOptions | ConsumeOptions;
 export type MaxMessages = {
@@ -132,10 +137,21 @@ export type Expires = {
   expires?: number;
 };
 
+export type Bind = {
+  /**
+   * If set to false the client will not try to check on its consumer by issuing consumer info
+   * requests. This means that the client may not report consumer not found, etc., and will simply
+   * fail request for messages due to missed heartbeats. This option is exclusive of abort_on_missing_resource.
+   *
+   * This option is not valid on ordered consumers.
+   */
+  bind?: boolean;
+};
+
 export type AbortOnMissingResource = {
   /**
    * If true, consume will abort if the stream or consumer is not found. Default is to recover
-   * once the stream/consumer is restored.
+   * once the stream/consumer is restored. This option is exclusive of bind.
    */
   abort_on_missing_resource?: boolean;
 };
@@ -252,7 +268,6 @@ export interface ExportedConsumer {
 
 export interface Consumer extends ExportedConsumer {
   info(cached?: boolean): Promise<ConsumerInfo>;
-
   delete(): Promise<boolean>;
 }
 
@@ -283,6 +298,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   forOrderedConsumer: boolean;
   resetHandler?: () => void;
   abortOnMissingResource?: boolean;
+  bind: boolean;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -293,8 +309,10 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     super();
     this.consumer = c;
 
+    const copts = opts as ConsumeOptions;
+
     this.opts = this.parseOptions(opts, refilling);
-    this.callback = (opts as ConsumeCallback).callback || null;
+    this.callback = copts.callback || null;
     this.noIterator = typeof this.callback === "function";
     this.monitor = null;
     this.pong = null;
@@ -304,8 +322,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.inbox = createInbox(c.api.nc.options.inboxPrefix);
     this.listeners = [];
     this.forOrderedConsumer = false;
-    this.abortOnMissingResource =
-      (opts as ConsumeOptions).abort_on_missing_resource === true;
+    this.abortOnMissingResource = copts.abort_on_missing_resource === true;
+    this.bind = copts.bind === true;
 
     this.start();
   }
@@ -525,7 +543,21 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     }
   }
 
-  async resetPending(): Promise<boolean> {
+  resetPending(): Promise<boolean> {
+    return this.bind ? this.resetPendingNoInfo() : this.resetPendingWithInfo();
+  }
+
+  async resetPendingNoInfo(): Promise<boolean> {
+    // here we are blind - we won't do an info, so all we are doing
+    // is invalidating the previous request results.
+    this.pending.msgs = 0;
+    this.pending.bytes = 0;
+    this.pending.requests = 0;
+    this.pull(this.pullOptions());
+    return true;
+  }
+
+  async resetPendingWithInfo(): Promise<boolean> {
     let notFound = 0;
     let streamNotFound = 0;
     const bo = backoff();
@@ -1122,6 +1154,10 @@ export class OrderedPullConsumerImpl implements Consumer {
     max_messages: 100,
     expires: 30_000,
   } as ConsumeMessages): Promise<ConsumerMessages> {
+    const copts = opts as ConsumeOptions;
+    if (copts.bind) {
+      return Promise.reject(new Error("bind is not supported"));
+    }
     if (this.type === PullConsumerType.Fetch) {
       return Promise.reject(new Error("ordered consumer initialized as fetch"));
     }
@@ -1142,6 +1178,11 @@ export class OrderedPullConsumerImpl implements Consumer {
   fetch(
     opts: FetchOptions = { max_messages: 100, expires: 30_000 },
   ): Promise<ConsumerMessages> {
+    const copts = opts as ConsumeOptions;
+    if (copts.bind) {
+      return Promise.reject(new Error("bind is not supported"));
+    }
+
     if (this.type === PullConsumerType.Consume) {
       return Promise.reject(
         new Error("ordered consumer already initialized as consume"),
@@ -1168,9 +1209,13 @@ export class OrderedPullConsumerImpl implements Consumer {
   async next(
     opts: NextOptions = { expires: 30_000 },
   ): Promise<JsMsg | null> {
-    const d = deferred<JsMsg | null>();
     const copts = opts as ConsumeOptions;
+    if (copts.bind) {
+      return Promise.reject(new Error("bind is not supported"));
+    }
     copts.max_messages = 1;
+
+    const d = deferred<JsMsg | null>();
     copts.callback = (m) => {
       // we can clobber the callback, because they are not supported
       // except on consume, which will fail when we try to fetch
