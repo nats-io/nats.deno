@@ -27,9 +27,10 @@ import { delay } from "../../nats-base-client/util.ts";
 import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { PullConsumerMessagesImpl } from "../consumer.ts";
+import { ConsumerEvents, PullConsumerMessagesImpl } from "../consumer.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
 import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
+import { assert } from "https://deno.land/std@0.200.0/assert/assert.ts";
 
 Deno.test("consumers - fetch no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
@@ -277,5 +278,43 @@ Deno.test("consumers - fetch sync", async () => {
   assertExists(await sync.next());
   assertExists(await sync.next());
   assertEquals(await sync.next(), null);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - fetch consumer bind", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a");
+
+  const c = await js.consumers.get("A", "a");
+  await c.delete();
+
+  const cisub = nc.subscribe("$JS.API.CONSUMER.INFO.A.a", {
+    callback: () => {},
+  });
+
+  const iter = await c.fetch({
+    expires: 1000,
+    bind: true,
+  });
+
+  const done = (async () => {
+    for await (const _ of iter) {
+      // nothing
+    }
+  })();
+
+  await done;
+  assertEquals(cisub.getProcessed(), 0);
   await cleanup(ns, nc);
 });

@@ -19,8 +19,12 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
+import {
+  assert,
+  assertEquals,
+  assertExists,
+  assertRejects,
+} from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { consumerHbTest } from "./consumers_test.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
@@ -28,7 +32,6 @@ import { deadline, deferred, delay } from "../../nats-base-client/util.ts";
 import { nanos } from "../jsutil.ts";
 import { ConsumerEvents, PullConsumerMessagesImpl } from "../consumer.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
 
 Deno.test("consumers - consume", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
@@ -321,6 +324,64 @@ Deno.test("consumers - consume consumer not found request abort", async () => {
     Error,
     "consumer not found",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - consume consumer bind", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", "a");
+  await c.delete();
+
+  const cisub = nc.subscribe("$JS.API.CONSUMER.INFO.A.a", {
+    callback: () => {},
+  });
+
+  const iter = await c.consume({
+    expires: 1000,
+    bind: true,
+  });
+
+  let hbm = 0;
+  let cnf = 0;
+
+  (async () => {
+    for await (const s of await iter.status()) {
+      switch (s.type) {
+        case ConsumerEvents.HeartbeatsMissed:
+          hbm++;
+          if (hbm > 5) {
+            iter.stop();
+          }
+          break;
+        case ConsumerEvents.ConsumerNotFound:
+          cnf++;
+          break;
+      }
+    }
+  })().then();
+
+  const done = (async () => {
+    for await (const _ of iter) {
+      // nothing
+    }
+  })();
+
+  await done;
+  assert(hbm > 1);
+  assertEquals(cnf, 0);
+  assertEquals(cisub.getProcessed(), 0);
 
   await cleanup(ns, nc);
 });

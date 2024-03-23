@@ -15,12 +15,13 @@
 
 import { initStream } from "./jstest_util.ts";
 import {
+  assert,
   assertEquals,
   assertExists,
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { AckPolicy, DeliverPolicy, JsMsg } from "../mod.ts";
+import { AckPolicy, ConsumerEvents, DeliverPolicy, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
@@ -908,6 +909,42 @@ Deno.test("ordered consumers - consume consumer deleted request abort", async ()
   await delay(1000);
   await c.delete();
   await done;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - bind is rejected", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A");
+
+  await assertRejects(
+    () => {
+      return c.next({ bind: true });
+    },
+    Error,
+    "bind is not supported",
+  );
+
+  await assertRejects(
+    () => {
+      return c.fetch({ bind: true });
+    },
+    Error,
+    "bind is not supported",
+  );
+
+  await assertRejects(
+    () => {
+      return c.consume({ bind: true });
+    },
+    Error,
+    "bind is not supported",
+  );
 
   await cleanup(ns, nc);
 });

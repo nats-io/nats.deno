@@ -200,3 +200,36 @@ Deno.test("consumers - next stream not found", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("consumers - next consumer bind", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a");
+
+  const c = await js.consumers.get("A", "a");
+  await c.delete();
+
+  const cisub = nc.subscribe("$JS.API.CONSUMER.INFO.A.a", {
+    callback: () => {},
+  });
+
+  const msg = await c.next({
+    expires: 1000,
+    bind: true,
+  });
+
+  assertEquals(msg, null);
+  assertEquals(cisub.getProcessed(), 0);
+
+  await cleanup(ns, nc);
+});
