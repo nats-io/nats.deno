@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,7 +21,6 @@ import {
   Empty,
   NatsConnection,
   NatsConnectionImpl,
-  NatsError,
   nuid,
   parseSemVer,
   QueuedIterator,
@@ -2020,7 +2019,7 @@ Deno.test("kv - bind no info", async () => {
 
   const d = deferred();
   nc.subscribe("$JS.API.STREAM.INFO.>", {
-    callback: (_err, msg) => {
+    callback: () => {
       d.reject(new Error("saw stream info"));
     },
   });
