@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -2712,7 +2712,8 @@ Deno.test("jsm - api check not ok", async () => {
   await nc.jetstream().jetstreamManager(false);
   await nc.jetstream({ checkAPI: false }).jetstreamManager();
   await nc.jetstream({ checkAPI: false }).jetstreamManager(true);
-  assertEquals(count, 0);
+  await nc.jetstream().jetstreamManager();
+  assertEquals(count, 2);
 
   await cleanup(ns, nc);
 });
@@ -2732,7 +2733,7 @@ Deno.test("jsm - api check ok", async () => {
   await nc.jetstream({ checkAPI: true }).jetstreamManager();
   await nc.jetstream({ checkAPI: true }).jetstreamManager(false);
 
-  assertEquals(count, 3);
+  assertEquals(count, 4);
   await cleanup(ns, nc);
 });
 
