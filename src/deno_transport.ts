@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The NATS Authors
+ * Copyright 2020-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,7 +34,7 @@ import {
   Transport,
 } from "../nats-base-client/internal_mod.ts";
 
-const VERSION = "1.19.0";
+const VERSION = "1.21.0";
 const LANG = "nats.deno";
 
 const ReadBufferSize = 1024 * 256;
