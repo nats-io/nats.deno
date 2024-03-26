@@ -45,7 +45,6 @@ import {
 } from "./jsapi_types.ts";
 import { JsHeaders } from "./types.ts";
 import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 
 enum PullConsumerType {
   Unset = -1,
@@ -547,7 +546,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     return this.bind ? this.resetPendingNoInfo() : this.resetPendingWithInfo();
   }
 
-  async resetPendingNoInfo(): Promise<boolean> {
+  resetPendingNoInfo(): Promise<boolean> {
     // here we are blind - we won't do an info, so all we are doing
     // is invalidating the previous request results.
     this.pending.msgs = 0;

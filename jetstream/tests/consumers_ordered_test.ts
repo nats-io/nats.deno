@@ -15,13 +15,12 @@
 
 import { initStream } from "./jstest_util.ts";
 import {
-  assert,
   assertEquals,
   assertExists,
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { AckPolicy, ConsumerEvents, DeliverPolicy, JsMsg } from "../mod.ts";
+import { DeliverPolicy, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
