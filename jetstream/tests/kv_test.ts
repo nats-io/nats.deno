@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,7 +21,6 @@ import {
   Empty,
   NatsConnection,
   NatsConnectionImpl,
-  NatsError,
   nuid,
   parseSemVer,
   QueuedIterator,
@@ -2020,7 +2019,7 @@ Deno.test("kv - bind no info", async () => {
 
   const d = deferred();
   nc.subscribe("$JS.API.STREAM.INFO.>", {
-    callback: (_err, msg) => {
+    callback: () => {
       d.reject(new Error("saw stream info"));
     },
   });
@@ -2057,6 +2056,24 @@ Deno.test("kv - watcher will name and filter", async () => {
   assert(m?.subject.endsWith("$KV.A.a.>"));
 
   iter.stop();
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - honors checkAPI option", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}, true),
+  );
+  const js = nc.jetstream();
+  const sub = nc.subscribe("$JS.API.INFO");
+  const si = syncIterator(sub);
+  await js.views.kv("A");
+  assertExists(await si.next());
+
+  const js2 = nc.jetstream({ checkAPI: false });
+  await js2.views.kv("B");
+  await sub.drain();
+  assertEquals(await si.next(), null);
 
   await cleanup(ns, nc);
 });
