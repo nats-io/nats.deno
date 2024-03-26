@@ -27,10 +27,9 @@ import { delay } from "../../nats-base-client/util.ts";
 import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { ConsumerEvents, PullConsumerMessagesImpl } from "../consumer.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
 import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
-import { assert } from "https://deno.land/std@0.200.0/assert/assert.ts";
+import { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - fetch no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
