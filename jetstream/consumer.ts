@@ -553,7 +553,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.pending.bytes = 0;
     this.pending.requests = 0;
     this.pull(this.pullOptions());
-    return true;
+    return Promise.resolve(true);
   }
 
   async resetPendingWithInfo(): Promise<boolean> {
