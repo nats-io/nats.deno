@@ -2732,7 +2732,7 @@ Deno.test("jsm - api check ok", async () => {
   await nc.jetstream({ checkAPI: true }).jetstreamManager();
   await nc.jetstream({ checkAPI: true }).jetstreamManager(false);
 
-  assertEquals(count, 3);
+  assertEquals(count, 5);
   await cleanup(ns, nc);
 });
 
