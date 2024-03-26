@@ -651,7 +651,7 @@ export interface NatsConnection {
    *
    * @param opts
    */
-  jetstream(opts?: JetStreamOptions): JetStreamClient;
+  jetstream(opts?: JetStreamOptions | JetStreamManagerOptions): JetStreamClient;
 
   /**
    * @return the number of milliseconds it took for a {@link flush}.
