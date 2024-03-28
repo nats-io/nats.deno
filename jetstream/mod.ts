@@ -38,9 +38,11 @@ export {
 } from "./internal_mod.ts";
 
 export type {
+  AbortOnMissingResource,
   AccountLimits,
   Advisory,
   ApiPagedRequest,
+  Bind,
   Closed,
   ClusterInfo,
   ConsumeBytes,
@@ -83,6 +85,7 @@ export type {
   KV,
   KvCodec,
   KvCodecs,
+  KvDeleteOptions,
   KvEntry,
   KvLimits,
   KvOptions,
@@ -96,6 +99,7 @@ export type {
   MaxMessages,
   MsgDeleteRequest,
   MsgRequest,
+  NextOptions,
   ObjectInfo,
   ObjectResult,
   ObjectStore,

@@ -51,6 +51,7 @@ export type {
   KV,
   KvCodec,
   KvCodecs,
+  KvDeleteOptions,
   KvEntry,
   KvLimits,
   KvOptions,
@@ -131,6 +132,8 @@ export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
 
 export type {
+  AbortOnMissingResource,
+  Bind,
   ConsumeBytes,
   ConsumeCallback,
   ConsumeMessages,
@@ -146,6 +149,7 @@ export type {
   IdleHeartbeat,
   MaxBytes,
   MaxMessages,
+  NextOptions,
   OrderedConsumerOptions,
   ThresholdBytes,
   ThresholdMessages,

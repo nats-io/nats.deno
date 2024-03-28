@@ -7,7 +7,7 @@ export { MsgImpl } from "./msg.ts";
 export { setTransportFactory } from "./transport.ts";
 export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, INFO, ProtocolHandler } from "./protocol.ts";
-export type { Backoff, Deferred, Perf, Timeout } from "./util.ts";
+export type { Backoff, Deferred, Delay, Perf, Timeout } from "./util.ts";
 export {
   backoff,
   collect,
