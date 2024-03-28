@@ -14,17 +14,27 @@
  */
 import {
   assertEquals,
+  assertRejects,
   fail,
 } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import {
+  AckPolicy,
   connect,
   createInbox,
   Empty,
   Msg,
+  StorageType,
   StringCodec,
 } from "../../src/mod.ts";
 import { nanos } from "../jsutil.ts";
-import { parseInfo, toJsMsg } from "../jsmsg.ts";
+import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
+import {
+  cleanup,
+  jetstreamServerConf,
+  setup,
+} from "../../tests/helpers/mod.ts";
+import { JetStreamManagerImpl } from "../jsm.ts";
+import { MsgImpl } from "../../nats-base-client/msg.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
@@ -131,4 +141,87 @@ Deno.test("jsmsg - acks", async () => {
   assertEquals(sc.decode(replies[3].data), "+ACK");
 
   await nc.close();
+});
+
+Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck();
+    },
+    Error,
+    "503",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - explicit consumer ackAck", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", {
+    durable_name: "a",
+    ack_policy: AckPolicy.Explicit,
+  });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+  assertEquals(await jm?.ackAck(), true);
+  assertEquals(await jm?.ackAck(), false);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck();
+    },
+    Error,
+    "TIMEOUT",
+  );
+
+  await cleanup(ns, nc);
 });
