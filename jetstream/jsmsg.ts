@@ -20,6 +20,7 @@ import { RequestOne } from "../nats-base-client/request.ts";
 import { nanos } from "./jsutil.ts";
 import { Msg, MsgHdrs, RequestOptions } from "../nats-base-client/core.ts";
 import { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
+import { deferred } from "../nats-base-client/mod.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);
@@ -220,6 +221,7 @@ export class JsMsgImpl implements JsMsg {
   // this has to dig into the internals as the message has access
   // to the protocol but not the high-level client.
   async ackAck(): Promise<boolean> {
+    const d = deferred<boolean>();
     if (!this.didAck) {
       this.didAck = true;
       if (this.msg.reply) {
@@ -243,13 +245,18 @@ export class JsMsgImpl implements JsMsg {
         }
         try {
           await Promise.race([r.timer, r.deferred]);
-          return true;
+          d.resolve(true);
         } catch (err) {
           r.cancel(err);
+          d.reject(err);
         }
+      } else {
+        d.resolve(false);
       }
+    } else {
+      d.resolve(false);
     }
-    return false;
+    return d;
   }
 
   ack() {
