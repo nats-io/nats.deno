@@ -505,7 +505,7 @@ export class NatsConnectionImpl implements NatsConnection {
   }
 
   jetstream(
-    opts: JetStreamOptions | JetStreamManagerImpl = {},
+    opts: JetStreamOptions | JetStreamManagerOptions = {},
   ): JetStreamClient {
     return new JetStreamClientImpl(this, opts);
   }
