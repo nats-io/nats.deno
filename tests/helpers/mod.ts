@@ -118,7 +118,7 @@ export async function cleanup(
     conns.push(v.close());
   });
   await Promise.all(conns);
-  await ns.stop();
+  await ns.stop(true);
 }
 
 export async function notCompatible(

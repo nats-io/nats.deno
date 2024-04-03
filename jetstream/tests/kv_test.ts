@@ -1365,7 +1365,7 @@ Deno.test("kv - replicas", async () => {
   assertEquals(si.config.num_replicas, 1);
 
   await nc.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
 });
 
 Deno.test("kv - allow direct", async () => {

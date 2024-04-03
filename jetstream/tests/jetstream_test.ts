@@ -1126,7 +1126,7 @@ Deno.test("jetstream - mirror alternates", async () => {
 
   await nc.close();
   await nc1.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
 });
 
 Deno.test("jetstream - backoff", async () => {
@@ -1258,7 +1258,7 @@ Deno.test("jetstream - repub on 503", async () => {
   });
 
   await nc.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
 });
 
 Deno.test("jetstream - duplicate message pub", async () => {
@@ -1349,7 +1349,7 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
   if (await notCompatible(servers[0], nc, "2.9.0")) {
-    await NatsServer.stopAll(servers);
+    await NatsServer.stopAll(servers, true);
     return;
   }
 
@@ -1374,7 +1374,7 @@ Deno.test("jetstream - num_replicas consumer option", async () => {
   assertEquals(ci.config.num_replicas, 2);
 
   await nc.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
   // in ci this hangs
   await delay(500);
 });

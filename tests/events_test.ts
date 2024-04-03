@@ -76,7 +76,7 @@ Deno.test("events - disconnect, reconnect", async () => {
   await cluster[0].stop();
   await Promise.all([disconnect, reconnect]);
   await nc.close();
-  await NatsServer.stopAll(cluster);
+  await NatsServer.stopAll(cluster, true);
 });
 
 Deno.test("events - update", async () => {
@@ -104,7 +104,7 @@ Deno.test("events - update", async () => {
   cluster.push(s);
   await lock;
   await nc.close();
-  await NatsServer.stopAll(cluster);
+  await NatsServer.stopAll(cluster, true);
 });
 
 Deno.test("events - ldm", async () => {
@@ -128,7 +128,7 @@ Deno.test("events - ldm", async () => {
   await cluster[0].signal(ServerSignals.LDM);
   await lock;
   await nc.close();
-  await NatsServer.stopAll(cluster);
+  await NatsServer.stopAll(cluster, true);
 });
 
 Deno.test("events - ignore server updates", async () => {
@@ -146,5 +146,5 @@ Deno.test("events - ignore server updates", async () => {
   await nc.flush();
   assertEquals(nc.protocol.servers.length(), 1);
   await nc.close();
-  await NatsServer.stopAll(cluster);
+  await NatsServer.stopAll(cluster, true);
 });
