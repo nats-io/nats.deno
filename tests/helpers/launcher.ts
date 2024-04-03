@@ -275,14 +275,7 @@ export class NatsServer implements PortInfo {
   }
 
   async stop(cleanup = false): Promise<void> {
-    // let dataDir = "";
     if (!this.stopped) {
-      // dataDir = await this.dataDir().then((v) => {
-      //   return v === null ? "" : v;
-      // }).catch(() => {
-      //   return "";
-      // });
-
       await this.updatePorts();
       this.stopped = true;
       this.process.stderr?.cancel().catch(() => {});
