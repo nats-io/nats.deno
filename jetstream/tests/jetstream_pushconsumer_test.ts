@@ -38,9 +38,15 @@ import {
   JsHeaders,
   PubAck,
 } from "../types.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
+import {
+  assert,
+  assertArrayIncludes,
+  assertEquals,
+  assertExists,
+  assertIsError,
+  assertRejects,
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { callbackConsume } from "./jetstream_test.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import {
   AckPolicy,
   DeliverPolicy,
@@ -48,7 +54,6 @@ import {
   StorageType,
 } from "../jsapi_types.ts";
 import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
-import { assert } from "../../nats-base-client/denobuffer.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { deferred, delay } from "../../nats-base-client/util.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
@@ -61,9 +66,6 @@ import {
   nanos,
 } from "../jsutil.ts";
 import { JetStreamSubscriptionImpl } from "../jsclient.ts";
-import { assertIsError } from "https://deno.land/std@0.200.0/assert/assert_is_error.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
-import { assertArrayIncludes } from "https://deno.land/std@0.200.0/assert/assert_array_includes.ts";
 
 Deno.test("jetstream - ephemeral push", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}, true));

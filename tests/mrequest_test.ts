@@ -21,7 +21,7 @@ import {
   assertEquals,
   assertRejects,
   fail,
-} from "https://deno.land/std@0.200.0/assert/mod.ts";
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { StringCodec } from "../nats-base-client/codec.ts";
 import { deferred, delay } from "../nats-base-client/util.ts";
 

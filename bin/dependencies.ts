@@ -17,7 +17,7 @@ import {
   extname,
   join,
   resolve,
-} from "https://deno.land/std@0.200.0/path/mod.ts";
+} from "https://deno.land/std@0.221.0/path/mod.ts";
 
 // resolve the specified directories to fq
 // let dirs = ["src", "nats-base-client", "jetstream", "bin"].map((n) => {

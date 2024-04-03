@@ -21,7 +21,7 @@ import {
   QueuedIterator,
   StreamConfig,
 } from "../../src/mod.ts";
-import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assert } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import {
   Empty,
   NatsConnection,

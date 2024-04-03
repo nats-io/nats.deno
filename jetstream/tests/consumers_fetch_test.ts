@@ -20,15 +20,17 @@ import {
 } from "../../tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
+import {
+  assertEquals,
+  assertExists,
+  assertRejects,
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { StringCodec } from "../../nats-base-client/codec.ts";
 import { delay } from "../../nats-base-client/util.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
 import { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - fetch no messages", async () => {

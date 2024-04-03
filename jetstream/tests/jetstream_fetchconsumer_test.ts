@@ -21,13 +21,16 @@ import {
 } from "../../tests/helpers/mod.ts";
 import { initStream, time } from "./jstest_util.ts";
 import { AckPolicy, StorageType } from "../jsapi_types.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
+import {
+  assert,
+  assertEquals,
+  assertExists,
+  assertRejects,
+  assertThrows,
+  fail,
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
-import { assertThrows } from "https://deno.land/std@0.200.0/assert/assert_throws.ts";
-import { fail } from "https://deno.land/std@0.200.0/assert/fail.ts";
-import { assert } from "../../nats-base-client/denobuffer.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
 import {
   DebugEvents,
   Events,
@@ -37,7 +40,6 @@ import {
 import { Js409Errors } from "../jsutil.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 import { deferred } from "../../nats-base-client/util.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
 import { consume } from "./jstest_util.ts";
 
 Deno.test("jetstream - fetch expires waits", async () => {

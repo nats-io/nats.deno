@@ -28,9 +28,16 @@ import {
   DeliverPolicy,
   StorageType,
 } from "../jsapi_types.ts";
-import { assertRejects } from "https://deno.land/std@0.200.0/assert/assert_rejects.ts";
+import {
+  assert,
+  assertArrayIncludes,
+  assertEquals,
+  assertExists,
+  assertRejects,
+  assertThrows,
+  fail,
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/assert_equals.ts";
 import { checkJsError, nanos } from "../jsutil.ts";
 import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
 import {
@@ -39,7 +46,6 @@ import {
   JetStreamSubscriptionInfoable,
   PubAck,
 } from "../types.ts";
-import { assert } from "../../nats-base-client/denobuffer.ts";
 import { deferred, delay } from "../../nats-base-client/util.ts";
 import {
   DebugEvents,
@@ -48,15 +54,11 @@ import {
   NatsError,
   syncIterator,
 } from "../../nats-base-client/core.ts";
-import { fail } from "https://deno.land/std@0.200.0/assert/fail.ts";
 import { JsMsg } from "../jsmsg.ts";
 import { connect } from "../../src/connect.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { JetStreamClientImpl } from "../jsclient.ts";
-import { assertThrows } from "https://deno.land/std@0.200.0/assert/assert_throws.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
-import { assertExists } from "https://deno.land/std@0.200.0/assert/assert_exists.ts";
-import { assertArrayIncludes } from "https://deno.land/std@0.200.0/assert/assert_array_includes.ts";
 import { callbackConsume } from "./jetstream_test.ts";
 
 Deno.test("jetstream - pull no messages", async () => {

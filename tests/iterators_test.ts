@@ -16,7 +16,7 @@ import { connect, createInbox, ErrorCode, syncIterator } from "../src/mod.ts";
 import {
   assertEquals,
   assertRejects,
-} from "https://deno.land/std@0.200.0/assert/mod.ts";
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 import { assert } from "../nats-base-client/denobuffer.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
