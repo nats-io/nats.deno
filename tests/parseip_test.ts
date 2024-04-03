@@ -15,7 +15,7 @@
 
 import { parseIP } from "../nats-base-client/internal_mod.ts";
 
-import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { ipV4 } from "../nats-base-client/ipparser.ts";
 
 Deno.test("ipparser", () => {

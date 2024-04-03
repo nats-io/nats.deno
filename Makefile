@@ -5,7 +5,7 @@ export DENO_JOBS=4
 build: test
 
 lint:
-	deno lint --unstable --ignore=docs/
+	deno lint --ignore=docs/
 
 test: clean
 	deno test --allow-all --unstable --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests

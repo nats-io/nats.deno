@@ -14,8 +14,8 @@
  */
 
 import { NatsServer } from "./mod.ts";
-import { parse } from "https://deno.land/std@0.200.0/flags/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
+import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { rgb24 } from "https://deno.land/std@0.221.0/fmt/colors.ts";
 
 const defaults = {
   c: 3,

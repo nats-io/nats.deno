@@ -4,7 +4,7 @@ This file lists the dependencies used in this repository.
 
 | Dependency                           | License     |
 | ------------------------------------ | ----------- |
-| https://deno.land/std@0.200.0        | MIT License |
+| https://deno.land/std@0.221.0        | MIT License |
 | https://deno.land/x/cobra            | MIT License |
 | https://deno.land/x/progress         | MIT License |
 | https://deno.land/x/emit             | MIT License |

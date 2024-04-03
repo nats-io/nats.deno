@@ -19,7 +19,7 @@ import {
   assertExists,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.200.0/assert/mod.ts";
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { DeliverPolicy, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
