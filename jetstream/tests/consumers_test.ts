@@ -195,24 +195,22 @@ Deno.test("consumers - fetch heartbeats", async () => {
  * @param debug
  */
 async function setupDataConnCluster(
-  count = 3,
+  count = 4,
   debug = false,
 ): Promise<NatsServer[]> {
   if (count < 3) {
-    return Promise.reject(new Error("min cluster is 3"));
+    return Promise.reject(new Error("min cluster is 4"));
   }
   let servers = await NatsServer.jetstreamCluster(count, {}, debug);
   await NatsServer.stopAll(servers);
 
   servers[0].config.jetstream = "disabled";
-  await Deno.rename(
-    servers[1].config.jetstream.store_dir,
-    `${servers[1].config.jetstream.store_dir}_old`,
-  );
-  await Deno.rename(
-    servers[2].config.jetstream.store_dir,
-    `${servers[2].config.jetstream.store_dir}_old`,
-  );
+  for (let i = 1; i < servers.length; i++) {
+    await Deno.remove(servers[i].config.jetstream.store_dir, {
+      recursive: true,
+    });
+  }
+
   const proms = servers.map((s) => {
     return s.restart();
   });
@@ -234,20 +232,18 @@ export async function consumerHbTest(fetch: boolean) {
 
   const js = nc.jetstream();
   const c = await js.consumers.get(stream, "a");
-  let iter: ConsumerMessages;
-  if (fetch) {
-    iter = await c.fetch({
+  const iter: ConsumerMessages = fetch
+    ? await c.fetch({
+      max_messages: 100,
+      idle_heartbeat: 1000,
+      expires: 30000,
+    })
+    : await c.consume({
       max_messages: 100,
       idle_heartbeat: 1000,
       expires: 30000,
     });
-  } else {
-    iter = await c.consume({
-      max_messages: 100,
-      idle_heartbeat: 1000,
-      expires: 30000,
-    });
-  }
+
   // stop the data serverss
   setTimeout(() => {
     servers[1].stop();
@@ -276,7 +272,7 @@ export async function consumerHbTest(fetch: boolean) {
   assertEquals(cs.data, 2);
 
   await nc.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
 }
 
 Deno.test("consumers - bad options", async () => {

@@ -228,16 +228,53 @@ export class NatsServer implements PortInfo {
     return this.logBuffer.join("");
   }
 
-  static stopAll(cluster: NatsServer[]): Promise<void[]> {
+  static stopAll(cluster: NatsServer[], cleanup = false): Promise<void[]> {
     const buf: Promise<void>[] = [];
     cluster.forEach((s) => {
-      s === null ? buf.push(Promise.resolve()) : buf.push(s?.stop());
+      s === null ? buf.push(Promise.resolve()) : buf.push(s?.stop(cleanup));
     });
 
     return Promise.all(buf);
   }
 
-  async stop(): Promise<void> {
+  rmPortsFile() {
+    const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
+    const portsFile = path.resolve(
+      path.join(tmp, `nats-server_${this.pid()}.ports`),
+    );
+    try {
+      Deno.statSync(portsFile);
+      Deno.removeSync(portsFile);
+    } catch (err) {
+      if (!(err instanceof Deno.errors.NotFound)) {
+        console.log(err.message);
+      }
+    }
+  }
+
+  rmConfigFile() {
+    try {
+      Deno.removeSync(this.configFile);
+    } catch (err) {
+      if (!(err instanceof Deno.errors.NotFound)) {
+        console.log(err.message);
+      }
+    }
+  }
+
+  rmDataDir() {
+    if (this.config?.jetstream?.store_dir) {
+      try {
+        Deno.removeSync(this.config.jetstream.store_dir, { recursive: true });
+      } catch (err) {
+        if (!(err instanceof Deno.errors.NotFound)) {
+          console.log(err.message);
+        }
+      }
+    }
+  }
+
+  async stop(cleanup = false): Promise<void> {
     if (!this.stopped) {
       await this.updatePorts();
       this.stopped = true;
@@ -246,6 +283,11 @@ export class NatsServer implements PortInfo {
       await this.process.status;
     }
     await this.done;
+    this.rmPortsFile();
+    this.rmConfigFile();
+    if (cleanup) {
+      this.rmDataDir();
+    }
   }
 
   signal(signal: string): Promise<void> {
@@ -331,8 +373,7 @@ export class NatsServer implements PortInfo {
       // need a server name for a cluster
       const serverName = nuid.next();
       // customize the store dir and make it
-      jetstream.store_dir = path.join("/tmp", "jetstream", serverName);
-      Deno.mkdirSync(jetstream.store_dir, { recursive: true });
+      jetstream.store_dir = Deno.makeTempDirSync({ prefix: "nats_js" });
 
       config = extend(
         config,
@@ -547,7 +588,10 @@ export class NatsServer implements PortInfo {
     conf = NatsServer.confDefaults(conf);
     conf.ports_file_dir = tmp;
 
-    const confFile = Deno.makeTempFileSync();
+    const confFile = Deno.makeTempFileSync({
+      prefix: "nats-server_",
+      suffix: ".conf",
+    });
     await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
     if (debug) {
       console.info(`${exe} -c ${confFile}`);

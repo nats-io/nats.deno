@@ -112,7 +112,7 @@ Deno.test("streams - mirrors", async () => {
   assertEquals(s2.name, selected);
 
   await nc.close();
-  await NatsServer.stopAll(cluster);
+  await NatsServer.stopAll(cluster, true);
 });
 
 Deno.test("streams - consumers", async () => {

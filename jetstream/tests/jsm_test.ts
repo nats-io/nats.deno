@@ -1253,7 +1253,7 @@ Deno.test("jsm - stream update properties", async () => {
   await updateOption({ mirror: { name: "nn" } }, true);
 
   await nc.close();
-  await NatsServer.stopAll(servers);
+  await NatsServer.stopAll(servers, true);
 });
 
 Deno.test("jsm - direct getMessage", async () => {
