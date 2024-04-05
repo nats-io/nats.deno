@@ -95,7 +95,7 @@ async function expectPullSubscribeCallbackError(
 }
 
 Deno.test("409 - max_batch", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
@@ -129,7 +129,7 @@ Deno.test("409 - max_batch", async () => {
 });
 
 Deno.test("409 - max_expires", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();
@@ -163,7 +163,7 @@ Deno.test("409 - max_expires", async () => {
 });
 
 Deno.test("409 - max_bytes", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.8.3")) {
     return;
   }
@@ -200,7 +200,7 @@ Deno.test("409 - max_bytes", async () => {
 });
 
 Deno.test("409 - max msg size", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
@@ -236,7 +236,7 @@ Deno.test("409 - max msg size", async () => {
 });
 
 Deno.test("409 - max waiting", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await nc.jetstreamManager();

@@ -263,8 +263,9 @@ export class NatsServer implements PortInfo {
   }
 
   rmDataDir() {
-    if (this.config?.jetstream?.store_dir) {
+    if (typeof this.config?.jetstream?.store_dir === "string") {
       try {
+        console.log(`rmDataDir: ${this.config.jetstream.store_dir}`);
         Deno.removeSync(this.config.jetstream.store_dir, { recursive: true });
       } catch (err) {
         if (!(err instanceof Deno.errors.NotFound)) {
@@ -321,6 +322,33 @@ export class NatsServer implements PortInfo {
     return jsz.config.store_dir;
   }
 
+  /**
+   * Setup a cluster that has N nodes with the first node being just a connection
+   * server - rest are JetStream.
+   * @param count
+   * @param debug
+   */
+  static async setupDataConnCluster(
+    count = 4,
+    debug = false,
+  ): Promise<NatsServer[]> {
+    if (count < 3) {
+      return Promise.reject(new Error("data cluster must be 4 or greater"));
+    }
+    let servers = await NatsServer.jetstreamCluster(count, {}, debug);
+    await NatsServer.stopAll(servers);
+    for (let i = 0; i < servers.length; i++) {
+      servers[i].rmDataDir();
+    }
+    servers[0].config.jetstream = "disabled";
+    const proms = servers.map((s) => {
+      return s.restart();
+    });
+    servers = await Promise.all(proms);
+    await NatsServer.dataClusterFormed(proms.slice(1));
+    return servers;
+  }
+
   static async jetstreamCluster(
     count = 2,
     serverConf?: Record<string, unknown>,
@@ -372,8 +400,6 @@ export class NatsServer implements PortInfo {
       }
       // need a server name for a cluster
       const serverName = nuid.next();
-      // customize the store dir and make it
-      jetstream.store_dir = Deno.makeTempDirSync({ prefix: "nats_js" });
 
       config = extend(
         config,
@@ -629,7 +655,7 @@ export class NatsServer implements PortInfo {
         }
       },
       1000,
-      { name: `read ports file ${portsFile}` },
+      { name: `read ports file ${portsFile} - ${confFile}` },
     );
 
     if (debug) {

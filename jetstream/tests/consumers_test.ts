@@ -188,39 +188,8 @@ Deno.test("consumers - fetch heartbeats", async () => {
   await consumerHbTest(true);
 });
 
-/**
- * Setup a cluster that has N nodes with the first node being just a connection
- * server - rest are JetStream - min number of servers is 3
- * @param count
- * @param debug
- */
-async function setupDataConnCluster(
-  count = 4,
-  debug = false,
-): Promise<NatsServer[]> {
-  if (count < 3) {
-    return Promise.reject(new Error("min cluster is 4"));
-  }
-  let servers = await NatsServer.jetstreamCluster(count, {}, debug);
-  await NatsServer.stopAll(servers);
-
-  servers[0].config.jetstream = "disabled";
-  for (let i = 1; i < servers.length; i++) {
-    await Deno.remove(servers[i].config.jetstream.store_dir, {
-      recursive: true,
-    });
-  }
-
-  const proms = servers.map((s) => {
-    return s.restart();
-  });
-  servers = await Promise.all(proms);
-  await NatsServer.dataClusterFormed(proms.slice(1));
-  return servers;
-}
-
 export async function consumerHbTest(fetch: boolean) {
-  const servers = await setupDataConnCluster(3);
+  const servers = await NatsServer.setupDataConnCluster();
 
   const nc = await connect({ port: servers[0].port });
   const { stream } = await initStream(nc);
@@ -248,6 +217,7 @@ export async function consumerHbTest(fetch: boolean) {
   setTimeout(() => {
     servers[1].stop();
     servers[2].stop();
+    servers[3].stop();
   }, 1000);
 
   const d = deferred<ConsumerStatus>();

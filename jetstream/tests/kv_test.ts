@@ -151,7 +151,7 @@ Deno.test("kv - bucket name validation", () => {
 });
 
 Deno.test("kv - init creates stream", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
@@ -171,7 +171,7 @@ Deno.test("kv - init creates stream", async () => {
 });
 
 Deno.test("kv - bind to existing KV", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
@@ -241,7 +241,7 @@ async function crud(bucket: Bucket): Promise<void> {
 
 Deno.test("kv - crud", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -255,7 +255,7 @@ Deno.test("kv - crud", async () => {
 
 Deno.test("kv - codec crud", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -279,7 +279,7 @@ Deno.test("kv - codec crud", async () => {
 
 Deno.test("kv - history", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -303,7 +303,7 @@ Deno.test("kv - history", async () => {
 
 Deno.test("kv - cleanups/empty", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -329,7 +329,7 @@ Deno.test("kv - cleanups/empty", async () => {
 
 Deno.test("kv - history cleanup", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -359,7 +359,7 @@ Deno.test("kv - history cleanup", async () => {
 
 Deno.test("kv - bucket watch", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -441,7 +441,7 @@ async function keyWatch(bucket: Bucket): Promise<void> {
 
 Deno.test("kv - key watch", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -459,7 +459,7 @@ Deno.test("kv - key watch", async () => {
 
 Deno.test("kv - codec key watch", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -499,7 +499,7 @@ async function keys(b: Bucket): Promise<void> {
 
 Deno.test("kv - keys", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -517,7 +517,7 @@ Deno.test("kv - keys", async () => {
 
 Deno.test("kv - codec keys", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -541,7 +541,7 @@ Deno.test("kv - codec keys", async () => {
 
 Deno.test("kv - ttl", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -568,7 +568,7 @@ Deno.test("kv - ttl", async () => {
 
 Deno.test("kv - no ttl", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -592,7 +592,7 @@ Deno.test("kv - no ttl", async () => {
 
 Deno.test("kv - complex key", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -638,7 +638,7 @@ Deno.test("kv - complex key", async () => {
 
 Deno.test("kv - remove key", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -666,7 +666,7 @@ Deno.test("kv - remove key", async () => {
 
 Deno.test("kv - remove subkey", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -691,7 +691,7 @@ Deno.test("kv - remove subkey", async () => {
 
 Deno.test("kv - create key", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -714,7 +714,7 @@ Deno.test("kv - create key", async () => {
 
 Deno.test("kv - update key", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -739,7 +739,7 @@ Deno.test("kv - update key", async () => {
 
 Deno.test("kv - internal consumer", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -766,7 +766,7 @@ Deno.test("kv - internal consumer", async () => {
 
 Deno.test("kv - is wildcard delete implemented", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -809,7 +809,7 @@ Deno.test("kv - is wildcard delete implemented", async () => {
 
 Deno.test("kv - delta", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -842,7 +842,7 @@ Deno.test("kv - delta", async () => {
 
 Deno.test("kv - watch and history headers only", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const b = await js.views.kv("bucket") as Bucket;
@@ -878,7 +878,7 @@ Deno.test("kv - watch and history headers only", async () => {
 
 Deno.test("kv - mem and file", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const d = await js.views.kv("default") as Bucket;
@@ -901,7 +901,7 @@ Deno.test("kv - mem and file", async () => {
 });
 
 Deno.test("kv - example", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const js = nc.jetstream();
   const sc = StringCodec();
 
@@ -1002,7 +1002,7 @@ function setupCrossAccount(): Promise<NatsServer> {
       },
     },
   };
-  return NatsServer.start(jetstreamServerConf(conf, true));
+  return NatsServer.start(jetstreamServerConf(conf));
 }
 
 async function makeKvAndClient(
@@ -1131,7 +1131,7 @@ Deno.test("kv - cross account watch", async () => {
 
 Deno.test("kv - watch iter stops", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const b = await js.views.kv("a") as Bucket;
@@ -1149,7 +1149,7 @@ Deno.test("kv - watch iter stops", async () => {
 
 Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const b = await js.views.kv("a") as Bucket;
@@ -1166,7 +1166,7 @@ Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
 
 Deno.test("kv - initialized watch empty", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1184,7 +1184,7 @@ Deno.test("kv - initialized watch empty", async () => {
 
 Deno.test("kv - initialized watch with messages", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1210,7 +1210,7 @@ Deno.test("kv - initialized watch with messages", async () => {
 
 Deno.test("kv - initialized watch with modifications", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1254,7 +1254,7 @@ Deno.test("kv - initialized watch with modifications", async () => {
 
 Deno.test("kv - watch init callback exceptions terminate the iterator", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1285,7 +1285,7 @@ Deno.test("kv - watch init callback exceptions terminate the iterator", async ()
 
 Deno.test("kv - get revision", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const sc = StringCodec();
@@ -1321,7 +1321,7 @@ Deno.test("kv - get revision", async () => {
 
 Deno.test("kv - purge deletes", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1370,7 +1370,7 @@ Deno.test("kv - replicas", async () => {
 
 Deno.test("kv - allow direct", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
 
   if (await notCompatible(ns, nc, "2.9.0")) {
@@ -1429,7 +1429,7 @@ Deno.test("kv - allow direct", async () => {
 
 Deno.test("kv - direct message", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
 
   if (await notCompatible(ns, nc, "2.9.0")) {
@@ -1476,7 +1476,7 @@ Deno.test("kv - direct message", async () => {
 });
 
 Deno.test("kv - republish", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
@@ -1507,7 +1507,7 @@ Deno.test("kv - republish", async () => {
 
 Deno.test("kv - ttl is in nanos", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1524,7 +1524,7 @@ Deno.test("kv - ttl is in nanos", async () => {
 
 Deno.test("kv - size", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
 
@@ -1546,7 +1546,7 @@ Deno.test("kv - mirror cross domain", async () => {
     jetstreamServerConf({
       server_name: "HUB",
       jetstream: { domain: "HUB" },
-    }, true),
+    }),
   );
   // the ports file doesn't report leaf node
   const varz = await ns.varz() as unknown;
@@ -1685,7 +1685,7 @@ Deno.test("kv - mirror cross domain", async () => {
 });
 
 Deno.test("kv - previous sequence", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
@@ -1705,7 +1705,7 @@ Deno.test("kv - previous sequence", async () => {
 });
 
 Deno.test("kv - encoded entry", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
@@ -1723,7 +1723,7 @@ Deno.test("kv - encoded entry", async () => {
 });
 
 Deno.test("kv - create after delete", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = nc.jetstream();
   const kv = await js.views.kv("K");
@@ -1740,7 +1740,7 @@ Deno.test("kv - create after delete", async () => {
 });
 
 Deno.test("kv - string payloads", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = nc.jetstream();
   const kv = await js.views.kv("K");
@@ -1763,7 +1763,7 @@ Deno.test("kv - string payloads", async () => {
 });
 
 Deno.test("kv - metadata", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
@@ -1776,7 +1776,7 @@ Deno.test("kv - metadata", async () => {
 });
 
 Deno.test("kv - watch updates only", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = nc.jetstream();
   const kv = await js.views.kv("K");
@@ -1809,7 +1809,7 @@ Deno.test("kv - watch updates only", async () => {
 });
 
 Deno.test("kv - watch history", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = nc.jetstream();
   const kv = await js.views.kv("K", { history: 10 });
@@ -1847,7 +1847,7 @@ Deno.test("kv - watch history", async () => {
 });
 
 Deno.test("kv - watch history no deletes", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = nc.jetstream();
   const kv = await js.views.kv("K", { history: 10 });
@@ -1961,7 +1961,7 @@ Deno.test("kv - watch start at", async () => {
 
 Deno.test("kv - delete key if revision", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -1985,7 +1985,7 @@ Deno.test("kv - delete key if revision", async () => {
 
 Deno.test("kv - purge key if revision", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -2009,7 +2009,7 @@ Deno.test("kv - purge key if revision", async () => {
 
 Deno.test("kv - bind no info", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -2039,7 +2039,7 @@ Deno.test("kv - bind no info", async () => {
 
 Deno.test("kv - watcher will name and filter", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
@@ -2062,7 +2062,7 @@ Deno.test("kv - watcher will name and filter", async () => {
 
 Deno.test("kv - honors checkAPI option", async () => {
   const { ns, nc } = await setup(
-    jetstreamServerConf({}, true),
+    jetstreamServerConf({}),
   );
   const js = nc.jetstream();
   const sub = nc.subscribe("$JS.API.INFO");
