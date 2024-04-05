@@ -930,6 +930,7 @@ Deno.test("auth - mux sub ok", async () => {
       msg.respond();
     },
   });
+  await sc.flush();
 
   const response = deferred<NatsError>();
   nc.request("q")
