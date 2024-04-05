@@ -132,6 +132,7 @@ Deno.test("next - consumer not found", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
   await c.delete();
+  await delay(1000);
 
   const exited = assertRejects(
     async () => {
