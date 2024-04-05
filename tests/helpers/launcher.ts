@@ -263,7 +263,7 @@ export class NatsServer implements PortInfo {
   }
 
   rmDataDir() {
-    if (this.config?.jetstream?.store_dir) {
+    if (typeof this.config?.jetstream?.store_dir === "string") {
       try {
         Deno.removeSync(this.config.jetstream.store_dir, { recursive: true });
       } catch (err) {
@@ -321,8 +321,35 @@ export class NatsServer implements PortInfo {
     return jsz.config.store_dir;
   }
 
+  /**
+   * Setup a cluster that has N nodes with the first node being just a connection
+   * server - rest are JetStream.
+   * @param count
+   * @param debug
+   */
+  static async setupDataConnCluster(
+    count = 4,
+    debug = false,
+  ): Promise<NatsServer[]> {
+    if (count < 4) {
+      return Promise.reject(new Error("data cluster must be 4 or greater"));
+    }
+    let servers = await NatsServer.jetstreamCluster(count, {}, debug);
+    await NatsServer.stopAll(servers);
+    for (let i = 0; i < servers.length; i++) {
+      servers[i].rmDataDir();
+    }
+    servers[0].config.jetstream = "disabled";
+    const proms = servers.map((s) => {
+      return s.restart();
+    });
+    servers = await Promise.all(proms);
+    await NatsServer.dataClusterFormed(proms.slice(1));
+    return servers;
+  }
+
   static async jetstreamCluster(
-    count = 2,
+    count = 3,
     serverConf?: Record<string, unknown>,
     debug = false,
   ): Promise<NatsServer[]> {
@@ -372,8 +399,6 @@ export class NatsServer implements PortInfo {
       }
       // need a server name for a cluster
       const serverName = nuid.next();
-      // customize the store dir and make it
-      jetstream.store_dir = Deno.makeTempDirSync({ prefix: "nats_js" });
 
       config = extend(
         config,
@@ -479,8 +504,8 @@ export class NatsServer implements PortInfo {
     conf = conf || {};
     conf = Object.assign({}, conf);
     conf.cluster = conf.cluster || {};
-    conf.cluster.name = nuid.next();
-    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:4225";
+    conf.cluster.name = "C_" + nuid.next();
+    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
 
     const ns = await NatsServer.start(conf, debug);
     const cluster = [ns];
@@ -592,7 +617,7 @@ export class NatsServer implements PortInfo {
       prefix: "nats-server_",
       suffix: ".conf",
     });
-    await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
+    Deno.writeFileSync(confFile, new TextEncoder().encode(toConf(conf)));
     if (debug) {
       console.info(`${exe} -c ${confFile}`);
     }
@@ -628,8 +653,8 @@ export class NatsServer implements PortInfo {
           // ignore
         }
       },
-      1000,
-      { name: `read ports file ${portsFile}` },
+      5000,
+      { name: `read ports file ${portsFile} - ${confFile}` },
     );
 
     if (debug) {

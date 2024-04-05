@@ -16,8 +16,6 @@
 import { NatsServer } from "./launcher.ts";
 import { compare, parseSemVer } from "../../nats-base-client/semver.ts";
 import { red, yellow } from "https://deno.land/std@0.221.0/fmt/colors.ts";
-import * as path from "https://deno.land/std@0.221.0/path/mod.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
 import { extend } from "../../nats-base-client/util.ts";
 import { connect } from "../../src/connect.ts";
 import {
@@ -42,13 +40,14 @@ export function disabled(reason: string): void {
 }
 
 export function jsopts() {
+  const store_dir = Deno.makeTempDirSync({ prefix: "jetstream" });
   return {
     // debug: true,
     // trace: true,
     jetstream: {
       max_file_store: 1024 * 1024,
       max_mem_store: 1024 * 1024,
-      store_dir: "/tmp",
+      store_dir,
     },
   };
 }
@@ -56,7 +55,6 @@ export function jsopts() {
 export function jetstreamExportServerConf(
   opts: unknown = {},
   prefix = "IPA.>",
-  randomStoreDir = true,
 ): Record<string, unknown> {
   const template = {
     "no_auth_user": "a",
@@ -81,18 +79,16 @@ export function jetstreamExportServerConf(
     },
   };
   const conf = Object.assign(template, opts);
-  return jetstreamServerConf(conf, randomStoreDir);
+  return jetstreamServerConf(conf);
 }
 
 export function jetstreamServerConf(
   opts: unknown = {},
-  randomStoreDir = true,
 ): Record<string, unknown> {
   const conf = Object.assign(jsopts(), opts);
-  if (randomStoreDir) {
-    conf.jetstream.store_dir = path.join("/tmp", "jetstream", nuid.next());
+  if (typeof conf.jetstream.store_dir !== "string") {
+    conf.jetstream.store_dir = Deno.makeTempDirSync({ prefix: "jetstream" });
   }
-  Deno.mkdirSync(conf.jetstream.store_dir, { recursive: true });
   return conf as Record<string, unknown>;
 }
 

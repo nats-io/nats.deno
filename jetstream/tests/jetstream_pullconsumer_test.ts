@@ -62,7 +62,7 @@ import { nuid } from "../../nats-base-client/nuid.ts";
 import { callbackConsume } from "./jetstream_test.ts";
 
 Deno.test("jetstream - pull no messages", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -83,7 +83,7 @@ Deno.test("jetstream - pull no messages", async () => {
 });
 
 Deno.test("jetstream - pull", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -107,7 +107,7 @@ Deno.test("jetstream - pull", async () => {
 });
 
 Deno.test("jetstream - pull consumer options", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   const v = await jsm.consumers.add(stream, {
@@ -124,7 +124,7 @@ Deno.test("jetstream - pull consumer options", async () => {
 });
 
 Deno.test("jetstream - pull sub - attached iterator", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -197,7 +197,7 @@ Deno.test("jetstream - pull sub - attached iterator", async () => {
 });
 
 Deno.test("jetstream - pull sub - attached callback", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   await jsm.consumers.add(stream, {
@@ -274,7 +274,7 @@ Deno.test("jetstream - pull sub - attached callback", async () => {
 });
 
 Deno.test("jetstream - pull sub - not attached callback", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -303,7 +303,7 @@ Deno.test("jetstream - pull sub - not attached callback", async () => {
 });
 
 Deno.test("jetstream - pull sub requires explicit", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -323,7 +323,7 @@ Deno.test("jetstream - pull sub requires explicit", async () => {
 });
 
 Deno.test("jetstream - pull sub ephemeral", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -349,7 +349,7 @@ Deno.test("jetstream - pull sub ephemeral", async () => {
 });
 
 Deno.test("jetstream - pull consumer info without pull", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
 
@@ -519,7 +519,7 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
 });
 
 Deno.test("jetstream - pull sub - multiple consumers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
   const js = nc.jetstream();
@@ -590,7 +590,7 @@ Deno.test("jetstream - pull sub - multiple consumers", async () => {
 });
 
 Deno.test("jetstream - pull next", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const js = nc.jetstream();
@@ -639,7 +639,7 @@ Deno.test("jetstream - pull next", async () => {
 });
 
 Deno.test("jetstream - pull errors", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const { stream, subj } = await initStream(nc);
   const jsm = await nc.jetstreamManager();
@@ -674,7 +674,7 @@ Deno.test("jetstream - pull errors", async () => {
 });
 
 Deno.test("jetstream - pull error: max_waiting", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.8.2")) {
     return;
   }
@@ -732,7 +732,7 @@ Deno.test("jetstream - pull error: js not enabled", async () => {
 });
 
 Deno.test("jetstream - ephemeral pull consumer", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const d = deferred<JsMsg>();
@@ -776,7 +776,7 @@ Deno.test("jetstream - ephemeral pull consumer", async () => {
 });
 
 Deno.test("jetstream - pull consumer max_bytes rejected on old servers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   // change the version of the server to fail pull with max bytes
@@ -1149,7 +1149,7 @@ Deno.test("jetstream - pull single filter", async () => {
 });
 
 Deno.test("jetstream - last of", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}, true));
+  const { ns, nc } = await setup(jetstreamServerConf({}));
   const jsm = await nc.jetstreamManager();
   const n = nuid.next();
   await jsm.streams.add({
