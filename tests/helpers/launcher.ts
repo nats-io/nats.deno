@@ -265,7 +265,6 @@ export class NatsServer implements PortInfo {
   rmDataDir() {
     if (typeof this.config?.jetstream?.store_dir === "string") {
       try {
-        console.log(`rmDataDir: ${this.config.jetstream.store_dir}`);
         Deno.removeSync(this.config.jetstream.store_dir, { recursive: true });
       } catch (err) {
         if (!(err instanceof Deno.errors.NotFound)) {
