@@ -331,7 +331,7 @@ export class NatsServer implements PortInfo {
     count = 4,
     debug = false,
   ): Promise<NatsServer[]> {
-    if (count < 3) {
+    if (count < 4) {
       return Promise.reject(new Error("data cluster must be 4 or greater"));
     }
     let servers = await NatsServer.jetstreamCluster(count, {}, debug);
@@ -349,7 +349,7 @@ export class NatsServer implements PortInfo {
   }
 
   static async jetstreamCluster(
-    count = 2,
+    count = 3,
     serverConf?: Record<string, unknown>,
     debug = false,
   ): Promise<NatsServer[]> {
@@ -504,8 +504,8 @@ export class NatsServer implements PortInfo {
     conf = conf || {};
     conf = Object.assign({}, conf);
     conf.cluster = conf.cluster || {};
-    conf.cluster.name = nuid.next();
-    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:4225";
+    conf.cluster.name = "C_" + nuid.next();
+    conf.cluster.listen = conf.cluster.listen || "127.0.0.1:-1";
 
     const ns = await NatsServer.start(conf, debug);
     const cluster = [ns];
@@ -617,7 +617,7 @@ export class NatsServer implements PortInfo {
       prefix: "nats-server_",
       suffix: ".conf",
     });
-    await Deno.writeFile(confFile, new TextEncoder().encode(toConf(conf)));
+    Deno.writeFileSync(confFile, new TextEncoder().encode(toConf(conf)));
     if (debug) {
       console.info(`${exe} -c ${confFile}`);
     }
@@ -653,7 +653,7 @@ export class NatsServer implements PortInfo {
           // ignore
         }
       },
-      1000,
+      5000,
       { name: `read ports file ${portsFile} - ${confFile}` },
     );
 

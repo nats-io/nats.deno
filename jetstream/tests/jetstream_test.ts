@@ -1103,7 +1103,7 @@ Deno.test("jetstream - mirror alternates", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
   if (await notCompatible(servers[0], nc, "2.8.2")) {
-    await NatsServer.stopAll([servers[1], servers[2]]);
+    await NatsServer.stopAll(servers, true);
     return;
   }
 
@@ -1213,22 +1213,8 @@ Deno.test("jetstream - detailed errors", async () => {
 });
 
 Deno.test("jetstream - repub on 503", async () => {
-  let servers = await NatsServer.jetstreamCluster(4, {});
-  servers[0].config.jetstream = "disabled";
-  await NatsServer.stopAll(servers);
-  const proms = servers.map((s) => {
-    return s.restart();
-  });
-
-  const connection = await proms[0];
-  const data = await NatsServer.dataClusterFormed([
-    proms[1],
-    proms[2],
-    proms[3],
-  ]);
-  servers = [connection, data[0], data[1], data[2]];
-
-  const nc = await connect({ port: connection.port });
+  let servers = await NatsServer.setupDataConnCluster(4);
+  const nc = await connect({ port: servers[0].port });
 
   const { stream, subj } = await initStream(nc, nuid.next(), {
     num_replicas: 3,
@@ -1346,7 +1332,7 @@ Deno.test("jetstream - mem_storage consumer option", async () => {
 });
 
 Deno.test("jetstream - num_replicas consumer option", async () => {
-  const servers = await NatsServer.jetstreamCluster(3);
+  const servers = await NatsServer.setupDataConnCluster();
   const nc = await connect({ port: servers[0].port });
   if (await notCompatible(servers[0], nc, "2.9.0")) {
     await NatsServer.stopAll(servers, true);

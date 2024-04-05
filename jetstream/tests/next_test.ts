@@ -28,7 +28,7 @@ import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { delay } from "../../nats-base-client/util.ts";
 
-Deno.test("consumers - next", async () => {
+Deno.test("next - basics", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream, subj } = await initStream(nc);
 
@@ -64,7 +64,7 @@ Deno.test("consumers - next", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - sub leaks next()", async () => {
+Deno.test("next - sub leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream } = await initStream(nc);
 
@@ -83,7 +83,7 @@ Deno.test("consumers - sub leaks next()", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - next listener leaks", async () => {
+Deno.test("next - listener leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "messages", subjects: ["hello"] });
@@ -118,7 +118,7 @@ Deno.test("consumers - next listener leaks", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - next consumer not found", async () => {
+Deno.test("next - consumer not found", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "A", subjects: ["hello"] });
@@ -145,7 +145,7 @@ Deno.test("consumers - next consumer not found", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - next deleted consumer", async () => {
+Deno.test("next - deleted consumer", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
   const jsm = await nc.jetstreamManager();
@@ -175,7 +175,7 @@ Deno.test("consumers - next deleted consumer", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - next stream not found", async () => {
+Deno.test("next - stream not found", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
   const jsm = await nc.jetstreamManager();
@@ -203,7 +203,7 @@ Deno.test("consumers - next stream not found", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - next consumer bind", async () => {
+Deno.test("next - consumer bind", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
   const jsm = await nc.jetstreamManager();

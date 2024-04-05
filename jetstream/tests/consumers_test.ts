@@ -185,11 +185,7 @@ Deno.test("consumers - push consumer not supported", async () => {
 });
 
 Deno.test("consumers - fetch heartbeats", async () => {
-  await consumerHbTest(true);
-});
-
-export async function consumerHbTest(fetch: boolean) {
-  const servers = await NatsServer.setupDataConnCluster();
+  const servers = await NatsServer.setupDataConnCluster(4);
 
   const nc = await connect({ port: servers[0].port });
   const { stream } = await initStream(nc);
@@ -201,24 +197,21 @@ export async function consumerHbTest(fetch: boolean) {
 
   const js = nc.jetstream();
   const c = await js.consumers.get(stream, "a");
-  const iter: ConsumerMessages = fetch
-    ? await c.fetch({
-      max_messages: 100,
-      idle_heartbeat: 1000,
-      expires: 30000,
-    })
-    : await c.consume({
-      max_messages: 100,
-      idle_heartbeat: 1000,
-      expires: 30000,
-    });
+  const iter: ConsumerMessages = await c.fetch({
+    max_messages: 100,
+    idle_heartbeat: 1000,
+    expires: 30000,
+  });
 
+  const buf: Promise<void>[] = [];
   // stop the data serverss
   setTimeout(() => {
-    servers[1].stop();
-    servers[2].stop();
-    servers[3].stop();
+    buf.push(servers[1].stop());
+    buf.push(servers[2].stop());
+    buf.push(servers[3].stop());
   }, 1000);
+
+  await Promise.all(buf);
 
   const d = deferred<ConsumerStatus>();
 
@@ -243,7 +236,7 @@ export async function consumerHbTest(fetch: boolean) {
 
   await nc.close();
   await NatsServer.stopAll(servers, true);
-}
+});
 
 Deno.test("consumers - bad options", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
