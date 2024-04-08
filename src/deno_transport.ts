@@ -33,7 +33,6 @@ import {
   ServerInfo,
   Transport,
 } from "../nats-base-client/internal_mod.ts";
-import StartTlsOptions = Deno.StartTlsOptions;
 
 const VERSION = "1.21.0";
 const LANG = "nats.deno";
@@ -134,7 +133,7 @@ export class DenoTransport implements Transport {
     return JSON.parse(m[1]) as ServerInfo;
   }
 
-  async loadTlsOptions(hostname: string): Promise<StartTlsOptions> {
+  async loadTlsOptions(hostname: string): Promise<Deno.StartTlsOptions> {
     const tls = this.options && this.options.tls
       ? this.options.tls
       : {} as TlsOptions;

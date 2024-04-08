@@ -1213,7 +1213,7 @@ Deno.test("jetstream - detailed errors", async () => {
 });
 
 Deno.test("jetstream - repub on 503", async () => {
-  let servers = await NatsServer.setupDataConnCluster(4);
+  const servers = await NatsServer.setupDataConnCluster(4);
   const nc = await connect({ port: servers[0].port });
 
   const { stream, subj } = await initStream(nc, nuid.next(), {
