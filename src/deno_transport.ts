@@ -63,13 +63,29 @@ export class DenoTransport implements Transport {
     options: ConnectionOptions,
   ) {
     this.options = options;
+
+    const { tls } = this.options;
+    const { handshakeFirst } = tls || {};
+
     try {
-      this.conn = await Deno.connect(hp);
+      if (handshakeFirst === true) {
+        const opts = await this.loadTlsOptions(hp.hostname);
+        const ctls = {
+          caCerts: opts.caCerts,
+          hostname: hp.hostname,
+          port: hp.port,
+        };
+        this.conn = await Deno.connectTls(ctls);
+        this.encrypted = true;
+        // do nothing yet.
+      } else {
+        this.conn = await Deno.connect(hp);
+      }
       const info = await this.peekInfo();
       checkOptions(info, this.options);
       const { tls_required: tlsRequired, tls_available: tlsAvailable } = info;
       const desired = tlsAvailable === true && options.tls !== null;
-      if (tlsRequired || desired) {
+      if (!handshakeFirst && (tlsRequired || desired)) {
         const tlsn = hp.tlsName ? hp.tlsName : hp.hostname;
         await this.startTLS(tlsn);
       }
@@ -117,7 +133,7 @@ export class DenoTransport implements Transport {
     return JSON.parse(m[1]) as ServerInfo;
   }
 
-  async startTLS(hostname: string): Promise<void> {
+  async loadTlsOptions(hostname: string): Promise<Deno.StartTlsOptions> {
     const tls = this.options && this.options.tls
       ? this.options.tls
       : {} as TlsOptions;
@@ -134,7 +150,11 @@ export class DenoTransport implements Transport {
       const ca = await Deno.readTextFile(tls.caFile);
       sto.caCerts = [ca];
     }
+    return sto;
+  }
 
+  async startTLS(hostname: string): Promise<void> {
+    const sto = await (this.loadTlsOptions(hostname));
     this.conn = await Deno.startTls(
       this.conn,
       sto,

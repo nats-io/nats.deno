@@ -8,7 +8,8 @@ lint:
 	deno lint --ignore=docs/
 
 test: clean
-	deno test --allow-all --unstable --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
+	deno test --allow-all --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
+	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage unsafe_tests/
 
 
 testw: clean
@@ -26,4 +27,4 @@ bundle:
 	deno bundle --log-level info --unstable src/mod.ts ./nats.js
 
 fmt:
-	deno fmt src/ doc/ bin/ nats-base-client/ examples/ tests/ debug/ jetstream/ jetstream.md README.md services.md
+	deno fmt src/ doc/ bin/ nats-base-client/ examples/ tests/ debug/ unsafe_tests/ jetstream/ jetstream.md README.md services.md

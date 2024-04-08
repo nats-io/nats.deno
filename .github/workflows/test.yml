@@ -52,7 +52,9 @@ jobs:
           TMPDIR: ${{ runner.temp }}
           CI: true
           NGS_CI_USER: ${{ secrets.NGS_CI_USER }}
-        run: deno test --allow-all --unstable --parallel --fail-fast --coverage=./cov
+        run: |
+          deno test --allow-all --unstable --parallel --fail-fast --coverage=./cov tests/ jetstream/tests 
+          deno test --allow-all --unstable --parallel --fail-fast --unsafely-ignore-certificate-errors --coverage=./cov unsafe_tests/ 
 
       - name: Build nats.js
         run: deno bundle --unstable src/connect.ts nats.js

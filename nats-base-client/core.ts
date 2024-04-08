@@ -1397,6 +1397,10 @@ export interface ConnectionOptions {
  * the client is requesting to only use connections that are secured by TLS.
  */
 export interface TlsOptions {
+  /**
+   * handshakeFirst option requires the server to be configured with `handshakeFirst: true`.
+   */
+  handshakeFirst?: boolean;
   certFile?: string;
   cert?: string;
   caFile?: string;
