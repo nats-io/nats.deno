@@ -8,7 +8,8 @@ lint:
 	deno lint --ignore=docs/
 
 test: clean
-	deno test --allow-all --unstable --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
+	deno test --allow-all --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
+	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage unsafe_tests/
 
 
 testw: clean
