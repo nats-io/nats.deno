@@ -36,6 +36,7 @@ import { ServiceClientImpl } from "./serviceclient.ts";
 import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
 import {
   ConnectionOptions,
+  Context,
   createInbox,
   ErrorCode,
   JetStreamManagerOptions,
@@ -475,6 +476,16 @@ export class NatsConnectionImpl implements NatsConnection {
 
   get info(): ServerInfo | undefined {
     return this.protocol.isClosed() ? undefined : this.protocol.info;
+  }
+
+  async context(): Promise<Context> {
+    const r = await this.request(`$SYS.REQ.USER.INFO`);
+    return r.json<Context>((key, value) => {
+      if (key === "time") {
+        return new Date(Date.parse(value));
+      }
+      return value;
+    });
   }
 
   stats(): Stats {
