@@ -131,12 +131,15 @@ Deno.test("next - consumer not found", async () => {
 
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
+  (nc as NatsConnectionImpl).options.debug = true;
   await c.delete();
+  console.log("----- waiting one second -----");
   await delay(1000);
+  console.log("----- after one second -----");
 
   const exited = assertRejects(
-    async () => {
-      await c.next({ expires: 1000 });
+    () => {
+      return c.next({ expires: 1000 });
     },
     Error,
     "consumer not found",
