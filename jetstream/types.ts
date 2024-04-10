@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The NATS Authors
+ * Copyright 2023-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -1132,8 +1132,9 @@ export enum KvWatchInclude {
 export type KvWatchOptions = {
   /**
    * A key or wildcarded key following keys as if they were NATS subject names.
+   * Note you can specify multiple keys if running on server 2.10.x or better.
    */
-  key?: string;
+  key?: string | string[];
   /**
    * Notification should only include entry headers
    */
@@ -1173,9 +1174,10 @@ export interface RoKV {
 
   /**
    * Returns an iterator of the specified key's history (or all keys).
+   * Note you can specify multiple keys if running on server 2.10.x or better.
    * @param opts
    */
-  history(opts?: { key?: string }): Promise<QueuedIterator<KvEntry>>;
+  history(opts?: { key?: string | string[] }): Promise<QueuedIterator<KvEntry>>;
 
   /**
    * Returns an iterator that will yield KvEntry updates as they happen.

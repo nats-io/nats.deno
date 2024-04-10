@@ -301,6 +301,31 @@ Deno.test("kv - history", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("kv - history multiple keys", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}),
+  );
+  const n = nuid.next();
+  const js = nc.jetstream();
+  const bucket = await js.views.kv(n, { history: 2 });
+
+  await bucket.put("A", Empty);
+  await bucket.put("B", Empty);
+  await bucket.put("C", Empty);
+  await bucket.put("D", Empty);
+
+  const iter = await bucket.history({ key: ["A", "D"] });
+  const buf = [];
+  for await (const e of iter) {
+    buf.push(e.key);
+  }
+
+  assertEquals(buf.length, 2);
+  assertArrayIncludes(buf, ["A", "D"]);
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("kv - cleanups/empty", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
@@ -1804,6 +1829,38 @@ Deno.test("kv - watch updates only", async () => {
 
   assertEquals(notifications.length, 1);
   assertEquals(notifications[0], "c");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("kv - watch multiple keys", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}));
+
+  const js = nc.jetstream();
+  const kv = await js.views.kv("K");
+
+  await kv.put("a", "a");
+  await kv.put("b", "b");
+  await kv.put("c", "c");
+
+  const d = deferred();
+  const iter = await kv.watch({
+    key: ["a", "c"],
+    initializedFn: () => {
+      d.resolve();
+    },
+  });
+
+  const notifications: string[] = [];
+  (async () => {
+    for await (const e of iter) {
+      notifications.push(e.key);
+    }
+  })().then();
+  await d;
+
+  assertEquals(notifications.length, 2);
+  assertArrayIncludes(notifications, ["a", "c"]);
 
   await cleanup(ns, nc);
 });
