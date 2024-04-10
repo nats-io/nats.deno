@@ -22,6 +22,7 @@ import {
   MsgHdrs,
   NatsError,
   Publisher,
+  RequestInfo,
   ReviverFn,
 } from "./core.ts";
 
@@ -112,5 +113,21 @@ export class MsgImpl implements Msg {
 
   string(): string {
     return TD.decode(this.data);
+  }
+
+  requestInfo(): RequestInfo | null {
+    const v = this.headers?.get("Nats-Request-Info");
+    if (v) {
+      return JSON.parse(
+        v,
+        function (this: unknown, key: string, value: unknown): unknown {
+          if ((key === "start" || key === "stop") && value !== "") {
+            return new Date(Date.parse(value as string));
+          }
+          return value;
+        },
+      ) as RequestInfo;
+    }
+    return null;
   }
 }

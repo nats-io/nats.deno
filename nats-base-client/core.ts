@@ -1434,3 +1434,64 @@ export enum ServiceVerb {
   STATS = "STATS",
   INFO = "INFO",
 }
+
+export type Context = {
+  server: ContextServer;
+  data: ContextUser;
+};
+
+export type ContextServer = {
+  name: string;
+  host: string;
+  id: string;
+  version: string;
+  tags: string[];
+  jetstream: boolean;
+  flags: number;
+  seq: number;
+  time: Date;
+};
+
+export type ContextUser = {
+  user: string;
+  account: string;
+  permissions?: {
+    publish?: ContextPermission;
+    subscribe?: ContextPermission;
+    responses?: ContextResponsePermission;
+  };
+};
+
+export type ContextPermission = {
+  deny?: string[];
+  allow?: string[];
+};
+
+export type ContextResponsePermission = {
+  max: number;
+  ttl: number;
+};
+
+export type RequestInfo = {
+  acc: string;
+  rtt: number;
+  start?: Date;
+  host?: string;
+  id?: string;
+  svc?: string;
+  user?: string;
+  name?: string;
+  lang?: string;
+  ver?: string;
+  server?: string;
+  cluster?: string;
+  alts?: string[];
+  stop?: Date;
+  jwt?: string;
+  issuer_key?: string;
+  name_tag?: string;
+  tags?: string[];
+  client_type?: string;
+  client_id?: string;
+  nonce?: string;
+};

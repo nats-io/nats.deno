@@ -14,6 +14,7 @@
  */
 
 import {
+  assertArrayIncludes,
   assertEquals,
   assertRejects,
   fail,
@@ -39,6 +40,7 @@ import {
 import { assertErrorCode, cleanup, NatsServer, setup } from "./helpers/mod.ts";
 import {
   deferred,
+  MsgImpl,
   NatsConnectionImpl,
   nkeys,
 } from "../nats-base-client/internal_mod.ts";
@@ -144,11 +146,11 @@ Deno.test("auth - sub no permissions keeps connection", async () => {
   }, { user: "a", pass: "a", reconnect: false });
 
   const errStatus = deferred<Status>();
-  const _ = (async () => {
+  (async () => {
     for await (const s of nc.status()) {
       errStatus.resolve(s);
     }
-  })();
+  })().then();
 
   const cbErr = deferred<Error | null>();
   const sub = nc.subscribe("bar", {
@@ -180,11 +182,11 @@ Deno.test("auth - sub iterator no permissions keeps connection", async () => {
   }, { user: "a", pass: "a", reconnect: false });
 
   const errStatus = deferred<Status>();
-  const _ = (async () => {
+  (async () => {
     for await (const s of nc.status()) {
       errStatus.resolve(s);
     }
-  })();
+  })().then();
 
   const iterErr = deferred<Error | null>();
   const sub = nc.subscribe("bar");
@@ -222,11 +224,11 @@ Deno.test("auth - pub permissions keep connection", async () => {
   }, { user: "a", pass: "a", reconnect: false });
 
   const errStatus = deferred<Status>();
-  const _ = (async () => {
+  (async () => {
     for await (const s of nc.status()) {
       errStatus.resolve(s);
     }
-  })();
+  })().then();
 
   nc.publish("bar");
 
@@ -249,11 +251,11 @@ Deno.test("auth - req permissions keep connection", async () => {
   }, { user: "a", pass: "a", reconnect: false });
 
   const errStatus = deferred<Status>();
-  const _ = (async () => {
+  (async () => {
     for await (const s of nc.status()) {
       errStatus.resolve(s);
     }
-  })();
+  })().then();
 
   const err = await assertRejects(
     async () => {
@@ -1193,4 +1195,60 @@ Deno.test("auth - creds and un and pw and token", async () => {
   await nc.flush();
   await nc.close();
   await ns.stop();
+});
+
+Deno.test("auth - request context", async () => {
+  const { ns, nc } = await setup({
+    accounts: {
+      S: {
+        users: [{
+          user: "s",
+          password: "s",
+          permission: {
+            subscribe: ["q.>", "_INBOX.>"],
+            publish: "$SYS.REQ.USER.INFO",
+            allow_responses: true,
+          },
+        }],
+        exports: [
+          { service: "q.>" },
+        ],
+      },
+      A: {
+        users: [{ user: "a", password: "a" }],
+        imports: [
+          { service: { subject: "q.>", account: "S" } },
+        ],
+      },
+    },
+  }, { user: "s", pass: "s" });
+
+  const srv = await (nc as NatsConnectionImpl).context();
+  assertEquals(srv.data.user, "s");
+  assertEquals(srv.data.account, "S");
+  assertArrayIncludes(srv.data.permissions?.publish?.allow || [], [
+    "$SYS.REQ.USER.INFO",
+  ]);
+  assertArrayIncludes(srv.data.permissions?.subscribe?.allow || [], [
+    "q.>",
+    "_INBOX.>",
+  ]);
+  assertEquals(srv.data.permissions?.responses?.max, 1);
+
+  nc.subscribe("q.>", {
+    callback(err, msg) {
+      if (err) {
+        fail(err.message);
+      }
+      const info = (msg as MsgImpl).requestInfo();
+      assertEquals(info?.acc, "A");
+      msg.respond();
+    },
+  });
+
+  const a = await connect({ user: "a", pass: "a", port: ns.port });
+  console.log(await (a as NatsConnectionImpl).context());
+  await a.request("q.hello");
+
+  await cleanup(ns, nc, a);
 });

@@ -811,7 +811,7 @@ The following is the list of connection options and default values.
 ### TlsOptions
 
 | Option           | Default | Description                                                                                                                     |
-| ---------------- | ------- |---------------------------------------------------------------------------------------------------------------------------------|
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `ca`             | N/A     | CA certificate                                                                                                                  |
 | `caFile`         |         | CA certificate filepath                                                                                                         |
 | `cert`           | N/A     | Client certificate                                                                                                              |
