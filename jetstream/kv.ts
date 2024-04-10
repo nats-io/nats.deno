@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -639,12 +639,16 @@ export class Bucket implements KV, KvRemove {
   }
 
   _buildCC(
-    k: string,
+    k: string | string[],
     content: KvWatchInclude,
     opts: Partial<ConsumerConfig> = {},
   ): Partial<ConsumerConfig> {
-    const ek = this.encodeKey(k);
-    this.validateSearchKey(k);
+    const a = !Array.isArray(k) ? [k] : k;
+    let filter_subjects: string[] | undefined = a.map((k) => {
+      const ek = this.encodeKey(k);
+      this.validateSearchKey(k);
+      return this.fullKeyName(ek);
+    });
 
     let deliver_policy = DeliverPolicy.LastPerSubject;
     if (content === KvWatchInclude.AllHistory) {
@@ -654,10 +658,17 @@ export class Bucket implements KV, KvRemove {
       deliver_policy = DeliverPolicy.New;
     }
 
+    let filter_subject: undefined | string = undefined;
+    if (filter_subjects.length === 1) {
+      filter_subject = filter_subjects[0];
+      filter_subjects = undefined;
+    }
+
     return Object.assign({
       deliver_policy,
       "ack_policy": AckPolicy.None,
-      "filter_subject": this.fullKeyName(ek),
+      filter_subjects,
+      filter_subject,
       "flow_control": true,
       "idle_heartbeat": nanos(5 * 1000),
     }, opts) as Partial<ConsumerConfig>;
@@ -668,7 +679,7 @@ export class Bucket implements KV, KvRemove {
   }
 
   async history(
-    opts: { key?: string; headers_only?: boolean } = {},
+    opts: { key?: string | string[]; headers_only?: boolean } = {},
   ): Promise<QueuedIterator<KvEntry>> {
     const k = opts.key ?? ">";
     const qi = new QueuedIteratorImpl<KvEntry>();
