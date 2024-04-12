@@ -88,6 +88,7 @@ export type {
   NKeyAuth,
   NoAuth,
   Payload,
+  Publisher,
   PublishOptions,
   QueuedIterator,
   Request,

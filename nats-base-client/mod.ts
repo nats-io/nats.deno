@@ -64,6 +64,7 @@ export type {
   Payload,
   Perf,
   ProtocolFilterFn,
+  Publisher,
   PublishOptions,
   QueuedIterator,
   RequestManyOptions,
