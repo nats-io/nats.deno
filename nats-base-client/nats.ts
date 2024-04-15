@@ -126,6 +126,13 @@ export class NatsConnectionImpl implements NatsConnection {
     this.protocol.publish(subject, data, options);
   }
 
+  publishMessage(msg: Msg) {
+    return this.publish(msg.subject, msg.data, {
+      reply: msg.reply,
+      headers: msg.headers,
+    });
+  }
+
   subscribe(
     subject: string,
     opts: SubscriptionOptions = {},

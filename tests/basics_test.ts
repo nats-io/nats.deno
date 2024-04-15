@@ -51,11 +51,17 @@ import {
   headers,
   isIP,
   NatsConnectionImpl,
+  Payload,
+  PublishOptions,
   RequestStrategy,
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { syncIterator } from "../nats-base-client/core.ts";
+import {
+  MsgHdrs,
+  Publisher,
+} from "https://deno.land/x/nats@v1.18.0/nats-base-client/core.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();
@@ -1374,3 +1380,63 @@ Deno.test("basics - sync subscription", async () => {
 
   await cleanup(ns, nc);
 });
+
+
+
+Deno.test("basics - respond message", async () => {
+  const { ns, nc } = await setup();
+  const sub = nc.subscribe("q");
+
+  const nis = new MM(nc);
+  nis.data = new TextEncoder().encode("not in service");
+
+  (async () => {
+    for await (const m of sub) {
+      if (m.reply) {
+        nis.subject = m.reply;
+        nc.publishMessage(nis);
+      }
+    }
+  })().then();
+
+  const r = await nc.request("q");
+  assertEquals(r.string(), "not in service");
+
+  await cleanup(ns, nc);
+});
+
+
+class MM implements Msg {
+  data!: Uint8Array;
+  sid: number;
+  subject!: string;
+  reply?: string;
+  headers?: MsgHdrs;
+  publisher: Publisher;
+
+  constructor(p: Publisher) {
+    this.publisher = p;
+    this.sid = -1;
+  }
+
+  json<T>(): T {
+    throw new Error("not implemented");
+  }
+
+  respond(payload?: Payload, opts?: PublishOptions): boolean {
+    if (!this.reply) {
+      return false;
+    }
+    payload = payload || Empty;
+    this.publisher.publish(this.reply, payload, opts);
+    return true;
+  }
+
+  respondMessage(m: Msg): boolean {
+    return this.respond(m.data, { headers: m.headers, reply: m.reply });
+  }
+
+  string(): string {
+    return "";
+  }
+}
