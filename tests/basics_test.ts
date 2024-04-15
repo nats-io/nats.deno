@@ -1381,8 +1381,6 @@ Deno.test("basics - sync subscription", async () => {
   await cleanup(ns, nc);
 });
 
-
-
 Deno.test("basics - respond message", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("q");
@@ -1404,7 +1402,6 @@ Deno.test("basics - respond message", async () => {
 
   await cleanup(ns, nc);
 });
-
 
 class MM implements Msg {
   data!: Uint8Array;
