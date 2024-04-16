@@ -133,6 +133,17 @@ export class NatsConnectionImpl implements NatsConnection {
     });
   }
 
+  respondMessage(msg: Msg) {
+    if (msg.reply) {
+      this.publish(msg.reply, msg.data, {
+        reply: msg.reply,
+        headers: msg.headers,
+      });
+      return true;
+    }
+    return false;
+  }
+
   subscribe(
     subject: string,
     opts: SubscriptionOptions = {},

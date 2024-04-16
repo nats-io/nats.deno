@@ -1381,7 +1381,7 @@ Deno.test("basics - sync subscription", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("basics - respond message", async () => {
+Deno.test("basics - publish message", async () => {
   const { ns, nc } = await setup();
   const sub = nc.subscribe("q");
 
@@ -1393,6 +1393,28 @@ Deno.test("basics - respond message", async () => {
       if (m.reply) {
         nis.subject = m.reply;
         nc.publishMessage(nis);
+      }
+    }
+  })().then();
+
+  const r = await nc.request("q");
+  assertEquals(r.string(), "not in service");
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - respond message", async () => {
+  const { ns, nc } = await setup();
+  const sub = nc.subscribe("q");
+
+  const nis = new MM(nc);
+  nis.data = new TextEncoder().encode("not in service");
+
+  (async () => {
+    for await (const m of sub) {
+      if (m.reply) {
+        nis.reply = m.reply;
+        nc.respondMessage(nis);
       }
     }
   })().then();
