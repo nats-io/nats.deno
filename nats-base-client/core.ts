@@ -550,6 +550,20 @@ export interface NatsConnection {
   ): void;
 
   /**
+   * Publishes using the subject of the specified message, specifying the
+   * data, headers and reply found in the message if any.
+   * @param msg
+   */
+  publishMessage(msg: Msg): void;
+
+  /**
+   * Replies using the reply subject of the specified message, specifying the
+   * data, headers in the message if any.
+   * @param msg
+   */
+  respondMessage(msg: Msg): boolean;
+
+  /**
    * Subscribe expresses interest in the specified subject. The subject may
    * have wildcards. Messages are delivered to the {@link SubOpts#callback |SubscriptionOptions callback}
    * if specified. Otherwise, the subscription is an async iterator for {@link Msg}.
