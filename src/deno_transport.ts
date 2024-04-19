@@ -156,6 +156,7 @@ export class DenoTransport implements Transport {
   async startTLS(hostname: string): Promise<void> {
     const sto = await (this.loadTlsOptions(hostname));
     this.conn = await Deno.startTls(
+      //@ts-ignore: just the conn
       this.conn,
       sto,
     );

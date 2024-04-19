@@ -58,8 +58,9 @@ import {
 import { JsMsg } from "./jsmsg.ts";
 import { BaseApiClient } from "./jsbaseclient_api.ts";
 import { ConsumerAPI } from "./jsmconsumer_api.ts";
-import { nanos, validateDurableName } from "./jsutil.ts";
+import { validateDurableName } from "./jsutil.ts";
 import { Lister } from "./jslister.ts";
+import { nanos } from "../nats-base-client/util.ts";
 
 /**
  * The response returned by the JetStream server when a message is added to a stream.

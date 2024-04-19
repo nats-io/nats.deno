@@ -24,9 +24,8 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { delay } from "../../nats-base-client/util.ts";
+import { delay, nanos } from "../../nats-base-client/util.ts";
 
 Deno.test("next - basics", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

@@ -38,7 +38,7 @@ import {
   fail,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
-import { checkJsError, nanos } from "../jsutil.ts";
+import { checkJsError } from "../jsutil.ts";
 import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
 import {
   consumerOpts,
@@ -46,7 +46,7 @@ import {
   JetStreamSubscriptionInfoable,
   PubAck,
 } from "../types.ts";
-import { deferred, delay } from "../../nats-base-client/util.ts";
+import { deferred, delay, nanos } from "../../nats-base-client/util.ts";
 import {
   DebugEvents,
   ErrorCode,

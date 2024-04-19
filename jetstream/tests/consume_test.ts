@@ -28,8 +28,12 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
-import { deadline, deferred, delay } from "../../nats-base-client/util.ts";
-import { nanos } from "../jsutil.ts";
+import {
+  deadline,
+  deferred,
+  delay,
+  nanos,
+} from "../../nats-base-client/util.ts";
 import {
   ConsumerEvents,
   ConsumerStatus,

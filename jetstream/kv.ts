@@ -21,7 +21,6 @@ import {
   Payload,
   QueuedIterator,
 } from "../nats-base-client/core.ts";
-import { millis, nanos } from "./jsutil.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { headers } from "../nats-base-client/headers.ts";
 import {
@@ -47,7 +46,7 @@ import {
   StoredMsg,
 } from "./types.ts";
 import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
-import { deferred } from "../nats-base-client/util.ts";
+import { deferred, millis, nanos } from "../nats-base-client/util.ts";
 import { Empty } from "../nats-base-client/encoders.ts";
 import {
   AckPolicy,

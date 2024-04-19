@@ -16,12 +16,13 @@ import {
   backoff,
   deferred,
   delay,
+  nanos,
   Timeout,
   timeout,
 } from "../nats-base-client/util.ts";
 import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
-import { isHeartbeatMsg, nanos } from "./jsutil.ts";
+import { isHeartbeatMsg } from "./jsutil.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import {
   createInbox,
