@@ -160,6 +160,7 @@ Deno.test("next - deleted consumer", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
 
+  (nc as NatsConnectionImpl).options.debug = true;
   const exited = assertRejects(
     () => {
       return c.next({ expires: 4000 });
@@ -190,7 +191,9 @@ Deno.test("next - stream not found", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
 
+  (nc as NatsConnectionImpl).options.debug = true;
   await jsm.streams.delete("A");
+  await delay(1000);
 
   await assertRejects(
     () => {
