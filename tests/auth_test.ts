@@ -979,6 +979,8 @@ Deno.test("auth - mux sub ok", async () => {
   });
 
   await proms;
+  await Promise.all([nc.flush(), sc.flush()]);
+
   await nc.request("q");
   await cleanup(ns, nc, sc);
 });
