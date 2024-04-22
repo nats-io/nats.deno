@@ -98,6 +98,7 @@ import {
   PullOptions,
   ReplayPolicy,
 } from "./jsapi_types.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
 
 export enum PubHeaders {
   MsgIdHdr = "Nats-Msg-Id",
@@ -775,6 +776,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
     const nci = this.js.nc;
     nci._resub(this.sub, newDeliver);
     const info = this.info;
+    info.config.name = nuid.next();
     info.ordered_consumer_sequence.delivery_seq = 0;
     info.flow_control.heartbeat_count = 0;
     info.flow_control.fc_count = 0;
@@ -842,6 +844,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
         // reset the consumer
         const seq = this.info?.ordered_consumer_sequence?.stream_seq || 0;
         this._resetOrderedConsumer(seq + 1);
+        this.monitor?.restart();
         // if we are ordered, we will reset the consumer and keep
         // feeding the iterator or callback - we are not stopping
         return false;

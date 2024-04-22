@@ -157,7 +157,7 @@ export class DenoTransport implements Transport {
     const sto = await (this.loadTlsOptions(hostname));
     this.conn = await Deno.startTls(
       //@ts-ignore: just the conn
-      this.conn,
+      this.conn as Deno.TcpConn,
       sto,
     );
     // this is necessary because the startTls process doesn't
