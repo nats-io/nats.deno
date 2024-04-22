@@ -2134,3 +2134,33 @@ Deno.test("kv - honors checkAPI option", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - watcher on server restart", async () => {
+  let { ns, nc } = await setup(
+    jetstreamServerConf({}),
+  );
+  const js = nc.jetstream();
+  const kv = await js.views.kv("A");
+  const iter = await kv.watch();
+  const d = deferred<KvEntry>();
+  (async () => {
+    for await (const e of iter) {
+      d.resolve(e);
+      break;
+    }
+  })().then();
+
+  ns = await ns.restart();
+  console.log("server restarted");
+  for (let i = 0; i < 10; i++) {
+    try {
+      await kv.put("hello", "world");
+      break;
+    } catch {
+      await delay(500);
+    }
+  }
+
+  await d;
+  await cleanup(ns, nc);
+});

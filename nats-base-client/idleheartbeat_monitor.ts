@@ -78,6 +78,7 @@ export class IdleHeartbeatMonitor {
     }
     this.timer = 0;
     this.autoCancelTimer = 0;
+    this.missed = 0;
   }
 
   /**
