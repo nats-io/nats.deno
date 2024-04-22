@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,13 +19,12 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { deferred } from "../../nats-base-client/mod.ts";
+import { deferred, nanos } from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
   ConsumerMessages,
   DeliverPolicy,
-  nanos,
   PullOptions,
 } from "../mod.ts";
 import { NatsServer } from "../../tests/helpers/launcher.ts";

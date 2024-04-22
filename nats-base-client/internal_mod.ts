@@ -15,6 +15,8 @@ export {
   deferred,
   delay,
   extend,
+  millis,
+  nanos,
   render,
   timeout,
 } from "./util.ts";

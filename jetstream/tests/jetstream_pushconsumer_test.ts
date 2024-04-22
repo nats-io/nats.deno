@@ -55,16 +55,11 @@ import {
 } from "../jsapi_types.ts";
 import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
-import { deferred, delay } from "../../nats-base-client/util.ts";
+import { deferred, delay, nanos } from "../../nats-base-client/util.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 import { JsMsg } from "../jsmsg.ts";
 import { connect } from "../../src/connect.ts";
-import {
-  isFlowControlMsg,
-  isHeartbeatMsg,
-  Js409Errors,
-  nanos,
-} from "../jsutil.ts";
+import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
 import { JetStreamSubscriptionImpl } from "../jsclient.ts";
 
 Deno.test("jetstream - ephemeral push", async () => {

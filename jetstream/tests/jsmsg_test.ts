@@ -23,10 +23,10 @@ import {
   createInbox,
   Empty,
   Msg,
+  nanos,
   StorageType,
   StringCodec,
 } from "../../src/mod.ts";
-import { nanos } from "../jsutil.ts";
 import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
   cleanup,

@@ -21,8 +21,6 @@ import {
   isHeartbeatMsg,
   isTerminal409,
   Js409Errors,
-  millis,
-  nanos,
   newJsErrorMsg,
   validateDurableName,
   validateStreamName,
@@ -39,7 +37,13 @@ import {
   IngestionFilterFnResult,
   QueuedIteratorImpl,
 } from "../nats-base-client/queued_iterator.ts";
-import { delay, Timeout, timeout } from "../nats-base-client/util.ts";
+import {
+  delay,
+  millis,
+  nanos,
+  Timeout,
+  timeout,
+} from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
 import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";

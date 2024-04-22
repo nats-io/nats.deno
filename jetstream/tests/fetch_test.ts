@@ -27,8 +27,7 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { StringCodec } from "../../nats-base-client/codec.ts";
-import { delay } from "../../nats-base-client/util.ts";
-import { nanos } from "../jsutil.ts";
+import { delay, nanos } from "../../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
 import { PullConsumerMessagesImpl } from "../consumer.ts";

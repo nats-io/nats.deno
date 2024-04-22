@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,10 +17,10 @@ import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
 import { MsgImpl } from "../nats-base-client/msg.ts";
 import { ProtocolHandler } from "../nats-base-client/protocol.ts";
 import { RequestOne } from "../nats-base-client/request.ts";
-import { nanos } from "./jsutil.ts";
 import { Msg, MsgHdrs, RequestOptions } from "../nats-base-client/core.ts";
 import { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
 import { deferred } from "../nats-base-client/mod.ts";
+import { nanos } from "../nats-base-client/util.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);

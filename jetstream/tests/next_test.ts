@@ -24,9 +24,8 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { nanos } from "../jsutil.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { delay } from "../../nats-base-client/util.ts";
+import { delay, nanos } from "../../nats-base-client/util.ts";
 
 Deno.test("next - basics", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
@@ -161,6 +160,7 @@ Deno.test("next - deleted consumer", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
 
+  (nc as NatsConnectionImpl).options.debug = true;
   const exited = assertRejects(
     () => {
       return c.next({ expires: 4000 });
@@ -191,7 +191,9 @@ Deno.test("next - stream not found", async () => {
   const js = nc.jetstream();
   const c = await js.consumers.get("A", "a");
 
+  (nc as NatsConnectionImpl).options.debug = true;
   await jsm.streams.delete("A");
+  await delay(1000);
 
   await assertRejects(
     () => {

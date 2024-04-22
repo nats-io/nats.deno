@@ -19,6 +19,7 @@ import {
   deferred,
   delay,
   Empty,
+  nanos,
   NatsConnection,
   NatsConnectionImpl,
   nuid,
@@ -34,7 +35,6 @@ import {
   KV,
   KvEntry,
   KvOptions,
-  nanos,
   StorageType,
 } from "../mod.ts";
 

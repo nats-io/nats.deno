@@ -12,12 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred } from "./util.ts";
+import { Deferred, deferred, nanos } from "./util.ts";
 import { headers } from "./headers.ts";
 import { JSONCodec } from "./codec.ts";
 import { nuid } from "./nuid.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
-import { nanos, validateName } from "../jetstream/jsutil.ts";
+import { validateName } from "../jetstream/jsutil.ts";
 import { parseSemVer } from "./semver.ts";
 import { Empty } from "./encoders.ts";
 import {

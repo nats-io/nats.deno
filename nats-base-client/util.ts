@@ -14,7 +14,7 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import { TD } from "./encoders.ts";
-import { ErrorCode, NatsError } from "./core.ts";
+import { ErrorCode, Nanos, NatsError } from "./core.ts";
 
 export type ValueResult<T> = {
   isError: false;
@@ -284,4 +284,20 @@ export function backoff(policy = [0, 250, 250, 500, 500, 3000, 5000]): Backoff {
       return jitter(attempt > max ? policy[max] : policy[attempt]);
     },
   };
+}
+
+/**
+ * Converts the specified millis into Nanos
+ * @param millis
+ */
+export function nanos(millis: number): Nanos {
+  return millis * 1000000;
+}
+
+/**
+ * Convert the specified Nanos into millis
+ * @param ns
+ */
+export function millis(ns: Nanos) {
+  return Math.floor(ns / 1000000);
 }
