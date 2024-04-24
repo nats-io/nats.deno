@@ -30,6 +30,7 @@ import {
   AckPolicy,
   ConsumerConfig,
   ConsumerInfo,
+  ConsumerUpdateConfig,
   defaultConsumer,
   DeliverPolicy,
   DirectBatchOptions,
@@ -51,10 +52,7 @@ import {
   StreamUpdateConfig,
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
-// import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
-import { ConsumerAPI } from "./jsmconsumer_api.ts";
 import { validateDurableName } from "./jsutil.ts";
-import { Lister } from "./jslister.ts";
 import { nanos } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Codec } from "../nats-base-client/codec.ts";
@@ -241,6 +239,17 @@ export interface Views {
   ) => Promise<ObjectStore>;
 }
 
+/**
+ * An interface for listing. Returns a promise with typed list.
+ */
+export interface Lister<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T>;
+
+  next(): Promise<T[]>;
+}
+
+export type ListerFieldFilter<T> = (v: unknown) => T[];
+
 export interface StreamAPI {
   /**
    * Returns the information about the specified stream
@@ -330,6 +339,59 @@ export interface StreamAPI {
    * @param name
    */
   get(name: string): Promise<Stream>;
+}
+
+export interface ConsumerAPI {
+  /**
+   * Returns the ConsumerInfo for the specified consumer in the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  info(stream: string, consumer: string): Promise<ConsumerInfo>;
+
+  /**
+   * Adds a new consumer to the specified stream with the specified consumer options.
+   * @param stream
+   * @param cfg
+   */
+  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
+
+  /**
+   * Updates the consumer configuration for the specified consumer on the specified
+   * stream that has the specified durable name.
+   * @param stream
+   * @param durable
+   * @param cfg
+   */
+  update(
+    stream: string,
+    durable: string,
+    cfg: Partial<ConsumerUpdateConfig>,
+  ): Promise<ConsumerInfo>;
+
+  /**
+   * Deletes the specified consumer name/durable from the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  delete(stream: string, consumer: string): Promise<boolean>;
+
+  /**
+   * Lists all the consumers on the specfied streams
+   * @param stream
+   */
+  list(stream: string): Lister<ConsumerInfo>;
+
+  pause(
+    stream: string,
+    name: string,
+    until?: Date,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
+
+  resume(
+    stream: string,
+    name: string,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
 }
 
 /**
