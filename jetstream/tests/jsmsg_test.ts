@@ -35,8 +35,8 @@ import {
   jetstreamServerConf,
   setup,
 } from "../../tests/helpers/mod.ts";
-import { JetStreamManagerImpl } from "../jsm.ts";
 import { MsgImpl } from "../../nats-base-client/msg.ts";
+import { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"

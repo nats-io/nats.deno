@@ -26,7 +26,6 @@ export {
   RepublishHeaders,
 } from "./types.ts";
 
-export { jetstreamManager } from "./jsm.ts";
 export { jetstream } from "./jsclient.ts";
 
 export {
@@ -157,3 +156,4 @@ export {
 
 export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
+export { jetstreamManager } from "./jsclient.ts";

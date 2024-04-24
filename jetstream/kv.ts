@@ -69,7 +69,6 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { JetStreamClientImpl } from "./jsclient.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
@@ -756,8 +755,8 @@ export class Bucket implements KV, KvRemove {
   }
 
   canSetWatcherName(): boolean {
-    const jsi = this.js as JetStreamClientImpl;
-    const nci = jsi.nc as NatsConnectionImpl;
+    //@ts-ignore: don't import JetStreamClientImpl
+    const nci = this.js.nc as NatsConnectionImpl;
     const { ok } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );
