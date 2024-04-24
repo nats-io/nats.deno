@@ -14,44 +14,30 @@
  */
 
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
-import { StreamAPIImpl } from "./jsmstream_api.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import {
-  Advisory,
-  AdvisoryKind,
   DirectMsg,
   DirectMsgHeaders,
   DirectStreamAPI,
-  JetStreamClient,
-  JetStreamManager,
-  JetStreamManagerOptions,
   JetStreamOptions,
   StoredMsg,
-  StreamAPI,
 } from "./types.ts";
 import {
-  ErrorCode,
   Msg,
   MsgHdrs,
   NatsConnection,
-  NatsError,
   QueuedIterator,
   RequestStrategy,
   ReviverFn,
 } from "../nats-base-client/core.ts";
 import {
-  AccountInfoResponse,
-  ApiResponse,
   DirectBatchOptions,
   DirectMsgRequest,
-  JetStreamAccountStats,
   LastForMsgRequest,
 } from "./jsapi_types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
 import { Empty, TD } from "../nats-base-client/encoders.ts";
 import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { jetstream } from "./jsclient.ts";
 
 export class DirectStreamAPIImpl extends BaseApiClientImpl
   implements DirectStreamAPI {
@@ -199,67 +185,5 @@ export class DirectMsgImpl implements DirectMsg {
 
   string(): string {
     return TD.decode(this.data);
-  }
-}
-
-export async function jetstreamManager(
-  nc: NatsConnection,
-  opts: JetStreamOptions | JetStreamManagerOptions = {},
-): Promise<JetStreamManager> {
-  const adm = new JetStreamManagerImpl(nc, opts);
-  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
-    try {
-      await adm.getAccountInfo();
-    } catch (err) {
-      const ne = err as NatsError;
-      if (ne.code === ErrorCode.NoResponders) {
-        ne.code = ErrorCode.JetStreamNotEnabled;
-      }
-      throw ne;
-    }
-  }
-  return adm;
-}
-
-export class JetStreamManagerImpl extends BaseApiClientImpl
-  implements JetStreamManager {
-  streams: StreamAPI;
-  consumers: ConsumerAPI;
-  direct: DirectStreamAPI;
-  constructor(nc: NatsConnection, opts?: JetStreamOptions) {
-    super(nc, opts);
-    this.streams = new StreamAPIImpl(nc, opts);
-    this.consumers = new ConsumerAPIImpl(nc, opts);
-    this.direct = new DirectStreamAPIImpl(nc, opts);
-  }
-
-  async getAccountInfo(): Promise<JetStreamAccountStats> {
-    const r = await this._request(`${this.prefix}.INFO`);
-    return r as AccountInfoResponse;
-  }
-
-  jetstream(): JetStreamClient {
-    return jetstream(this.nc, this.getOptions());
-  }
-
-  advisories(): AsyncIterable<Advisory> {
-    const iter = new QueuedIteratorImpl<Advisory>();
-    this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
-      callback: (err, msg) => {
-        if (err) {
-          throw err;
-        }
-        try {
-          const d = this.parseJsResponse(msg) as ApiResponse;
-          const chunks = d.type.split(".");
-          const kind = chunks[chunks.length - 1];
-          iter.push({ kind: kind as AdvisoryKind, data: d });
-        } catch (err) {
-          iter.stop(err);
-        }
-      },
-    });
-
-    return iter;
   }
 }

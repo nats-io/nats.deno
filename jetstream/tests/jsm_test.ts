@@ -71,11 +71,11 @@ import {
   encodeOperator,
   encodeUser,
 } from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { JetStreamManagerImpl } from "../jsm.ts";
 import { Feature } from "../../nats-base-client/semver.ts";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
 import { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
 import { ConsumerApiAction, StoreCompression } from "../jsapi_types.ts";
+import { JetStreamManagerImpl } from "../jsclient.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";

@@ -45,19 +45,21 @@ import {
   timeout,
 } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
-import { jetstreamManager } from "./jsm.ts";
 import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import {
+  Advisory,
+  AdvisoryKind,
   ConsumerInfoable,
   ConsumerOpts,
   consumerOpts,
   ConsumerOptsBuilder,
   Consumers,
   Destroyable,
+  DirectStreamAPI,
   isConsumerOptsBuilder,
   JetStreamClient,
   JetStreamManager,
@@ -76,6 +78,7 @@ import {
   ObjectStoreOptions,
   PubAck,
   Pullable,
+  StreamAPI,
   Streams,
   Views,
 } from "./types.ts";
@@ -91,16 +94,20 @@ import {
 } from "../nats-base-client/core.ts";
 import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
 import {
+  AccountInfoResponse,
   AckPolicy,
+  ApiResponse,
   ConsumerConfig,
   ConsumerInfo,
   CreateConsumerRequest,
   DeliverPolicy,
+  JetStreamAccountStats,
   PubHeaders,
   PullOptions,
   ReplayPolicy,
 } from "./jsapi_types.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
+import { DirectStreamAPIImpl } from "./jsm.ts";
 
 export function jetstream(
   nc: NatsConnection,
@@ -147,6 +154,69 @@ class ViewsImpl implements Views {
       );
     }
     return ObjectStoreImpl.create(this.js, name, opts);
+  }
+}
+
+export async function jetstreamManager(
+  nc: NatsConnection,
+  opts: JetStreamOptions | JetStreamManagerOptions = {},
+): Promise<JetStreamManager> {
+  const adm = new JetStreamManagerImpl(nc, opts);
+  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
+    try {
+      await adm.getAccountInfo();
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.code === ErrorCode.NoResponders) {
+        ne.code = ErrorCode.JetStreamNotEnabled;
+      }
+      throw ne;
+    }
+  }
+  return adm;
+}
+
+export class JetStreamManagerImpl extends BaseApiClientImpl
+  implements JetStreamManager {
+  streams: StreamAPI;
+  consumers: ConsumerAPI;
+  direct: DirectStreamAPI;
+
+  constructor(nc: NatsConnection, opts?: JetStreamOptions) {
+    super(nc, opts);
+    this.streams = new StreamAPIImpl(nc, opts);
+    this.consumers = new ConsumerAPIImpl(nc, opts);
+    this.direct = new DirectStreamAPIImpl(nc, opts);
+  }
+
+  async getAccountInfo(): Promise<JetStreamAccountStats> {
+    const r = await this._request(`${this.prefix}.INFO`);
+    return r as AccountInfoResponse;
+  }
+
+  jetstream(): JetStreamClient {
+    return jetstream(this.nc, this.getOptions());
+  }
+
+  advisories(): AsyncIterable<Advisory> {
+    const iter = new QueuedIteratorImpl<Advisory>();
+    this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
+      callback: (err, msg) => {
+        if (err) {
+          throw err;
+        }
+        try {
+          const d = this.parseJsResponse(msg) as ApiResponse;
+          const chunks = d.type.split(".");
+          const kind = chunks[chunks.length - 1];
+          iter.push({ kind: kind as AdvisoryKind, data: d });
+        } catch (err) {
+          iter.stop(err);
+        }
+      },
+    });
+
+    return iter;
   }
 }
 
