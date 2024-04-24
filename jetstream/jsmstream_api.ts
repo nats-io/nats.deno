@@ -15,7 +15,7 @@
 
 import { Empty, MsgHdrs } from "../nats-base-client/types.ts";
 import { BaseApiClientImpl, StreamNames } from "./jsbaseclient_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
 import { KvStatusImpl } from "./kv.ts";
@@ -26,10 +26,13 @@ import { Feature } from "../nats-base-client/semver.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
   Consumer,
+  ConsumerAPI,
   Consumers,
   JetStreamOptions,
   kvPrefix,
   KvStatus,
+  Lister,
+  ListerFieldFilter,
   ObjectStoreStatus,
   OrderedConsumerOptions,
   StoredMsg,
@@ -58,7 +61,7 @@ import {
   SuccessResponse,
 } from "./jsapi_types.ts";
 import { OrderedPullConsumerImpl, PullConsumerImpl } from "./consumer.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -463,10 +466,9 @@ export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
       if (kvStreams.length) {
         cluster = this.nc.info?.cluster ?? "";
       }
-      const status = kvStreams.map((si) => {
+      return kvStreams.map((si) => {
         return new KvStatusImpl(si, cluster);
       });
-      return status;
     };
     const subj = `${this.prefix}.STREAM.LIST`;
     return new ListerImpl<KvStatus>(subj, filter, this);
@@ -483,10 +485,9 @@ export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
       objStreams.forEach((si) => {
         this._fixInfo(si);
       });
-      const status = objStreams.map((si) => {
+      return objStreams.map((si) => {
         return new ObjectStoreStatusImpl(si);
       });
-      return status;
     };
     const subj = `${this.prefix}.STREAM.LIST`;
     return new ListerImpl<ObjectStoreStatus>(subj, filter, this);

@@ -25,7 +25,7 @@ import {
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { JsMsg, JsMsgImpl, toJsMsg } from "./jsmsg.ts";
 import {
   MsgAdapter,
@@ -53,6 +53,7 @@ import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import {
   Advisory,
   AdvisoryKind,
+  ConsumerAPI,
   ConsumerInfoable,
   ConsumerOpts,
   consumerOpts,

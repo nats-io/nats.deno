@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { ListerImpl } from "./jslister.ts";
 import {
   minValidation,
   validateDurableName,
@@ -32,60 +32,12 @@ import {
   SuccessResponse,
 } from "./jsapi_types.ts";
 
-import { JetStreamOptions } from "./types.ts";
-
-export interface ConsumerAPI {
-  /**
-   * Returns the ConsumerInfo for the specified consumer in the specified stream.
-   * @param stream
-   * @param consumer
-   */
-  info(stream: string, consumer: string): Promise<ConsumerInfo>;
-
-  /**
-   * Adds a new consumer to the specified stream with the specified consumer options.
-   * @param stream
-   * @param cfg
-   */
-  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
-
-  /**
-   * Updates the consumer configuration for the specified consumer on the specified
-   * stream that has the specified durable name.
-   * @param stream
-   * @param durable
-   * @param cfg
-   */
-  update(
-    stream: string,
-    durable: string,
-    cfg: Partial<ConsumerUpdateConfig>,
-  ): Promise<ConsumerInfo>;
-
-  /**
-   * Deletes the specified consumer name/durable from the specified stream.
-   * @param stream
-   * @param consumer
-   */
-  delete(stream: string, consumer: string): Promise<boolean>;
-
-  /**
-   * Lists all the consumers on the specfied streams
-   * @param stream
-   */
-  list(stream: string): Lister<ConsumerInfo>;
-
-  pause(
-    stream: string,
-    name: string,
-    until?: Date,
-  ): Promise<{ paused: boolean; pause_until?: string }>;
-
-  resume(
-    stream: string,
-    name: string,
-  ): Promise<{ paused: boolean; pause_until?: string }>;
-}
+import {
+  ConsumerAPI,
+  JetStreamOptions,
+  Lister,
+  ListerFieldFilter,
+} from "./types.ts";
 
 export class ConsumerAPIImpl extends BaseApiClientImpl implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {

@@ -20,17 +20,7 @@ import {
   ConsumerListResponse,
   StreamListResponse,
 } from "./jsapi_types.ts";
-
-/**
- * An interface for listing. Returns a promise with typed list.
- */
-export interface Lister<T> {
-  [Symbol.asyncIterator](): AsyncIterator<T>;
-
-  next(): Promise<T[]>;
-}
-
-export type ListerFieldFilter<T> = (v: unknown) => T[];
+import { Lister, ListerFieldFilter } from "./types.ts";
 
 export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   err?: Error;
@@ -85,8 +75,7 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
         return [];
       }
       this.offset += count;
-      const a = this.filter(r);
-      return a;
+      return this.filter(r);
     } catch (err) {
       this.err = err;
       throw err;
@@ -107,7 +96,6 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
         // has to be a stream...
         return (r as StreamListResponse).streams?.length || 0;
     }
-    return 0;
   }
 
   async *[Symbol.asyncIterator]() {

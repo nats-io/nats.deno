@@ -45,6 +45,7 @@ export type {
   ConsumeMessages,
   ConsumeOptions,
   Consumer,
+  ConsumerAPI,
   ConsumerCallbackFn,
   ConsumerInfoable,
   ConsumerMessages,
@@ -78,6 +79,7 @@ export type {
   KvPutOptions,
   KvStatus,
   KvWatchOptions,
+  Lister,
   MaxBytes,
   MaxMessages,
   NextOptions,
@@ -142,7 +144,6 @@ export type {
 } from "./jsapi_types.ts";
 
 export type { JsMsg } from "./jsmsg.ts";
-export type { Lister } from "./jslister.ts";
 
 export {
   AckPolicy,
@@ -154,6 +155,5 @@ export {
   StoreCompression,
 } from "./jsapi_types.ts";
 
-export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
 export { jetstreamManager } from "./jsclient.ts";

@@ -755,7 +755,7 @@ export class Bucket implements KV, KvRemove {
   }
 
   canSetWatcherName(): boolean {
-    //@ts-ignore: don't import JetStreamClientImpl
+    //@ts-ignore: avoiding circular dependencies
     const nci = this.js.nc as NatsConnectionImpl;
     const { ok } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
