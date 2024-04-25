@@ -110,11 +110,41 @@ import {
 import { nuid } from "../nats-base-client/nuid.ts";
 import { DirectStreamAPIImpl } from "./jsm.ts";
 
+/**
+ * Returns a {@link JetStreamClient} supported by the specified NatsConnection
+ * @param nc
+ * @param opts
+ */
 export function jetstream(
   nc: NatsConnection,
   opts: JetStreamManagerOptions = {},
 ): JetStreamClient {
   return new JetStreamClientImpl(nc, opts);
+}
+
+
+/**
+ * Returns a {@link JetStreamManager} supported by the specified NatsConnection
+ * @param nc
+ * @param opts
+ */
+export async function jetstreamManager(
+    nc: NatsConnection,
+    opts: JetStreamOptions | JetStreamManagerOptions = {},
+): Promise<JetStreamManager> {
+  const adm = new JetStreamManagerImpl(nc, opts);
+  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
+    try {
+      await adm.getAccountInfo();
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.code === ErrorCode.NoResponders) {
+        ne.code = ErrorCode.JetStreamNotEnabled;
+      }
+      throw ne;
+    }
+  }
+  return adm;
 }
 
 class ViewsImpl implements Views {
@@ -156,25 +186,6 @@ class ViewsImpl implements Views {
     }
     return ObjectStoreImpl.create(this.js, name, opts);
   }
-}
-
-export async function jetstreamManager(
-  nc: NatsConnection,
-  opts: JetStreamOptions | JetStreamManagerOptions = {},
-): Promise<JetStreamManager> {
-  const adm = new JetStreamManagerImpl(nc, opts);
-  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
-    try {
-      await adm.getAccountInfo();
-    } catch (err) {
-      const ne = err as NatsError;
-      if (ne.code === ErrorCode.NoResponders) {
-        ne.code = ErrorCode.JetStreamNotEnabled;
-      }
-      throw ne;
-    }
-  }
-  return adm;
 }
 
 export class JetStreamManagerImpl extends BaseApiClientImpl
