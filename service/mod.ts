@@ -23,3 +23,5 @@ export {
   ServiceResponseType,
   ServiceVerb,
 } from "./internal_mod.ts";
+
+export { Svc } from "./service.ts";
