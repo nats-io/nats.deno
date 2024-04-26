@@ -16,7 +16,7 @@
 import { deferred } from "./util.ts";
 import { ProtocolHandler, SubscriptionImpl } from "./protocol.ts";
 import { Empty } from "./encoders.ts";
-import { NatsError, ServiceClient } from "./types.ts";
+import { NatsError } from "./types.ts";
 
 import type { SemVer } from "./semver.ts";
 import { Features, parseSemVer } from "./semver.ts";
@@ -29,8 +29,6 @@ import {
   RequestOne,
 } from "./request.ts";
 import { isRequestError } from "./msg.ts";
-import { ServiceImpl } from "./service.ts";
-import { ServiceClientImpl } from "./serviceclient.ts";
 import {
   ConnectionOptions,
   Context,
@@ -45,9 +43,6 @@ import {
   RequestOptions,
   RequestStrategy,
   ServerInfo,
-  Service,
-  ServiceConfig,
-  ServicesAPI,
   Stats,
   Status,
   Subscription,
@@ -59,7 +54,6 @@ export class NatsConnectionImpl implements NatsConnection {
   protocol!: ProtocolHandler;
   draining: boolean;
   listeners: QueuedIterator<Status>[];
-  _services!: ServicesAPI;
 
   private constructor(opts: ConnectionOptions) {
     this.draining = false;
@@ -528,13 +522,6 @@ export class NatsConnectionImpl implements NatsConnection {
     return this.protocol.features;
   }
 
-  get services(): ServicesAPI {
-    if (!this._services) {
-      this._services = new ServicesFactory(this);
-    }
-    return this._services;
-  }
-
   reconnect(): Promise<void> {
     if (this.isClosed()) {
       return Promise.reject(
@@ -547,25 +534,5 @@ export class NatsConnectionImpl implements NatsConnection {
       );
     }
     return this.protocol.reconnect();
-  }
-}
-
-export class ServicesFactory implements ServicesAPI {
-  nc: NatsConnection;
-  constructor(nc: NatsConnection) {
-    this.nc = nc;
-  }
-
-  add(config: ServiceConfig): Promise<Service> {
-    try {
-      const s = new ServiceImpl(this.nc, config);
-      return s.start();
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  }
-
-  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
-    return new ServiceClientImpl(this.nc, opts, prefix);
   }
 }

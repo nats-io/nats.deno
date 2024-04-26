@@ -14,23 +14,23 @@
  */
 
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
+import { connect, NatsConnection, StringCodec } from "../../src/mod.ts";
+
 import {
-  connect,
-  NatsConnection,
   ServiceError,
   ServiceIdentity,
   ServiceInfo,
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
-  StringCodec,
-} from "../../src/mod.ts";
+} from "../mod.ts";
 
 import { collect } from "../../nats-base-client/util.ts";
-import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
+import { ServiceClientImpl } from "../serviceclient.ts";
 import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
 
 import { parseSemVer } from "../../nats-base-client/semver.ts";
+import { Svc } from "../service.ts";
 
 const ajv = new Ajv();
 
@@ -137,7 +137,8 @@ async function checkPing(nc: NatsConnection, name: string) {
 }
 
 async function invoke(nc: NatsConnection, name: string): Promise<void> {
-  const sc = nc.services.client();
+  const svc = new Svc(nc);
+  const sc = svc.client();
   const infos = await collect(await sc.info(name));
 
   let proms = infos.map((v) => {
@@ -199,7 +200,8 @@ async function check<T extends ServiceIdentity>(
     }
   };
 
-  const sc = nc.services.client() as ServiceClientImpl;
+  const svc = new Svc(nc);
+  const sc = svc.client() as ServiceClientImpl;
   // all
   let responses = filter(
     name,

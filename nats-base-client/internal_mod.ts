@@ -1,7 +1,7 @@
 export { NatsConnectionImpl } from "./nats.ts";
 export { Nuid, nuid } from "./nuid.ts";
 
-export type { ServiceClient, TypedSubscriptionOptions } from "./types.ts";
+export type { TypedSubscriptionOptions } from "./types.ts";
 
 export { MsgImpl } from "./msg.ts";
 export { setTransportFactory } from "./transport.ts";
@@ -71,14 +71,9 @@ export type {
   Authenticator,
   ConnectionOptions,
   Dispatcher,
-  Endpoint,
-  EndpointInfo,
-  EndpointOptions,
-  EndpointStats,
   JwtAuth,
   Msg,
   MsgHdrs,
-  NamedEndpointStats,
   Nanos,
   NatsConnection,
   NKeyAuth,
@@ -94,17 +89,6 @@ export type {
   Server,
   ServerInfo,
   ServersChanged,
-  Service,
-  ServiceConfig,
-  ServiceGroup,
-  ServiceHandler,
-  ServiceIdentity,
-  ServiceInfo,
-  ServiceMetadata,
-  ServiceMsg,
-  ServiceResponse,
-  ServicesAPI,
-  ServiceStats,
   Stats,
   Status,
   Sub,
@@ -125,11 +109,6 @@ export {
   Match,
   NatsError,
   RequestStrategy,
-  ServiceError,
-  ServiceErrorCodeHeader,
-  ServiceErrorHeader,
-  ServiceResponseType,
-  ServiceVerb,
   syncIterator,
 } from "./core.ts";
 export { SubscriptionImpl, Subscriptions } from "./protocol.ts";

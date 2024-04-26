@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "./helpers/mod.ts";
-import { ServiceImpl } from "../nats-base-client/service.ts";
+import { cleanup, setup } from "../../tests/helpers/mod.ts";
+import { ServiceImpl, Svc } from "../service.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -24,19 +24,10 @@ import {
   fail,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 
-import { collect, delay } from "../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { collect, delay } from "../../nats-base-client/util.ts";
+import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import {
-  connect,
-  createInbox,
   EndpointInfo,
-  ErrorCode,
-  JSONCodec,
-  Msg,
-  NatsConnection,
-  NatsError,
-  nuid,
-  QueuedIterator,
   Service,
   ServiceConfig,
   ServiceError,
@@ -47,9 +38,20 @@ import {
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
+} from "../types.ts";
+import {
+  connect,
+  createInbox,
+  ErrorCode,
+  JSONCodec,
+  Msg,
+  NatsConnection,
+  NatsError,
+  nuid,
+  QueuedIterator,
   StringCodec,
-} from "../src/mod.ts";
-import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
+} from "../../src/mod.ts";
+import { SubscriptionImpl } from "../../nats-base-client/protocol.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -72,10 +74,11 @@ Deno.test("service - control subject", () => {
 
 Deno.test("service - bad name", async () => {
   const { ns, nc } = await setup({}, {});
+  const svc = new Svc(nc);
   const t = async (name: string, msg: string) => {
     await assertRejects(
       async () => {
-        await nc.services.add({
+        await svc.add({
           name: name,
           version: "1.0.0",
         });
@@ -96,7 +99,9 @@ Deno.test("service - client", async () => {
   const { ns, nc } = await setup({}, {});
   const sc = StringCodec();
   const subj = createInbox();
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+
+  const srv = await svc.add({
     name: "test",
     version: "1.0.0",
     description: "responds with hello",
@@ -111,7 +116,7 @@ Deno.test("service - client", async () => {
   await nc.request(subj);
   await nc.request(subj);
 
-  const m = nc.services.client();
+  const m = svc.client();
 
   function verifyIdentity(ids: ServiceIdentity[]) {
     assertEquals(ids.length, 1);
@@ -195,20 +200,21 @@ Deno.test("service - client", async () => {
 
 Deno.test("service - basics", async () => {
   const { ns, nc } = await setup({}, {});
+  const svc = new Svc(nc);
   const conf: ServiceConfig = {
     name: "test",
     version: "0.0.0",
   };
-  const srvA = await nc.services.add(conf) as ServiceImpl;
+  const srvA = await svc.add(conf) as ServiceImpl;
   srvA.addEndpoint("foo", (_err: Error | null, msg: Msg) => {
     msg?.respond();
   });
-  const srvB = await nc.services.add(conf) as ServiceImpl;
+  const srvB = await svc.add(conf) as ServiceImpl;
   srvB.addEndpoint("foo", (_err: Error | null, msg: Msg) => {
     msg?.respond();
   });
 
-  const m = nc.services.client();
+  const m = svc.client();
   const count = async (
     p: Promise<QueuedIterator<unknown>>,
   ): Promise<number> => {
@@ -269,7 +275,8 @@ Deno.test("service - stop error", async () => {
     },
   }, { user: "a", pass: "a" });
 
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -306,7 +313,8 @@ Deno.test("service - start error", async () => {
     },
   }, { user: "a", pass: "a" });
 
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -326,7 +334,8 @@ Deno.test("service - start error", async () => {
 
 Deno.test("service - callback error", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -346,7 +355,8 @@ Deno.test("service - callback error", async () => {
 
 Deno.test("service - service error is headers", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -364,8 +374,8 @@ Deno.test("service - service error is headers", async () => {
 
 Deno.test("service - sub stop", async () => {
   const { ns, nc } = await setup();
-
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -388,8 +398,8 @@ Deno.test("service - sub stop", async () => {
 
 Deno.test("service - monitoring sub stop", async () => {
   const { ns, nc } = await setup();
-
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -412,8 +422,8 @@ Deno.test("service - monitoring sub stop", async () => {
 
 Deno.test("service - custom stats handler", async () => {
   const { ns, nc } = await setup();
-
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "test",
     version: "2.0.0",
     statsHandler: (): Promise<unknown> => {
@@ -424,7 +434,7 @@ Deno.test("service - custom stats handler", async () => {
     m.respond();
   });
 
-  const m = nc.services.client();
+  const m = svc.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
   assertEquals(
@@ -445,12 +455,13 @@ Deno.test("service - bad stats handler", async () => {
     statsHandler: "hello world",
   };
 
-  const srv = await nc.services.add(config as unknown as ServiceConfig);
+  const svc = new Svc(nc);
+  const srv = await svc.add(config as unknown as ServiceConfig);
   srv.addEndpoint("q", (_err, m) => {
     m.respond();
   });
 
-  const m = nc.services.client();
+  const m = svc.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
   assertEquals(stats[0].endpoints?.[0].data, undefined);
@@ -460,8 +471,8 @@ Deno.test("service - bad stats handler", async () => {
 
 Deno.test("service - stats handler error", async () => {
   const { ns, nc } = await setup();
-
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "test",
     version: "2.0.0",
     statsHandler: (): Promise<unknown> => {
@@ -472,7 +483,7 @@ Deno.test("service - stats handler error", async () => {
     m.respond();
   });
 
-  const m = nc.services.client();
+  const m = svc.client();
   const stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
   assertEquals(stats[0].endpoints?.length, 1);
@@ -487,7 +498,8 @@ Deno.test("service - stats handler error", async () => {
 Deno.test("service - reset", async () => {
   const { ns, nc } = await setup();
 
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   }) as ServiceImpl;
@@ -501,7 +513,7 @@ Deno.test("service - reset", async () => {
 
   service.handlers[0].stats.countError(new Error("hello"));
 
-  const m = nc.services.client();
+  const m = svc.client();
   let stats = await collect(await m.stats());
   assertEquals(stats[0].endpoints?.length, 1);
   assertEquals(stats.length, 1);
@@ -528,7 +540,8 @@ Deno.test("service - reset", async () => {
 Deno.test("service - iter", async () => {
   const { ns, nc } = await setup();
 
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   }) as ServiceImpl;
@@ -544,7 +557,7 @@ Deno.test("service - iter", async () => {
   await nc.request("q");
   service.handlers[0].stats.countError(new Error("hello"));
 
-  const m = nc.services.client();
+  const m = svc.client();
   let stats = await collect(await m.stats());
   assertEquals(stats.length, 1);
   assertEquals(stats[0].endpoints?.length, 1);
@@ -563,7 +576,8 @@ Deno.test("service - iter", async () => {
 Deno.test("service - iter closed", async () => {
   const { ns, nc } = await setup();
 
-  const service = await nc.services.add({
+  const svc = new Svc(nc);
+  const service = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -585,7 +599,8 @@ Deno.test("service - iter closed", async () => {
 Deno.test("service - version must be semver", async () => {
   const { ns, nc } = await setup();
   const test = (v?: string): Promise<Service> => {
-    return nc.services.add({
+    const svc = new Svc(nc);
+    return svc.add({
       name: "test",
       version: v!,
     });
@@ -620,7 +635,9 @@ Deno.test("service - version must be semver", async () => {
 
 Deno.test("service - service errors", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "test",
     version: "2.0.0",
   });
@@ -659,7 +676,8 @@ Deno.test("service - cross platform service test", async () => {
     },
   };
 
-  const srv = await nc.services.add(conf);
+  const svc = new Svc(nc);
+  const srv = await svc.add(conf);
   srv.addEndpoint("test", {
     subject: createInbox(),
     handler: (_err, m): void => {
@@ -680,7 +698,7 @@ Deno.test("service - cross platform service test", async () => {
   const args = [
     "run",
     "-A",
-    "./tests/helpers/service-check.ts",
+    "./service/tests/service-check.ts",
     "--name",
     name,
     "--server",
@@ -705,7 +723,9 @@ Deno.test("service - cross platform service test", async () => {
 
 Deno.test("service - stats name respects assigned name", async () => {
   const { ns, nc } = await setup();
-  const test = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const test = await svc.add({
     name: "tEsT",
     // @ts-ignore: testing
     version: "0.0.1",
@@ -724,7 +744,9 @@ Deno.test("service - stats name respects assigned name", async () => {
 
 Deno.test("service - multiple endpoints", async () => {
   const { ns, nc } = await setup();
-  const ms = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const ms = await svc.add({
     name: "multi",
     version: "0.0.1",
   });
@@ -759,7 +781,9 @@ Deno.test("service - multiple endpoints", async () => {
 
 Deno.test("service - multi cb/iterator", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
   });
@@ -784,7 +808,9 @@ Deno.test("service - multi cb/iterator", async () => {
 
 Deno.test("service - group and endpoint names", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
   });
@@ -810,7 +836,9 @@ Deno.test("service - group and endpoint names", async () => {
 
 Deno.test("service - group subs", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
   });
@@ -837,7 +865,9 @@ Deno.test("service - group subs", async () => {
 
 Deno.test("service - metadata", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
@@ -861,7 +891,9 @@ Deno.test("service - metadata", async () => {
 
 Deno.test("service - schema metadata", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
@@ -880,7 +912,9 @@ Deno.test("service - schema metadata", async () => {
 
 Deno.test("service - json reviver", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
@@ -907,7 +941,8 @@ Deno.test("service - json reviver", async () => {
 });
 
 async function testQueueName(nc: NatsConnection, subj: string, q?: string) {
-  const srv = await nc.services.add({
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
@@ -981,7 +1016,9 @@ function checkQueueGroup(srv: Service, subj: string, queue: string) {
 
 Deno.test("service - endpoint default queue group", async () => {
   const { ns, nc } = await setup();
-  const srv = await nc.services.add({
+
+  const svc = new Svc(nc);
+  const srv = await svc.add({
     name: "example",
     version: "0.0.1",
     metadata: { service: "1" },
