@@ -18,7 +18,6 @@ import { BaseApiClientImpl, StreamNames } from "./jsbaseclient_api.ts";
 import { ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
-import { KvStatusImpl } from "./kv.ts";
 import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
 import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
 import { TD } from "../nats-base-client/encoders.ts";
@@ -29,8 +28,6 @@ import {
   ConsumerAPI,
   Consumers,
   JetStreamOptions,
-  kvPrefix,
-  KvStatus,
   Lister,
   ListerFieldFilter,
   ObjectStoreStatus,
@@ -449,29 +446,6 @@ export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
 
   find(subject: string): Promise<string> {
     return this.findStream(subject);
-  }
-
-  listKvs(): Lister<KvStatus> {
-    const filter: ListerFieldFilter<KvStatus> = (
-      v: unknown,
-    ): KvStatus[] => {
-      const slr = v as StreamListResponse;
-      const kvStreams = slr.streams.filter((v) => {
-        return v.config.name.startsWith(kvPrefix);
-      });
-      kvStreams.forEach((si) => {
-        this._fixInfo(si);
-      });
-      let cluster = "";
-      if (kvStreams.length) {
-        cluster = this.nc.info?.cluster ?? "";
-      }
-      return kvStreams.map((si) => {
-        return new KvStatusImpl(si, cluster);
-      });
-    };
-    const subj = `${this.prefix}.STREAM.LIST`;
-    return new ListerImpl<KvStatus>(subj, filter, this);
   }
 
   listObjectStores(): Lister<ObjectStoreStatus> {

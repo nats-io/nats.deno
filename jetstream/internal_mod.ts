@@ -22,18 +22,10 @@ export {
   DirectMsgHeaders,
   isConsumerOptsBuilder,
   JsHeaders,
-  KvWatchInclude,
   RepublishHeaders,
 } from "./types.ts";
 
-export { jetstream } from "./jsclient.ts";
-
-export {
-  Base64KeyCodec,
-  Bucket,
-  defaultBucketOpts,
-  NoopKvCodecs,
-} from "./kv.ts";
+export { jetstream, JetStreamClientImpl } from "./jsclient.ts";
 
 export type {
   AbortOnMissingResource,
@@ -54,6 +46,7 @@ export type {
   Consumers,
   ConsumerStatus,
   Destroyable,
+  DirectStreamAPI,
   Expires,
   FetchBytes,
   FetchMessages,
@@ -69,16 +62,6 @@ export type {
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsMsgCallback,
-  KV,
-  KvCodec,
-  KvCodecs,
-  KvDeleteOptions,
-  KvEntry,
-  KvLimits,
-  KvOptions,
-  KvPutOptions,
-  KvStatus,
-  KvWatchOptions,
   Lister,
   MaxBytes,
   MaxMessages,
@@ -95,7 +78,6 @@ export type {
   OrderedConsumerOptions,
   PubAck,
   Pullable,
-  RoKV,
   StoredMsg,
   Stream,
   StreamAPI,
@@ -149,6 +131,7 @@ export {
   AckPolicy,
   DeliverPolicy,
   DiscardPolicy,
+  PubHeaders,
   ReplayPolicy,
   RetentionPolicy,
   StorageType,

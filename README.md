@@ -11,7 +11,7 @@ A Deno client for the [NATS messaging system](https://nats.io).
 You can get the latest release version like this:
 
 ```typescript
-import * as nats from "https://deno.land/x/nats/src/mod.ts";
+import * as nats from "https://deno.land/x/nats/src/types.ts";
 ```
 
 To specify a specific released version, simply replace nats with
@@ -20,7 +20,7 @@ nats@_versionTag_.
 You can get the current development version by:
 
 ```typescript
-import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
+import * as nats from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/types.ts";
 ```
 
 ## Documentation
@@ -54,7 +54,7 @@ is working.
 
 ```typescript
 // import the connect function
-import { connect } from "../../src/mod.ts";
+import { connect } from "../../src/types.ts";
 
 const servers = [
   {},
@@ -123,7 +123,7 @@ the server.
 
 ```typescript
 // import the connect function
-import { connect, StringCodec } from "../../src/mod.ts";
+import { connect, StringCodec } from "../../src/types.ts";
 
 // to create a connection to a nats-server:
 const nc = await connect({ servers: "demo.nats.io:4222" });
@@ -191,7 +191,7 @@ All subscriptions are independent. If two different subscriptions match a
 subject, both will get to process the message:
 
 ```javascript
-import { connect, StringCodec, Subscription } from "../../src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/types.ts";
 const nc = await connect({ servers: "demo.nats.io:4222" });
 const sc = StringCodec();
 
@@ -244,7 +244,7 @@ simply to illustrate not only how to create responses, but how the subject
 itself is used to dispatch different behaviors.
 
 ```typescript
-import { connect, StringCodec, Subscription } from "../../src/mod.ts";
+import { connect, StringCodec, Subscription } from "../../src/types.ts";
 
 // create a connection
 const nc = await connect({ servers: "demo.nats.io" });
@@ -319,7 +319,7 @@ Here's a simple example of a client making a simple request from the service
 above:
 
 ```typescript
-import { connect, Empty, StringCodec } from "../../src/mod.ts";
+import { connect, Empty, StringCodec } from "../../src/types.ts";
 
 // create a connection
 const nc = await connect({ servers: "demo.nats.io:4222" });
@@ -357,7 +357,7 @@ import {
   NatsConnection,
   StringCodec,
   Subscription,
-} from "../../src/mod.ts";
+} from "../../src/types.ts";
 
 // this is the definition of a service with `count` members in them.
 // if the queue is specified, the they will be part of a queue
@@ -436,7 +436,7 @@ are publishing a message with a header, it is possible for the recipient to not
 support them.
 
 ```typescript
-import { connect, createInbox, Empty, headers } from "../../src/mod.ts";
+import { connect, createInbox, Empty, headers } from "../../src/types.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 
 const nc = await connect(
@@ -525,7 +525,7 @@ Setting the `user`/`pass` or `token` options, simply initializes an
 ```typescript
 // if the connection requires authentication, provide `user` and `pass` or
 // `token` options in the NatsConnectionOptions
-import { connect } from "src/mod.ts";
+import { connect } from "src/types.ts";
 
 const nc1 = await connect({
   servers: "127.0.0.1:4222",

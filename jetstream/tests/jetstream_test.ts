@@ -228,7 +228,7 @@ Deno.test("jetstream - publish require last message id", async () => {
       await js.publish(subj, Empty, { msgID: "b", expect: { lastMsgID: "b" } });
     },
     Error,
-    "wrong last msg id: a",
+    "wrong last msg ID: a",
     undefined,
   );
 
@@ -934,84 +934,6 @@ Deno.test("jetstream - headers only", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - can access kv", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
-  if (await notCompatible(ns, nc, "2.6.2")) {
-    return;
-  }
-  const sc = StringCodec();
-
-  const js = jetstream(nc);
-  // create the named KV or bind to it if it exists:
-  const kv = await js.views.kv("testing", { history: 5 });
-
-  // create an entry - this is similar to a put, but will fail if the
-  // key exists
-  await kv.create("hello.world", sc.encode("hi"));
-
-  // Values in KV are stored as KvEntries:
-  // {
-  //   bucket: string,
-  //   key: string,
-  //   value: Uint8Array,
-  //   created: Date,
-  //   revision: number,
-  //   delta?: number,
-  //   operation: "PUT"|"DEL"|"PURGE"
-  // }
-  // The operation property specifies whether the value was
-  // updated (PUT), deleted (DEL) or purged (PURGE).
-
-  // you can monitor values modification in a KV by watching.
-  // You can watch specific key subset or everything.
-  // Watches start with the latest value for each key in the
-  // set of keys being watched - in this case all keys
-  const watch = await kv.watch();
-  (async () => {
-    for await (const _e of watch) {
-      // do something with the change
-    }
-  })().then();
-
-  // update the entry
-  await kv.put("hello.world", sc.encode("world"));
-  // retrieve the KvEntry storing the value
-  // returns null if the value is not found
-  const e = await kv.get("hello.world");
-  assert(e);
-  // initial value of "hi" was overwritten above
-  assertEquals(sc.decode(e.value), "world");
-
-  const keys = await collect<string>(await kv.keys());
-  assertEquals(keys.length, 1);
-  assertEquals(keys[0], "hello.world");
-
-  const h = await kv.history({ key: "hello.world" });
-  (async () => {
-    for await (const _e of h) {
-      // do something with the historical value
-      // you can test e.operation for "PUT", "DEL", or "PURGE"
-      // to know if the entry is a marker for a value set
-      // or for a deletion or purge.
-    }
-  })().then();
-
-  // deletes the key - the delete is recorded
-  await kv.delete("hello.world");
-
-  // purge is like delete, but all history values
-  // are dropped and only the purge remains.
-  await kv.purge("hello.world");
-
-  // stop the watch operation above
-  watch.stop();
-
-  // danger: destroys all values in the KV!
-  await kv.destroy();
-
-  await cleanup(ns, nc);
-});
-
 Deno.test("jetstream - bind with diff subject fails", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const jsm = await jetstreamManager(nc);
@@ -1382,49 +1304,6 @@ Deno.test("jetstream - filter_subject consumer update", async () => {
   ci.config.filter_subject = "foo.baz";
   ci = await jsm.consumers.update(si.config.name, "a", ci.config);
   assertEquals(ci.config.filter_subject, "foo.baz");
-  await cleanup(ns, nc);
-});
-
-Deno.test("jetstream - kv and object store views reject in older servers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({
-    max_payload: 1024 * 1024,
-  }));
-
-  const nci = nc as NatsConnectionImpl;
-  const js = jetstream(nc);
-  async function t(version: string, kv: boolean, os: boolean): Promise<void> {
-    nci.features.update(version);
-
-    if (!kv) {
-      await assertRejects(
-        async () => {
-          await js.views.kv(nuid.next());
-        },
-        Error,
-        `kv is only supported on servers 2.6.2 or better`,
-      );
-    } else {
-      await js.views.kv(nuid.next());
-    }
-
-    if (!os) {
-      await assertRejects(
-        async () => {
-          await js.views.os(nuid.next());
-        },
-        Error,
-        `objectstore is only supported on servers 2.6.3 or better`,
-      );
-    } else {
-      await js.views.os(nuid.next());
-    }
-  }
-
-  await t("2.6.1", false, false);
-  await t("2.6.2", true, false);
-  await t("2.6.3", true, true);
-  await t("2.6.4", true, true);
-
   await cleanup(ns, nc);
 });
 

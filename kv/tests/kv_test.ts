@@ -35,11 +35,8 @@ import {
   jetstream,
   jetstreamManager,
   JetStreamOptions,
-  KV,
-  KvEntry,
-  KvOptions,
   StorageType,
-} from "../mod.ts";
+} from "../../jetstream/mod.ts";
 
 import {
   assert,
@@ -50,13 +47,14 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 
-import {
-  Base64KeyCodec,
-  Bucket,
-  NoopKvCodecs,
-  validateBucket,
-  validateKey,
-} from "../kv.ts";
+import type { KV, KvEntry, KvOptions } from "../types.ts";
+
+import { KvWatchInclude } from "../types.ts";
+
+import { Base64KeyCodec, Bucket, NoopKvCodecs } from "../mod.ts";
+
+import { kvPrefix, validateBucket, validateKey } from "../internal_mod.ts";
+
 import {
   cleanup,
   jetstreamServerConf,
@@ -68,11 +66,8 @@ import {
 import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
 import { connect } from "../../src/mod.ts";
 import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
-import {
-  JetStreamSubscriptionInfoable,
-  kvPrefix,
-  KvWatchInclude,
-} from "../types.ts";
+import { JetStreamSubscriptionInfoable } from "../../jetstream/types.ts";
+import { Kvm } from "../kv.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
@@ -152,6 +147,30 @@ Deno.test("kv - bucket name validation", () => {
   }
 });
 
+Deno.test("kv - list kv", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}),
+  );
+
+  const jsm = await jetstreamManager(nc);
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  const kvm = new Kvm(nc);
+  let kvs = await kvm.list().next();
+  assertEquals(kvs.length, 0);
+
+  await kvm.create("kv");
+
+  kvs = await kvm.list().next();
+  assertEquals(kvs.length, 1);
+  assertEquals(kvs[0].bucket, `kv`);
+
+  // test names as well
+  const names = await (await jsm.streams.names()).next();
+  assertEquals(names.length, 2);
+  assertArrayIncludes(names, ["A", "KV_kv"]);
+
+  await cleanup(ns, nc);
+});
 Deno.test("kv - init creates stream", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
@@ -162,8 +181,7 @@ Deno.test("kv - init creates stream", async () => {
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const js = jetstream(nc);
-  await js.views.kv(n);
+  await new Kvm(nc).create(n);
 
   streams = await jsm.streams.list().next();
   assertEquals(streams.length, 1);
@@ -183,16 +201,16 @@ Deno.test("kv - bind to existing KV", async () => {
 
   const n = nuid.next();
   const js = jetstream(nc);
-  await js.views.kv(n, { history: 10 }) as Bucket;
+  await new Kvm(js).create(n, { history: 10 });
 
   streams = await jsm.streams.list().next();
   assertEquals(streams.length, 1);
   assertEquals(streams[0].config.name, `KV_${n}`);
 
-  const kv = await js.views.kv(n, { bindOnly: true }) as Bucket;
+  const kv = await new Kvm(js).open(n);
   const status = await kv.status();
   assertEquals(status.bucket, `${n}`);
-  await crud(kv);
+  await crud(kv as Bucket);
   await cleanup(ns, nc);
 });
 
@@ -250,7 +268,7 @@ Deno.test("kv - crud", async () => {
   }
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n, { history: 10 }) as Bucket;
+  const bucket = await new Kvm(js).create(n, { history: 10 }) as Bucket;
   await crud(bucket);
   await cleanup(ns, nc);
 });
@@ -268,7 +286,7 @@ Deno.test("kv - codec crud", async () => {
 
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n, {
+  const bucket = await new Kvm(js).create(n, {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -288,7 +306,7 @@ Deno.test("kv - history", async () => {
   }
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n, { history: 2 });
+  const bucket = await new Kvm(js).create(n, { history: 2 });
   let status = await bucket.status();
   assertEquals(status.values, 0);
   assertEquals(status.history, 2);
@@ -309,7 +327,7 @@ Deno.test("kv - history multiple keys", async () => {
   );
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n, { history: 2 });
+  const bucket = await new Kvm(js).create(n, { history: 2 });
 
   await bucket.put("A", Empty);
   await bucket.put("B", Empty);
@@ -337,7 +355,7 @@ Deno.test("kv - cleanups/empty", async () => {
   }
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n);
+  const bucket = await new Kvm(js).create(n);
   assertEquals(await bucket.get("x"), null);
 
   const h = await bucket.history();
@@ -363,7 +381,7 @@ Deno.test("kv - history cleanup", async () => {
   }
   const n = nuid.next();
   const js = jetstream(nc);
-  const bucket = await js.views.kv(n);
+  const bucket = await new Kvm(js).create(n);
   await bucket.put("a", Empty);
   await bucket.put("b", Empty);
   await bucket.put("c", Empty);
@@ -394,7 +412,7 @@ Deno.test("kv - bucket watch", async () => {
   const sc = StringCodec();
   const n = nuid.next();
   const js = jetstream(nc);
-  const b = await js.views.kv(n, { history: 10 });
+  const b = await new Kvm(js).create(n, { history: 10 });
   const m: Map<string, string> = new Map();
   const iter = await b.watch();
   const done = (async () => {
@@ -474,7 +492,7 @@ Deno.test("kv - key watch", async () => {
     return;
   }
   const js = jetstream(nc);
-  const bucket = await js.views.kv(nuid.next()) as Bucket;
+  const bucket = await new Kvm(js).create(nuid.next()) as Bucket;
   await keyWatch(bucket);
 
   const nci = nc as NatsConnectionImpl;
@@ -492,7 +510,7 @@ Deno.test("kv - codec key watch", async () => {
     return;
   }
   const js = jetstream(nc);
-  const bucket = await js.views.kv(nuid.next(), {
+  const bucket = await new Kvm(js).create(nuid.next(), {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -532,7 +550,7 @@ Deno.test("kv - keys", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next());
+  const b = await new Kvm(js).create(nuid.next());
   await keys(b as Bucket);
 
   const nci = nc as NatsConnectionImpl;
@@ -550,7 +568,7 @@ Deno.test("kv - codec keys", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next(), {
+  const b = await new Kvm(js).create(nuid.next(), {
     history: 10,
     codec: {
       key: Base64KeyCodec(),
@@ -576,7 +594,7 @@ Deno.test("kv - ttl", async () => {
 
   const sc = StringCodec();
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next(), { ttl: 1000 }) as Bucket;
+  const b = await new Kvm(js).create(nuid.next(), { ttl: 1000 }) as Bucket;
 
   const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.info(b.stream);
@@ -602,7 +620,7 @@ Deno.test("kv - no ttl", async () => {
   }
   const sc = StringCodec();
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
 
   await b.put("x", sc.encode("hello"));
   let e = await b.get("x");
@@ -626,7 +644,7 @@ Deno.test("kv - complex key", async () => {
   }
   const sc = StringCodec();
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
 
   await b.put("x.y.z", sc.encode("hello"));
   const e = await b.get("x.y.z");
@@ -672,7 +690,7 @@ Deno.test("kv - remove key", async () => {
   }
   const sc = StringCodec();
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
 
   await b.put("a.b", sc.encode("ab"));
   let v = await b.get("a.b");
@@ -699,7 +717,7 @@ Deno.test("kv - remove subkey", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
   await b.put("a", Empty);
   await b.put("a.b", Empty);
   await b.put("a.c", Empty);
@@ -724,7 +742,7 @@ Deno.test("kv - create key", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
   const sc = StringCodec();
   await b.create("a", Empty);
   await assertRejects(
@@ -747,7 +765,7 @@ Deno.test("kv - update key", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next()) as Bucket;
+  const b = await new Kvm(js).create(nuid.next()) as Bucket;
   const sc = StringCodec();
   const seq = await b.create("a", Empty);
   await assertRejects(
@@ -774,7 +792,7 @@ Deno.test("kv - internal consumer", async () => {
 
   async function getCount(name: string): Promise<number> {
     const js = jetstream(nc);
-    const b = await js.views.kv(name) as Bucket;
+    const b = await new Kvm(js).create(name) as Bucket;
     const watch = await b.watch() as QueuedIteratorImpl<unknown>;
     const sub = watch._data as JetStreamSubscriptionInfoable;
     return sub?.info?.last?.num_pending || 0;
@@ -782,7 +800,7 @@ Deno.test("kv - internal consumer", async () => {
 
   const name = nuid.next();
   const js = jetstream(nc);
-  const b = await js.views.kv(name) as Bucket;
+  const b = await new Kvm(js).create(name) as Bucket;
   assertEquals(await getCount(name), 0);
 
   await b.put("a", Empty);
@@ -801,7 +819,7 @@ Deno.test("kv - is wildcard delete implemented", async () => {
 
   const name = nuid.next();
   const js = jetstream(nc);
-  const b = await js.views.kv(name, { history: 10 }) as Bucket;
+  const b = await new Kvm(js).create(name, { history: 10 }) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
   await b.put("a.b", Empty);
@@ -844,7 +862,7 @@ Deno.test("kv - delta", async () => {
 
   const name = nuid.next();
   const js = jetstream(nc);
-  const b = await js.views.kv(name) as Bucket;
+  const b = await new Kvm(js).create(name) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
   await b.put("a.b", Empty);
@@ -872,7 +890,7 @@ Deno.test("kv - watch and history headers only", async () => {
     jetstreamServerConf({}),
   );
   const js = jetstream(nc);
-  const b = await js.views.kv("bucket") as Bucket;
+  const b = await new Kvm(js).create("bucket") as Bucket;
   const sc = StringCodec();
   await b.put("key1", sc.encode("aaa"));
 
@@ -908,17 +926,17 @@ Deno.test("kv - mem and file", async () => {
     jetstreamServerConf({}),
   );
   const js = jetstream(nc);
-  const d = await js.views.kv("default") as Bucket;
+  const d = await new Kvm(js).create("default") as Bucket;
   assertEquals((await d.status()).backingStore, StorageType.File);
   assertEquals((await d.status()).storage, StorageType.File);
 
-  const f = await js.views.kv("file", {
+  const f = await new Kvm(js).create("file", {
     storage: StorageType.File,
   }) as Bucket;
   assertEquals((await f.status()).backingStore, StorageType.File);
   assertEquals((await f.status()).storage, StorageType.File);
 
-  const m = await js.views.kv("mem", {
+  const m = await new Kvm(js).create("mem", {
     storage: StorageType.Memory,
   }) as Bucket;
   assertEquals((await m.status()).backingStore, StorageType.Memory);
@@ -932,7 +950,7 @@ Deno.test("kv - example", async () => {
   const js = jetstream(nc);
   const sc = StringCodec();
 
-  const kv = await js.views.kv("testing", { history: 5 });
+  const kv = await new Kvm(js).create("testing", { history: 5 });
 
   // create an entry - this is similar to a put, but will fail if the
   // key exists
@@ -1038,7 +1056,7 @@ async function makeKvAndClient(
 ): Promise<{ nc: NatsConnection; kv: KV }> {
   const nc = await connect(opts);
   const js = jetstream(nc, jsopts);
-  const kv = await js.views.kv("a");
+  const kv = await new Kvm(js).create("a");
   return { nc, kv };
 }
 
@@ -1161,7 +1179,7 @@ Deno.test("kv - watch iter stops", async () => {
     jetstreamServerConf({}),
   );
   const js = jetstream(nc);
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
   const watch = await b.watch();
   const done = (async () => {
     for await (const _e of watch) {
@@ -1179,7 +1197,7 @@ Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
     jetstreamServerConf({}),
   );
   const js = jetstream(nc);
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
   const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.info(b.stream);
   const v272 = parseSemVer("2.7.2");
@@ -1197,7 +1215,7 @@ Deno.test("kv - initialized watch empty", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
   const d = deferred();
   await b.watch({
     initializedFn: () => {
@@ -1215,7 +1233,7 @@ Deno.test("kv - initialized watch with messages", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
   await b.put("A", Empty);
   await b.put("B", Empty);
   await b.put("C", Empty);
@@ -1241,7 +1259,7 @@ Deno.test("kv - initialized watch with modifications", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
 
   await b.put("A", Empty);
   await b.put("B", Empty);
@@ -1285,7 +1303,7 @@ Deno.test("kv - watch init callback exceptions terminate the iterator", async ()
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
   for (let i = 0; i < 10; i++) {
     await b.put(i.toString(), Empty);
   }
@@ -1317,7 +1335,7 @@ Deno.test("kv - get revision", async () => {
   const js = jetstream(nc);
   const sc = StringCodec();
 
-  const b = await js.views.kv(nuid.next(), { history: 3 }) as Bucket;
+  const b = await new Kvm(js).create(nuid.next(), { history: 3 }) as Bucket;
 
   async function check(key: string, value: string | null, revision = 0) {
     const e = await b.get(key, { revision });
@@ -1352,7 +1370,7 @@ Deno.test("kv - purge deletes", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a") as Bucket;
+  const b = await new Kvm(js).create("a") as Bucket;
 
   // keep the marker if delete is younger
   await b.put("a", Empty);
@@ -1379,7 +1397,7 @@ Deno.test("kv - replicas", async () => {
   const nc = await connect({ port: servers[0].port });
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a", { replicas: 3 });
+  const b = await new Kvm(js).create("a", { replicas: 3 });
   const status = await b.status();
 
   const jsm = await jetstreamManager(nc);
@@ -1411,7 +1429,7 @@ Deno.test("kv - allow direct", async () => {
     opts: Partial<KvOptions>,
     direct: boolean,
   ): Promise<void> {
-    const kv = await js.views.kv(name, opts) as Bucket;
+    const kv = await new Kvm(js).create(name, opts) as Bucket;
     assertEquals(kv.direct, direct);
     const si = await jsm.streams.info(kv.bucketName());
     assertEquals(si.config.allow_direct, direct);
@@ -1425,17 +1443,17 @@ Deno.test("kv - allow direct", async () => {
   await test(nuid.next(), { history: 1, allow_direct: true }, true);
 
   // now we create a kv that enables it
-  const xkv = await js.views.kv("X") as Bucket;
+  const xkv = await new Kvm(js).create("X") as Bucket;
   assertEquals(xkv.direct, true);
 
   // but the client opts-out of the direct
-  const xc = await js.views.kv("X", { allow_direct: false }) as Bucket;
+  const xc = await new Kvm(js).create("X", { allow_direct: false }) as Bucket;
   assertEquals(xc.direct, false);
 
   // now the creator disables it, but the client wants it
-  const ykv = await js.views.kv("Y", { allow_direct: false }) as Bucket;
+  const ykv = await new Kvm(js).create("Y", { allow_direct: false }) as Bucket;
   assertEquals(ykv.direct, false);
-  const yc = await js.views.kv("Y", { allow_direct: true }) as Bucket;
+  const yc = await new Kvm(js).create("Y", { allow_direct: true }) as Bucket;
   assertEquals(yc.direct, false);
 
   // now let's pretend we got a server that doesn't support it
@@ -1466,7 +1484,7 @@ Deno.test("kv - direct message", async () => {
   const js = jetstream(nc);
   const sc = StringCodec();
 
-  const kv = await js.views.kv("a", { allow_direct: true, history: 3 });
+  const kv = await new Kvm(js).create("a", { allow_direct: true, history: 3 });
   assertEquals(await kv.get("a"), null);
 
   await kv.put("a", sc.encode("hello"));
@@ -1509,7 +1527,7 @@ Deno.test("kv - republish", async () => {
   }
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("test", {
+  const kv = await new Kvm(js).create("test", {
     republish: {
       src: ">",
       dest: "republished-kv.>",
@@ -1538,7 +1556,7 @@ Deno.test("kv - ttl is in nanos", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a", { ttl: 1000 });
+  const b = await new Kvm(js).create("a", { ttl: 1000 });
   const status = await b.status();
   assertEquals(status.ttl, 1000);
   assertEquals(status.size, 0);
@@ -1555,7 +1573,7 @@ Deno.test("kv - size", async () => {
   );
   const js = jetstream(nc);
 
-  const b = await js.views.kv("a", { ttl: 1000 });
+  const b = await new Kvm(js).create("a", { ttl: 1000 });
   let status = await b.status();
   assertEquals(status.size, 0);
   assertEquals(status.size, status.streamInfo.state.bytes);
@@ -1593,7 +1611,7 @@ Deno.test("kv - mirror cross domain", async () => {
 
   // setup a KV
   const js = jetstream(nc);
-  const kv = await js.views.kv("TEST");
+  const kv = await new Kvm(js).create("TEST");
   const sc = StringCodec();
   const m = new Map<string, KvEntry[]>();
 
@@ -1623,7 +1641,7 @@ Deno.test("kv - mirror cross domain", async () => {
   assertEquals(sc.decode(a[0].value), "derek");
 
   const ljs = jetstream(lnc);
-  await ljs.views.kv("MIRROR", {
+  await new Kvm(ljs).create("MIRROR", {
     mirror: { name: "TEST", domain: "HUB" },
   });
 
@@ -1683,7 +1701,7 @@ Deno.test("kv - mirror cross domain", async () => {
     assertArrayIncludes(keys, ["name", "age"]);
   }
 
-  const mkv = await ljs.views.kv("MIRROR");
+  const mkv = await new Kvm(ljs).create("MIRROR");
 
   watch(mkv, "mirror", "name").then();
   await t(mkv, "rip", "derek");
@@ -1694,7 +1712,7 @@ Deno.test("kv - mirror cross domain", async () => {
 
   // access the origin kv via the leafnode
   const rjs = jetstream(lnc, { domain: "HUB" });
-  const rkv = await rjs.views.kv("TEST") as Bucket;
+  const rkv = await new Kvm(rjs).create("TEST") as Bucket;
   assertEquals(rkv.prefix, "$KV.TEST");
   watch(rkv, "origin", "name").then();
   await t(rkv, "ivan", "rip");
@@ -1717,7 +1735,7 @@ Deno.test("kv - previous sequence", async () => {
     return;
   }
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
 
   assertEquals(await kv.put("A", Empty, { previousSeq: 0 }), 1);
   assertEquals(await kv.put("B", Empty, { previousSeq: 0 }), 2);
@@ -1737,7 +1755,7 @@ Deno.test("kv - encoded entry", async () => {
     return;
   }
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
   await kv.put("a", StringCodec().encode("hello"));
   await kv.put("b", JSONCodec().encode(5));
   await kv.put("c", JSONCodec().encode(["hello", 5]));
@@ -1753,7 +1771,7 @@ Deno.test("kv - create after delete", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
   await kv.create("a", Empty);
 
   await assertRejects(async () => {
@@ -1770,7 +1788,7 @@ Deno.test("kv - string payloads", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
   await kv.create("a", "b");
   let entry = await kv.get("a");
   assertExists(entry);
@@ -1796,7 +1814,7 @@ Deno.test("kv - metadata", async () => {
   }
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K", { metadata: { hello: "world" } });
+  const kv = await new Kvm(js).create("K", { metadata: { hello: "world" } });
   const status = await kv.status();
   assertEquals(status.metadata?.hello, "world");
   await cleanup(ns, nc);
@@ -1806,7 +1824,7 @@ Deno.test("kv - watch updates only", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
 
   await kv.put("a", "a");
   await kv.put("b", "b");
@@ -1839,7 +1857,7 @@ Deno.test("kv - watch multiple keys", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K");
+  const kv = await new Kvm(js).create("K");
 
   await kv.put("a", "a");
   await kv.put("b", "b");
@@ -1871,7 +1889,7 @@ Deno.test("kv - watch history", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K", { history: 10 });
+  const kv = await new Kvm(js).create("K", { history: 10 });
 
   await kv.put("a", "a");
   await kv.put("a", "aa");
@@ -1909,7 +1927,7 @@ Deno.test("kv - watch history no deletes", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("K", { history: 10 });
+  const kv = await new Kvm(js).create("K", { history: 10 });
 
   await kv.put("a", "a");
   await kv.put("a", "aa");
@@ -1959,14 +1977,14 @@ Deno.test("kv - republish header handling", async () => {
   });
 
   const js = jetstream(nc);
-  const kv = await js.views.kv(n);
+  const kv = await new Kvm(js).create(n);
 
   nc.publish("A.orange", "hey");
   await js.publish("A.tomato", "hello");
   await kv.put("A.potato", "yo");
 
   async function check(allow_direct = false): Promise<void> {
-    const B = await js.views.kv(n, { allow_direct });
+    const B = await new Kvm(js).create(n, { allow_direct });
     let e = await B.get("A.orange");
     assertExists(e);
 
@@ -1985,13 +2003,13 @@ Deno.test("kv - republish header handling", async () => {
 Deno.test("kv - compression", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const js = jetstream(nc);
-  const s2 = await js.views.kv("compressed", {
+  const s2 = await new Kvm(js).create("compressed", {
     compression: true,
   });
   let status = await s2.status();
   assertEquals(status.compression, true);
 
-  const none = await js.views.kv("none");
+  const none = await new Kvm(js).create("none");
   status = await none.status();
   assertEquals(status.compression, false);
   await cleanup(ns, nc);
@@ -2000,7 +2018,7 @@ Deno.test("kv - compression", async () => {
 Deno.test("kv - watch start at", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const js = jetstream(nc);
-  const kv = await js.views.kv("a");
+  const kv = await new Kvm(js).create("a");
   await kv.put("a", "1");
   await kv.put("b", "2");
   await kv.put("c", "3");
@@ -2026,7 +2044,7 @@ Deno.test("kv - delete key if revision", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next());
+  const b = await new Kvm(js).create(nuid.next());
   const seq = await b.create("a", Empty);
   await assertRejects(
     async () => {
@@ -2050,7 +2068,7 @@ Deno.test("kv - purge key if revision", async () => {
     return;
   }
   const js = jetstream(nc);
-  const b = await js.views.kv(nuid.next());
+  const b = await new Kvm(js).create(nuid.next());
   const seq = await b.create("a", Empty);
 
   await assertRejects(
@@ -2074,7 +2092,7 @@ Deno.test("kv - bind no info", async () => {
     return;
   }
   const js = jetstream(nc);
-  await js.views.kv("A");
+  await new Kvm(js).create("A");
 
   const d = deferred();
   nc.subscribe("$JS.API.STREAM.INFO.>", {
@@ -2083,7 +2101,10 @@ Deno.test("kv - bind no info", async () => {
     },
   });
 
-  const kv = await js.views.kv("A", { bindOnly: true, allow_direct: true });
+  const kv = await new Kvm(js).create("A", {
+    bindOnly: true,
+    allow_direct: true,
+  });
   await kv.put("a", "hello");
   const e = await kv.get("a");
   assertEquals(e?.string(), "hello");
@@ -2105,7 +2126,7 @@ Deno.test("kv - watcher will name and filter", async () => {
   }
 
   const js = jetstream(nc);
-  const kv = await js.views.kv("A");
+  const kv = await new Kvm(js).create("A");
 
   const sub = syncIterator(nc.subscribe("$JS.API.>"));
   const iter = await kv.watch({ key: "a.>" });
@@ -2126,11 +2147,11 @@ Deno.test("kv - honors checkAPI option", async () => {
   const js = jetstream(nc);
   const sub = nc.subscribe("$JS.API.INFO");
   const si = syncIterator(sub);
-  await js.views.kv("A");
+  await new Kvm(js).create("A");
   assertExists(await si.next());
 
   const js2 = jetstream(nc, { checkAPI: false });
-  await js2.views.kv("B");
+  await new Kvm(js2).create("B");
   await sub.drain();
   assertEquals(await si.next(), null);
 
@@ -2142,7 +2163,7 @@ Deno.test("kv - watcher on server restart", async () => {
     jetstreamServerConf({}),
   );
   const js = jetstream(nc);
-  const kv = await js.views.kv("A");
+  const kv = await new Kvm(js).create("A");
   const iter = await kv.watch();
   const d = deferred<KvEntry>();
   (async () => {
@@ -2153,7 +2174,6 @@ Deno.test("kv - watcher on server restart", async () => {
   })().then();
 
   ns = await ns.restart();
-  console.log("server restarted");
   for (let i = 0; i < 10; i++) {
     try {
       await kv.put("hello", "world");
@@ -2164,5 +2184,112 @@ Deno.test("kv - watcher on server restart", async () => {
   }
 
   await d;
+  await cleanup(ns, nc);
+});
+
+// FIXME: this is a sanity example
+// Deno.test("jetstream - can access kv", async () => {
+//   const { ns, nc } = await setup(jetstreamServerConf({}));
+//   if (await notCompatible(ns, nc, "2.6.2")) {
+//     return;
+//   }
+//   const sc = StringCodec();
+//
+//   const js = jetstream(nc);
+//   // create the named KV or bind to it if it exists:
+//   const kv = await new Kv(js).create("testing", { history: 5 });
+//
+//   // create an entry - this is similar to a put, but will fail if the
+//   // key exists
+//   await kv.create("hello.world", sc.encode("hi"));
+//
+//   // Values in KV are stored as KvEntries:
+//   // {
+//   //   bucket: string,
+//   //   key: string,
+//   //   value: Uint8Array,
+//   //   created: Date,
+//   //   revision: number,
+//   //   delta?: number,
+//   //   operation: "PUT"|"DEL"|"PURGE"
+//   // }
+//   // The operation property specifies whether the value was
+//   // updated (PUT), deleted (DEL) or purged (PURGE).
+//
+//   // you can monitor values modification in a KV by watching.
+//   // You can watch specific key subset or everything.
+//   // Watches start with the latest value for each key in the
+//   // set of keys being watched - in this case all keys
+//   const watch = await kv.watch();
+//   (async () => {
+//     for await (const _e of watch) {
+//       // do something with the change
+//     }
+//   })().then();
+//
+//   // update the entry
+//   await kv.put("hello.world", sc.encode("world"));
+//   // retrieve the KvEntry storing the value
+//   // returns null if the value is not found
+//   const e = await kv.get("hello.world");
+//   assert(e);
+//   // initial value of "hi" was overwritten above
+//   assertEquals(sc.decode(e.value), "world");
+//
+//   const keys = await collect<string>(await kv.keys());
+//   assertEquals(keys.length, 1);
+//   assertEquals(keys[0], "hello.world");
+//
+//   const h = await kv.history({ key: "hello.world" });
+//   (async () => {
+//     for await (const _e of h) {
+//       // do something with the historical value
+//       // you can test e.operation for "PUT", "DEL", or "PURGE"
+//       // to know if the entry is a marker for a value set
+//       // or for a deletion or purge.
+//     }
+//   })().then();
+//
+//   // deletes the key - the delete is recorded
+//   await kv.delete("hello.world");
+//
+//   // purge is like delete, but all history values
+//   // are dropped and only the purge remains.
+//   await kv.purge("hello.world");
+//
+//   // stop the watch operation above
+//   watch.stop();
+//
+//   // danger: destroys all values in the KV!
+//   await kv.destroy();
+//
+//   await cleanup(ns, nc);
+// });
+
+Deno.test("kv - kv rejects in older servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }));
+
+  const nci = nc as NatsConnectionImpl;
+  const js = jetstream(nc);
+  async function t(version: string, ok: boolean): Promise<void> {
+    nci.features.update(version);
+
+    if (!ok) {
+      await assertRejects(
+        async () => {
+          await new Kvm(js).create(nuid.next());
+        },
+        Error,
+        `kv is only supported on servers 2.6.2 or better`,
+      );
+    } else {
+      await new Kvm(js).create(nuid.next());
+    }
+  }
+
+  await t("2.6.1", false);
+  await t("2.6.2", true);
   await cleanup(ns, nc);
 });

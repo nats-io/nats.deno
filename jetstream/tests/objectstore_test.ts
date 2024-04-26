@@ -35,11 +35,12 @@ import {
   ObjectStoreMeta,
   StorageType,
 } from "../mod.ts";
-import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
+import { Empty, headers, nanos, nuid, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
 import { digestType } from "../objectstore.ts";
+import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -1117,5 +1118,33 @@ Deno.test("os - compression", async () => {
   const none = await js.views.os("none");
   status = await none.status();
   assertEquals(status.compression, false);
+  await cleanup(ns, nc);
+});
+
+Deno.test("os - os rejects in older servers", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({
+    max_payload: 1024 * 1024,
+  }));
+
+  const nci = nc as NatsConnectionImpl;
+  const js = jetstream(nc);
+  async function t(version: string, ok: boolean): Promise<void> {
+    nci.features.update(version);
+
+    if (!ok) {
+      await assertRejects(
+        async () => {
+          await js.views.os(nuid.next());
+        },
+        Error,
+        `objectstore is only supported on servers 2.6.3 or better`,
+      );
+    } else {
+      await js.views.os(nuid.next());
+    }
+  }
+
+  await t("2.6.2", false);
+  await t("2.6.3", true);
   await cleanup(ns, nc);
 });

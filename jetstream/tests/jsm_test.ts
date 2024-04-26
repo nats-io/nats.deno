@@ -1590,34 +1590,54 @@ Deno.test("jsm - consumer name is validated", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jsm - list all", async () => {
+Deno.test("jsm - discard_new_per_subject option", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
 
+  if (await notCompatible(ns, nc, "2.9.2")) {
+    return;
+  }
+
   const jsm = await jetstreamManager(nc);
-  await jsm.streams.add({ name: "A", subjects: ["a"] });
-  let kvs = await jsm.streams.listKvs().next();
-  assertEquals(kvs.length, 0);
-  let obs = await jsm.streams.listObjectStores().next();
-  assertEquals(obs.length, 0);
+
+  // discard policy new is required
+  await assertRejects(
+    async () => {
+      await jsm.streams.add({
+        name: "A",
+        discard_new_per_subject: true,
+        subjects: ["A.>"],
+        max_msgs_per_subject: 1,
+      });
+    },
+    Error,
+    "discard new per subject requires discard new policy to be set",
+  );
+
+  const si = await jsm.streams.add({
+    name: "A",
+    discard: DiscardPolicy.New,
+    discard_new_per_subject: true,
+    subjects: ["A.>"],
+    max_msgs_per_subject: 1,
+  });
+  assertEquals(si.config.discard_new_per_subject, true);
 
   const js = jetstream(nc);
-  await js.views.os("os");
-  await js.views.kv("kv");
 
-  kvs = await jsm.streams.listKvs().next();
-  assertEquals(kvs.length, 1);
-  assertEquals(kvs[0].bucket, `kv`);
-
-  obs = await jsm.streams.listObjectStores().next();
-  assertEquals(obs.length, 1);
-  assertEquals(obs[0].bucket, `os`);
-
-  // test names as well
-  const names = await (await jsm.streams.names()).next();
-  assertEquals(names.length, 3);
-  assertArrayIncludes(names, ["A", "KV_kv", "OBJ_os"]);
+  await js.publish("A.b", Empty);
+  await assertRejects(
+    async () => {
+      await js.publish("A.b", Empty)
+        .catch((err) => {
+          console.log(err);
+          throw err;
+        });
+    },
+    Error,
+    "maximum messages per subject exceeded",
+  );
 
   await cleanup(ns, nc);
 });
@@ -1770,7 +1790,7 @@ Deno.test("jsm - list filter", async () => {
   ];
 
   for (let i = 0; i < tests.length; i++) {
-    const lister = await jsm.streams.list(tests[i].filter);
+    const lister = jsm.streams.list(tests[i].filter);
     const streams = await lister.next();
     const names = streams.map((si) => {
       return si.config.name;
@@ -1778,55 +1798,6 @@ Deno.test("jsm - list filter", async () => {
     names.sort();
     assertEquals(names, tests[i].expected);
   }
-  await cleanup(ns, nc);
-});
-
-Deno.test("jsm - discard_new_per_subject option", async () => {
-  const { ns, nc } = await setup(
-    jetstreamServerConf({}),
-  );
-
-  if (await notCompatible(ns, nc, "2.9.2")) {
-    return;
-  }
-
-  const jsm = await jetstreamManager(nc);
-
-  // discard policy new is required
-  await assertRejects(
-    async () => {
-      await jsm.streams.add({
-        name: "A",
-        discard_new_per_subject: true,
-        subjects: ["$KV.A.>"],
-        max_msgs_per_subject: 1,
-      });
-    },
-    Error,
-    "discard new per subject requires discard new policy to be set",
-  );
-
-  const si = await jsm.streams.add({
-    name: "KV_A",
-    discard: DiscardPolicy.New,
-    discard_new_per_subject: true,
-    subjects: ["$KV.A.>"],
-    max_msgs_per_subject: 1,
-  });
-  assertEquals(si.config.discard_new_per_subject, true);
-
-  const js = jetstream(nc);
-
-  const kv = await js.views.kv("A", { bindOnly: true });
-  await kv.put("B", Empty);
-  await assertRejects(
-    async () => {
-      await kv.put("B", Empty);
-    },
-    Error,
-    "maximum messages per subject exceeded",
-  );
-
   await cleanup(ns, nc);
 });
 
@@ -1960,7 +1931,7 @@ Deno.test("jsm - filter_subjects rejects filter_subject", async () => {
       });
     },
     Error,
-    "consumer cannot have both filtersubject and filtersubjects specified",
+    "consumer cannot have both FilterSubject and FilterSubjects specified",
   );
   await cleanup(ns, nc);
 });
@@ -2043,7 +2014,7 @@ Deno.test("jsm - update from filter_subject to filter_subjects", async () => {
       });
     },
     Error,
-    "consumer cannot have both filtersubject and filtersubjects specified",
+    "consumer cannot have both FilterSubject and FilterSubjects specified",
   );
   // now switch it
   ci = await jsm.consumers.update(name, "dur", {
@@ -2061,7 +2032,7 @@ Deno.test("jsm - update from filter_subject to filter_subjects", async () => {
       });
     },
     Error,
-    "consumer cannot have both filtersubject and filtersubjects specified",
+    "consumer cannot have both FilterSubject and FilterSubjects specified",
   );
 
   // and from filter_subjects back
