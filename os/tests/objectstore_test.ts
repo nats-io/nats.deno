@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -28,18 +28,13 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
-import {
-  jetstream,
-  jetstreamManager,
-  ObjectInfo,
-  ObjectStoreMeta,
-  StorageType,
-} from "../mod.ts";
+import type { ObjectInfo, ObjectStoreMeta } from "../types.ts";
+import { jetstreamManager, StorageType } from "../../jetstream/mod.ts";
 import { Empty, headers, nanos, nuid, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
-import { digestType } from "../objectstore.ts";
+import { digestType, Objm } from "../objectstore.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
@@ -103,8 +98,8 @@ Deno.test("objectstore - basics", async () => {
   const blob = new Uint8Array(65536);
   crypto.getRandomValues(blob);
 
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS", { description: "testing" });
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS", { description: "testing" });
 
   const info = await os.status();
   assertEquals(info.description, "testing");
@@ -159,8 +154,8 @@ Deno.test("objectstore - default status", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { description: "testing" });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { description: "testing" });
   const blob = new Uint8Array(65536);
   crypto.getRandomValues(blob);
   await os.put({ name: "BLOB" }, readableStreamFrom(blob));
@@ -182,8 +177,8 @@ Deno.test("objectstore - chunked content", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
 
   const data = makeData(nc.info!.max_payload * 3);
   await os.put(
@@ -204,8 +199,8 @@ Deno.test("objectstore - multi content", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
 
   const a = makeData(128);
   await os.put(
@@ -235,8 +230,8 @@ Deno.test("objectstore - delete markers", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
 
   const a = makeData(128);
   await os.put(
@@ -259,8 +254,8 @@ Deno.test("objectstore - get on deleted returns error", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
 
   const a = makeData(128);
   await os.put(
@@ -286,8 +281,8 @@ Deno.test("objectstore - multi with delete", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
 
   const sc = StringCodec();
 
@@ -317,8 +312,8 @@ Deno.test("objectstore - object names", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
   const sc = StringCodec();
   await os.put({ name: "blob.txt" }, readableStreamFrom(sc.encode("A")));
   await os.put({ name: "foo bar" }, readableStreamFrom(sc.encode("A")));
@@ -336,8 +331,8 @@ Deno.test("objectstore - metadata", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test", { storage: StorageType.Memory });
+  const objm = new Objm(nc);
+  const os = await objm.create("test", { storage: StorageType.Memory });
   const sc = StringCodec();
 
   await os.put({ name: "a" }, readableStreamFrom(sc.encode("A")));
@@ -367,8 +362,8 @@ Deno.test("objectstore - empty entry", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("empty");
+  const objm = new Objm(nc);
+  const os = await objm.create("empty");
 
   const oi = await os.put(
     { name: "empty" },
@@ -393,8 +388,8 @@ Deno.test("objectstore - list", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
   let infos = await os.list();
   assertEquals(infos.length, 0);
 
@@ -415,8 +410,8 @@ Deno.test("objectstore - watch initially empty", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const buf: ObjectInfo[] = [];
   const iter = await os.watch({ includeHistory: true });
@@ -466,8 +461,8 @@ Deno.test("objectstore - watch skip history", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const sc = StringCodec();
   await os.put(
@@ -511,8 +506,8 @@ Deno.test("objectstore - watch history", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const sc = StringCodec();
   await os.put(
@@ -558,8 +553,8 @@ Deno.test("objectstore - same store link", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const sc = StringCodec();
   const src = await os.put(
@@ -586,8 +581,8 @@ Deno.test("objectstore - link of link rejected", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const sc = StringCodec();
   const src = await os.put(
@@ -612,8 +607,8 @@ Deno.test("objectstore - external link", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const sc = StringCodec();
   const src = await os.put(
@@ -621,7 +616,7 @@ Deno.test("objectstore - external link", async () => {
     readableStreamFrom(sc.encode("a")),
   );
 
-  const os2 = await js.views.os("another");
+  const os2 = await objm.create("another");
   const io = await os2.link("ref", src);
   assertExists(io.options?.link);
   assertEquals(io.options?.link?.bucket, "test");
@@ -638,10 +633,10 @@ Deno.test("objectstore - store link", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
-  const os2 = await js.views.os("another");
+  const os2 = await objm.create("another");
   const si = await os2.linkStore("src", os);
   assertExists(si.options?.link);
   assertEquals(si.options?.link?.bucket, "test");
@@ -658,8 +653,8 @@ Deno.test("objectstore - max chunk is max payload", async () => {
   }
   assertEquals(nc.info?.max_payload, 8 * 1024);
 
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const rs = readableStreamFrom(makeData(32 * 1024));
 
@@ -680,8 +675,8 @@ Deno.test("objectstore - default chunk is 128k", async () => {
   }
   assertEquals(nc.info?.max_payload, 1024 * 1024);
 
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const rs = readableStreamFrom(makeData(129 * 1024));
 
@@ -700,8 +695,8 @@ Deno.test("objectstore - sanitize", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
   await os.put({ name: "has.dots.here" }, readableStreamFrom(makeData(1)));
   await os.put(
     { name: "the spaces are here" },
@@ -733,8 +728,8 @@ Deno.test("objectstore - partials", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
   const sc = StringCodec();
 
   const data = sc.encode("".padStart(7, "a"));
@@ -772,8 +767,8 @@ Deno.test("objectstore - no store", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
   await os.put({ name: "test" }, readableStreamFrom(Empty));
   await os.delete("test");
   const oi = await os.info("test");
@@ -832,8 +827,8 @@ Deno.test("objectstore - hashtests", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("hashes");
+  const objm = new Objm(nc);
+  const os = await objm.create("hashes");
 
   const base =
     "https://raw.githubusercontent.com/nats-io/nats.client.deps/main/digester_test/";
@@ -874,8 +869,8 @@ Deno.test("objectstore - meta update", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   // cannot update meta of an object that doesn't exist
   await assertRejects(
@@ -920,8 +915,8 @@ Deno.test("objectstore - cannot put links", async () => {
     return;
   }
   const sc = StringCodec();
-  const js = jetstream(nc);
-  const os = await js.views.os("test");
+  const objm = new Objm(nc);
+  const os = await objm.create("test");
 
   const link = { bucket: "test", name: "a" };
   const mm = {
@@ -946,8 +941,8 @@ Deno.test("objectstore - put purges old entries", async () => {
     return;
   }
 
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS", { description: "testing" });
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS", { description: "testing" });
 
   // we expect 10 messages per put
   const t = async (first: number, last: number) => {
@@ -980,8 +975,8 @@ Deno.test("objectstore - put previous sequences", async () => {
     return;
   }
 
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS", { description: "testing" });
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS", { description: "testing" });
 
   // putting the first
   let oi = await os.put(
@@ -1023,9 +1018,8 @@ Deno.test("objectstore - put/get blob", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS", { description: "testing" });
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS", { description: "testing" });
 
   const payload = new Uint8Array(9);
 
@@ -1056,9 +1050,9 @@ Deno.test("objectstore - ttl", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
+  const objm = new Objm(nc);
   const ttl = nanos(60 * 1000);
-  const os = await js.views.os("OBJS", { ttl });
+  const os = await objm.create("OBJS", { ttl });
   const status = await os.status();
   assertEquals(status.ttl, ttl);
 
@@ -1070,8 +1064,8 @@ Deno.test("objectstore - allow direct", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS");
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS");
   const status = await os.status();
   assertEquals(status.streamInfo.config.allow_direct, true);
 
@@ -1084,8 +1078,8 @@ Deno.test("objectstore - stream metadata and entry metadata", async () => {
     return;
   }
 
-  const js = jetstream(nc);
-  const os = await js.views.os("OBJS", {
+  const objm = new Objm(nc);
+  const os = await objm.create("OBJS", {
     description: "testing",
     metadata: { hello: "world" },
   });
@@ -1108,14 +1102,14 @@ Deno.test("objectstore - stream metadata and entry metadata", async () => {
 
 Deno.test("os - compression", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const js = jetstream(nc);
-  const s2 = await js.views.os("compressed", {
+  const objm = new Objm(nc);
+  const s2 = await objm.create("compressed", {
     compression: true,
   });
   let status = await s2.status();
   assertEquals(status.compression, true);
 
-  const none = await js.views.os("none");
+  const none = await objm.create("none");
   status = await none.status();
   assertEquals(status.compression, false);
   await cleanup(ns, nc);
@@ -1127,20 +1121,21 @@ Deno.test("os - os rejects in older servers", async () => {
   }));
 
   const nci = nc as NatsConnectionImpl;
-  const js = jetstream(nc);
+  const objm = new Objm(nc);
+
   async function t(version: string, ok: boolean): Promise<void> {
     nci.features.update(version);
 
     if (!ok) {
       await assertRejects(
         async () => {
-          await js.views.os(nuid.next());
+          await objm.create(nuid.next());
         },
         Error,
         `objectstore is only supported on servers 2.6.3 or better`,
       );
     } else {
-      await js.views.os(nuid.next());
+      await objm.create(nuid.next());
     }
   }
 

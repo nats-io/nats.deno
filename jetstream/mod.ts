@@ -89,15 +89,6 @@ export type {
   MsgDeleteRequest,
   MsgRequest,
   NextOptions,
-  ObjectInfo,
-  ObjectResult,
-  ObjectStore,
-  ObjectStoreLink,
-  ObjectStoreMeta,
-  ObjectStoreMetaOptions,
-  ObjectStoreOptions,
-  ObjectStorePutOpts,
-  ObjectStoreStatus,
   OrderedConsumerOptions,
   PeerInfo,
   Placement,
@@ -129,6 +120,5 @@ export type {
   SubjectTransformConfig,
   ThresholdBytes,
   ThresholdMessages,
-  Views,
 } from "./internal_mod.ts";
 export { consumerOpts } from "./types.ts";

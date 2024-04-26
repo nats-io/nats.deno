@@ -31,7 +31,6 @@ import {
   StorageType,
 } from "../mod.ts";
 import {
-  collect,
   delay,
   NatsConnectionImpl,
 } from "../../nats-base-client/internal_mod.ts";

@@ -46,7 +46,6 @@ import {
 } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
 import { Feature } from "../nats-base-client/semver.ts";
-import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import {
@@ -72,13 +71,10 @@ import {
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsHeaders,
-  ObjectStore,
-  ObjectStoreOptions,
   PubAck,
   Pullable,
   StreamAPI,
   Streams,
-  Views,
 } from "./types.ts";
 import {
   createInbox,
@@ -141,47 +137,6 @@ export async function jetstreamManager(
     }
   }
   return adm;
-}
-
-class ViewsImpl implements Views {
-  js: JetStreamClientImpl;
-  constructor(js: JetStreamClientImpl) {
-    this.js = js;
-  }
-  // kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
-  //   const jsi = this.js as JetStreamClientImpl;
-  //   const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
-  //   if (!ok) {
-  //     return Promise.reject(
-  //       new Error(`kv is only supported on servers ${min} or better`),
-  //     );
-  //   }
-  //   if (opts.bindOnly) {
-  //     return Bucket.bind(this.js, name, opts);
-  //   }
-  //
-  //   return Bucket.create(this.js, name, opts);
-  // }
-  os(
-    name: string,
-    opts: Partial<ObjectStoreOptions> = {},
-  ): Promise<ObjectStore> {
-    if (typeof crypto?.subtle?.digest !== "function") {
-      return Promise.reject(
-        new Error(
-          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
-        ),
-      );
-    }
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`objectstore is only supported on servers ${min} or better`),
-      );
-    }
-    return ObjectStoreImpl.create(this.js, name, opts);
-  }
 }
 
 export class JetStreamManagerImpl extends BaseApiClientImpl
@@ -256,10 +211,6 @@ export class JetStreamClientImpl extends BaseApiClientImpl
 
   get apiPrefix(): string {
     return this.prefix;
-  }
-
-  get views(): Views {
-    return new ViewsImpl(this);
   }
 
   async publish(

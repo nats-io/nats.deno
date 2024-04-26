@@ -66,15 +66,6 @@ export type {
   MaxBytes,
   MaxMessages,
   NextOptions,
-  ObjectInfo,
-  ObjectResult,
-  ObjectStore,
-  ObjectStoreLink,
-  ObjectStoreMeta,
-  ObjectStoreMetaOptions,
-  ObjectStoreOptions,
-  ObjectStorePutOpts,
-  ObjectStoreStatus,
   OrderedConsumerOptions,
   PubAck,
   Pullable,
@@ -84,7 +75,6 @@ export type {
   Streams,
   ThresholdBytes,
   ThresholdMessages,
-  Views,
 } from "./types.ts";
 
 export type { StreamNames } from "./jsbaseclient_api.ts";

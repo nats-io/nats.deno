@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,16 +24,10 @@ import {
   JetStreamClient,
   JetStreamManager,
   JsHeaders,
-  ObjectInfo,
-  ObjectResult,
-  ObjectStore,
-  ObjectStoreMeta,
-  ObjectStoreMetaOptions,
-  ObjectStoreOptions,
-  ObjectStorePutOpts,
-  ObjectStoreStatus,
+  Lister,
+  ListerFieldFilter,
   PubAck,
-} from "./types.ts";
+} from "../jetstream/types.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { SHA256 } from "../nats-base-client/sha256.js";
 
@@ -52,8 +46,23 @@ import {
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
-} from "./jsapi_types.ts";
-import { JsMsg } from "./jsmsg.ts";
+  StreamListResponse,
+} from "../jetstream/jsapi_types.ts";
+import { JsMsg } from "../jetstream/jsmsg.ts";
+import {
+  ObjectInfo,
+  ObjectResult,
+  ObjectStore,
+  ObjectStoreMeta,
+  ObjectStoreMetaOptions,
+  ObjectStoreOptions,
+  ObjectStorePutOpts,
+  ObjectStoreStatus,
+} from "./types.ts";
+import { jetstream, JetStreamClientImpl } from "../jetstream/jsclient.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { Feature } from "../nats-base-client/semver.ts";
+import { ListerImpl } from "../jetstream/jslister.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -68,6 +77,87 @@ export function objectStoreBucketName(stream: string): string {
     return stream.substring(4);
   }
   return stream;
+}
+
+/**
+ * The entry point to creating and managing new ObjectStore instances.
+ */
+export class Objm {
+  js: JetStreamClientImpl;
+
+  /**
+   * Creates an instance of the Objm that allows you to create and access ObjectStore.
+   * Note that if the argument is a NatsConnection, default JetStream Options are
+   * used. If you want to set some options, please provide a JetStreamClient instead.
+   * @param nc
+   */
+  constructor(nc: JetStreamClient | NatsConnection) {
+    this.js =
+      (nc instanceof NatsConnectionImpl
+        ? jetstream(nc)
+        : nc) as JetStreamClientImpl;
+  }
+
+  /**
+   * Creates and opens the specified ObjectStore. If the Object already exists, it opens the existing ObjectStore.
+   * @param name
+   * @param opts
+   */
+  create(
+    name: string,
+    opts: Partial<ObjectStoreOptions> = {},
+  ): Promise<ObjectStore> {
+    return this.#maybeCreate(name, opts);
+  }
+
+  #maybeCreate(
+    name: string,
+    opts: Partial<ObjectStoreOptions> = {},
+  ): Promise<ObjectStore> {
+    if (typeof crypto?.subtle?.digest !== "function") {
+      return Promise.reject(
+        new Error(
+          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
+        ),
+      );
+    }
+
+    const jsi = this.js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`objectstore is only supported on servers ${min} or better`),
+      );
+    }
+
+    return ObjectStoreImpl.create(this.js, name, opts);
+  }
+
+  /**
+   * Returns a list of ObjectStoreInfo for all streams that are identified as
+   * being a ObjectStore (that is having names that have the prefix `OBJ_`)
+   */
+  list(): Lister<ObjectStoreStatus> {
+    const filter: ListerFieldFilter<ObjectStoreStatus> = (
+      v: unknown,
+    ): ObjectStoreStatus[] => {
+      const slr = v as StreamListResponse;
+      const streams = slr.streams.filter((v) => {
+        return v.config.name.startsWith(osPrefix);
+      });
+      streams.forEach((si) => {
+        si.config.sealed = si.config.sealed || false;
+        si.config.deny_delete = si.config.deny_delete || false;
+        si.config.deny_purge = si.config.deny_purge || false;
+        si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+      });
+      return streams.map((si) => {
+        return new ObjectStoreStatusImpl(si);
+      });
+    };
+    const subj = `${this.js.prefix}.STREAM.LIST`;
+    return new ListerImpl<ObjectStoreStatus>(subj, filter, this.js);
+  }
 }
 
 export class ObjectStoreStatusImpl implements ObjectStoreStatus {
