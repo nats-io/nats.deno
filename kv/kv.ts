@@ -20,17 +20,50 @@ import {
   NatsError,
   Payload,
   QueuedIterator,
-} from "../nats-base-client/core.ts";
+} from "../nats-base-client/mod.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { headers } from "../nats-base-client/headers.ts";
+import { headers } from "../nats-base-client/mod.ts";
+import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
+import { deferred, millis, nanos } from "../nats-base-client/util.ts";
+import { Empty } from "../nats-base-client/encoders.ts";
 import {
+  AckPolicy,
+  ConsumerConfig,
+  ConsumerInfo,
   consumerOpts,
-  DirectStreamAPI,
+  DeliverPolicy,
+  DiscardPolicy,
+  jetstream,
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
-  JetStreamSubscriptionInfoable,
   JsHeaders,
+  JsMsg,
+  Lister,
+  MsgRequest,
+  Placement,
+  PurgeOpts,
+  PurgeResponse,
+  Republish,
+  RetentionPolicy,
+  StorageType,
+  StoreCompression,
+  StoredMsg,
+  StreamConfig,
+  StreamInfo,
+  StreamSource,
+} from "../jetstream/mod.ts";
+
+import type {
+  DirectStreamAPI,
+  JetStreamSubscriptionInfoable,
+} from "../jetstream/internal_mod.ts";
+
+import { PubHeaders } from "../jetstream/internal_mod.ts";
+
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
+import {
   KV,
   KvCodec,
   KvCodecs,
@@ -43,33 +76,12 @@ import {
   KvStatus,
   KvWatchInclude,
   KvWatchOptions,
-  StoredMsg,
 } from "./types.ts";
-import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
-import { deferred, millis, nanos } from "../nats-base-client/util.ts";
-import { Empty } from "../nats-base-client/encoders.ts";
-import {
-  AckPolicy,
-  ConsumerConfig,
-  ConsumerInfo,
-  DeliverPolicy,
-  DiscardPolicy,
-  MsgRequest,
-  Placement,
-  PubHeaders,
-  PurgeOpts,
-  PurgeResponse,
-  Republish,
-  RetentionPolicy,
-  StorageType,
-  StoreCompression,
-  StreamConfig,
-  StreamInfo,
-  StreamSource,
-} from "./jsapi_types.ts";
-import { JsMsg } from "./jsmsg.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
+
+import { JetStreamClientImpl } from "../jetstream/internal_mod.ts";
+import { StreamListResponse } from "../jetstream/jsapi_types.ts";
+import { ListerImpl } from "../jetstream/jslister.ts";
+import { ListerFieldFilter } from "../jetstream/types.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -166,6 +178,89 @@ export function hasWildcards(k: string) {
 export function validateBucket(name: string) {
   if (!validBucketRe.test(name)) {
     throw new Error(`invalid bucket name: ${name}`);
+  }
+}
+
+/**
+ * The entry point to creating new KV instances.
+ */
+export class Kvm {
+  js: JetStreamClientImpl;
+
+  /**
+   * Creates an instance of the Kv that allows you to create and access KV stores.
+   * Note that if the argument is a NatsConnection, default JetStream Options are
+   * used. If you want to set some options, please provide a JetStreamClient instead.
+   * @param nc
+   */
+  constructor(nc: JetStreamClient | NatsConnection) {
+    this.js =
+      (nc instanceof NatsConnectionImpl
+        ? jetstream(nc)
+        : nc) as JetStreamClientImpl;
+  }
+
+  /**
+   * Creates and opens the specified KV. If the KV already exists, it opens the existing KV.
+   * @param name
+   * @param opts
+   */
+  create(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    return this.#maybeCreate(name, opts);
+  }
+
+  /**
+   * Open to the specified KV. If the KV doesn't exist, this API will fail.
+   * @param name
+   * @param opts
+   */
+  open(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    opts.bindOnly = true;
+    return this.#maybeCreate(name, opts);
+  }
+
+  #maybeCreate(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+    const jsi = this.js as JetStreamClientImpl;
+    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
+    if (!ok) {
+      return Promise.reject(
+        new Error(`kv is only supported on servers ${min} or better`),
+      );
+    }
+    if (opts.bindOnly) {
+      return Bucket.bind(this.js, name, opts);
+    }
+
+    return Bucket.create(this.js, name, opts);
+  }
+
+  /**
+   * Lists all available KVs
+   */
+  list(): Lister<KvStatus> {
+    const filter: ListerFieldFilter<KvStatus> = (
+      v: unknown,
+    ): KvStatus[] => {
+      const slr = v as StreamListResponse;
+      const kvStreams = slr.streams.filter((v) => {
+        return v.config.name.startsWith(kvPrefix);
+      });
+      kvStreams.forEach((si) => {
+        si.config.sealed = si.config.sealed || false;
+        si.config.deny_delete = si.config.deny_delete || false;
+        si.config.deny_purge = si.config.deny_purge || false;
+        si.config.allow_rollup_hdrs = si.config.allow_rollup_hdrs || false;
+      });
+      let cluster = "";
+      if (kvStreams.length) {
+        cluster = this.js.nc.info?.cluster ?? "";
+      }
+      return kvStreams.map((si) => {
+        return new KvStatusImpl(si, cluster);
+      });
+    };
+    const subj = `${this.js.prefix}.STREAM.LIST`;
+    return new ListerImpl<KvStatus>(subj, filter, this.js);
   }
 }
 

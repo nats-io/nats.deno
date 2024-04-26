@@ -144,6 +144,9 @@ export class BaseApiClientImpl {
       const err = checkJsErrorCode(r.error.code, r.error.description);
       if (err !== null) {
         err.api_error = r.error;
+        if (r.error.description !== "") {
+          err.message = r.error.description;
+        }
         throw err;
       }
     }

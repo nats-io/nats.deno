@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-import { validateBucket } from "./kv.ts";
 import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
 import { JSONCodec } from "../nats-base-client/codec.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
@@ -112,6 +111,12 @@ export class ObjectStoreStatusImpl implements ObjectStoreStatus {
       return this.si.config.compression !== StoreCompression.None;
     }
     return false;
+  }
+}
+export function validateBucket(name: string) {
+  const validBucketRe = /^[-\w]+$/;
+  if (!validBucketRe.test(name)) {
+    throw new Error(`invalid bucket name: ${name}`);
   }
 }
 

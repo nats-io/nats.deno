@@ -45,7 +45,6 @@ import {
   timeout,
 } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
-import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
 import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
@@ -73,8 +72,6 @@ import {
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsHeaders,
-  KV,
-  KvOptions,
   ObjectStore,
   ObjectStoreOptions,
   PubAck,
@@ -122,15 +119,14 @@ export function jetstream(
   return new JetStreamClientImpl(nc, opts);
 }
 
-
 /**
  * Returns a {@link JetStreamManager} supported by the specified NatsConnection
  * @param nc
  * @param opts
  */
 export async function jetstreamManager(
-    nc: NatsConnection,
-    opts: JetStreamOptions | JetStreamManagerOptions = {},
+  nc: NatsConnection,
+  opts: JetStreamOptions | JetStreamManagerOptions = {},
 ): Promise<JetStreamManager> {
   const adm = new JetStreamManagerImpl(nc, opts);
   if ((opts as JetStreamManagerOptions).checkAPI !== false) {
@@ -152,20 +148,20 @@ class ViewsImpl implements Views {
   constructor(js: JetStreamClientImpl) {
     this.js = js;
   }
-  kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`kv is only supported on servers ${min} or better`),
-      );
-    }
-    if (opts.bindOnly) {
-      return Bucket.bind(this.js, name, opts);
-    }
-
-    return Bucket.create(this.js, name, opts);
-  }
+  // kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
+  //   const jsi = this.js as JetStreamClientImpl;
+  //   const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
+  //   if (!ok) {
+  //     return Promise.reject(
+  //       new Error(`kv is only supported on servers ${min} or better`),
+  //     );
+  //   }
+  //   if (opts.bindOnly) {
+  //     return Bucket.bind(this.js, name, opts);
+  //   }
+  //
+  //   return Bucket.create(this.js, name, opts);
+  // }
   os(
     name: string,
     opts: Partial<ObjectStoreOptions> = {},
