@@ -18,7 +18,6 @@ import { BaseApiClientImpl, StreamNames } from "./jsbaseclient_api.ts";
 import { ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
-import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
 import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
 import { TD } from "../nats-base-client/encoders.ts";
 import { Feature } from "../nats-base-client/semver.ts";
@@ -30,7 +29,6 @@ import {
   JetStreamOptions,
   Lister,
   ListerFieldFilter,
-  ObjectStoreStatus,
   OrderedConsumerOptions,
   StoredMsg,
   Stream,
@@ -446,25 +444,6 @@ export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
 
   find(subject: string): Promise<string> {
     return this.findStream(subject);
-  }
-
-  listObjectStores(): Lister<ObjectStoreStatus> {
-    const filter: ListerFieldFilter<ObjectStoreStatus> = (
-      v: unknown,
-    ): ObjectStoreStatus[] => {
-      const slr = v as StreamListResponse;
-      const objStreams = slr.streams.filter((v) => {
-        return v.config.name.startsWith(osPrefix);
-      });
-      objStreams.forEach((si) => {
-        this._fixInfo(si);
-      });
-      return objStreams.map((si) => {
-        return new ObjectStoreStatusImpl(si);
-      });
-    };
-    const subj = `${this.prefix}.STREAM.LIST`;
-    return new ListerImpl<ObjectStoreStatus>(subj, filter, this);
   }
 
   names(subject = ""): Lister<string> {
