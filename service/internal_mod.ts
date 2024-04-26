@@ -23,3 +23,5 @@ export {
   ServiceResponseType,
   ServiceVerb,
 } from "./types.ts";
+
+export { Svc } from "./service.ts";
