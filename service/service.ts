@@ -12,29 +12,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred, nanos } from "./util.ts";
-import { headers } from "./headers.ts";
-import { JSONCodec } from "./codec.ts";
-import { nuid } from "./nuid.ts";
-import { QueuedIteratorImpl } from "./queued_iterator.ts";
+import { Deferred, deferred, nanos } from "../nats-base-client/util.ts";
+import { headers } from "../nats-base-client/headers.ts";
+import { JSONCodec } from "../nats-base-client/codec.ts";
+import { nuid } from "../nats-base-client/nuid.ts";
+import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { validateName } from "../jetstream/jsutil.ts";
-import { parseSemVer } from "./semver.ts";
-import { Empty } from "./encoders.ts";
+import { parseSemVer } from "../nats-base-client/semver.ts";
+import { Empty } from "../nats-base-client/encoders.ts";
 import {
-  Endpoint,
-  EndpointInfo,
-  EndpointOptions,
   Msg,
   MsgHdrs,
-  NamedEndpointStats,
   Nanos,
   NatsConnection,
   NatsError,
   Payload,
   PublishOptions,
   QueuedIterator,
+  RequestManyOptions,
   ReviverFn,
+  Sub,
+} from "../nats-base-client/core.ts";
+import { ServiceClientImpl } from "./serviceclient.ts";
+import {
+  Endpoint,
+  EndpointInfo,
+  EndpointOptions,
+  NamedEndpointStats,
   Service,
+  ServiceClient,
   ServiceConfig,
   ServiceError,
   ServiceErrorCodeHeader,
@@ -47,8 +53,7 @@ import {
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
-  Sub,
-} from "./core.ts";
+} from "./types.ts";
 
 /**
  * Services have common backplane subject pattern:
@@ -60,6 +65,26 @@ import {
  * Note that <name> and <id> are upper-cased.
  */
 export const ServiceApiPrefix = "$SRV";
+
+export class Svc {
+  nc: NatsConnection;
+  constructor(nc: NatsConnection) {
+    this.nc = nc;
+  }
+
+  add(config: ServiceConfig): Promise<Service> {
+    try {
+      const s = new ServiceImpl(this.nc, config);
+      return s.start();
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
+    return new ServiceClientImpl(this.nc, opts, prefix);
+  }
+}
 
 export class ServiceMsgImpl implements ServiceMsg {
   msg: Msg;
