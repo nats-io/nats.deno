@@ -1,3 +1,11 @@
+import {
+  NatsConnection,
+  RequestManyOptions,
+} from "../nats-base-client/core.ts";
+import { ServiceImpl } from "./service.ts";
+import { ServiceClientImpl } from "./serviceclient.ts";
+import { Service, ServiceClient, ServiceConfig } from "./types.ts";
+
 export type {
   Endpoint,
   EndpointInfo,
@@ -24,4 +32,23 @@ export {
   ServiceVerb,
 } from "./types.ts";
 
-export { Svc } from "./service.ts";
+export class Svc {
+  nc: NatsConnection;
+
+  constructor(nc: NatsConnection) {
+    this.nc = nc;
+  }
+
+  add(config: ServiceConfig): Promise<Service> {
+    try {
+      const s = new ServiceImpl(this.nc, config);
+      return s.start();
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
+    return new ServiceClientImpl(this.nc, opts, prefix);
+  }
+}
