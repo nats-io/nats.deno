@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { cleanup, setup } from "../../tests/helpers/mod.ts";
-import { ServiceImpl, Svc } from "../service.ts";
+import { ServiceImpl } from "../service.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -38,6 +38,7 @@ import {
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
+  Svc,
 } from "../types.ts";
 import {
   connect,

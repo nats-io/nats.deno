@@ -23,6 +23,7 @@ import {
   ServiceResponseType,
   ServiceStats,
   ServiceVerb,
+  Svc,
 } from "../mod.ts";
 
 import { collect } from "../../nats-base-client/util.ts";
@@ -30,7 +31,6 @@ import { ServiceClientImpl } from "../serviceclient.ts";
 import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
 
 import { parseSemVer } from "../../nats-base-client/semver.ts";
-import { Svc } from "../service.ts";
 
 const ajv = new Ajv();
 

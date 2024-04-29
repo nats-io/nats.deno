@@ -24,4 +24,4 @@ export {
   ServiceVerb,
 } from "./internal_mod.ts";
 
-export { Svc } from "./service.ts";
+export { Svc } from "./internal_mod.ts";

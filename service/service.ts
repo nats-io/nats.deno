@@ -29,18 +29,15 @@ import {
   Payload,
   PublishOptions,
   QueuedIterator,
-  RequestManyOptions,
   ReviverFn,
   Sub,
 } from "../nats-base-client/core.ts";
-import { ServiceClientImpl } from "./serviceclient.ts";
 import {
   Endpoint,
   EndpointInfo,
   EndpointOptions,
   NamedEndpointStats,
   Service,
-  ServiceClient,
   ServiceConfig,
   ServiceError,
   ServiceErrorCodeHeader,
@@ -65,26 +62,6 @@ import {
  * Note that <name> and <id> are upper-cased.
  */
 export const ServiceApiPrefix = "$SRV";
-
-export class Svc {
-  nc: NatsConnection;
-  constructor(nc: NatsConnection) {
-    this.nc = nc;
-  }
-
-  add(config: ServiceConfig): Promise<Service> {
-    try {
-      const s = new ServiceImpl(this.nc, config);
-      return s.start();
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  }
-
-  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
-    return new ServiceClientImpl(this.nc, opts, prefix);
-  }
-}
 
 export class ServiceMsgImpl implements ServiceMsg {
   msg: Msg;
