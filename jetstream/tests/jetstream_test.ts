@@ -57,11 +57,7 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 
 import { assert } from "../../nats-base-client/denobuffer.ts";
-import {
-  JetStreamClientImpl,
-  JetStreamSubscriptionImpl,
-  PubHeaders,
-} from "../jsclient.ts";
+import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
 import { connect } from "../../src/connect.ts";
 import {
@@ -72,6 +68,7 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { ConsumerOptsBuilderImpl } from "../types.ts";
+import { PubHeaders } from "../jsapi_types.ts";
 
 export function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {

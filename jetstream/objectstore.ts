@@ -46,6 +46,7 @@ import {
 } from "../nats-base-client/core.ts";
 import {
   DiscardPolicy,
+  PubHeaders,
   PurgeResponse,
   StorageType,
   StoreCompression,
@@ -54,7 +55,6 @@ import {
   StreamInfoRequestOptions,
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
-import { PubHeaders } from "./jsclient.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";

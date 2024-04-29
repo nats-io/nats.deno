@@ -48,7 +48,7 @@ export interface StreamNameBySubject {
   subject: string;
 }
 
-export class BaseApiClient {
+export class BaseApiClientImpl {
   nc: NatsConnectionImpl;
   opts: JetStreamOptions;
   prefix: string;

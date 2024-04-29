@@ -14,7 +14,7 @@
  */
 
 import { Empty, MsgHdrs } from "../nats-base-client/types.ts";
-import { BaseApiClient, StreamNames } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl, StreamNames } from "./jsbaseclient_api.ts";
 import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
 import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
@@ -209,7 +209,7 @@ export class StreamImpl implements Stream {
   }
 }
 
-export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
+export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
   }
