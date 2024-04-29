@@ -26,6 +26,7 @@ import { Feature } from "../nats-base-client/semver.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
   Consumers,
+  JetStreamOptions,
   kvPrefix,
   KvStatus,
   ObjectStoreStatus,
@@ -34,11 +35,7 @@ import {
   StreamAPI,
   Streams,
 } from "./types.ts";
-import {
-  JetStreamOptions,
-  NatsConnection,
-  ReviverFn,
-} from "../nats-base-client/core.ts";
+import { NatsConnection, ReviverFn } from "../nats-base-client/core.ts";
 import {
   ApiPagedRequest,
   ExternalStream,

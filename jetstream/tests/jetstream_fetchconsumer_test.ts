@@ -41,16 +41,17 @@ import { Js409Errors } from "../jsutil.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 import { deferred } from "../../nats-base-client/util.ts";
 import { consume } from "./jstest_util.ts";
+import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("jetstream - fetch expires waits", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const start = Date.now();
   const iter = js.fetch(stream, "me", { expires: 1000 });
   await (async () => {
@@ -67,12 +68,12 @@ Deno.test("jetstream - fetch expires waits", async () => {
 Deno.test("jetstream - fetch expires waits after initial", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish(subj, Empty);
   const start = Date.now();
   const iter = js.fetch(stream, "me", { expires: 1000, batch: 5 });
@@ -90,13 +91,13 @@ Deno.test("jetstream - fetch expires waits after initial", async () => {
 Deno.test("jetstream - fetch expires or no_wait is required", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   assertThrows(
     () => {
       js.fetch(stream, "me");
@@ -111,13 +112,13 @@ Deno.test("jetstream - fetch expires or no_wait is required", async () => {
 Deno.test("jetstream - fetch: no_wait with more left", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish(subj);
   await js.publish(subj);
 
@@ -130,13 +131,13 @@ Deno.test("jetstream - fetch: no_wait with more left", async () => {
 Deno.test("jetstream - fetch some messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   // try to get messages = none available
   let sub = await js.fetch(stream, "me", { batch: 2, no_wait: true });
   await (async () => {
@@ -196,13 +197,13 @@ Deno.test("jetstream - fetch some messages", async () => {
 Deno.test("jetstream - fetch none - breaks after expires", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sw = time();
   const batch = js.fetch(stream, "me", {
     batch: 10,
@@ -225,13 +226,13 @@ Deno.test("jetstream - fetch none - breaks after expires", async () => {
 Deno.test("jetstream - fetch none - no wait breaks fast", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sw = time();
   const batch = js.fetch(stream, "me", {
     batch: 10,
@@ -253,13 +254,13 @@ Deno.test("jetstream - fetch none - no wait breaks fast", async () => {
 Deno.test("jetstream - fetch one - no wait breaks fast", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish(subj);
 
   const sw = time();
@@ -285,13 +286,13 @@ Deno.test("jetstream - fetch one - no wait breaks fast", async () => {
 Deno.test("jetstream - fetch none - cancel timers", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sw = time();
   const batch = js.fetch(stream, "me", {
     batch: 10,
@@ -319,12 +320,12 @@ Deno.test("jetstream - fetch none - cancel timers", async () => {
 Deno.test("jetstream - fetch one - breaks after expires", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish(subj);
 
   const sw = time();
@@ -398,14 +399,14 @@ Deno.test("jetstream - fetch one - breaks after expires", async () => {
 Deno.test("jetstream - idleheartbeat missed on fetch", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const iter = js.fetch(stream, "me", {
     expires: 2000,
     idle_heartbeat: 250,
@@ -429,14 +430,14 @@ Deno.test("jetstream - idleheartbeat missed on fetch", async () => {
 Deno.test("jetstream - idleheartbeat on fetch", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   await jsm.consumers.add(stream, {
     durable_name: "me",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const iter = js.fetch(stream, "me", {
     expires: 2000,
     idle_heartbeat: 250,
@@ -478,7 +479,7 @@ Deno.test("jetstream - fetch on stopped server doesn't close client", async () =
       }
     }
   })().then();
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.add({ name: nuid.next(), subjects: ["test"] });
   const { name: stream } = si.config;
   await jsm.consumers.add(stream, {
@@ -486,7 +487,7 @@ Deno.test("jetstream - fetch on stopped server doesn't close client", async () =
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   setTimeout(() => {
     ns.stop();
@@ -524,9 +525,9 @@ Deno.test("jetstream - fetch heartbeat", async () => {
     }
   })().then();
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "my-stream", subjects: ["test"] });
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await ns.stop();
 
   const iter = js.fetch("my-stream", "dur", {
@@ -553,7 +554,7 @@ Deno.test("jetstream - fetch heartbeat", async () => {
 Deno.test("jetstream - fetch consumer deleted", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const name = nuid.next();
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({
     name,
     subjects: [name],
@@ -565,7 +566,7 @@ Deno.test("jetstream - fetch consumer deleted", async () => {
   });
 
   const d = deferred<NatsError>();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const iter = js.fetch(name, name, { expires: 5000 });
   (async () => {
@@ -587,7 +588,7 @@ Deno.test("jetstream - fetch consumer deleted", async () => {
 Deno.test("jetstream - fetch sync", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const name = nuid.next();
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({
     name,
     subjects: [name],
@@ -598,7 +599,7 @@ Deno.test("jetstream - fetch sync", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   await js.publish(name);
   await js.publish(name);

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
 import { nuid } from "./nuid.ts";
 
 /**
@@ -487,32 +486,6 @@ export interface ServicesAPI {
 /**
  * Options to a JetStream options applied to all  JetStream or JetStreamManager requests.
  */
-export interface JetStreamOptions {
-  /**
-   * Prefix required to interact with JetStream. Must match
-   * server configuration.
-   */
-  apiPrefix?: string;
-  /**
-   * Number of milliseconds to wait for a JetStream API request.
-   * @default ConnectionOptions.timeout
-   * @see ConnectionOptions.timeout
-   */
-  timeout?: number;
-  /**
-   * Name of the JetStream domain. This value automatically modifies
-   * the default JetStream apiPrefix.
-   */
-  domain?: string;
-}
-
-export interface JetStreamManagerOptions extends JetStreamOptions {
-  /**
-   * Allows disabling a check on the account for JetStream enablement see
-   * {@link JetStreamManager.getAccountInfo()}.
-   */
-  checkAPI?: boolean;
-}
 
 export type Payload = Uint8Array | string;
 
@@ -650,22 +623,6 @@ export interface NatsConnection {
    * sent and recieved by the client.
    */
   stats(): Stats;
-
-  /**
-   * Returns a Promise to a {@link JetStreamManager} which allows the client
-   * to access Streams and Consumers information.
-   *
-   * @param opts
-   */
-  jetstreamManager(opts?: JetStreamManagerOptions): Promise<JetStreamManager>;
-
-  /**
-   * Returns a {@link JetStreamClient} which allows publishing messages to
-   * JetStream or consuming messages from streams.
-   *
-   * @param opts
-   */
-  jetstream(opts?: JetStreamOptions | JetStreamManagerOptions): JetStreamClient;
 
   /**
    * @return the number of milliseconds it took for a {@link flush}.

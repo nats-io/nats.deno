@@ -16,6 +16,8 @@ export {
   checkJsError,
   isFlowControlMsg,
   isHeartbeatMsg,
+  jetstream,
+  jetstreamManager,
 } from "./internal_mod.ts";
 
 export {

@@ -32,6 +32,9 @@ import {
 import {
   DirectMsgHeaders,
   DiscardPolicy,
+  jetstream,
+  jetstreamManager,
+  JetStreamOptions,
   KV,
   KvEntry,
   KvOptions,
@@ -65,7 +68,6 @@ import {
 import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
 import { connect } from "../../src/mod.ts";
 import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
-import { JetStreamOptions } from "../../nats-base-client/core.ts";
 import {
   JetStreamSubscriptionInfoable,
   kvPrefix,
@@ -155,12 +157,12 @@ Deno.test("kv - init creates stream", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   let streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.views.kv(n);
 
   streams = await jsm.streams.list().next();
@@ -175,12 +177,12 @@ Deno.test("kv - bind to existing KV", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   let streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.views.kv(n, { history: 10 }) as Bucket;
 
   streams = await jsm.streams.list().next();
@@ -247,7 +249,7 @@ Deno.test("kv - crud", async () => {
     return;
   }
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n, { history: 10 }) as Bucket;
   await crud(bucket);
   await cleanup(ns, nc);
@@ -260,12 +262,12 @@ Deno.test("kv - codec crud", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const streams = await jsm.streams.list().next();
   assertEquals(streams.length, 0);
 
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n, {
     history: 10,
     codec: {
@@ -285,7 +287,7 @@ Deno.test("kv - history", async () => {
     return;
   }
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n, { history: 2 });
   let status = await bucket.status();
   assertEquals(status.values, 0);
@@ -306,7 +308,7 @@ Deno.test("kv - history multiple keys", async () => {
     jetstreamServerConf({}),
   );
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n, { history: 2 });
 
   await bucket.put("A", Empty);
@@ -334,7 +336,7 @@ Deno.test("kv - cleanups/empty", async () => {
     return;
   }
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n);
   assertEquals(await bucket.get("x"), null);
 
@@ -360,7 +362,7 @@ Deno.test("kv - history cleanup", async () => {
     return;
   }
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(n);
   await bucket.put("a", Empty);
   await bucket.put("b", Empty);
@@ -391,7 +393,7 @@ Deno.test("kv - bucket watch", async () => {
   }
   const sc = StringCodec();
   const n = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(n, { history: 10 });
   const m: Map<string, string> = new Map();
   const iter = await b.watch();
@@ -471,7 +473,7 @@ Deno.test("kv - key watch", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(nuid.next()) as Bucket;
   await keyWatch(bucket);
 
@@ -489,7 +491,7 @@ Deno.test("kv - codec key watch", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const bucket = await js.views.kv(nuid.next(), {
     history: 10,
     codec: {
@@ -529,7 +531,7 @@ Deno.test("kv - keys", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next());
   await keys(b as Bucket);
 
@@ -547,7 +549,7 @@ Deno.test("kv - codec keys", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next(), {
     history: 10,
     codec: {
@@ -573,10 +575,10 @@ Deno.test("kv - ttl", async () => {
   }
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next(), { ttl: 1000 }) as Bucket;
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.info(b.stream);
   assertEquals(si.config.max_age, nanos(1000));
 
@@ -599,7 +601,7 @@ Deno.test("kv - no ttl", async () => {
     return;
   }
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("x", sc.encode("hello"));
@@ -623,7 +625,7 @@ Deno.test("kv - complex key", async () => {
     return;
   }
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("x.y.z", sc.encode("hello"));
@@ -669,7 +671,7 @@ Deno.test("kv - remove key", async () => {
     return;
   }
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
 
   await b.put("a.b", sc.encode("ab"));
@@ -696,7 +698,7 @@ Deno.test("kv - remove subkey", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
   await b.put("a", Empty);
   await b.put("a.b", Empty);
@@ -721,7 +723,7 @@ Deno.test("kv - create key", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   await b.create("a", Empty);
@@ -744,7 +746,7 @@ Deno.test("kv - update key", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next()) as Bucket;
   const sc = StringCodec();
   const seq = await b.create("a", Empty);
@@ -771,7 +773,7 @@ Deno.test("kv - internal consumer", async () => {
   }
 
   async function getCount(name: string): Promise<number> {
-    const js = nc.jetstream();
+    const js = jetstream(nc);
     const b = await js.views.kv(name) as Bucket;
     const watch = await b.watch() as QueuedIteratorImpl<unknown>;
     const sub = watch._data as JetStreamSubscriptionInfoable;
@@ -779,7 +781,7 @@ Deno.test("kv - internal consumer", async () => {
   }
 
   const name = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(name) as Bucket;
   assertEquals(await getCount(name), 0);
 
@@ -798,7 +800,7 @@ Deno.test("kv - is wildcard delete implemented", async () => {
   }
 
   const name = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(name, { history: 10 }) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
@@ -841,7 +843,7 @@ Deno.test("kv - delta", async () => {
   }
 
   const name = nuid.next();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(name) as Bucket;
   await b.put("a", Empty);
   await b.put("a.a", Empty);
@@ -869,7 +871,7 @@ Deno.test("kv - watch and history headers only", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv("bucket") as Bucket;
   const sc = StringCodec();
   await b.put("key1", sc.encode("aaa"));
@@ -905,7 +907,7 @@ Deno.test("kv - mem and file", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const d = await js.views.kv("default") as Bucket;
   assertEquals((await d.status()).backingStore, StorageType.File);
   assertEquals((await d.status()).storage, StorageType.File);
@@ -927,7 +929,7 @@ Deno.test("kv - mem and file", async () => {
 
 Deno.test("kv - example", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sc = StringCodec();
 
   const kv = await js.views.kv("testing", { history: 5 });
@@ -1035,7 +1037,7 @@ async function makeKvAndClient(
   jsopts: Partial<JetStreamOptions> = {},
 ): Promise<{ nc: NatsConnection; kv: KV }> {
   const nc = await connect(opts);
-  const js = nc.jetstream(jsopts);
+  const js = jetstream(nc, jsopts);
   const kv = await js.views.kv("a");
   return { nc, kv };
 }
@@ -1158,7 +1160,7 @@ Deno.test("kv - watch iter stops", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv("a") as Bucket;
   const watch = await b.watch();
   const done = (async () => {
@@ -1176,9 +1178,9 @@ Deno.test("kv - defaults to discard new - if server 2.7.2", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv("a") as Bucket;
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.info(b.stream);
   const v272 = parseSemVer("2.7.2");
   const serv = (nc as NatsConnectionImpl).getServerVersion();
@@ -1193,7 +1195,7 @@ Deno.test("kv - initialized watch empty", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a") as Bucket;
   const d = deferred();
@@ -1211,7 +1213,7 @@ Deno.test("kv - initialized watch with messages", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a") as Bucket;
   await b.put("A", Empty);
@@ -1237,7 +1239,7 @@ Deno.test("kv - initialized watch with modifications", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a") as Bucket;
 
@@ -1281,7 +1283,7 @@ Deno.test("kv - watch init callback exceptions terminate the iterator", async ()
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a") as Bucket;
   for (let i = 0; i < 10; i++) {
@@ -1312,7 +1314,7 @@ Deno.test("kv - get revision", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sc = StringCodec();
 
   const b = await js.views.kv(nuid.next(), { history: 3 }) as Bucket;
@@ -1348,7 +1350,7 @@ Deno.test("kv - purge deletes", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a") as Bucket;
 
@@ -1375,12 +1377,12 @@ Deno.test("kv - purge deletes", async () => {
 Deno.test("kv - replicas", async () => {
   const servers = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: servers[0].port });
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a", { replicas: 3 });
   const status = await b.status();
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   let si = await jsm.streams.info(status.streamInfo.config.name);
   assertEquals(si.config.num_replicas, 3);
 
@@ -1401,8 +1403,8 @@ Deno.test("kv - allow direct", async () => {
   if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
-  const js = nc.jetstream();
-  const jsm = await nc.jetstreamManager();
+  const js = jetstream(nc);
+  const jsm = await jetstreamManager(nc);
 
   async function test(
     name: string,
@@ -1461,7 +1463,7 @@ Deno.test("kv - direct message", async () => {
     return;
   }
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sc = StringCodec();
 
   const kv = await js.views.kv("a", { allow_direct: true, history: 3 });
@@ -1506,7 +1508,7 @@ Deno.test("kv - republish", async () => {
     return;
   }
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("test", {
     republish: {
       src: ">",
@@ -1534,14 +1536,14 @@ Deno.test("kv - ttl is in nanos", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a", { ttl: 1000 });
   const status = await b.status();
   assertEquals(status.ttl, 1000);
   assertEquals(status.size, 0);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.info("KV_a");
   assertEquals(si.config.max_age, nanos(1000));
   await cleanup(ns, nc);
@@ -1551,7 +1553,7 @@ Deno.test("kv - size", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const b = await js.views.kv("a", { ttl: 1000 });
   let status = await b.status();
@@ -1590,7 +1592,7 @@ Deno.test("kv - mirror cross domain", async () => {
   );
 
   // setup a KV
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("TEST");
   const sc = StringCodec();
   const m = new Map<string, KvEntry[]>();
@@ -1620,13 +1622,13 @@ Deno.test("kv - mirror cross domain", async () => {
   assertEquals(a.length, 1);
   assertEquals(sc.decode(a[0].value), "derek");
 
-  const ljs = await lnc.jetstream();
+  const ljs = jetstream(lnc);
   await ljs.views.kv("MIRROR", {
     mirror: { name: "TEST", domain: "HUB" },
   });
 
   // setup a Mirror
-  const ljsm = await lnc.jetstreamManager();
+  const ljsm = await jetstreamManager(lnc);
   let si = await ljsm.streams.info("KV_MIRROR");
   assertEquals(si.config.mirror_direct, true);
 
@@ -1691,7 +1693,7 @@ Deno.test("kv - mirror cross domain", async () => {
   assertEquals(sc.decode(a[1].value), "rip");
 
   // access the origin kv via the leafnode
-  const rjs = lnc.jetstream({ domain: "HUB" });
+  const rjs = jetstream(lnc, { domain: "HUB" });
   const rkv = await rjs.views.kv("TEST") as Bucket;
   assertEquals(rkv.prefix, "$KV.TEST");
   watch(rkv, "origin", "name").then();
@@ -1714,7 +1716,7 @@ Deno.test("kv - previous sequence", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
 
   assertEquals(await kv.put("A", Empty, { previousSeq: 0 }), 1);
@@ -1734,7 +1736,7 @@ Deno.test("kv - encoded entry", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
   await kv.put("a", StringCodec().encode("hello"));
   await kv.put("b", JSONCodec().encode(5));
@@ -1750,7 +1752,7 @@ Deno.test("kv - encoded entry", async () => {
 Deno.test("kv - create after delete", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
   await kv.create("a", Empty);
 
@@ -1767,7 +1769,7 @@ Deno.test("kv - create after delete", async () => {
 Deno.test("kv - string payloads", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
   await kv.create("a", "b");
   let entry = await kv.get("a");
@@ -1793,7 +1795,7 @@ Deno.test("kv - metadata", async () => {
     return;
   }
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K", { metadata: { hello: "world" } });
   const status = await kv.status();
   assertEquals(status.metadata?.hello, "world");
@@ -1803,7 +1805,7 @@ Deno.test("kv - metadata", async () => {
 Deno.test("kv - watch updates only", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
 
   await kv.put("a", "a");
@@ -1836,7 +1838,7 @@ Deno.test("kv - watch updates only", async () => {
 Deno.test("kv - watch multiple keys", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K");
 
   await kv.put("a", "a");
@@ -1868,7 +1870,7 @@ Deno.test("kv - watch multiple keys", async () => {
 Deno.test("kv - watch history", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K", { history: 10 });
 
   await kv.put("a", "a");
@@ -1906,7 +1908,7 @@ Deno.test("kv - watch history", async () => {
 Deno.test("kv - watch history no deletes", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("K", { history: 10 });
 
   await kv.put("a", "a");
@@ -1944,7 +1946,7 @@ Deno.test("kv - watch history no deletes", async () => {
 
 Deno.test("kv - republish header handling", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const n = nuid.next();
   await jsm.streams.add({
     name: n,
@@ -1956,7 +1958,7 @@ Deno.test("kv - republish header handling", async () => {
     },
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv(n);
 
   nc.publish("A.orange", "hey");
@@ -1982,7 +1984,7 @@ Deno.test("kv - republish header handling", async () => {
 
 Deno.test("kv - compression", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const s2 = await js.views.kv("compressed", {
     compression: true,
   });
@@ -1997,7 +1999,7 @@ Deno.test("kv - compression", async () => {
 
 Deno.test("kv - watch start at", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("a");
   await kv.put("a", "1");
   await kv.put("b", "2");
@@ -2023,7 +2025,7 @@ Deno.test("kv - delete key if revision", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next());
   const seq = await b.create("a", Empty);
   await assertRejects(
@@ -2047,7 +2049,7 @@ Deno.test("kv - purge key if revision", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const b = await js.views.kv(nuid.next());
   const seq = await b.create("a", Empty);
 
@@ -2071,7 +2073,7 @@ Deno.test("kv - bind no info", async () => {
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;
   }
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.views.kv("A");
 
   const d = deferred();
@@ -2102,7 +2104,7 @@ Deno.test("kv - watcher will name and filter", async () => {
     return;
   }
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("A");
 
   const sub = syncIterator(nc.subscribe("$JS.API.>"));
@@ -2121,13 +2123,13 @@ Deno.test("kv - honors checkAPI option", async () => {
   const { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const sub = nc.subscribe("$JS.API.INFO");
   const si = syncIterator(sub);
   await js.views.kv("A");
   assertExists(await si.next());
 
-  const js2 = nc.jetstream({ checkAPI: false });
+  const js2 = jetstream(nc, { checkAPI: false });
   await js2.views.kv("B");
   await sub.drain();
   assertEquals(await si.next(), null);
@@ -2139,7 +2141,7 @@ Deno.test("kv - watcher on server restart", async () => {
   let { ns, nc } = await setup(
     jetstreamServerConf({}),
   );
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const kv = await js.views.kv("A");
   const iter = await kv.watch();
   const d = deferred<KvEntry>();

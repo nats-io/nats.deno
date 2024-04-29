@@ -23,7 +23,9 @@ import {
 import {
   AckPolicy,
   consumerOpts,
+  jetstream,
   JetStreamClient,
+  jetstreamManager,
   PullOptions,
 } from "../mod.ts";
 import {
@@ -99,10 +101,10 @@ Deno.test("409 - max_batch", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   for (let i = 0; i < 10; i++) {
     await js.publish(subj, sc.encode("hello"));
   }
@@ -133,10 +135,10 @@ Deno.test("409 - max_expires", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   for (let i = 0; i < 10; i++) {
     await js.publish(subj, sc.encode("hello"));
   }
@@ -170,10 +172,10 @@ Deno.test("409 - max_bytes", async () => {
   }
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   for (let i = 0; i < 10; i++) {
     await js.publish(subj, sc.encode("hello"));
   }
@@ -207,10 +209,10 @@ Deno.test("409 - max msg size", async () => {
   }
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   for (let i = 0; i < 10; i++) {
     await js.publish(subj, sc.encode("hello"));
   }
@@ -240,10 +242,10 @@ Deno.test("409 - max waiting", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   const sc = StringCodec();
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   for (let i = 0; i < 10; i++) {
     await js.publish(subj, sc.encode("hello"));
   }
