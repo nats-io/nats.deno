@@ -792,7 +792,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
 
     const subj = `${info.api.prefix}.CONSUMER.CREATE.${info.stream}`;
 
-    this.js._request(subj, req)
+    this.js._request(subj, req, { retries: -1 })
       .then((v) => {
         const ci = v as ConsumerInfo;
         this.info!.config = ci.config;
