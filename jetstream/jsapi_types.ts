@@ -1108,3 +1108,11 @@ export interface DeliveryInfo {
    */
   redelivered: boolean;
 }
+
+export enum PubHeaders {
+  MsgIdHdr = "Nats-Msg-Id",
+  ExpectedStreamHdr = "Nats-Expected-Stream",
+  ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
+  ExpectedLastMsgIdHdr = "Nats-Expected-Last-Msg-Id",
+  ExpectedLastSubjectSequenceHdr = "Nats-Expected-Last-Subject-Sequence",
+}

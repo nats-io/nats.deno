@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import { StreamAPIImpl } from "./jsmstream_api.ts";
 import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
@@ -25,14 +25,17 @@ import {
   DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
+  JetStreamManagerOptions,
   JetStreamOptions,
   StoredMsg,
   StreamAPI,
 } from "./types.ts";
 import {
+  ErrorCode,
   Msg,
   MsgHdrs,
   NatsConnection,
+  NatsError,
   QueuedIterator,
   RequestStrategy,
   ReviverFn,
@@ -48,9 +51,9 @@ import {
 import { checkJsError, validateStreamName } from "./jsutil.ts";
 import { Empty, TD } from "../nats-base-client/encoders.ts";
 import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { jetstream } from "./jsconnection.ts";
+import { jetstream } from "./jsclient.ts";
 
-export class DirectStreamAPIImpl extends BaseApiClient
+export class DirectStreamAPIImpl extends BaseApiClientImpl
   implements DirectStreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
@@ -199,7 +202,26 @@ export class DirectMsgImpl implements DirectMsg {
   }
 }
 
-export class JetStreamManagerImpl extends BaseApiClient
+export async function jetstreamManager(
+  nc: NatsConnection,
+  opts: JetStreamOptions | JetStreamManagerOptions = {},
+): Promise<JetStreamManager> {
+  const adm = new JetStreamManagerImpl(nc, opts);
+  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
+    try {
+      await adm.getAccountInfo();
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.code === ErrorCode.NoResponders) {
+        ne.code = ErrorCode.JetStreamNotEnabled;
+      }
+      throw ne;
+    }
+  }
+  return adm;
+}
+
+export class JetStreamManagerImpl extends BaseApiClientImpl
   implements JetStreamManager {
   streams: StreamAPI;
   consumers: ConsumerAPI;

@@ -56,6 +56,7 @@ import {
   DiscardPolicy,
   MsgRequest,
   Placement,
+  PubHeaders,
   PurgeOpts,
   PurgeResponse,
   Republish,
@@ -68,7 +69,7 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { JetStreamClientImpl, PubHeaders } from "./jsclient.ts";
+import { JetStreamClientImpl } from "./jsclient.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {

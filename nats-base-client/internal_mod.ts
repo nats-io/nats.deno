@@ -57,12 +57,6 @@ export { TD, TE } from "./encoders.ts";
 export { isIP, parseIP } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
-export {
-  Base64KeyCodec,
-  Bucket,
-  defaultBucketOpts,
-  NoopKvCodecs,
-} from "../jetstream/kv.ts";
 
 export type { SemVer } from "./semver.ts";
 

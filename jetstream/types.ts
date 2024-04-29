@@ -15,11 +15,13 @@
 
 import { Consumer, OrderedConsumerOptions } from "./consumer.ts";
 import {
+  Msg,
   MsgHdrs,
   Nanos,
   NatsError,
   Payload,
   QueuedIterator,
+  RequestOptions,
   ReviverFn,
   Sub,
 } from "../nats-base-client/core.ts";
@@ -50,11 +52,30 @@ import {
   StreamUpdateConfig,
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+// import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import { ConsumerAPI } from "./jsmconsumer_api.ts";
 import { validateDurableName } from "./jsutil.ts";
 import { Lister } from "./jslister.ts";
 import { nanos } from "../nats-base-client/util.ts";
+import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
+import { Codec } from "../nats-base-client/codec.ts";
+
+export interface BaseClient {
+  nc: NatsConnectionImpl;
+  opts: JetStreamOptions;
+  prefix: string;
+  timeout: number;
+  jc: Codec<unknown>;
+
+  getOptions(): JetStreamOptions;
+  findStream(subject: string): Promise<string>;
+  parseJsResponse(m: Msg): unknown;
+  _request(
+    subj: string,
+    data?: unknown,
+    opts?: RequestOptions,
+  ): Promise<unknown>;
+}
 
 export interface JetStreamOptions {
   /**
@@ -1647,7 +1668,7 @@ export interface JetStreamSubscriptionInfoable {
 }
 
 export interface JetStreamSubscriptionInfo extends ConsumerOpts {
-  api: BaseApiClient;
+  api: BaseClient;
   last: ConsumerInfo;
   attached: boolean;
   deliver: string;

@@ -14,7 +14,7 @@
  */
 
 import { Empty, NatsError } from "../nats-base-client/types.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import {
   checkJsError,
   isFlowControlMsg,
@@ -45,7 +45,7 @@ import {
   timeout,
 } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
-import { jetstreamManager } from "./jsconnection.ts";
+import { jetstreamManager } from "./jsm.ts";
 import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
@@ -96,17 +96,17 @@ import {
   ConsumerInfo,
   CreateConsumerRequest,
   DeliverPolicy,
+  PubHeaders,
   PullOptions,
   ReplayPolicy,
 } from "./jsapi_types.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
 
-export enum PubHeaders {
-  MsgIdHdr = "Nats-Msg-Id",
-  ExpectedStreamHdr = "Nats-Expected-Stream",
-  ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
-  ExpectedLastMsgIdHdr = "Nats-Expected-Last-Msg-Id",
-  ExpectedLastSubjectSequenceHdr = "Nats-Expected-Last-Subject-Sequence",
+export function jetstream(
+  nc: NatsConnection,
+  opts: JetStreamManagerOptions = {},
+): JetStreamClient {
+  return new JetStreamClientImpl(nc, opts);
 }
 
 class ViewsImpl implements Views {
@@ -150,7 +150,7 @@ class ViewsImpl implements Views {
   }
 }
 
-export class JetStreamClientImpl extends BaseApiClient
+export class JetStreamClientImpl extends BaseApiClientImpl
   implements JetStreamClient {
   consumers: Consumers;
   streams: Streams;
@@ -742,11 +742,11 @@ export class JetStreamClientImpl extends BaseApiClient
 
 export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
-  js: BaseApiClient;
+  js: BaseApiClientImpl;
   monitor: IdleHeartbeatMonitor | null;
 
   constructor(
-    js: BaseApiClient,
+    js: BaseApiClientImpl,
     subject: string,
     opts: JetStreamSubscriptionOptions,
   ) {
@@ -914,7 +914,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
 class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
   implements Pullable {
   constructor(
-    js: BaseApiClient,
+    js: BaseApiClientImpl,
     subject: string,
     opts: TypedSubscriptionOptions<JsMsg>,
   ) {
@@ -967,7 +967,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
         }
       }
 
-      const api = this.info.api as BaseApiClient;
+      const api = this.info.api as BaseApiClientImpl;
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;
 

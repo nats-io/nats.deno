@@ -19,19 +19,26 @@ import {
   setup,
 } from "../../tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import {
   assertEquals,
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { Empty } from "../../nats-base-client/encoders.ts";
-import { StringCodec } from "../../nats-base-client/codec.ts";
-import { delay, nanos } from "../../nats-base-client/util.ts";
+import {
+  delay,
+  Empty,
+  nanos,
+  StringCodec,
+  syncIterator,
+} from "../../nats-base-client/mod.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
+import {
+  AckPolicy,
+  DeliverPolicy,
+  jetstream,
+  jetstreamManager,
+} from "../mod.ts";
 import { PullConsumerMessagesImpl } from "../consumer.ts";
-import { jetstream, jetstreamManager } from "../jsconnection.ts";
 
 Deno.test("fetch - no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

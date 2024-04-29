@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
 import {
   minValidation,
@@ -87,7 +87,7 @@ export interface ConsumerAPI {
   ): Promise<{ paused: boolean; pause_until?: string }>;
 }
 
-export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
+export class ConsumerAPIImpl extends BaseApiClientImpl implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
   }

@@ -24,7 +24,15 @@ export {
   RepublishHeaders,
 } from "./types.ts";
 
-export { jetstream, jetstreamManager } from "./jsconnection.ts";
+export { jetstreamManager } from "./jsm.ts";
+export { jetstream } from "./jsclient.ts";
+
+export {
+  Base64KeyCodec,
+  Bucket,
+  defaultBucketOpts,
+  NoopKvCodecs,
+} from "./kv.ts";
 
 export type {
   Advisory,

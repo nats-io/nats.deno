@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import {
   ApiPaged,
   ApiPagedRequest,
@@ -37,14 +37,14 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   offset: number;
   pageInfo: ApiPaged;
   subject: string;
-  jsm: BaseApiClient;
+  jsm: BaseApiClientImpl;
   filter: ListerFieldFilter<T>;
   payload: unknown;
 
   constructor(
     subject: string,
     filter: ListerFieldFilter<T>,
-    jsm: BaseApiClient,
+    jsm: BaseApiClientImpl,
     payload?: unknown,
   ) {
     if (!subject) {
