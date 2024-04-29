@@ -22,6 +22,8 @@ import {
   connect,
   createInbox,
   Empty,
+  jetstream,
+  jetstreamManager,
   Msg,
   nanos,
   StorageType,
@@ -145,7 +147,7 @@ Deno.test("jsmsg - acks", async () => {
 
 Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -153,7 +155,7 @@ Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", { durable_name: "a" });
@@ -173,7 +175,7 @@ Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
 
 Deno.test("jsmsg - explicit consumer ackAck", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -181,7 +183,7 @@ Deno.test("jsmsg - explicit consumer ackAck", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", {
@@ -198,7 +200,7 @@ Deno.test("jsmsg - explicit consumer ackAck", async () => {
 
 Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -206,7 +208,7 @@ Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", { durable_name: "a" });

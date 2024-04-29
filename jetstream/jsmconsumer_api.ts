@@ -21,11 +21,7 @@ import {
 } from "./jsutil.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { Feature } from "../nats-base-client/semver.ts";
-import {
-  JetStreamOptions,
-  Nanos,
-  NatsConnection,
-} from "../nats-base-client/core.ts";
+import { Nanos, NatsConnection } from "../nats-base-client/core.ts";
 import {
   ConsumerApiAction,
   ConsumerConfig,
@@ -35,6 +31,8 @@ import {
   CreateConsumerRequest,
   SuccessResponse,
 } from "./jsapi_types.ts";
+
+import { JetStreamOptions } from "./types.ts";
 
 export interface ConsumerAPI {
   /**

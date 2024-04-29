@@ -25,11 +25,11 @@ import {
   DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
+  JetStreamOptions,
   StoredMsg,
   StreamAPI,
 } from "./types.ts";
 import {
-  JetStreamOptions,
   Msg,
   MsgHdrs,
   NatsConnection,
@@ -48,6 +48,7 @@ import {
 import { checkJsError, validateStreamName } from "./jsutil.ts";
 import { Empty, TD } from "../nats-base-client/encoders.ts";
 import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
+import { jetstream } from "./jsconnection.ts";
 
 export class DirectStreamAPIImpl extends BaseApiClient
   implements DirectStreamAPI {
@@ -216,7 +217,7 @@ export class JetStreamManagerImpl extends BaseApiClient
   }
 
   jetstream(): JetStreamClient {
-    return this.nc.jetstream(this.getOptions());
+    return jetstream(this.nc, this.getOptions());
   }
 
   advisories(): AsyncIterable<Advisory> {

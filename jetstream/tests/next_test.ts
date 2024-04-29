@@ -26,18 +26,19 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { delay, nanos } from "../../nats-base-client/util.ts";
+import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("next - basics", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream, subj } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: stream,
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, stream);
   let ci = await c.info(true);
   assertEquals(ci.num_pending, 0);
@@ -67,14 +68,14 @@ Deno.test("next - sub leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
   const { stream } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: stream,
     ack_policy: AckPolicy.Explicit,
   });
   //@ts-ignore: test
   assertEquals(nc.protocol.subscriptions.size(), 1);
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, stream);
   await c.next({ expires: 1000 });
   //@ts-ignore: test
@@ -84,10 +85,10 @@ Deno.test("next - sub leaks", async () => {
 
 Deno.test("next - listener leaks", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "messages", subjects: ["hello"] });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("hello");
 
   await jsm.consumers.add("messages", {
@@ -119,7 +120,7 @@ Deno.test("next - listener leaks", async () => {
 
 Deno.test("next - consumer not found", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["hello"] });
 
   await jsm.consumers.add("A", {
@@ -128,7 +129,7 @@ Deno.test("next - consumer not found", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
   await c.delete();
   await delay(1000);
@@ -148,7 +149,7 @@ Deno.test("next - consumer not found", async () => {
 Deno.test("next - deleted consumer", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["hello"] });
 
   await jsm.consumers.add("A", {
@@ -157,7 +158,7 @@ Deno.test("next - deleted consumer", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
 
   (nc as NatsConnectionImpl).options.debug = true;
@@ -179,7 +180,7 @@ Deno.test("next - deleted consumer", async () => {
 Deno.test("next - stream not found", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["hello"] });
 
   await jsm.consumers.add("A", {
@@ -188,7 +189,7 @@ Deno.test("next - stream not found", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
 
   (nc as NatsConnectionImpl).options.debug = true;
@@ -209,7 +210,7 @@ Deno.test("next - stream not found", async () => {
 Deno.test("next - consumer bind", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   await jsm.consumers.add("A", {
@@ -218,7 +219,7 @@ Deno.test("next - consumer bind", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a");
 
   const c = await js.consumers.get("A", "a");

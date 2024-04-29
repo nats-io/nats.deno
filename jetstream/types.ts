@@ -15,7 +15,6 @@
 
 import { Consumer, OrderedConsumerOptions } from "./consumer.ts";
 import {
-  JetStreamOptions,
   MsgHdrs,
   Nanos,
   NatsError,
@@ -23,11 +22,6 @@ import {
   QueuedIterator,
   ReviverFn,
   Sub,
-} from "../nats-base-client/core.ts";
-
-export type {
-  JetStreamManagerOptions,
-  JetStreamOptions,
 } from "../nats-base-client/core.ts";
 
 import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
@@ -61,6 +55,33 @@ import { ConsumerAPI } from "./jsmconsumer_api.ts";
 import { validateDurableName } from "./jsutil.ts";
 import { Lister } from "./jslister.ts";
 import { nanos } from "../nats-base-client/util.ts";
+
+export interface JetStreamOptions {
+  /**
+   * Prefix required to interact with JetStream. Must match
+   * server configuration.
+   */
+  apiPrefix?: string;
+  /**
+   * Number of milliseconds to wait for a JetStream API request.
+   * @default ConnectionOptions.timeout
+   * @see ConnectionOptions.timeout
+   */
+  timeout?: number;
+  /**
+   * Name of the JetStream domain. This value automatically modifies
+   * the default JetStream apiPrefix.
+   */
+  domain?: string;
+}
+
+export interface JetStreamManagerOptions extends JetStreamOptions {
+  /**
+   * Allows disabling a check on the account for JetStream enablement see
+   * {@link JetStreamManager.getAccountInfo()}.
+   */
+  checkAPI?: boolean;
+}
 
 /**
  * The response returned by the JetStream server when a message is added to a stream.

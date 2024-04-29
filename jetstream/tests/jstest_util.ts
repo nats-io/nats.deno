@@ -15,6 +15,8 @@
 
 import {
   AckPolicy,
+  jetstream,
+  jetstreamManager,
   JsMsg,
   nanos,
   PubAck,
@@ -44,7 +46,7 @@ export async function initStream(
   stream: string = nuid.next(),
   opts: Partial<StreamConfig> = {},
 ): Promise<{ stream: string; subj: string }> {
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const subj = `${stream}.A`;
   const sc = Object.assign({ name: stream, subjects: [subj] }, opts);
   await jsm.streams.add(sc);
@@ -55,7 +57,7 @@ export async function createConsumer(
   nc: NatsConnection,
   stream: string,
 ): Promise<string> {
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const ci = await jsm.consumers.add(stream, {
     name: nuid.next(),
     inactive_threshold: nanos(2 * 60 * 1000),
@@ -77,7 +79,7 @@ export function fill(
   count = 100,
   opts: Partial<FillOptions> = {},
 ): Promise<PubAck[]> {
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const options = Object.assign({}, {
     randomize: false,

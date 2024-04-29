@@ -24,6 +24,8 @@ export {
   RepublishHeaders,
 } from "./types.ts";
 
+export { jetstream, jetstreamManager } from "./jsconnection.ts";
+
 export type {
   Advisory,
   Closed,

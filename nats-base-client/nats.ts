@@ -29,18 +29,13 @@ import {
   RequestOne,
 } from "./request.ts";
 import { isRequestError } from "./msg.ts";
-import { JetStreamManagerImpl } from "../jetstream/jsm.ts";
-import { JetStreamClientImpl } from "../jetstream/jsclient.ts";
 import { ServiceImpl } from "./service.ts";
 import { ServiceClientImpl } from "./serviceclient.ts";
-import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
 import {
   ConnectionOptions,
   Context,
   createInbox,
   ErrorCode,
-  JetStreamManagerOptions,
-  JetStreamOptions,
   Msg,
   NatsConnection,
   Payload,
@@ -513,30 +508,6 @@ export class NatsConnectionImpl implements NatsConnection {
       inMsgs: this.protocol.inMsgs,
       outMsgs: this.protocol.outMsgs,
     };
-  }
-
-  async jetstreamManager(
-    opts: JetStreamManagerOptions = {},
-  ): Promise<JetStreamManager> {
-    const adm = new JetStreamManagerImpl(this, opts);
-    if (opts.checkAPI !== false) {
-      try {
-        await adm.getAccountInfo();
-      } catch (err) {
-        const ne = err as NatsError;
-        if (ne.code === ErrorCode.NoResponders) {
-          ne.code = ErrorCode.JetStreamNotEnabled;
-        }
-        throw ne;
-      }
-    }
-    return adm;
-  }
-
-  jetstream(
-    opts: JetStreamOptions | JetStreamManagerOptions = {},
-  ): JetStreamClient {
-    return new JetStreamClientImpl(this, opts);
   }
 
   getServerVersion(): SemVer | undefined {

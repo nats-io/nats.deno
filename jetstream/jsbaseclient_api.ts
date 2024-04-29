@@ -20,13 +20,13 @@ import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { checkJsErrorCode } from "./jsutil.ts";
 import {
   ErrorCode,
-  JetStreamOptions,
   Msg,
   NatsConnection,
   NatsError,
   RequestOptions,
 } from "../nats-base-client/core.ts";
 import { ApiResponse } from "./jsapi_types.ts";
+import { JetStreamOptions } from "./types.ts";
 
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;

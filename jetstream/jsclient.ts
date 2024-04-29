@@ -45,6 +45,7 @@ import {
   timeout,
 } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
+import { jetstreamManager } from "./jsconnection.ts";
 import { Bucket } from "./kv.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { ObjectStoreImpl } from "./objectstore.ts";
@@ -60,6 +61,8 @@ import {
   isConsumerOptsBuilder,
   JetStreamClient,
   JetStreamManager,
+  JetStreamManagerOptions,
+  JetStreamOptions,
   JetStreamPublishOptions,
   JetStreamPullSubscription,
   JetStreamSubscription,
@@ -80,8 +83,6 @@ import {
   createInbox,
   ErrorCode,
   isNatsError,
-  JetStreamManagerOptions,
-  JetStreamOptions,
   Msg,
   NatsConnection,
   Payload,
@@ -172,7 +173,7 @@ export class JetStreamClientImpl extends BaseApiClient
       this.opts,
       { checkAPI },
     ) as JetStreamManagerOptions;
-    return this.nc.jetstreamManager(opts);
+    return jetstreamManager(this.nc, opts);
   }
 
   get apiPrefix(): string {
