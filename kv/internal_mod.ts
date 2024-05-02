@@ -18,6 +18,7 @@ export {
   Base64KeyCodec,
   Bucket,
   defaultBucketOpts,
+  Kvm,
   NoopKvCodecs,
   validateBucket,
   validateKey,
