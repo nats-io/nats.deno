@@ -16,6 +16,7 @@
 import { cleanup, setup } from "./helpers/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
+  assert,
   assertEquals,
   assertExists,
   fail,
@@ -117,6 +118,7 @@ Deno.test("resub - removes server interest", async () => {
       // nothing
     },
   });
+  await nc.flush();
 
   const nci = nc as NatsConnectionImpl;
   let sub = nci.protocol.subscriptions.all().find((s) => {
@@ -129,12 +131,13 @@ Deno.test("resub - removes server interest", async () => {
 
   // change it
   nci._resub(sub, "b");
+  await nc.flush();
 
   // make sure we don't find a
   sub = nci.protocol.subscriptions.all().find((s) => {
     return s.subject === "a";
   });
-  assertEquals(sub, undefined);
+  assert(sub === undefined);
 
   // make sure we find b
   sub = nci.protocol.subscriptions.all().find((s) => {
