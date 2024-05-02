@@ -995,6 +995,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     if (!s || this.isClosed()) {
       return;
     }
+    this.unsub(s);
     s.subject = subject;
     this.subscriptions.resub(s);
     // we don't auto-unsub here because we don't

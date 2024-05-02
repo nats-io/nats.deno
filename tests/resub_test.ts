@@ -15,8 +15,13 @@
 
 import { cleanup, setup } from "./helpers/mod.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { createInbox, Msg } from "../nats-base-client/core.ts";
+import {
+  assertEquals,
+  assertExists,
+  fail,
+} from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { createInbox, Msg, NatsConnection } from "../nats-base-client/core.ts";
+import { NatsServer } from "./helpers/launcher.ts";
 
 Deno.test("resub - iter", async () => {
   const { ns, nc } = await setup();
@@ -73,5 +78,71 @@ Deno.test("resub - callback", async () => {
   assertEquals(buf.length, 2);
   assertEquals(buf[0].subject, subja);
   assertEquals(buf[1].subject, subjb);
+  await cleanup(ns, nc);
+});
+
+async function assertEqualSubs(
+  ns: NatsServer,
+  nc: NatsConnection,
+): Promise<void> {
+  const nci = nc as NatsConnectionImpl;
+  const cid = nc.info?.client_id || -1;
+  if (cid === -1) {
+    fail("client_id not found");
+  }
+
+  const connz = await ns.connz(cid, "detail");
+
+  const conn = connz.connections.find((c) => {
+    return c.cid === cid;
+  });
+  assertExists(conn);
+  assertExists(conn.subscriptions_list_detail);
+
+  const subs = nci.protocol.subscriptions.all();
+  subs.forEach((sub) => {
+    const ssub = conn.subscriptions_list_detail?.find((d) => {
+      return d.sid === `${sub.sid}`;
+    });
+    assertExists(ssub);
+    assertEquals(ssub.subject, sub.subject);
+  });
+}
+
+Deno.test("resub - removes server interest", async () => {
+  const { ns, nc } = await setup();
+
+  nc.subscribe("a", {
+    callback() {
+      // nothing
+    },
+  });
+
+  const nci = nc as NatsConnectionImpl;
+  let sub = nci.protocol.subscriptions.all().find((s) => {
+    return s.subject === "a";
+  });
+  assertExists(sub);
+
+  // assert the server sees the same subscriptions
+  await assertEqualSubs(ns, nc);
+
+  // change it
+  nci._resub(sub, "b");
+
+  // make sure we don't find a
+  sub = nci.protocol.subscriptions.all().find((s) => {
+    return s.subject === "a";
+  });
+  assertEquals(sub, undefined);
+
+  // make sure we find b
+  sub = nci.protocol.subscriptions.all().find((s) => {
+    return s.subject === "b";
+  });
+  assertExists(sub);
+
+  // assert server thinks the same thing
+  await assertEqualSubs(ns, nc);
   await cleanup(ns, nc);
 });
