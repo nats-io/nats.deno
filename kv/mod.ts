@@ -18,5 +18,6 @@ export {
   Base64KeyCodec,
   Bucket,
   defaultBucketOpts,
+  Kvm,
   NoopKvCodecs,
 } from "./internal_mod.ts";
