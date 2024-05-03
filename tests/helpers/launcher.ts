@@ -72,6 +72,45 @@ export interface JSZ {
   };
 }
 
+export interface SubDetails {
+  subject: string;
+  sid: string;
+  msgs: number;
+  cid: number;
+}
+
+export interface Conn {
+  cid: number;
+  kind: string;
+  type: string;
+  ip: string;
+  port: number;
+  start: string;
+  "last_activity": string;
+  "rtt": string;
+  uptime: string;
+  idle: string;
+  "pending_bytes": number;
+  "in_msgs": number;
+  "out_msgs": number;
+  subscriptions: number;
+  name: string;
+  lang: string;
+  version: string;
+  subscriptions_list?: string[];
+  subscriptions_list_detail?: SubDetails[];
+}
+
+export interface ConnZ {
+  "server_id": string;
+  now: string;
+  "num_connections": number;
+  "total": number;
+  "offset": number;
+  "limit": number;
+  "connections": Conn[];
+}
+
 function parseHostport(
   s?: string,
 ): { hostname: string; port: number } | undefined {
@@ -313,6 +352,21 @@ export class NatsServer implements PortInfo {
       return Promise.reject(new Error("server is not monitoring"));
     }
     const resp = await fetch(`http://127.0.0.1:${this.monitoring}/jsz`);
+    return await resp.json();
+  }
+
+  async connz(cid?: number, subs: boolean | "detail" = true): Promise<ConnZ> {
+    if (!this.monitoring) {
+      return Promise.reject(new Error("server is not monitoring"));
+    }
+    const args = [];
+    args.push(`subs=${subs}`);
+    if (cid) {
+      args.push(`cid=${cid}`);
+    }
+
+    const qs = args.length ? args.join("&") : "";
+    const resp = await fetch(`http://127.0.0.1:${this.monitoring}/connz?${qs}`);
     return await resp.json();
   }
 
