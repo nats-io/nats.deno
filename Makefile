@@ -3,7 +3,7 @@
 build: test
 
 lint:
-	deno lint --ignore=docs/
+	deno lint --ignore=docs/,debug/
 
 test: clean
 	deno test --allow-all --parallel --reload --quiet --coverage=coverage tests/ jetstream/tests
