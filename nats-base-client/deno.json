@@ -1,0 +1,13 @@
+{
+  "name": "@nats-io/nats-core",
+  "version": "3.0.0-1",
+  "exports": {
+    ".": "./src/mod.ts"
+  },
+  "publish": {
+    "include": [
+      "./src/**/*",
+      "jsr.json"
+    ]
+  }
+}
