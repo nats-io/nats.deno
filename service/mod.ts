@@ -22,6 +22,5 @@ export {
   ServiceErrorHeader,
   ServiceResponseType,
   ServiceVerb,
+  Svc,
 } from "./internal_mod.ts";
-
-export { Svc } from "./internal_mod.ts";

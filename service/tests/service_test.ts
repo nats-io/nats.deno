@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,31 +26,36 @@ import {
 
 import { collect, delay } from "../../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import {
+import type {
   EndpointInfo,
   Service,
   ServiceConfig,
+  ServiceIdentity,
+  ServiceInfo,
+  ServiceStats,
+} from "../mod.ts";
+import {
   ServiceError,
   ServiceErrorCodeHeader,
   ServiceErrorHeader,
-  ServiceIdentity,
-  ServiceInfo,
   ServiceResponseType,
-  ServiceStats,
   ServiceVerb,
   Svc,
-} from "../types.ts";
+} from "../mod.ts";
 import {
   connect,
   createInbox,
   ErrorCode,
   JSONCodec,
+  nuid,
+  StringCodec,
+} from "../../src/mod.ts";
+
+import type {
   Msg,
   NatsConnection,
   NatsError,
-  nuid,
   QueuedIterator,
-  StringCodec,
 } from "../../src/mod.ts";
 import { SubscriptionImpl } from "../../nats-base-client/protocol.ts";
 

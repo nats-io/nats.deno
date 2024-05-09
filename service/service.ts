@@ -12,7 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred, nanos } from "../nats-base-client/util.ts";
+import { deferred, nanos } from "../nats-base-client/util.ts";
+import type { Deferred } from "../nats-base-client/util.ts";
 import { headers } from "../nats-base-client/headers.ts";
 import { JSONCodec } from "../nats-base-client/codec.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
