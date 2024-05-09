@@ -13,5 +13,4 @@
  * limitations under the License.
  */
 
-export {Nuid, nuid} from "../nuid/src/mod.ts"
-
+export { Nuid, nuid } from "../nuid/src/mod.ts";
