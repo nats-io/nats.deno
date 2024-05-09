@@ -194,6 +194,8 @@ export class NatsError extends Error {
   }
 }
 
+export type MsgCallback<T> = (err: NatsError | null, msg: T) => void;
+
 /**
  * Subscription Options
  */
@@ -221,7 +223,7 @@ export interface SubOpts<T> {
    * @param err
    * @param msg
    */
-  callback?: (err: NatsError | null, msg: T) => void;
+  callback?: MsgCallback<T>;
 }
 
 export interface DnsResolveFn {

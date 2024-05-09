@@ -14,17 +14,16 @@
  */
 import { nkeys } from "./nkeys.ts";
 import { TD, TE } from "./encoders.ts";
-import {
+import type {
   Auth,
   Authenticator,
-  ErrorCode,
   JwtAuth,
-  NatsError,
   NKeyAuth,
   NoAuth,
   TokenAuth,
   UserPass,
 } from "./core.ts";
+import { ErrorCode, NatsError } from "./core.ts";
 
 export function multiAuthenticator(authenticators: Authenticator[]) {
   return (nonce?: string): Auth => {

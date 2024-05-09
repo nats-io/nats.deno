@@ -43,7 +43,7 @@ export function ipV4(a: number, b: number, c: number, d: number): Uint8Array {
   return ip;
 }
 
-export function isIP(h: string) {
+export function isIP(h: string): boolean {
   return parseIP(h) !== undefined;
 }
 

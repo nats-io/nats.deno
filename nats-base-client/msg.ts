@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The NATS Authors
+ * Copyright 2020-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,16 +15,16 @@
 import { MsgHdrsImpl } from "./headers.ts";
 import type { MsgArg } from "./parser.ts";
 import { Empty, TD } from "./encoders.ts";
-import { Codec, JSONCodec } from "./codec.ts";
-import {
-  ErrorCode,
+import type { Codec } from "./codec.ts";
+import { JSONCodec } from "./codec.ts";
+import type {
   Msg,
   MsgHdrs,
-  NatsError,
   Publisher,
   RequestInfo,
   ReviverFn,
 } from "./core.ts";
+import { ErrorCode, NatsError } from "./core.ts";
 
 export function isRequestError(msg: Msg): NatsError | null {
   // NATS core only considers errors 503s on messages that have no payload

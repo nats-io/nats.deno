@@ -2,12 +2,15 @@
   "name": "@nats-io/nats-core",
   "version": "3.0.0-1",
   "exports": {
-    ".": "./src/mod.ts"
+    ".": "./mod.ts",
+    "./internal": "./internal_mod.ts"
   },
   "publish": {
     "include": [
-      "./src/**/*",
-      "jsr.json"
+      "./**/*"
     ]
+  },
+  "imports": {
+    "jsr:@nats-io/nkeys": "jsr:@nats-io/nkeys@1.1.1-1"
   }
 }

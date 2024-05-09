@@ -18,22 +18,21 @@ import { ProtocolHandler, SubscriptionImpl } from "./protocol.ts";
 import { Empty } from "./encoders.ts";
 import { NatsError } from "./types.ts";
 
-import type { SemVer } from "./semver.ts";
-import { Features, parseSemVer } from "./semver.ts";
+import type { Features, SemVer } from "./semver.ts";
+import { parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
-import {
-  RequestMany,
-  RequestManyOptionsInternal,
-  RequestOne,
-} from "./request.ts";
+import { RequestMany, RequestOne } from "./request.ts";
+
+import type { RequestManyOptionsInternal } from "./request.ts";
+
 import { isRequestError } from "./msg.ts";
-import {
+import { createInbox, ErrorCode, RequestStrategy } from "./core.ts";
+
+import type {
   ConnectionOptions,
   Context,
-  createInbox,
-  ErrorCode,
   Msg,
   NatsConnection,
   Payload,
@@ -41,7 +40,6 @@ import {
   QueuedIterator,
   RequestManyOptions,
   RequestOptions,
-  RequestStrategy,
   ServerInfo,
   Stats,
   Status,
@@ -115,14 +113,14 @@ export class NatsConnectionImpl implements NatsConnection {
     this.protocol.publish(subject, data, options);
   }
 
-  publishMessage(msg: Msg) {
+  publishMessage(msg: Msg): void {
     return this.publish(msg.subject, msg.data, {
       reply: msg.reply,
       headers: msg.headers,
     });
   }
 
-  respondMessage(msg: Msg) {
+  respondMessage(msg: Msg): boolean {
     if (msg.reply) {
       this.publish(msg.reply, msg.data, {
         reply: msg.reply,
