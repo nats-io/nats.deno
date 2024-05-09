@@ -22,7 +22,7 @@ import {
 } from "../nats-base-client/util.ts";
 import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
-import { isHeartbeatMsg } from "./jsutil.ts";
+import { isHeartbeatMsg, minValidation } from "./jsutil.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import {
   createInbox,
@@ -948,6 +948,7 @@ export class PullConsumerImpl implements Consumer {
  * {@link ConsumerUpdateConfig}
  */
 export type OrderedConsumerOptions = {
+  name_prefix: string;
   filterSubjects: string[] | string;
   deliver_policy: DeliverPolicy;
   opt_start_seq: number;
@@ -981,6 +982,11 @@ export class OrderedPullConsumerImpl implements Consumer {
     this.stream = stream;
     this.cursor = { stream_seq: 1, deliver_seq: 0 };
     this.namePrefix = nuid.next();
+    if (typeof opts.name_prefix === "string") {
+      // make sure the prefix is valid
+      minValidation("name_prefix", opts.name_prefix);
+      this.namePrefix = opts.name_prefix + this.namePrefix;
+    }
     this.serial = 0;
     this.currentConsumer = null;
     this.userCallback = null;

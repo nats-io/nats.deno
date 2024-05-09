@@ -15,6 +15,7 @@
 
 import { initStream } from "./jstest_util.ts";
 import {
+  assert,
   assertEquals,
   assertExists,
   assertRejects,
@@ -943,6 +944,36 @@ Deno.test("ordered consumers - bind is rejected", async () => {
     },
     Error,
     "bind is not supported",
+  );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - name prefix", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+
+  const js = nc.jetstream();
+  const c = await js.consumers.get("A", { name_prefix: "hello" });
+  const ci = await c.info(true);
+  assert(ci.name.startsWith("hello"));
+
+  await assertRejects(
+    () => {
+      return js.consumers.get("A", { name_prefix: "" });
+    },
+    Error,
+    "name_prefix name required",
+  );
+
+  await assertRejects(
+    () => {
+      return js.consumers.get("A", { name_prefix: "one.two" });
+    },
+    Error,
+    "invalid name_prefix name - name_prefix name cannot contain '.'",
   );
 
   await cleanup(ns, nc);
