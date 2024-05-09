@@ -34,14 +34,15 @@ import {
   delay,
   nanos,
 } from "../../nats-base-client/util.ts";
+import { PullConsumerMessagesImpl } from "../consumer.ts";
+import { syncIterator } from "../../nats-base-client/core.ts";
+import { connect } from "../../src/connect.ts";
 import {
   ConsumerEvents,
   ConsumerStatus,
-  PullConsumerMessagesImpl,
-} from "../consumer.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
-import { connect } from "../../src/connect.ts";
-import { jetstream, jetstreamManager } from "../mod.ts";
+  jetstream,
+  jetstreamManager,
+} from "../mod.ts";
 
 Deno.test("consumers - consume", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

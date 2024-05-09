@@ -952,10 +952,10 @@ Deno.test("ordered consumers - bind is rejected", async () => {
 Deno.test("ordered consumers - name prefix", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", { name_prefix: "hello" });
   const ci = await c.info(true);
   assert(ci.name.startsWith("hello"));

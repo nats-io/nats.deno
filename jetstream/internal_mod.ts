@@ -16,6 +16,8 @@ export { checkJsError, isFlowControlMsg, isHeartbeatMsg } from "./jsutil.ts";
 
 export {
   AdvisoryKind,
+  ConsumerDebugEvents,
+  ConsumerEvents,
   consumerOpts,
   DirectMsgHeaders,
   isConsumerOptsBuilder,
@@ -35,13 +37,28 @@ export {
 } from "./kv.ts";
 
 export type {
+  AbortOnMissingResource,
   Advisory,
+  Bind,
   Closed,
+  ConsumeBytes,
+  ConsumeCallback,
+  ConsumeMessages,
+  ConsumeOptions,
+  Consumer,
+  ConsumerCallbackFn,
   ConsumerInfoable,
+  ConsumerMessages,
   ConsumerOpts,
   ConsumerOptsBuilder,
   Consumers,
+  ConsumerStatus,
   Destroyable,
+  Expires,
+  FetchBytes,
+  FetchMessages,
+  FetchOptions,
+  IdleHeartbeat,
   JetStreamClient,
   JetStreamManager,
   JetStreamManagerOptions,
@@ -62,6 +79,9 @@ export type {
   KvPutOptions,
   KvStatus,
   KvWatchOptions,
+  MaxBytes,
+  MaxMessages,
+  NextOptions,
   ObjectInfo,
   ObjectResult,
   ObjectStore,
@@ -71,6 +91,7 @@ export type {
   ObjectStoreOptions,
   ObjectStorePutOpts,
   ObjectStoreStatus,
+  OrderedConsumerOptions,
   PubAck,
   Pullable,
   RoKV,
@@ -78,6 +99,8 @@ export type {
   Stream,
   StreamAPI,
   Streams,
+  ThresholdBytes,
+  ThresholdMessages,
   Views,
 } from "./types.ts";
 
@@ -134,28 +157,3 @@ export {
 
 export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
-
-export type {
-  AbortOnMissingResource,
-  Bind,
-  ConsumeBytes,
-  ConsumeCallback,
-  ConsumeMessages,
-  ConsumeOptions,
-  Consumer,
-  ConsumerCallbackFn,
-  ConsumerMessages,
-  ConsumerStatus,
-  Expires,
-  FetchBytes,
-  FetchMessages,
-  FetchOptions,
-  IdleHeartbeat,
-  MaxBytes,
-  MaxMessages,
-  NextOptions,
-  OrderedConsumerOptions,
-  ThresholdBytes,
-  ThresholdMessages,
-} from "./consumer.ts";
-export { ConsumerDebugEvents, ConsumerEvents } from "./consumer.ts";

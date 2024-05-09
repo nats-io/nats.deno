@@ -23,7 +23,10 @@ import { deferred, nanos } from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
+  ConsumerDebugEvents,
+  ConsumerEvents,
   ConsumerMessages,
+  ConsumerStatus,
   DeliverPolicy,
   jetstream,
   jetstreamManager,
@@ -37,12 +40,7 @@ import {
   jetstreamServerConf,
   setup,
 } from "../../tests/helpers/mod.ts";
-import {
-  ConsumerDebugEvents,
-  ConsumerEvents,
-  ConsumerStatus,
-  PullConsumerMessagesImpl,
-} from "../consumer.ts";
+import { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));

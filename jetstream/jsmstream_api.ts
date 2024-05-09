@@ -25,11 +25,13 @@ import { TD } from "../nats-base-client/encoders.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
+  Consumer,
   Consumers,
   JetStreamOptions,
   kvPrefix,
   KvStatus,
   ObjectStoreStatus,
+  OrderedConsumerOptions,
   StoredMsg,
   Stream,
   StreamAPI,
@@ -55,12 +57,7 @@ import {
   StreamUpdateConfig,
   SuccessResponse,
 } from "./jsapi_types.ts";
-import {
-  Consumer,
-  OrderedConsumerOptions,
-  OrderedPullConsumerImpl,
-  PullConsumerImpl,
-} from "./consumer.ts";
+import { OrderedPullConsumerImpl, PullConsumerImpl } from "./consumer.ts";
 import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
