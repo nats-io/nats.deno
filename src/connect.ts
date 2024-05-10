@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The NATS Authors
+ * Copyright 2020-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,14 +13,17 @@
  * limitations under the License.
  */
 import { denoResolveHost, DenoTransport } from "./deno_transport.ts";
-import {
+import type {
   ConnectionOptions,
   NatsConnection,
+  Transport,
+  TransportFactory,
+} from "@nats-io/nats-core/internal";
+
+import {
   NatsConnectionImpl,
   setTransportFactory,
-  Transport,
-} from "../nats-base-client/internal_mod.ts";
-import { TransportFactory } from "../nats-base-client/transport.ts";
+} from "@nats-io/nats-core/internal";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
   setTransportFactory({
