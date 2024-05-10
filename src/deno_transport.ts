@@ -24,7 +24,7 @@ import {
   INFO,
   NatsError,
   render,
-} from "@nats-io/nats-core/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 
 import type {
   ConnectionOptions,
@@ -32,9 +32,9 @@ import type {
   ServerInfo,
   TlsOptions,
   Transport,
-} from "@nats-io/nats-core/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 
-import { writeAll } from "@std/io";
+import { writeAll } from "jsr:@std/io";
 
 const VERSION = "1.25.0";
 const LANG = "nats.deno";

@@ -1,17 +1,17 @@
 {
   "name": "@nats-io/nats-transport-deno",
-  "version": "3.0.0-2",
+  "version": "3.0.0-3",
   "exports": {
     ".": "./mod.ts"
   },
   "publish": {
     "include": [
-      "./**/*"
+      "./*"
     ]
   },
   "imports": {
-    "@nats-io/nats-core/internal": "jsr:@nats-io/nats-core@3.0.0-1/internal",
-    "@nats-io/nats-core": "jsr:@nats-io/nats-core@3.0.0-1",
-    "@std/io": "jsr:@std/io@0.224.0"
+    "jsr:@std/io": "jsr:@std/io@0.224.0",
+    "jsr:@nats-io/nats-core": "jsr:@nats-io/nats-core@3.0.0-2",
+    "jsr:@nats-io/nats-core/internal": "jsr:@nats-io/nats-core@3.0.0-2/internal"
   }
 }

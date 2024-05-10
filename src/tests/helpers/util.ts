@@ -12,26 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { denoResolveHost, DenoTransport } from "./deno_transport.ts";
-import type {
-  ConnectionOptions,
-  NatsConnection,
-  Transport,
-  TransportFactory,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { deferred } from "../../mod.ts";
+import { timeout } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import type { Msg, Subscription } from "../../mod.ts";
 
-import {
-  NatsConnectionImpl,
-  setTransportFactory,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+export function consume(sub: Subscription, ms = 1000): Promise<Msg[]> {
+  const to = timeout<Msg[]>(ms);
+  const d = deferred<Msg[]>();
+  const msgs: Msg[] = [];
+  (async () => {
+    for await (const m of sub) {
+      msgs.push(m);
+    }
+    to.cancel();
+    d.resolve(msgs);
+  })().catch((err) => {
+    d.reject(err);
+  });
 
-export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
-  setTransportFactory({
-    factory: (): Transport => {
-      return new DenoTransport();
-    },
-    dnsResolveFn: denoResolveHost,
-  } as TransportFactory);
-
-  return NatsConnectionImpl.connect(opts);
+  return Promise.race([to, d]);
 }

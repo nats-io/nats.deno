@@ -1,2 +1,2 @@
 export { connect } from "./connect.ts";
-export * from "@nats-io/nats-core";
+export * from "jsr:@nats-io/nats-core@3.0.0-11";
