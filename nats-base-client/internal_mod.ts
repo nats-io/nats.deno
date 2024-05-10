@@ -120,4 +120,4 @@ export type {
 } from "./idleheartbeat_monitor.ts";
 export { IdleHeartbeatMonitor } from "./idleheartbeat_monitor.ts";
 
-export { Servers } from "./servers.ts";
+export { isIPV4OrHostname, Servers } from "./servers.ts";
