@@ -111,3 +111,9 @@ export {
   syncIterator,
 } from "./core.ts";
 export { SubscriptionImpl, Subscriptions } from "./protocol.ts";
+
+export type {
+  IdleHeartbeatFn,
+  IdleHeartbeatOptions,
+} from "./idleheartbeat_monitor.ts";
+export { IdleHeartbeatMonitor } from "./idleheartbeat_monitor.ts";
