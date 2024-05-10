@@ -58,7 +58,7 @@ export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
 export { ipV4, isIP, parseIP } from "./ipparser.ts";
-export { TypedSubscription } from "./typedsub.ts";
+export { TypedSubscription, checkFn } from "./typedsub.ts";
 export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
 
 export type { SemVer } from "./semver.ts";
