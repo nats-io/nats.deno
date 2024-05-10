@@ -60,9 +60,7 @@ export { TypedSubscription } from "./typedsub.ts";
 export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
 
 export type { SemVer } from "./semver.ts";
-
-export { compare, parseSemVer } from "./semver.ts";
-
+export { compare, Feature, Features, parseSemVer } from "./semver.ts";
 export { Empty } from "./types.ts";
 export { extractProtocolMessage } from "./transport.ts";
 
