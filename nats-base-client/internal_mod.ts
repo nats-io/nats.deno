@@ -64,7 +64,7 @@ export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
 export type { SemVer } from "./semver.ts";
 export { compare, Feature, Features, parseSemVer } from "./semver.ts";
 export { Empty } from "./types.ts";
-export { extractProtocolMessage } from "./transport.ts";
+export { extractProtocolMessage, protoLen } from "./transport.ts";
 
 export type {
   ApiError,
