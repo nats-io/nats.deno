@@ -1,4 +1,4 @@
-import { resolve, join} from "jsr:@std/path";
+import { join, resolve } from "jsr:@std/path";
 import { NatsServer } from "../tests/helpers/launcher.ts";
 import { connect } from "../mod.ts";
 

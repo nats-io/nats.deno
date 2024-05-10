@@ -18,7 +18,7 @@ import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/interna
 import { assert, assertEquals, assertExists, fail } from "jsr:@std/assert";
 import { createInbox } from "../mod.ts";
 import type { Msg, NatsConnection } from "../mod.ts";
-import { NatsServer } from "./helpers/launcher.ts";
+import type { NatsServer } from "./helpers/launcher.ts";
 
 Deno.test("resub - iter", async () => {
   const { ns, nc } = await setup();
