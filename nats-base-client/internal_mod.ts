@@ -29,6 +29,7 @@ export {
   buildAuthenticator,
   checkOptions,
   checkUnsupportedOption,
+  DEFAULT_MAX_RECONNECT_ATTEMPTS
 } from "./options.ts";
 export { RequestOne } from "./request.ts";
 export {
