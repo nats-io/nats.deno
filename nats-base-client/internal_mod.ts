@@ -30,6 +30,8 @@ export {
   checkOptions,
   checkUnsupportedOption,
   DEFAULT_MAX_RECONNECT_ATTEMPTS,
+  defaultOptions,
+  parseOptions,
 } from "./options.ts";
 export { RequestOne } from "./request.ts";
 export {
