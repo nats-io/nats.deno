@@ -55,7 +55,7 @@ export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
 export { Bench, Metric } from "./bench.ts";
 export type { BenchOpts } from "./bench.ts";
 export { TD, TE } from "./encoders.ts";
-export { isIP, parseIP } from "./ipparser.ts";
+export { isIP, parseIP, ipV4 } from "./ipparser.ts";
 export { TypedSubscription } from "./typedsub.ts";
 export type { MsgAdapter, TypedCallback } from "./typedsub.ts";
 
