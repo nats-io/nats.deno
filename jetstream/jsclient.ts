@@ -51,6 +51,7 @@ import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import {
   Advisory,
   AdvisoryKind,
+  BaseClient,
   ConsumerAPI,
   ConsumerInfoable,
   ConsumerOpts,
@@ -613,7 +614,7 @@ export class JetStreamClientImpl extends BaseApiClientImpl
       jsi.config.ack_policy = AckPolicy.All;
     }
 
-    jsi.api = this;
+    jsi.api = this as unknown as BaseClient;
     jsi.config = jsi.config || {} as ConsumerConfig;
     jsi.stream = jsi.stream ? jsi.stream : await this.findStream(subject);
 
@@ -996,7 +997,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
         }
       }
 
-      const api = this.info.api as BaseApiClientImpl;
+      const api = this.info.api as unknown as BaseApiClientImpl;
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;
 

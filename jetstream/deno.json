@@ -1,0 +1,19 @@
+{
+  "name": "@nats-io/jetstream",
+  "version": "3.0.0-1",
+  "exports": {
+    ".": "./mod.ts",
+    "./internal": "./internal_mod.ts"
+  },
+  "publish": {
+    "include": [
+      "./**/*"
+    ],
+    "exclude": [
+      "./**/tests"
+    ]
+  },
+  "imports": {
+    "jsr:@nats-io/nats-core": "jsr:@nats-io/nats-core@3.0.0-11"
+  }
+}

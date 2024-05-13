@@ -13,25 +13,32 @@
  * limitations under the License.
  */
 
-import {
+import type {
+  Codec,
   Msg,
   MsgHdrs,
+  NatsConnectionImpl,
   NatsError,
   Payload,
   QueuedIterator,
   RequestOptions,
   ReviverFn,
   Sub,
-} from "../nats-base-client/core.ts";
+  TypedSubscriptionOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { nanos } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 
-import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
 import {
   AckPolicy,
+  defaultConsumer,
+  DeliverPolicy,
+  ReplayPolicy,
+} from "./jsapi_types.ts";
+
+import type {
   ConsumerConfig,
   ConsumerInfo,
   ConsumerUpdateConfig,
-  defaultConsumer,
-  DeliverPolicy,
   DirectBatchOptions,
   DirectMsgRequest,
   JetStreamAccountStats,
@@ -39,18 +46,14 @@ import {
   PullOptions,
   PurgeOpts,
   PurgeResponse,
-  ReplayPolicy,
   StreamAlternate,
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
   StreamUpdateConfig,
 } from "./jsapi_types.ts";
-import { JsMsg } from "./jsmsg.ts";
+import type { JsMsg } from "./jsmsg.ts";
 import { validateDurableName } from "./jsutil.ts";
-import { nanos } from "../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { Codec } from "../nats-base-client/codec.ts";
 
 export interface BaseClient {
   nc: NatsConnectionImpl;
@@ -825,135 +828,135 @@ export interface ConsumerOptsBuilder {
   /**
    * User description of this consumer
    */
-  description(description: string): this;
+  description(description: string): ConsumerOptsBuilder;
 
   /**
    * DeliverTo sets the subject where a push consumer receives messages
    * @param subject
    */
-  deliverTo(subject: string): this;
+  deliverTo(subject: string): ConsumerOptsBuilder;
 
   /**
    * Sets the durable name, when not set an ephemeral consumer is created
    * @param name
    */
-  durable(name: string): this;
+  durable(name: string): ConsumerOptsBuilder;
 
   /**
    * The consumer will start at the message with the specified sequence
    * @param seq
    */
-  startSequence(seq: number): this;
+  startSequence(seq: number): ConsumerOptsBuilder;
 
   /**
    * consumer will start with messages received on the specified time/date
    * @param time
    */
-  startTime(time: Date): this;
+  startTime(time: Date): ConsumerOptsBuilder;
 
   /**
    * Consumer will start at first available message on the stream
    */
-  deliverAll(): this;
+  deliverAll(): ConsumerOptsBuilder;
 
   /**
    * Consumer will deliver all the last per messages per subject
    */
-  deliverLastPerSubject(): this;
+  deliverLastPerSubject(): ConsumerOptsBuilder;
 
   /**
    * Consumer will start at the last message
    */
-  deliverLast(): this;
+  deliverLast(): ConsumerOptsBuilder;
 
   /**
    * Consumer will start with new messages (not yet in the stream)
    */
-  deliverNew(): this;
+  deliverNew(): ConsumerOptsBuilder;
 
   /**
    * Start delivering at the at a past point in time
    * @param millis
    */
-  startAtTimeDelta(millis: number): this;
+  startAtTimeDelta(millis: number): ConsumerOptsBuilder;
 
   /**
    * Messages delivered to the consumer will not have a payload. Instead,
    * they will have the header `Nats-Msg-Size` indicating the number of bytes
    * in the message as stored by JetStream.
    */
-  headersOnly(): this;
+  headersOnly(): ConsumerOptsBuilder;
 
   /**
    * Consumer will not track ack for messages
    */
-  ackNone(): this;
+  ackNone(): ConsumerOptsBuilder;
 
   /**
    * Ack'ing a message implicitly acks all messages with a lower sequence
    */
-  ackAll(): this;
+  ackAll(): ConsumerOptsBuilder;
 
   /**
    * Consumer will ack all messages - not that unless {@link manualAck} is set
    * the client will auto ack messages after processing via its callback or when
    * the iterator continues processing.
    */
-  ackExplicit(): this;
+  ackExplicit(): ConsumerOptsBuilder;
 
   /**
    * Sets the time a delivered message might remain unacknowledged before a redelivery is attempted
    * @param millis
    */
-  ackWait(millis: number): this;
+  ackWait(millis: number): ConsumerOptsBuilder;
 
   /**
    * Max number of re-delivery attempts for a particular message
    * @param max
    */
-  maxDeliver(max: number): this;
+  maxDeliver(max: number): ConsumerOptsBuilder;
 
   /**
    * Consumer should filter the messages to those that match the specified filter.
    * This api can be called multiple times.
    * @param s
    */
-  filterSubject(s: string): this;
+  filterSubject(s: string): ConsumerOptsBuilder;
 
   /**
    * Replay messages as fast as possible
    */
-  replayInstantly(): this;
+  replayInstantly(): ConsumerOptsBuilder;
 
   /**
    * Replay at the rate received
    */
-  replayOriginal(): this;
+  replayOriginal(): ConsumerOptsBuilder;
 
   /**
    * Sample a subset of messages expressed as a percentage(0-100)
    * @param n
    */
-  sample(n: number): this;
+  sample(n: number): ConsumerOptsBuilder;
 
   /**
    * Limit message delivery to the specified rate in bits per second.
    * @param bps
    */
-  limit(bps: number): this;
+  limit(bps: number): ConsumerOptsBuilder;
 
   /**
    * Pull subscriber option only. Limits the maximum outstanding messages scheduled
    * via batch pulls as pulls are additive.
    * @param max
    */
-  maxWaiting(max: number): this;
+  maxWaiting(max: number): ConsumerOptsBuilder;
 
   /**
    * Max number of outstanding acks before the server stops sending new messages
    * @param max
    */
-  maxAckPending(max: number): this;
+  maxAckPending(max: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Enables idle heartbeats from the server. If the number of
@@ -961,51 +964,51 @@ export interface ConsumerOptsBuilder {
    * send a heartbeat (status code 100 message) indicating that the JetStream consumer is alive.
    * @param millis
    */
-  idleHeartbeat(millis: number): this;
+  idleHeartbeat(millis: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer flow control - the server sends a status code 100 and uses the delay on the
    * response to throttle inbound messages for a client and prevent slow consumer.
    */
-  flowControl(): this;
+  flowControl(): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Sets the name of the queue group - same as queue
    * @param name
    */
-  deliverGroup(name: string): this;
+  deliverGroup(name: string): ConsumerOptsBuilder;
 
   /**
    * Prevents the consumer implementation from auto-acking messages. Message callbacks
    * and iterators must explicitly ack messages.
    */
-  manualAck(): this;
+  manualAck(): ConsumerOptsBuilder;
 
   /**
    * Standard NATS subscription option which automatically closes the subscription after the specified
    * number of messages (actual stream or flow control) are seen by the client.
    * @param max
    */
-  maxMessages(max: number): this;
+  maxMessages(max: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Standard NATS queue group option, same as {@link deliverGroup}
    * @param n
    */
-  queue(n: string): this;
+  queue(n: string): ConsumerOptsBuilder;
 
   /**
    * Use a callback to process messages. If not specified, you process messages by iterating
    * on the returned subscription object.
    * @param fn
    */
-  callback(fn: JsMsgCallback): this;
+  callback(fn: JsMsgCallback): ConsumerOptsBuilder;
 
   /**
    * Push consumer only - creates an ordered consumer - ordered consumers cannot be a pull consumer
    * nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
    */
-  orderedConsumer(): this;
+  orderedConsumer(): ConsumerOptsBuilder;
 
   /**
    * Bind to the specified durable (or consumer name if ephemeral) on the specified stream.
@@ -1014,28 +1017,28 @@ export interface ConsumerOptsBuilder {
    * @param stream
    * @param durable
    */
-  bind(stream: string, durable: string): this;
+  bind(stream: string, durable: string): ConsumerOptsBuilder;
 
   /**
    * Specify the name of the stream, avoiding a lookup where the stream is located by
    * searching for a subject.
    * @param stream
    */
-  bindStream(stream: string): this;
+  bindStream(stream: string): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max number of messages that can be pulled in a batch
    * that can be requested by a client during a pull.
    * @param n
    */
-  maxPullBatch(n: number): this;
+  maxPullBatch(n: number): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max amount of time before a pull request expires that
    * may be requested by a client during a pull.
    * @param millis
    */
-  maxPullRequestExpires(millis: number): this;
+  maxPullRequestExpires(millis: number): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max amount of time that an ephemeral consumer will be
@@ -1043,24 +1046,24 @@ export interface ConsumerOptsBuilder {
    * specified interval the server will discard the consumer.
    * @param millis
    */
-  inactiveEphemeralThreshold(millis: number): this;
+  inactiveEphemeralThreshold(millis: number): ConsumerOptsBuilder;
 
   /**
    * Force the consumer state to be kept in memory rather than inherit the setting from
    * the Stream
    */
-  memory(): this;
+  memory(): ConsumerOptsBuilder;
 
   /**
    * When set do not inherit the replica count from the stream but specifically set it to this amount
    */
-  numReplicas(n: number): this;
+  numReplicas(n: number): ConsumerOptsBuilder;
 
   /**
    * The name of the consumer
    * @param n
    */
-  consumerName(n: string): this;
+  consumerName(n: string): ConsumerOptsBuilder;
 }
 
 /**
@@ -1344,23 +1347,23 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return o;
   }
 
-  description(description: string) {
+  description(description: string): ConsumerOptsBuilder {
     this.config.description = description;
     return this;
   }
 
-  deliverTo(subject: string) {
+  deliverTo(subject: string): ConsumerOptsBuilder {
     this.config.deliver_subject = subject;
     return this;
   }
 
-  durable(name: string) {
+  durable(name: string): ConsumerOptsBuilder {
     validateDurableName(name);
     this.config.durable_name = name;
     return this;
   }
 
-  startSequence(seq: number) {
+  startSequence(seq: number): ConsumerOptsBuilder {
     if (seq <= 0) {
       throw new Error("sequence must be greater than 0");
     }
@@ -1369,84 +1372,84 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return this;
   }
 
-  startTime(time: Date) {
+  startTime(time: Date): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.StartTime;
     this.config.opt_start_time = time.toISOString();
     return this;
   }
 
-  deliverAll() {
+  deliverAll(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.All;
     return this;
   }
 
-  deliverLastPerSubject() {
+  deliverLastPerSubject(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.LastPerSubject;
     return this;
   }
 
-  deliverLast() {
+  deliverLast(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.Last;
     return this;
   }
 
-  deliverNew() {
+  deliverNew(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.New;
     return this;
   }
 
-  startAtTimeDelta(millis: number) {
+  startAtTimeDelta(millis: number): ConsumerOptsBuilder {
     this.startTime(new Date(Date.now() - millis));
     return this;
   }
 
-  headersOnly() {
+  headersOnly(): ConsumerOptsBuilder {
     this.config.headers_only = true;
     return this;
   }
 
-  ackNone() {
+  ackNone(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.None;
     return this;
   }
 
-  ackAll() {
+  ackAll(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.All;
     return this;
   }
 
-  ackExplicit() {
+  ackExplicit(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.Explicit;
     return this;
   }
 
-  ackWait(millis: number) {
+  ackWait(millis: number): ConsumerOptsBuilder {
     this.config.ack_wait = nanos(millis);
     return this;
   }
 
-  maxDeliver(max: number) {
+  maxDeliver(max: number): ConsumerOptsBuilder {
     this.config.max_deliver = max;
     return this;
   }
 
-  filterSubject(s: string) {
+  filterSubject(s: string): ConsumerOptsBuilder {
     this.filters = this.filters || [];
     this.filters.push(s);
     return this;
   }
 
-  replayInstantly() {
+  replayInstantly(): ConsumerOptsBuilder {
     this.config.replay_policy = ReplayPolicy.Instant;
     return this;
   }
 
-  replayOriginal() {
+  replayOriginal(): ConsumerOptsBuilder {
     this.config.replay_policy = ReplayPolicy.Original;
     return this;
   }
 
-  sample(n: number) {
+  sample(n: number): ConsumerOptsBuilder {
     n = Math.trunc(n);
     if (n < 0 || n > 100) {
       throw new Error(`value must be between 0-100`);
@@ -1455,100 +1458,100 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return this;
   }
 
-  limit(n: number) {
+  limit(n: number): ConsumerOptsBuilder {
     this.config.rate_limit_bps = n;
     return this;
   }
 
-  maxWaiting(max: number) {
+  maxWaiting(max: number): ConsumerOptsBuilder {
     this.config.max_waiting = max;
     return this;
   }
 
-  maxAckPending(max: number) {
+  maxAckPending(max: number): ConsumerOptsBuilder {
     this.config.max_ack_pending = max;
     return this;
   }
 
-  idleHeartbeat(millis: number) {
+  idleHeartbeat(millis: number): ConsumerOptsBuilder {
     this.config.idle_heartbeat = nanos(millis);
     return this;
   }
 
-  flowControl() {
+  flowControl(): ConsumerOptsBuilder {
     this.config.flow_control = true;
     return this;
   }
 
-  deliverGroup(name: string) {
+  deliverGroup(name: string): ConsumerOptsBuilder {
     this.queue(name);
     return this;
   }
 
-  manualAck() {
+  manualAck(): ConsumerOptsBuilder {
     this.mack = true;
     return this;
   }
 
-  maxMessages(max: number) {
+  maxMessages(max: number): ConsumerOptsBuilder {
     this.max = max;
     return this;
   }
 
-  callback(fn: JsMsgCallback) {
+  callback(fn: JsMsgCallback): ConsumerOptsBuilder {
     this.callbackFn = fn;
     return this;
   }
 
-  queue(n: string) {
+  queue(n: string): ConsumerOptsBuilder {
     this.qname = n;
     this.config.deliver_group = n;
     return this;
   }
 
-  orderedConsumer() {
+  orderedConsumer(): ConsumerOptsBuilder {
     this.ordered = true;
     return this;
   }
 
-  bind(stream: string, durable: string) {
+  bind(stream: string, durable: string): ConsumerOptsBuilder {
     this.stream = stream;
     this.config.durable_name = durable;
     this.isBind = true;
     return this;
   }
 
-  bindStream(stream: string) {
+  bindStream(stream: string): ConsumerOptsBuilder {
     this.stream = stream;
     return this;
   }
 
-  inactiveEphemeralThreshold(millis: number) {
+  inactiveEphemeralThreshold(millis: number): ConsumerOptsBuilder {
     this.config.inactive_threshold = nanos(millis);
     return this;
   }
 
-  maxPullBatch(n: number) {
+  maxPullBatch(n: number): ConsumerOptsBuilder {
     this.config.max_batch = n;
     return this;
   }
 
-  maxPullRequestExpires(millis: number) {
+  maxPullRequestExpires(millis: number): ConsumerOptsBuilder {
     this.config.max_expires = nanos(millis);
     return this;
   }
 
-  memory() {
+  memory(): ConsumerOptsBuilder {
     this.config.mem_storage = true;
     return this;
   }
 
-  numReplicas(n: number) {
+  numReplicas(n: number): ConsumerOptsBuilder {
     this.config.num_replicas = n;
     return this;
   }
 
-  consumerName(n: string) {
+  consumerName(n: string): ConsumerOptsBuilder {
     this.config.name = n;
     return this;
   }
