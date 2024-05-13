@@ -18,8 +18,7 @@ import {
   assertExists,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { deferred, nanos } from "../../nats-base-client/mod.ts";
+} from "jsr:@std/assert";
 import {
   AckPolicy,
   Consumer,
@@ -32,14 +31,18 @@ import {
   jetstreamManager,
   PullOptions,
 } from "../mod.ts";
-import { NatsServer } from "../../tests/helpers/launcher.ts";
-import { connect } from "../../src/connect.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+import { NatsServer } from "../../src/tests/helpers/launcher.ts";
+import {
+  connect,
+  deferred,
+  nanos,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {

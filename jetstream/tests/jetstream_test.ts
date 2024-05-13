@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "../../tests/helpers/launcher.ts";
+import { NatsServer } from "../../src/tests/helpers/launcher.ts";
 
 import { initStream } from "./jstest_util.ts";
 import {
@@ -30,13 +30,12 @@ import {
   RetentionPolicy,
   StorageType,
 } from "../mod.ts";
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 import {
-  delay,
-  NatsConnectionImpl,
-} from "../../nats-base-client/internal_mod.ts";
-import {
+  connect,
   createInbox,
   deferred,
+  delay,
   Empty,
   ErrorCode,
   headers,
@@ -45,27 +44,26 @@ import {
   NatsError,
   nuid,
   StringCodec,
-} from "../../nats-base-client/mod.ts";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import {
+  assert,
   assertArrayIncludes,
   assertEquals,
   assertExists,
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 
-import { assert } from "../../nats-base-client/denobuffer.ts";
 import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
-import { connect } from "../../src/connect.ts";
 import {
   cleanup,
   jetstreamServerConf,
   Lock,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { ConsumerOptsBuilderImpl } from "../types.ts";
 import { PubHeaders } from "../jsapi_types.ts";
 

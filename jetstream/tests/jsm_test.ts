@@ -20,10 +20,14 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import {
+  Feature,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import {
+  connect,
   deferred,
   Empty,
   ErrorCode,
@@ -36,7 +40,7 @@ import {
   nkeys,
   nuid,
   StringCodec,
-} from "../../nats-base-client/mod.ts";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import {
   AckPolicy,
   AdvisoryKind,
@@ -55,7 +59,6 @@ import {
   StreamUpdateConfig,
 } from "../mod.ts";
 import { initStream } from "./jstest_util.ts";
-import { connect } from "../../src/mod.ts";
 import {
   assertThrowsAsyncErrorCode,
   cleanup,
@@ -64,14 +67,13 @@ import {
   NatsServer,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { validateName } from "../jsutil.ts";
 import {
   encodeAccount,
   encodeOperator,
   encodeUser,
-} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
-import { Feature } from "../../nats-base-client/semver.ts";
+} from "jsr:@nats-io/jwt@0.0.9-3";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
 import { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
 import { ConsumerApiAction, StoreCompression } from "../jsapi_types.ts";

@@ -18,28 +18,29 @@ import {
   jetstreamServerConf,
   NatsServer,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 import {
   assert,
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
-import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import {
+  connect,
   deadline,
   deferred,
   delay,
   nanos,
-} from "../../nats-base-client/util.ts";
+  syncIterator,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import { PullConsumerMessagesImpl } from "../consumer.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
-import { connect } from "../../src/connect.ts";
 import {
+  AckPolicy,
   ConsumerEvents,
   ConsumerStatus,
+  DeliverPolicy,
   jetstream,
   jetstreamManager,
 } from "../mod.ts";

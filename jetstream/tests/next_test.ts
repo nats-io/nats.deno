@@ -17,15 +17,15 @@ import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
+import { assertEquals, assertRejects } from "jsr:@std/assert";
 import {
-  assertEquals,
-  assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { delay, nanos } from "../../nats-base-client/util.ts";
+  delay,
+  nanos,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("next - basics", async () => {

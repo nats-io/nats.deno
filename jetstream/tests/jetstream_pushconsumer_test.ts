@@ -20,16 +20,24 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import {
+  connect,
   createInbox,
   DebugEvents,
+  deferred,
+  delay,
+  Empty,
   ErrorCode,
   Events,
+  JSONCodec,
+  nanos,
   NatsError,
+  nuid,
+  StringCodec,
   syncIterator,
-} from "../../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import {
   ConsumerOpts,
   consumerOpts,
@@ -45,7 +53,7 @@ import {
   assertExists,
   assertIsError,
   assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 import { callbackConsume } from "./jetstream_test.ts";
 import {
   AckPolicy,
@@ -53,12 +61,7 @@ import {
   RetentionPolicy,
   StorageType,
 } from "../jsapi_types.ts";
-import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
-import { Empty } from "../../nats-base-client/encoders.ts";
-import { deferred, delay, nanos } from "../../nats-base-client/util.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
 import { JsMsg } from "../jsmsg.ts";
-import { connect } from "../../src/connect.ts";
 import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
 import { JetStreamSubscriptionImpl } from "../jsclient.ts";
 import { jetstream, jetstreamManager } from "../mod.ts";
@@ -1136,7 +1139,7 @@ Deno.test("jetstream - idleheartbeats errors in iterator push sub", async () => 
   await delay(1700);
   sub.monitor._change(100, 0, 1);
   const err = await d;
-  assertIsError(err, NatsError, Js409Errors.IdleHeartbeatMissed);
+  assertIsError(err, Error, Js409Errors.IdleHeartbeatMissed);
   assertEquals(err.code, ErrorCode.JetStreamIdleHeartBeat);
   assertEquals(sub.sub.isClosed(), true);
 

@@ -20,20 +20,19 @@ import {
   assertExists,
   assertRejects,
   assertStringIncludes,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 import { DeliverPolicy, jetstream, jetstreamManager, JsMsg } from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
 } from "../consumer.ts";
-import { deferred } from "../../nats-base-client/mod.ts";
 import {
   cleanup,
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
-import { deadline, delay } from "../../nats-base-client/util.ts";
+} from "../../src/tests/helpers/mod.ts";
+import { deadline, deferred, delay } from "../../nats-base-client/util.ts";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

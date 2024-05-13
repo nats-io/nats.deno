@@ -19,7 +19,7 @@ import {
   nanos,
   NatsError,
   StringCodec,
-} from "../../nats-base-client/mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-11";
 import {
   AckPolicy,
   consumerOpts,
@@ -28,17 +28,14 @@ import {
   jetstreamManager,
   PullOptions,
 } from "../mod.ts";
-import {
-  assertRejects,
-  assertStringIncludes,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertRejects, assertStringIncludes } from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
 import {
   cleanup,
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 
 type testArgs = {
   js: JetStreamClient;

@@ -12,29 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { assertEquals, assertRejects, fail } from "jsr:@std/assert";
+import { AckPolicy, jetstream, jetstreamManager, StorageType } from "../mod.ts";
+
 import {
-  assertEquals,
-  assertRejects,
-  fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import {
-  AckPolicy,
   connect,
   createInbox,
   Empty,
-  jetstream,
-  jetstreamManager,
   Msg,
   nanos,
-  StorageType,
   StringCodec,
-} from "../../src/mod.ts";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { MsgImpl } from "../../nats-base-client/msg.ts";
 import { JetStreamManagerImpl } from "../jsclient.ts";
 

@@ -17,21 +17,17 @@ import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import {
-  assertEquals,
-  assertExists,
-  assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertEquals, assertExists, assertRejects } from "jsr:@std/assert";
 import {
   delay,
   Empty,
   nanos,
   StringCodec,
   syncIterator,
-} from "../../nats-base-client/mod.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-11";
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 import {
   AckPolicy,
   DeliverPolicy,

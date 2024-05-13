@@ -18,7 +18,7 @@ import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream, time } from "./jstest_util.ts";
 import { AckPolicy, StorageType } from "../jsapi_types.ts";
 import {
@@ -28,18 +28,19 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { Empty } from "../../nats-base-client/encoders.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+} from "jsr:@std/assert";
 import {
   DebugEvents,
+  deferred,
+  Empty,
   Events,
   NatsError,
+  nuid,
   syncIterator,
-} from "../../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-11";
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+
 import { Js409Errors } from "../jsutil.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
-import { deferred } from "../../nats-base-client/util.ts";
 import { consume } from "./jstest_util.ts";
 import { jetstream, jetstreamManager } from "../mod.ts";
 
@@ -420,7 +421,7 @@ Deno.test("jetstream - idleheartbeat missed on fetch", async () => {
         // no message expected
       }
     },
-    NatsError,
+    Error,
     Js409Errors.IdleHeartbeatMissed,
   );
 

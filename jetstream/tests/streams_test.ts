@@ -13,14 +13,11 @@
  * limitations under the License.
  */
 
-import { NatsServer, notCompatible } from "../../tests/helpers/mod.ts";
-import {
-  AckPolicy,
-  connect,
-  jetstream,
-  jetstreamManager,
-  JSONCodec,
-} from "../../src/mod.ts";
+import { NatsServer, notCompatible } from "../../src/tests/helpers/mod.ts";
+import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
+
+import { connect, JSONCodec } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+
 import {
   assertArrayIncludes,
   assertEquals,
@@ -31,9 +28,9 @@ import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
 
 Deno.test("streams - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));

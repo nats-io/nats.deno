@@ -20,7 +20,7 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import {
   AckPolicy,
@@ -36,27 +36,33 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { Empty } from "../../nats-base-client/encoders.ts";
+} from "jsr:@std/assert";
 import { checkJsError } from "../jsutil.ts";
-import { JSONCodec, StringCodec } from "../../nats-base-client/codec.ts";
+import {
+  connect,
+  DebugEvents,
+  deferred,
+  delay,
+  Empty,
+  ErrorCode,
+  Events,
+  JSONCodec,
+  nanos,
+  NatsError,
+  StringCodec,
+  syncIterator,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+
+import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+
 import {
   consumerOpts,
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
   PubAck,
 } from "../types.ts";
-import { deferred, delay, nanos } from "../../nats-base-client/util.ts";
-import {
-  DebugEvents,
-  ErrorCode,
-  Events,
-  NatsError,
-  syncIterator,
-} from "../../nats-base-client/core.ts";
+
 import { JsMsg } from "../jsmsg.ts";
-import { connect } from "../../src/connect.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { JetStreamClientImpl } from "../jsclient.ts";
 import { nuid } from "../../nats-base-client/nuid.ts";
 import { callbackConsume } from "./jetstream_test.ts";
