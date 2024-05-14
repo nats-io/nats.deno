@@ -23,15 +23,13 @@ import {
 } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import type {
   Codec,
-  NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
-import { checkJsErrorCode } from "./jsutil.ts";
-import type {
   Msg,
   NatsConnection,
+  NatsConnectionImpl,
   NatsError,
   RequestOptions,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { checkJsErrorCode } from "./jsutil.ts";
 import type { ApiResponse } from "./jsapi_types.ts";
 import type { JetStreamOptions } from "./types.ts";
 

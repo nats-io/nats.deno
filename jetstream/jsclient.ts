@@ -46,9 +46,6 @@ import type {
   TypedSubscriptionOptions,
 } from "jsr:@nats-io/nats-core@3.0.0-12";
 
-import { headers } from "../nats-base-client/headers.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import { consumerOpts, isConsumerOptsBuilder, JsHeaders } from "./types.ts";
 
@@ -81,8 +78,12 @@ import type {
 import {
   createInbox,
   ErrorCode,
+  Feature,
+  headers,
+  IdleHeartbeatMonitor,
   isNatsError,
-} from "../nats-base-client/core.ts";
+  nuid,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import type {
   Msg,
@@ -107,7 +108,6 @@ import type {
   JetStreamAccountStats,
   PullOptions,
 } from "./jsapi_types.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
 import { DirectStreamAPIImpl } from "./jsm.ts";
 
 /**
