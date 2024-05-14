@@ -14,9 +14,9 @@
  */
 
 import { NatsServer } from "./launcher.ts";
-import { compare, parseSemVer } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { compare, parseSemVer } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { red, yellow } from "jsr:@std/fmt/colors";
-import { extend } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { extend } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { connect } from "../../mod.ts";
 import type { ConnectionOptions, NatsConnection } from "../../mod.ts";
 

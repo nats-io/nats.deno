@@ -16,8 +16,8 @@ import { assert, assertEquals, fail } from "jsr:@std/assert";
 
 import { DebugEvents, deferred, delay } from "../mod.ts";
 import type { Status } from "../mod.ts";
-import { Heartbeat } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
-import type { PH } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { Heartbeat } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { PH } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 function pm(
   lag: number,

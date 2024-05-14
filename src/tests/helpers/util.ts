@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { deferred } from "../../mod.ts";
-import { timeout } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { timeout } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import type { Msg, Subscription } from "../../mod.ts";
 
 export function consume(sub: Subscription, ms = 1000): Promise<Msg[]> {

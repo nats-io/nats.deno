@@ -51,10 +51,10 @@ import {
 import type {
   MsgImpl,
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   DEFAULT_MAX_RECONNECT_ATTEMPTS,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 const conf = {
   authorization: {

@@ -53,12 +53,12 @@ import type { MsgHdrs, Publisher } from "../mod.ts";
 import type {
   NatsConnectionImpl,
   SubscriptionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   collect,
   Feature,
   isIP,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();

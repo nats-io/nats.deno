@@ -28,7 +28,7 @@ import {
   extend,
   parseOptions,
   Servers,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 const { version, lang } = new DenoTransport();
 

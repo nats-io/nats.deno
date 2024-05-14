@@ -26,10 +26,10 @@ import {
 } from "../mod.ts";
 import type { Auth, Authenticator, NatsConnection } from "../mod.ts";
 
-import { deadline, delay } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { deadline, delay } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import { assertEquals } from "jsr:@std/assert";
 import {

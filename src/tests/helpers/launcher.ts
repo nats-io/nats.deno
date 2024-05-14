@@ -16,8 +16,8 @@
 import { join, resolve } from "jsr:@std/path";
 import { rgb24 } from "jsr:@std/fmt/colors";
 import { check, jsopts } from "./mod.ts";
-import type { Deferred } from "../../mod.ts";
-import { extend, timeout } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { extend, timeout } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { Deferred } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import { deferred, delay, nuid } from "../../mod.ts";
 

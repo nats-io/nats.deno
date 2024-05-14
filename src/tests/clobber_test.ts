@@ -14,7 +14,7 @@
  */
 
 import { NatsServer } from "./helpers/launcher.ts";
-import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { connect, createInbox } from "../mod.ts";
 import { assertEquals } from "jsr:@std/assert";
 

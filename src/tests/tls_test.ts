@@ -19,9 +19,10 @@ import {
   fail,
 } from "jsr:@std/assert";
 import { connect, ErrorCode } from "../mod.ts";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { assertErrorCode, cleanup, Lock, NatsServer } from "./helpers/mod.ts";
 import { join, resolve } from "jsr:@std/path";
+import { Certs } from "./helpers/certs.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
@@ -47,12 +48,14 @@ Deno.test("tls - connects to tls without option", async () => {
 
 Deno.test("tls - custom ca fails without root", async () => {
   const cwd = Deno.cwd();
+  const certs = await Certs.import("../helpers/certs.json");
+  console.log(certs.list);
   const config = {
     host: "0.0.0.0",
     tls: {
-      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
 
@@ -82,9 +85,9 @@ Deno.test("tls - custom ca with root connects", async () => {
   const config = {
     host: "0.0.0.0",
     tls: {
-      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
 
@@ -106,9 +109,9 @@ Deno.test("tls - available connects with or without", async () => {
     host: "0.0.0.0",
     allow_non_tls: true,
     tls: {
-      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
 

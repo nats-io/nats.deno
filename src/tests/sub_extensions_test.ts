@@ -17,7 +17,7 @@ import { createInbox, deferred, StringCodec } from "../mod.ts";
 import type {
   Msg,
   SubscriptionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {

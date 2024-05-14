@@ -24,7 +24,7 @@ import {
   INFO,
   NatsError,
   render,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import type {
   ConnectionOptions,
@@ -32,7 +32,7 @@ import type {
   ServerInfo,
   TlsOptions,
   Transport,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import { writeAll } from "jsr:@std/io";
 

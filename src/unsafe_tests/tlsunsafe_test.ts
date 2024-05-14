@@ -8,9 +8,9 @@ Deno.test("tls-unsafe - handshake first", async () => {
     host: "localhost",
     tls: {
       handshake_first: true,
-      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
 

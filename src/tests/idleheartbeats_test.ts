@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { IdleHeartbeatMonitor } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { IdleHeartbeatMonitor } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { assert, assertEquals } from "jsr:@std/assert";
 import { deferred } from "../mod.ts";
 

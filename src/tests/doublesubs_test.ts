@@ -23,8 +23,8 @@ import {
 } from "../mod.ts";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
-import { extend } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { extend } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { assertArrayIncludes, assertEquals } from "jsr:@std/assert";
 import { join, resolve } from "jsr:@std/path";
 
@@ -35,9 +35,9 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const tlsconfig = {
     tls: {
-      cert_file: resolve(join(cwd, "./tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
+      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
+      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
 
@@ -56,7 +56,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const cert = {
     tls: {
-      caFile: resolve(join(cwd, "./tests/certs/RootCA.crt")),
+      caFile: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
     },
   };
   if (tls) {

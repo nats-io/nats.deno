@@ -22,8 +22,8 @@ import {
 } from "../mod.ts";
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
-import { QueuedIteratorImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import { QueuedIteratorImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {

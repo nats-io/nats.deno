@@ -29,12 +29,12 @@ import { TestDispatcher } from "./parser_test.ts";
 import { cleanup, setup } from "./helpers/mod.ts";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   MsgHdrsImpl,
   MsgImpl,
   Parser,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();

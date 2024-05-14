@@ -22,11 +22,11 @@ import {
   NatsError,
   StringCodec,
   TypedSubscription,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import type {
   Msg,
   TypedSubscriptionOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { cleanup, setup } from "./helpers/mod.ts";
 
 Deno.test("typedsub - rejects no adapter", async () => {
