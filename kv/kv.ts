@@ -25,7 +25,7 @@ import {
   nuid,
   parseSemVer,
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type {
   MsgHdrs,
@@ -34,7 +34,7 @@ import type {
   NatsError,
   Payload,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import {
   AckPolicy,

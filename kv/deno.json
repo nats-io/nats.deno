@@ -14,6 +14,7 @@
     ]
   },
   "imports": {
-    "jsr:@nats-io/nats-core": "jsr:@nats-io/nats-core@3.0.0-11"
+    "jsr:@nats-io/nats-core": "jsr:@nats-io/nats-core@3.0.0-14",
+    "jsr:@nats-io/jetstream": "jsr:@nats-io/nats-core@3.0.0-3"
   }
 }

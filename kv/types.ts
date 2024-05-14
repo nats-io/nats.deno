@@ -19,7 +19,7 @@ import type {
   StreamInfo,
   StreamSource,
 } from "jsr:@nats-io/jetstream@3.0.0-3";
-import type { Payload, QueuedIterator } from "jsr:@nats-io/nats-core@3.0.0-13";
+import type { Payload, QueuedIterator } from "jsr:@nats-io/nats-core@3.0.0-14";
 
 export interface KvEntry {
   bucket: string;
