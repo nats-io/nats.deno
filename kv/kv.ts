@@ -14,30 +14,46 @@
  */
 
 import {
+  compare,
+  deferred,
+  Empty,
   ErrorCode,
+  Feature,
+  headers,
+  millis,
+  nanos,
+  nuid,
+  parseSemVer,
+  QueuedIteratorImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
+import type {
   MsgHdrs,
   NatsConnection,
+  NatsConnectionImpl,
   NatsError,
   Payload,
   QueuedIterator,
-} from "../nats-base-client/mod.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { headers } from "../nats-base-client/mod.ts";
-import { compare, Feature, parseSemVer } from "../nats-base-client/semver.ts";
-import { deferred, millis, nanos } from "../nats-base-client/util.ts";
-import { Empty } from "../nats-base-client/encoders.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
 import {
   AckPolicy,
-  ConsumerConfig,
-  ConsumerInfo,
   consumerOpts,
   DeliverPolicy,
   DiscardPolicy,
   jetstream,
+  JsHeaders,
+  RetentionPolicy,
+  StorageType,
+  StoreCompression,
+} from "../jetstream/mod.ts";
+
+import type {
+  ConsumerConfig,
+  ConsumerInfo,
   JetStreamClient,
   JetStreamManager,
   JetStreamPublishOptions,
-  JsHeaders,
   JsMsg,
   Lister,
   MsgRequest,
@@ -45,9 +61,6 @@ import {
   PurgeOpts,
   PurgeResponse,
   Republish,
-  RetentionPolicy,
-  StorageType,
-  StoreCompression,
   StoredMsg,
   StreamConfig,
   StreamInfo,
@@ -57,31 +70,28 @@ import {
 import type {
   DirectStreamAPI,
   JetStreamSubscriptionInfoable,
-} from "../jetstream/internal_mod.ts";
+} from "../jetstream/types.ts";
 
-import { PubHeaders } from "../jetstream/internal_mod.ts";
+import { JetStreamClientImpl, PubHeaders } from "../jetstream/internal_mod.ts";
 
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
-import {
+import type {
   KV,
   KvCodec,
   KvCodecs,
   KvDeleteOptions,
   KvEntry,
   KvOptions,
-  kvPrefix,
   KvPutOptions,
   KvRemove,
   KvStatus,
-  KvWatchInclude,
   KvWatchOptions,
 } from "./types.ts";
 
-import { JetStreamClientImpl } from "../jetstream/internal_mod.ts";
-import { StreamListResponse } from "../jetstream/jsapi_types.ts";
+import { kvPrefix, KvWatchInclude } from "./types.ts";
+
+import type { StreamListResponse } from "../jetstream/jsapi_types.ts";
 import { ListerImpl } from "../jetstream/jslister.ts";
-import { ListerFieldFilter } from "../jetstream/types.ts";
+import type { ListerFieldFilter } from "../jetstream/types.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -149,7 +159,7 @@ export function validateSearchKey(k: string) {
   }
 }
 
-export function hasWildcards(k: string) {
+export function hasWildcards(k: string): boolean {
   if (k.startsWith(".") || k.endsWith(".")) {
     throw new Error(`invalid key: ${k}`);
   }
@@ -195,9 +205,9 @@ export class Kvm {
    */
   constructor(nc: JetStreamClient | NatsConnection) {
     this.js =
-      (nc instanceof NatsConnectionImpl
-        ? jetstream(nc)
-        : nc) as JetStreamClientImpl;
+      (nc instanceof JetStreamClientImpl
+        ? nc
+        : jetstream(nc as NatsConnection)) as JetStreamClientImpl;
   }
 
   /**

@@ -19,7 +19,7 @@ import {
   StreamInfo,
   StreamSource,
 } from "../jetstream/jsapi_types.ts";
-import { Payload, QueuedIterator } from "../nats-base-client/mod.ts";
+import type { Payload, QueuedIterator } from "jsr:@nats-io/nats-core@3.0.0-12";
 
 export interface KvEntry {
   bucket: string;

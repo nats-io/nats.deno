@@ -15,28 +15,31 @@
 import {
   collect,
   compare,
-  ConnectionOptions,
   deferred,
   delay,
   Empty,
   nanos,
-  NatsConnection,
-  NatsConnectionImpl,
   nuid,
   parseSemVer,
-  QueuedIterator,
   StringCodec,
   syncIterator,
-} from "../../nats-base-client/internal_mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
+  ConnectionOptions,
+  NatsConnection,
+  NatsConnectionImpl,
+  QueuedIterator,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import {
   DirectMsgHeaders,
   DiscardPolicy,
   jetstream,
   jetstreamManager,
-  JetStreamOptions,
   StorageType,
 } from "../../jetstream/mod.ts";
+
+import type { JetStreamOptions } from "../../jetstream/mod.ts";
 
 import {
   assert,
@@ -45,13 +48,15 @@ import {
   assertExists,
   assertRejects,
   assertThrows,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 
 import type { KV, KvEntry, KvOptions } from "../types.ts";
 
+import type { Bucket } from "../mod.ts";
+
 import { KvWatchInclude } from "../types.ts";
 
-import { Base64KeyCodec, Bucket, NoopKvCodecs } from "../mod.ts";
+import { Base64KeyCodec, NoopKvCodecs } from "../mod.ts";
 
 import { kvPrefix, validateBucket, validateKey } from "../internal_mod.ts";
 
@@ -62,10 +67,12 @@ import {
   NatsServer,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
-import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
-import { connect } from "../../src/mod.ts";
-import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
+} from "../../src/tests/helpers/mod.ts";
+import { JSONCodec } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
+  QueuedIteratorImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import { JetStreamSubscriptionInfoable } from "../../jetstream/types.ts";
 import { Kvm } from "../kv.ts";
 
