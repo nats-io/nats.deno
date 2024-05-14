@@ -14,13 +14,17 @@
  */
 import {
   Placement,
+  PubAck,
   PurgeResponse,
   StorageType,
   StreamInfo,
   StreamInfoRequestOptions,
-} from "../jetstream/jsapi_types.ts";
-import { MsgHdrs, Nanos, QueuedIterator } from "../nats-base-client/core.ts";
-import { PubAck } from "../jetstream/types.ts";
+} from "jsr:@nats-io/jetstream@3.0.0-3";
+import {
+  MsgHdrs,
+  Nanos,
+  QueuedIterator,
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 
 export type ObjectStoreLink = {
   /**

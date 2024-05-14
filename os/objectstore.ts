@@ -13,32 +13,35 @@
  * limitations under the License.
  */
 
-import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
-import { JSONCodec } from "../nats-base-client/codec.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
-import { deferred } from "../nats-base-client/util.ts";
-import { DataBuffer } from "../nats-base-client/databuffer.ts";
-import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
 import {
-  consumerOpts,
-  JetStreamClient,
-  JetStreamManager,
-  JsHeaders,
-  Lister,
-  ListerFieldFilter,
-  PubAck,
-} from "../jetstream/types.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { SHA256 } from "../nats-base-client/sha256.js";
-
-import {
+  Base64UrlPaddedCodec,
+  DataBuffer,
+  deferred,
+  Feature,
+  headers,
+  JSONCodec,
   MsgHdrs,
+  MsgHdrsImpl,
   NatsConnection,
   NatsError,
+  nuid,
   QueuedIterator,
-} from "../nats-base-client/core.ts";
+  QueuedIteratorImpl,
+  SHA256,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
 import {
+  consumerOpts,
   DiscardPolicy,
+  JetStreamClient,
+  JetStreamClientImpl,
+  JetStreamManager,
+  JsHeaders,
+  JsMsg,
+  Lister,
+  ListerFieldFilter,
+  ListerImpl,
+  PubAck,
   PubHeaders,
   PurgeResponse,
   StorageType,
@@ -47,8 +50,9 @@ import {
   StreamInfo,
   StreamInfoRequestOptions,
   StreamListResponse,
-} from "../jetstream/jsapi_types.ts";
-import { JsMsg } from "../jetstream/jsmsg.ts";
+  toJetStreamClient,
+} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
+
 import {
   ObjectInfo,
   ObjectResult,
@@ -59,10 +63,6 @@ import {
   ObjectStorePutOpts,
   ObjectStoreStatus,
 } from "./types.ts";
-import { jetstream, JetStreamClientImpl } from "../jetstream/jsclient.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { ListerImpl } from "../jetstream/jslister.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -92,10 +92,7 @@ export class Objm {
    * @param nc
    */
   constructor(nc: JetStreamClient | NatsConnection) {
-    this.js =
-      (nc instanceof NatsConnectionImpl
-        ? jetstream(nc)
-        : nc) as JetStreamClientImpl;
+    this.js = toJetStreamClient(nc) as JetStreamClientImpl;
   }
 
   /**
@@ -121,9 +118,7 @@ export class Objm {
         ),
       );
     }
-
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
+    const { ok, min } = this.js.nc.features.get(Feature.JS_OBJECTSTORE);
     if (!ok) {
       return Promise.reject(
         new Error(`objectstore is only supported on servers ${min} or better`),

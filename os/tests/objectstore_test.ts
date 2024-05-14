@@ -18,24 +18,30 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../src/tests/helpers/mod.ts";
 import {
   assert,
   assertEquals,
   assertExists,
   assertRejects,
   equal,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { DataBuffer } from "../../nats-base-client/databuffer.ts";
+} from "jsr:@std/assert";
+import {
+  Base64UrlPaddedCodec,
+  DataBuffer,
+  Empty,
+  headers,
+  nanos,
+  NatsConnectionImpl,
+  nuid,
+  SHA256,
+  StringCodec,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
 import type { ObjectInfo, ObjectStoreMeta } from "../types.ts";
-import { jetstreamManager, StorageType } from "../../jetstream/mod.ts";
-import { Empty, headers, nanos, nuid, StringCodec } from "../../src/mod.ts";
+import { jetstreamManager, StorageType } from "jsr:@nats-io/jetstream@3.0.0-3";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
-import { SHA256 } from "../../nats-base-client/sha256.js";
-import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
 import { digestType, Objm } from "../objectstore.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 
 function readableStreamFrom(data: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
