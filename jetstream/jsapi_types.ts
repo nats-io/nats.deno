@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-import type { ApiError, Nanos } from "jsr:@nats-io/nats-core@3.0.0-12";
-import { nanos } from "jsr:@nats-io/nats-core@3.0.0-12";
+import type { ApiError, Nanos } from "jsr:@nats-io/nats-core@3.0.0-13";
+import { nanos } from "jsr:@nats-io/nats-core@3.0.0-13";
 
 export interface ApiPaged {
   total: number;

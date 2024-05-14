@@ -25,7 +25,12 @@ export {
   RepublishHeaders,
 } from "./types.ts";
 
-export { jetstream, JetStreamClientImpl } from "./jsclient.ts";
+export {
+  jetstream,
+  JetStreamClientImpl,
+  jetstreamManager,
+  toJetStreamClient,
+} from "./jsclient.ts";
 
 export type {
   AbortOnMissingResource,
@@ -131,6 +136,5 @@ export {
 } from "./jsapi_types.ts";
 
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
-export { jetstreamManager } from "./jsclient.ts";
 
 export { ListerImpl } from "./jslister.ts";

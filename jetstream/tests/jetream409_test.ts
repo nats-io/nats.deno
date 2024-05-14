@@ -14,9 +14,9 @@
  */
 
 import { Js409Errors, setMaxWaitingToFail } from "../jsutil.ts";
-import { deferred, nanos, StringCodec } from "jsr:@nats-io/nats-core@3.0.0-12";
+import { deferred, nanos, StringCodec } from "jsr:@nats-io/nats-core@3.0.0-13";
 
-import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-12";
+import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-13";
 import {
   AckPolicy,
   consumerOpts,

@@ -31,7 +31,7 @@ import type { Advisory, JsMsg, JsMsgCallback, PubAck } from "../mod.ts";
 import type {
   NatsConnectionImpl,
   NatsError,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import {
   connect,
   createInbox,

@@ -20,14 +20,14 @@ import {
   JSONCodec,
   MsgHdrsImpl,
   TD,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import type {
   Codec,
   MsgHdrs,
   NatsConnection,
   NatsConnectionImpl,
   ReviverFn,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import type { StreamNames } from "./jsbaseclient_api.ts";
 import { ListerImpl } from "./jslister.ts";

@@ -22,10 +22,10 @@ import {
   fail,
 } from "jsr:@std/assert";
 
-import { Feature } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { Feature } from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import {
   connect,
   deferred,

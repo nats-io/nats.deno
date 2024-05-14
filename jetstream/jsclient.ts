@@ -36,7 +36,7 @@ import {
   QueuedIteratorImpl,
   timeout,
   TypedSubscription,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 
 import type {
   IngestionFilterFn,
@@ -44,7 +44,7 @@ import type {
   MsgAdapter,
   Timeout,
   TypedSubscriptionOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-12";
+} from "jsr:@nats-io/nats-core@3.0.0-13";
 
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import { consumerOpts, isConsumerOptsBuilder, JsHeaders } from "./types.ts";
@@ -83,7 +83,7 @@ import {
   IdleHeartbeatMonitor,
   isNatsError,
   nuid,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 
 import type {
   Msg,
@@ -92,7 +92,7 @@ import type {
   QueuedIterator,
   RequestOptions,
   SubscriptionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import {
   AckPolicy,
   DeliverPolicy,
@@ -109,6 +109,16 @@ import type {
   PullOptions,
 } from "./jsapi_types.ts";
 import { DirectStreamAPIImpl } from "./jsm.ts";
+
+export function toJetStreamClient(
+  nc: NatsConnection | JetStreamClient,
+): JetStreamClient {
+  //@ts-ignore: see if we have a nc
+  if (typeof nc.nc === "undefined") {
+    return jetstream(nc as NatsConnection);
+  }
+  return nc as JetStreamClient;
+}
 
 /**
  * Returns a {@link JetStreamClient} supported by the specified NatsConnection

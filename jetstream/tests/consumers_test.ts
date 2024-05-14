@@ -39,7 +39,7 @@ import {
   deferred,
   nanos,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import {
   cleanup,
   jetstreamServerConf,

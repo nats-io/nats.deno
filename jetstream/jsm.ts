@@ -28,14 +28,14 @@ import type {
   NatsConnection,
   QueuedIterator,
   ReviverFn,
-} from "jsr:@nats-io/nats-core@3.0.0-12";
+} from "jsr:@nats-io/nats-core@3.0.0-13";
 import {
   Empty,
   JSONCodec,
   QueuedIteratorImpl,
   RequestStrategy,
   TD,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import type {
   DirectBatchOptions,
   DirectMsgRequest,

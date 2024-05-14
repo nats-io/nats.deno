@@ -26,8 +26,8 @@ import {
   nanos,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-12";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 import {
   AckPolicy,
   DeliverPolicy,
