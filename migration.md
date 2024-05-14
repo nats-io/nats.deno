@@ -24,19 +24,20 @@ number of issues we would like to address going forward:
 In order to satisfy those needs, the NATS JavaScript library will split into
 separate libraries which focus on:
 
-- Transport Libraries (nats.js - `@nats/node`, nats.deno `@nats/deno`, nats.ws
-  `@nats/es-websocket`) - these depend on NatsCore, and only contribute a
-  transport implementation.
-- NatsCore `@nats/core` ("nats-base-client") - publish/subscribe/request-reply.
-- JetStream `@nats/jetstream` (depends on `@nats-core`)
-- KV `@nats/kv` (depends on JetStream)
-- ObjectStore `@nats/obj` (depends on JetStream)
-- Services `@nats/services` (depends on NatsCore)
+- Transport Libraries (nats.js - `@nats-io/node`, nats.deno `@nats-io/deno`,
+  nats.ws `@nats/es-websocket`) - these depend on NatsCore, and only contribute
+  a transport implementation.
+- NatsCore `@nats-io/core` ("nats-base-client") -
+  publish/subscribe/request-reply.
+- JetStream `@nats-io/jetstream` (depends on `@nats-core`)
+- KV `@nats-io/kv` (depends on JetStream)
+- ObjectStore `@nats-io/obj` (depends on JetStream)
+- Services `@nats-io/services` (depends on NatsCore)
 
 Your library selection process will start by selecting your runtime, and
 importing any additional functionality you may be interested in. The
-`@nats/node`, `@nats/deno`, `@nats/es-websocket` depend and re-export
-`@nats/core`.
+`@nats-io/node`, `@nats-io/deno`, `@nats-io/es-websocket` depend and re-export
+`@nats-io/core`.
 
 To use the extended functionality you will need to install and import from the
 other libraries and call API to create an instance of the functionality the
