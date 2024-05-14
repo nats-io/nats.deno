@@ -28,7 +28,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-function getLengths(b64) {
+function getLengths(b64: string): [number, number] {
     const len = b64.length;
     let validLen = b64.indexOf("=");
     if (validLen === -1) {
@@ -40,14 +40,14 @@ function getLengths(b64) {
         placeHoldersLen
     ];
 }
-function init(lookup, revLookup, urlsafe = false) {
-    function _byteLength(validLen, placeHoldersLen) {
+function init(lookup: string[], revLookup: number[], urlsafe: boolean = false) {
+    function _byteLength(validLen: number, placeHoldersLen: number): number {
         return Math.floor((validLen + placeHoldersLen) * 3 / 4 - placeHoldersLen);
     }
-    function tripletToBase64(num) {
+    function tripletToBase64(num: number): string {
         return lookup[num >> 18 & 0x3f] + lookup[num >> 12 & 0x3f] + lookup[num >> 6 & 0x3f] + lookup[num & 0x3f];
     }
-    function encodeChunk(buf, start, end) {
+    function encodeChunk(buf: Uint8Array, start: number, end: number): string {
         const out = new Array((end - start) / 3);
         for(let i = start, curTriplet = 0; i < end; i += 3){
             out[curTriplet++] = tripletToBase64((buf[i] << 16) + (buf[i + 1] << 8) + buf[i + 2]);
@@ -55,10 +55,10 @@ function init(lookup, revLookup, urlsafe = false) {
         return out.join("");
     }
     return {
-        byteLength (b64) {
+        byteLength (b64: string): number {
             return _byteLength.apply(null, getLengths(b64));
         },
-        toUint8Array (b64) {
+        toUint8Array (b64: string): Uint8Array {
             const [validLen, placeHoldersLen] = getLengths(b64);
             const buf = new Uint8Array(_byteLength(validLen, placeHoldersLen));
             const len = placeHoldersLen ? validLen - 4 : validLen;
@@ -81,7 +81,7 @@ function init(lookup, revLookup, urlsafe = false) {
             }
             return buf;
         },
-        fromUint8Array (buf) {
+        fromUint8Array (buf: Uint8Array): string {
             const maxChunkLength = 16383;
             const len = buf.length;
             const extraBytes = len % 3;
@@ -107,7 +107,7 @@ function init(lookup, revLookup, urlsafe = false) {
         }
     };
 }
-const lookup = [];
+const lookup: string[] = [];
 const revLookup = [];
 const code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 for(let i = 0, l = code.length; i < l; ++i){
@@ -117,10 +117,10 @@ for(let i = 0, l = code.length; i < l; ++i){
 const { byteLength , toUint8Array , fromUint8Array  } = init(lookup, revLookup, true);
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
-function toHexString(buf) {
+function toHexString(buf: Uint8Array) {
     return buf.reduce((hex, __byte)=>`${hex}${__byte < 16 ? "0" : ""}${__byte.toString(16)}`, "");
 }
-function fromHexString(hex) {
+function fromHexString(hex: string): Uint8Array {
     const len = hex.length;
     if (len % 2 || !/^[0-9a-fA-F]+$/.test(hex)) {
         throw new TypeError("Invalid hex string.");
@@ -133,7 +133,7 @@ function fromHexString(hex) {
     }
     return buf;
 }
-function decode(buf, encoding = "utf8") {
+function decode(buf: Uint8Array, encoding: string = "utf8"): string {
     if (/^utf-?8$/i.test(encoding)) {
         return decoder.decode(buf);
     } else if (/^base64$/i.test(encoding)) {
@@ -144,7 +144,7 @@ function decode(buf, encoding = "utf8") {
         throw new TypeError("Unsupported string encoding.");
     }
 }
-function encode(str, encoding = "utf8") {
+function encode(str: string, encoding: string = "utf8"): Uint8Array {
     if (/^utf-?8$/i.test(encoding)) {
         return encoder.encode(str);
     } else if (/^base64$/i.test(encoding)) {
@@ -155,15 +155,15 @@ function encode(str, encoding = "utf8") {
         throw new TypeError("Unsupported string encoding.");
     }
 }
-const BYTES = 32;
+const BYTES: number = 32;
 class SHA256 {
-    hashSize = 32;
-    _buf;
-    _bufIdx;
-    _count;
-    _K;
-    _H;
-    _finalized;
+    hashSize: number = 32;
+    _buf: Uint8Array;
+    _bufIdx!: number;
+    _count!: Uint32Array;
+    _K: Uint32Array;
+    _H!: Uint32Array;
+    _finalized!: boolean;
     constructor(){
         this._buf = new Uint8Array(64);
         this._K = new Uint32Array([
@@ -234,7 +234,7 @@ class SHA256 {
         ]);
         this.init();
     }
-    init() {
+    init(): this  {
         this._H = new Uint32Array([
             0x6a09e667,
             0xbb67ae85,
@@ -251,7 +251,7 @@ class SHA256 {
         this._finalized = false;
         return this;
     }
-    update(msg, inputEncoding) {
+    update(msg: string|Uint8Array|null, inputEncoding?: string): this {
         if (msg === null) {
             throw new TypeError("msg must be a string or Uint8Array.");
         } else if (typeof msg === "string") {
@@ -271,7 +271,7 @@ class SHA256 {
         c[1] += msg.length >>> 29;
         return this;
     }
-    digest(outputEncoding) {
+    digest(outputEncoding: string): string|Uint8Array {
         if (this._finalized) {
             throw new Error("digest has already been called.");
         }
@@ -306,7 +306,7 @@ class SHA256 {
         this.init();
         return outputEncoding ? decode(hash, outputEncoding) : hash;
     }
-    _transform() {
+    _transform(): void {
         const h = this._H;
         let h0 = h[0];
         let h1 = h[1];
@@ -350,7 +350,7 @@ class SHA256 {
         h[7] = h[7] + h7 | 0;
     }
 }
-function sha256(msg, inputEncoding, outputEncoding) {
+function sha256(msg: string|Uint8Array|null, inputEncoding: string, outputEncoding: string): string|Uint8Array {
     return new SHA256().update(msg, inputEncoding).digest(outputEncoding);
 }
 export { BYTES as BYTES };

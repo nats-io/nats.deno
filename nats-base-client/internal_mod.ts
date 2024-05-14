@@ -122,3 +122,7 @@ export type {
 export { IdleHeartbeatMonitor } from "./idleheartbeat_monitor.ts";
 
 export { isIPV4OrHostname, Servers } from "./servers.ts";
+
+export { Base64Codec, Base64UrlCodec, Base64UrlPaddedCodec } from "./base64.ts";
+
+export { SHA256 } from "./sha256.ts";
