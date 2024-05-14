@@ -52,7 +52,7 @@ export type {
   ProtocolFilterFn,
 } from "./queued_iterator.ts";
 export { QueuedIteratorImpl } from "./queued_iterator.ts";
-export type { ParserEvent } from "./parser.ts";
+export type { MsgArg, ParserEvent } from "./parser.ts";
 export { Kind, Parser, State } from "./parser.ts";
 export { DenoBuffer, MAX_SIZE, readAll, writeAll } from "./denobuffer.ts";
 export { Bench, Metric } from "./bench.ts";
