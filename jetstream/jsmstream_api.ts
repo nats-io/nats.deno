@@ -13,16 +13,26 @@
  * limitations under the License.
  */
 
-import { Empty, MsgHdrs } from "../nats-base-client/types.ts";
-import { BaseApiClientImpl, StreamNames } from "./jsbaseclient_api.ts";
+import {
+  Empty,
+  Feature,
+  headers,
+  JSONCodec,
+  MsgHdrsImpl,
+  TD,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
+  Codec,
+  MsgHdrs,
+  NatsConnection,
+  NatsConnectionImpl,
+  ReviverFn,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import type { StreamNames } from "./jsbaseclient_api.ts";
 import { ListerImpl } from "./jslister.ts";
 import { validateStreamName } from "./jsutil.ts";
-import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { TD } from "../nats-base-client/encoders.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import {
+import type {
   Consumer,
   ConsumerAPI,
   Consumers,
@@ -35,8 +45,7 @@ import {
   StreamAPI,
   Streams,
 } from "./types.ts";
-import { NatsConnection, ReviverFn } from "../nats-base-client/core.ts";
-import {
+import type {
   ApiPagedRequest,
   ExternalStream,
   MsgDeleteRequest,
@@ -210,7 +219,7 @@ export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
   }
 
   checkStreamConfigVersions(cfg: Partial<StreamConfig>) {
-    const nci = this.nc as NatsConnectionImpl;
+    const nci = this.nc as unknown as NatsConnectionImpl;
     if (cfg.metadata) {
       const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
       if (!ok) {

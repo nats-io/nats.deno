@@ -21,11 +21,10 @@ import {
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import { assertEquals, assertRejects } from "jsr:@std/assert";
-import {
-  delay,
-  nanos,
+import { delay, nanos } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("next - basics", async () => {

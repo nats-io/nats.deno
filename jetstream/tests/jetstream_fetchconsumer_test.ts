@@ -34,11 +34,13 @@ import {
   deferred,
   Empty,
   Events,
-  NatsError,
   nuid,
   syncIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-11";
-import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12";
+import type {
+  NatsConnectionImpl,
+  NatsError,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import { Js409Errors } from "../jsutil.ts";
 import { consume } from "./jstest_util.ts";

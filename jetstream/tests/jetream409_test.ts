@@ -14,20 +14,16 @@
  */
 
 import { Js409Errors, setMaxWaitingToFail } from "../jsutil.ts";
-import {
-  deferred,
-  nanos,
-  NatsError,
-  StringCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-11";
+import { deferred, nanos, StringCodec } from "jsr:@nats-io/nats-core@3.0.0-12";
+
+import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-12";
 import {
   AckPolicy,
   consumerOpts,
   jetstream,
-  JetStreamClient,
   jetstreamManager,
-  PullOptions,
 } from "../mod.ts";
+import type { JetStreamClient, PullOptions } from "../mod.ts";
 import { assertRejects, assertStringIncludes } from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
 import {

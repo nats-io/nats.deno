@@ -26,15 +26,15 @@ import {
   nanos,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-11";
-import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   AckPolicy,
   DeliverPolicy,
   jetstream,
   jetstreamManager,
 } from "../mod.ts";
-import { PullConsumerMessagesImpl } from "../consumer.ts";
+import type { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("fetch - no messages", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

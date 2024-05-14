@@ -17,20 +17,21 @@ import { NatsServer } from "../../src/tests/helpers/launcher.ts";
 import { initStream } from "./jstest_util.ts";
 import {
   AckPolicy,
-  Advisory,
   consumerOpts,
   DeliverPolicy,
   jetstream,
   jetstreamManager,
   JsHeaders,
-  JsMsg,
-  JsMsgCallback,
-  PubAck,
   RepublishHeaders,
   RetentionPolicy,
   StorageType,
 } from "../mod.ts";
-import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+
+import type { Advisory, JsMsg, JsMsgCallback, PubAck } from "../mod.ts";
+import type {
+  NatsConnectionImpl,
+  NatsError,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   connect,
   createInbox,
@@ -41,7 +42,6 @@ import {
   headers,
   JSONCodec,
   nanos,
-  NatsError,
   nuid,
   StringCodec,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
@@ -55,7 +55,10 @@ import {
   fail,
 } from "jsr:@std/assert";
 
-import { JetStreamClientImpl, JetStreamSubscriptionImpl } from "../jsclient.ts";
+import type {
+  JetStreamClientImpl,
+  JetStreamSubscriptionImpl,
+} from "../jsclient.ts";
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
 import {
   cleanup,

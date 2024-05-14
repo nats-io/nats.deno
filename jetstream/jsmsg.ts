@@ -12,15 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { DataBuffer } from "../nats-base-client/databuffer.ts";
-import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
-import { MsgImpl } from "../nats-base-client/msg.ts";
-import { ProtocolHandler } from "../nats-base-client/protocol.ts";
-import { RequestOne } from "../nats-base-client/request.ts";
-import { Msg, MsgHdrs, RequestOptions } from "../nats-base-client/core.ts";
-import { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
-import { deferred } from "../nats-base-client/mod.ts";
-import { nanos } from "../nats-base-client/util.ts";
+
+import type {
+  Msg,
+  MsgHdrs,
+  MsgImpl,
+  ProtocolHandler,
+  RequestOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import {
+  DataBuffer,
+  deferred,
+  JSONCodec,
+  nanos,
+  RequestOne,
+  StringCodec,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);
 const NAK = Uint8Array.of(45, 78, 65, 75);

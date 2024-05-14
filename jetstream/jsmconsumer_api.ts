@@ -19,11 +19,15 @@ import {
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { Nanos, NatsConnection } from "../nats-base-client/core.ts";
-import {
-  ConsumerApiAction,
+import type {
+  Nanos,
+  NatsConnection,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { Feature } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { ConsumerApiAction } from "./jsapi_types.ts";
+
+import type {
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
@@ -32,7 +36,7 @@ import {
   SuccessResponse,
 } from "./jsapi_types.ts";
 
-import {
+import type {
   ConsumerAPI,
   JetStreamOptions,
   Lister,
@@ -71,7 +75,7 @@ export class ConsumerAPIImpl extends BaseApiClientImpl implements ConsumerAPI {
       validateDurableName(cr.config.durable_name);
     }
 
-    const nci = this.nc as NatsConnectionImpl;
+    const nci = this.nc as unknown as NatsConnectionImpl;
     let { min, ok: newAPI } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );

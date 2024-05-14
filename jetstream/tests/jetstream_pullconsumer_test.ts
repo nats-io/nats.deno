@@ -22,12 +22,8 @@ import {
   setup,
 } from "../../src/tests/helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import {
-  AckPolicy,
-  ConsumerConfig,
-  DeliverPolicy,
-  StorageType,
-} from "../jsapi_types.ts";
+import { AckPolicy, DeliverPolicy, StorageType } from "../jsapi_types.ts";
+import type { ConsumerConfig } from "../jsapi_types.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -48,23 +44,25 @@ import {
   Events,
   JSONCodec,
   nanos,
-  NatsError,
+  nuid,
   StringCodec,
   syncIterator,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 
-import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import type {
+  NatsConnectionImpl,
+  NatsError,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
-import {
-  consumerOpts,
+import { consumerOpts } from "../types.ts";
+import type {
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
   PubAck,
 } from "../types.ts";
 
-import { JsMsg } from "../jsmsg.ts";
-import { JetStreamClientImpl } from "../jsclient.ts";
-import { nuid } from "../../nats-base-client/nuid.ts";
+import type { JsMsg } from "../jsmsg.ts";
+import type { JetStreamClientImpl } from "../jsclient.ts";
 import { callbackConsume } from "./jetstream_test.ts";
 import { jetstream, jetstreamManager } from "../mod.ts";
 

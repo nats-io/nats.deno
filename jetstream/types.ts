@@ -25,8 +25,8 @@ import type {
   ReviverFn,
   Sub,
   TypedSubscriptionOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
-import { nanos } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { nanos } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 import {
   AckPolicy,

@@ -17,51 +17,54 @@ import {
   deferred,
   delay,
   nanos,
-  Timeout,
-  timeout,
-} from "../nats-base-client/util.ts";
-import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
-import { isHeartbeatMsg, minValidation } from "./jsutil.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import {
-  createInbox,
-  Events,
-  MsgHdrs,
   NatsError,
+  nuid,
+  timeout,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
+  MsgHdrs,
   QueuedIterator,
   Status,
   Subscription,
-} from "../nats-base-client/core.ts";
-import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
-import { JsMsg, toJsMsg } from "./jsmsg.ts";
-import { MsgImpl } from "../nats-base-client/msg.ts";
+  SubscriptionImpl,
+  Timeout,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { isHeartbeatMsg, minValidation } from "./jsutil.ts";
+
+import { toJsMsg } from "./jsmsg.ts";
+import type { JsMsg } from "./jsmsg.ts";
+
+import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
-  AckPolicy,
+  createInbox,
+  Events,
+  IdleHeartbeatMonitor,
+  QueuedIteratorImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
+import { AckPolicy, DeliverPolicy } from "./jsapi_types.ts";
+import type {
   ConsumerConfig,
   ConsumerInfo,
-  DeliverPolicy,
   PullOptions,
 } from "./jsapi_types.ts";
-import {
+import type {
   ConsumeMessages,
   ConsumeOptions,
   Consumer,
   ConsumerAPI,
   ConsumerCallbackFn,
-  ConsumerDebugEvents,
-  ConsumerEvents,
   ConsumerMessages,
   ConsumerStatus,
   FetchMessages,
   FetchOptions,
-  JsHeaders,
   NextOptions,
   OrderedConsumerOptions,
   PullConsumerOptions,
 } from "./types.ts";
-import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
 
+import { ConsumerDebugEvents, ConsumerEvents, JsHeaders } from "./types.ts";
 enum PullConsumerType {
   Unset = -1,
   Consume,

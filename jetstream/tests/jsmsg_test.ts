@@ -19,18 +19,20 @@ import {
   connect,
   createInbox,
   Empty,
-  Msg,
   nanos,
   StringCodec,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
-import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
+import type { Msg } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
+import type { JsMsgImpl } from "../jsmsg.ts";
+import { parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
   cleanup,
   jetstreamServerConf,
   setup,
 } from "../../src/tests/helpers/mod.ts";
-import { MsgImpl } from "../../nats-base-client/msg.ts";
-import { JetStreamManagerImpl } from "../jsclient.ts";
+import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"

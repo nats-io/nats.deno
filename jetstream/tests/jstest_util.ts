@@ -12,23 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  AckPolicy,
-  jetstream,
-  jetstreamManager,
-  JsMsg,
-  PubAck,
-  StreamConfig,
-} from "../mod.ts";
+import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
+import type { JsMsg, PubAck, StreamConfig } from "../mod.ts";
 
 import { assert } from "jsr:@std/assert";
-import {
-  Empty,
-  nanos,
+import { Empty, nanos, nuid } from "jsr:@nats-io/nats-core@3.0.0-12";
+
+import type {
   NatsConnection,
-  nuid,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-11";
+} from "jsr:@nats-io/nats-core@3.0.0-12";
 
 export async function consume(iter: QueuedIterator<JsMsg>): Promise<JsMsg[]> {
   const buf: JsMsg[] = [];

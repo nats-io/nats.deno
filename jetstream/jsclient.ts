@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-import { Empty, NatsError } from "../nats-base-client/types.ts";
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import {
   checkJsError,
@@ -26,41 +25,44 @@ import {
   validateStreamName,
 } from "./jsutil.ts";
 import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { JsMsg, JsMsgImpl, toJsMsg } from "./jsmsg.ts";
-import {
-  MsgAdapter,
-  TypedSubscription,
-  TypedSubscriptionOptions,
-} from "../nats-base-client/typedsub.ts";
-import {
-  IngestionFilterFn,
-  IngestionFilterFnResult,
-  QueuedIteratorImpl,
-} from "../nats-base-client/queued_iterator.ts";
+import { toJsMsg } from "./jsmsg.ts";
+import type { JsMsg, JsMsgImpl } from "./jsmsg.ts";
 import {
   delay,
+  Empty,
   millis,
   nanos,
-  Timeout,
+  NatsError,
+  QueuedIteratorImpl,
   timeout,
-} from "../nats-base-client/util.ts";
+  TypedSubscription,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
+import type {
+  IngestionFilterFn,
+  IngestionFilterFnResult,
+  MsgAdapter,
+  Timeout,
+  TypedSubscriptionOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-12";
+
 import { headers } from "../nats-base-client/headers.ts";
 import { Feature } from "../nats-base-client/semver.ts";
 import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
-import {
+import { consumerOpts, isConsumerOptsBuilder, JsHeaders } from "./types.ts";
+
+import type {
   Advisory,
   AdvisoryKind,
   BaseClient,
   ConsumerAPI,
   ConsumerInfoable,
   ConsumerOpts,
-  consumerOpts,
   ConsumerOptsBuilder,
   Consumers,
   Destroyable,
   DirectStreamAPI,
-  isConsumerOptsBuilder,
   JetStreamClient,
   JetStreamManager,
   JetStreamManagerOptions,
@@ -71,7 +73,6 @@ import {
   JetStreamSubscriptionInfo,
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
-  JsHeaders,
   PubAck,
   Pullable,
   StreamAPI,
@@ -81,25 +82,30 @@ import {
   createInbox,
   ErrorCode,
   isNatsError,
+} from "../nats-base-client/core.ts";
+
+import type {
   Msg,
   NatsConnection,
   Payload,
   QueuedIterator,
   RequestOptions,
-} from "../nats-base-client/core.ts";
-import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
+  SubscriptionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
-  AccountInfoResponse,
   AckPolicy,
+  DeliverPolicy,
+  PubHeaders,
+  ReplayPolicy,
+} from "./jsapi_types.ts";
+import type {
+  AccountInfoResponse,
   ApiResponse,
   ConsumerConfig,
   ConsumerInfo,
   CreateConsumerRequest,
-  DeliverPolicy,
   JetStreamAccountStats,
-  PubHeaders,
   PullOptions,
-  ReplayPolicy,
 } from "./jsapi_types.ts";
 import { nuid } from "../nats-base-client/nuid.ts";
 import { DirectStreamAPIImpl } from "./jsm.ts";

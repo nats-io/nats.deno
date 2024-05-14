@@ -22,10 +22,10 @@ import {
   fail,
 } from "jsr:@std/assert";
 
-import {
-  Feature,
+import { Feature } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   connect,
   deferred,
@@ -35,24 +35,29 @@ import {
   JSONCodec,
   jwtAuthenticator,
   nanos,
-  NatsConnection,
-  NatsError,
   nkeys,
   nuid,
   StringCodec,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import type {
+  NatsConnection,
+  NatsError,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 import {
   AckPolicy,
   AdvisoryKind,
-  ConsumerConfig,
-  ConsumerInfo,
   DiscardPolicy,
   jetstream,
   jetstreamManager,
-  Lister,
-  PubAck,
   RetentionPolicy,
   StorageType,
+} from "../mod.ts";
+
+import type {
+  ConsumerConfig,
+  ConsumerInfo,
+  Lister,
+  PubAck,
   StreamConfig,
   StreamInfo,
   StreamSource,
@@ -75,9 +80,9 @@ import {
   encodeUser,
 } from "jsr:@nats-io/jwt@0.0.9-3";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
-import { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
+import type { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
 import { ConsumerApiAction, StoreCompression } from "../jsapi_types.ts";
-import { JetStreamManagerImpl } from "../jsclient.ts";
+import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";
@@ -1630,12 +1635,8 @@ Deno.test("jsm - discard_new_per_subject option", async () => {
 
   await js.publish("A.b", Empty);
   await assertRejects(
-    async () => {
-      await js.publish("A.b", Empty)
-        .catch((err) => {
-          console.log(err);
-          throw err;
-        });
+    () => {
+      return js.publish("A.b", Empty);
     },
     Error,
     "maximum messages per subject exceeded",

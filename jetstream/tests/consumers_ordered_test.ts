@@ -21,8 +21,9 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "jsr:@std/assert";
-import { DeliverPolicy, jetstream, jetstreamManager, JsMsg } from "../mod.ts";
-import {
+import { DeliverPolicy, jetstream, jetstreamManager } from "../mod.ts";
+import type { JsMsg } from "../mod.ts";
+import type {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
 } from "../consumer.ts";
@@ -32,7 +33,7 @@ import {
   notCompatible,
   setup,
 } from "../../src/tests/helpers/mod.ts";
-import { deadline, deferred, delay } from "../../nats-base-client/util.ts";
+import { deadline, deferred, delay } from "jsr:@nats-io/nats-core@3.0.0-12";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

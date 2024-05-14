@@ -12,15 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
-import {
+import type { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import type {
   ApiPaged,
   ApiPagedRequest,
   ApiResponse,
   ConsumerListResponse,
   StreamListResponse,
 } from "./jsapi_types.ts";
-import { Lister, ListerFieldFilter } from "./types.ts";
+import type { Lister, ListerFieldFilter } from "./types.ts";
 
 export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   err?: Error;

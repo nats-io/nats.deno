@@ -12,16 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Empty } from "../nats-base-client/encoders.ts";
-import { MsgArg } from "../nats-base-client/parser.ts";
-import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
-import { MsgImpl } from "../nats-base-client/msg.ts";
 import {
+  Empty,
   ErrorCode,
-  Msg,
+  headers,
+  MsgImpl,
   NatsError,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+
+import type {
+  Msg,
+  MsgArg,
+  MsgHdrsImpl,
   Publisher,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 
 export function validateDurableName(name?: string) {
   return minValidation("durable", name);

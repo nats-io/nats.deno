@@ -38,12 +38,12 @@ import {
   StringCodec,
   syncIterator,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
-import {
+import { consumerOpts, JsHeaders } from "../types.ts";
+
+import type {
   ConsumerOpts,
-  consumerOpts,
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
-  JsHeaders,
   PubAck,
 } from "../types.ts";
 import {
@@ -61,9 +61,9 @@ import {
   RetentionPolicy,
   StorageType,
 } from "../jsapi_types.ts";
-import { JsMsg } from "../jsmsg.ts";
+import type { JsMsg } from "../jsmsg.ts";
 import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
-import { JetStreamSubscriptionImpl } from "../jsclient.ts";
+import type { JetStreamSubscriptionImpl } from "../jsclient.ts";
 import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("jetstream - ephemeral push", async () => {

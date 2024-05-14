@@ -15,29 +15,33 @@
 
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import {
+import { DirectMsgHeaders } from "./types.ts";
+import type {
   DirectMsg,
-  DirectMsgHeaders,
   DirectStreamAPI,
   JetStreamOptions,
   StoredMsg,
 } from "./types.ts";
-import {
+import type {
+  Codec,
   Msg,
   MsgHdrs,
   NatsConnection,
   QueuedIterator,
-  RequestStrategy,
   ReviverFn,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-12";
 import {
+  Empty,
+  JSONCodec,
+  RequestStrategy,
+  TD,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
   DirectBatchOptions,
   DirectMsgRequest,
   LastForMsgRequest,
 } from "./jsapi_types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
-import { Empty, TD } from "../nats-base-client/encoders.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
 
 export class DirectStreamAPIImpl extends BaseApiClientImpl
   implements DirectStreamAPI {

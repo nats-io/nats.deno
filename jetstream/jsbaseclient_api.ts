@@ -14,19 +14,26 @@
  */
 
 import { Empty } from "../nats-base-client/encoders.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { backoff, delay, extend } from "../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { checkJsErrorCode } from "./jsutil.ts";
 import {
+  backoff,
+  delay,
   ErrorCode,
+  extend,
+  JSONCodec,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type {
+  Codec,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { checkJsErrorCode } from "./jsutil.ts";
+import type {
   Msg,
   NatsConnection,
   NatsError,
   RequestOptions,
 } from "../nats-base-client/core.ts";
-import { ApiResponse } from "./jsapi_types.ts";
-import { JetStreamOptions } from "./types.ts";
+import type { ApiResponse } from "./jsapi_types.ts";
+import type { JetStreamOptions } from "./types.ts";
 
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;

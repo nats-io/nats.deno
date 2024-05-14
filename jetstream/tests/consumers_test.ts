@@ -21,14 +21,16 @@ import {
 } from "jsr:@std/assert";
 import {
   AckPolicy,
-  Consumer,
   ConsumerDebugEvents,
   ConsumerEvents,
-  ConsumerMessages,
-  ConsumerStatus,
   DeliverPolicy,
   jetstream,
   jetstreamManager,
+} from "../mod.ts";
+import type {
+  Consumer,
+  ConsumerMessages,
+  ConsumerStatus,
   PullOptions,
 } from "../mod.ts";
 import { NatsServer } from "../../src/tests/helpers/launcher.ts";
@@ -37,13 +39,13 @@ import {
   deferred,
   nanos,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
-import { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-11/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import {
   cleanup,
   jetstreamServerConf,
   setup,
 } from "../../src/tests/helpers/mod.ts";
-import { PullConsumerMessagesImpl } from "../consumer.ts";
+import type { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
