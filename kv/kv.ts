@@ -22,33 +22,33 @@ import {
   headers,
   millis,
   nanos,
-  NatsConnectionImpl,
   nuid,
   parseSemVer,
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 
 import type {
   MsgHdrs,
   NatsConnection,
+  NatsConnectionImpl,
   NatsError,
   Payload,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
 
 import {
   AckPolicy,
   consumerOpts,
   DeliverPolicy,
   DiscardPolicy,
-  jetstream,
   JsHeaders,
   ListerImpl,
   PubHeaders,
   RetentionPolicy,
   StorageType,
   StoreCompression,
-} from "jsr:@nats-io/jetstream@3.0.0-2/internal";
+  toJetStreamClient,
+} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
 
 import type {
   ConsumerConfig,
@@ -72,7 +72,7 @@ import type {
   StreamInfo,
   StreamListResponse,
   StreamSource,
-} from "jsr:@nats-io/jetstream@3.0.0-2/internal";
+} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
 
 import type {
   KV,
@@ -200,10 +200,7 @@ export class Kvm {
    * @param nc
    */
   constructor(nc: JetStreamClient | NatsConnection) {
-    this.js =
-      (nc instanceof NatsConnectionImpl
-        ? jetstream(nc)
-        : nc) as JetStreamClientImpl;
+    this.js = toJetStreamClient(nc) as JetStreamClientImpl;
   }
 
   /**
@@ -226,8 +223,7 @@ export class Kvm {
   }
 
   #maybeCreate(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
+    const { ok, min } = this.js.nc.features.get(Feature.JS_KV);
     if (!ok) {
       return Promise.reject(
         new Error(`kv is only supported on servers ${min} or better`),
