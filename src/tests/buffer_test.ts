@@ -13,7 +13,7 @@ import {
   MAX_SIZE,
   readAll,
   writeAll,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 // N controls how many iterations of certain checks are performed.
 const N = 100;

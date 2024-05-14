@@ -18,7 +18,7 @@ import { assertEquals } from "jsr:@std/assert";
 import type {
   NatsConnectionImpl,
   ServersChanged,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { setup } from "./helpers/mod.ts";
 
 Deno.test("events - close on close", async () => {

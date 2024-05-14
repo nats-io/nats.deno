@@ -21,11 +21,11 @@ import {
   RequestOne,
   SubscriptionImpl,
   Subscriptions,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   Msg,
   ProtocolHandler,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assertErrorCode } from "./helpers/mod.ts";
 import { assertEquals, equal } from "jsr:@std/assert";
 

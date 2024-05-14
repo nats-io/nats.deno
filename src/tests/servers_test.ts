@@ -16,8 +16,8 @@ import {
   isIPV4OrHostname,
   Servers,
   setTransportFactory,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
-import type { ServerInfo } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { ServerInfo } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assertEquals } from "jsr:@std/assert";
 
 Deno.test("servers - single", () => {

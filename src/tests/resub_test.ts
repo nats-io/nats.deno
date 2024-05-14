@@ -14,7 +14,7 @@
  */
 
 import { cleanup, setup } from "./helpers/mod.ts";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals, assertExists, fail } from "jsr:@std/assert";
 import { createInbox } from "../mod.ts";
 import type { Msg, NatsConnection } from "../mod.ts";

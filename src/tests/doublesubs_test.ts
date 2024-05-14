@@ -23,8 +23,8 @@ import {
 } from "../mod.ts";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
-import { extend } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { extend } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assertArrayIncludes, assertEquals } from "jsr:@std/assert";
 import { join, resolve } from "jsr:@std/path";
 

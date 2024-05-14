@@ -19,7 +19,7 @@ import {
   fail,
 } from "jsr:@std/assert";
 import { connect, ErrorCode } from "../mod.ts";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assertErrorCode, cleanup, Lock, NatsServer } from "./helpers/mod.ts";
 import { join, resolve } from "jsr:@std/path";
 import { Certs } from "./helpers/certs.ts";

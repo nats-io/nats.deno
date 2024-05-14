@@ -22,11 +22,11 @@ import {
   MsgImpl,
   Parser,
   State,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   Dispatcher,
   ParserEvent,
-} from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 
 const te = new TextEncoder();

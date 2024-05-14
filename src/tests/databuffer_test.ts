@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { assertEquals } from "jsr:@std/assert";
-import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 Deno.test("databuffer - empty", () => {
   const buf = new DataBuffer();

@@ -21,7 +21,7 @@ import {
   StringCodec,
 } from "../mod.ts";
 import type { Msg, NatsConnection } from "../mod.ts";
-import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
+import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals } from "jsr:@std/assert";
 import { NatsServer } from "./helpers/launcher.ts";
 
