@@ -14,7 +14,6 @@
  */
 
 import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
 import { DirectMsgHeaders } from "./types.ts";
 import type {
   DirectMsg,
@@ -33,6 +32,7 @@ import type {
 import {
   Empty,
   JSONCodec,
+  QueuedIteratorImpl,
   RequestStrategy,
   TD,
 } from "jsr:@nats-io/nats-core@3.0.0-12/internal";

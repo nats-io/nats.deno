@@ -98,7 +98,7 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
     }
   }
 
-  async *[Symbol.asyncIterator]() {
+  async *[Symbol.asyncIterator](): AsyncIterator<T> {
     let page = await this.next();
     while (page.length > 0) {
       for (const item of page) {

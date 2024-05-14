@@ -63,6 +63,7 @@ export type {
   JetStreamSubscriptionOptions,
   JsMsgCallback,
   Lister,
+  ListerFieldFilter,
   MaxBytes,
   MaxMessages,
   NextOptions,
@@ -108,6 +109,7 @@ export type {
   StreamConfig,
   StreamConsumerLimits,
   StreamInfo,
+  StreamListResponse,
   StreamSource,
   StreamSourceInfo,
   StreamState,
@@ -130,3 +132,5 @@ export {
 
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
 export { jetstreamManager } from "./jsclient.ts";
+
+export { ListerImpl } from "./jslister.ts";
