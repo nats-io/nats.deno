@@ -33,7 +33,7 @@ import {
   notCompatible,
   setup,
 } from "../../src/tests/helpers/mod.ts";
-import { deadline, deferred, delay } from "jsr:@nats-io/nats-core@3.0.0-13";
+import { deadline, deferred, delay } from "jsr:@nats-io/nats-core@3.0.0-14";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());

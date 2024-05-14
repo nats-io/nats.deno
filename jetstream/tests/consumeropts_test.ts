@@ -15,7 +15,7 @@
 
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 
-import { millis } from "jsr:@nats-io/nats-core@3.0.0-13";
+import { millis } from "jsr:@nats-io/nats-core@3.0.0-14";
 
 import { consumerOpts, isConsumerOptsBuilder } from "../types.ts";
 

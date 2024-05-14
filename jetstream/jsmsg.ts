@@ -19,7 +19,7 @@ import type {
   MsgImpl,
   ProtocolHandler,
   RequestOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   DataBuffer,
   deferred,
@@ -27,7 +27,7 @@ import {
   nanos,
   RequestOne,
   StringCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type { DeliveryInfo, PullOptions } from "./jsapi_types.ts";
 
 export const ACK = Uint8Array.of(43, 65, 67, 75);

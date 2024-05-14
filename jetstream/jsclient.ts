@@ -36,7 +36,7 @@ import {
   QueuedIteratorImpl,
   timeout,
   TypedSubscription,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type {
   IngestionFilterFn,
@@ -44,7 +44,7 @@ import type {
   MsgAdapter,
   Timeout,
   TypedSubscriptionOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-13";
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
 import { consumerOpts, isConsumerOptsBuilder, JsHeaders } from "./types.ts";
@@ -83,7 +83,7 @@ import {
   IdleHeartbeatMonitor,
   isNatsError,
   nuid,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type {
   Msg,
@@ -92,7 +92,7 @@ import type {
   QueuedIterator,
   RequestOptions,
   SubscriptionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   AckPolicy,
   DeliverPolicy,

@@ -36,11 +36,11 @@ import {
   Events,
   nuid,
   syncIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-13";
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 import type {
   NatsConnectionImpl,
   NatsError,
-} from "jsr:@nats-io/nats-core@3.0.0-13/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import { Js409Errors } from "../jsutil.ts";
 import { consume } from "./jstest_util.ts";
