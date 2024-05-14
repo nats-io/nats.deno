@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-import { Empty } from "../nats-base-client/encoders.ts";
 import {
   backoff,
   delay,
+  Empty,
   ErrorCode,
   extend,
   JSONCodec,
