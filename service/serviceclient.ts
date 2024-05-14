@@ -12,19 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Empty } from "../nats-base-client/encoders.ts";
-import { JSONCodec } from "../nats-base-client/codec.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { RequestStrategy } from "../nats-base-client/core.ts";
+import {
+  Empty,
+  JSONCodec,
+  QueuedIteratorImpl,
+  RequestStrategy,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type {
   NatsConnection,
   QueuedIterator,
   RequestManyOptions,
-} from "../nats-base-client/mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import { ServiceImpl } from "./service.ts";
-
 import { ServiceVerb } from "./types.ts";
 
 import type {

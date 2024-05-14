@@ -1,10 +1,10 @@
-import {
+import type {
   NatsConnection,
   RequestManyOptions,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 import { ServiceImpl } from "./service.ts";
 import { ServiceClientImpl } from "./serviceclient.ts";
-import { Service, ServiceClient, ServiceConfig } from "./types.ts";
+import type { Service, ServiceClient, ServiceConfig } from "./types.ts";
 
 export type {
   Endpoint,

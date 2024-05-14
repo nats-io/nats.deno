@@ -4,7 +4,7 @@ import {
   NatsError,
   PublishOptions,
   QueuedIterator,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 
 export interface ServiceMsg extends Msg {
   respondError(

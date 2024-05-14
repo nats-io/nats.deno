@@ -12,16 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { deferred, nanos } from "../nats-base-client/util.ts";
-import type { Deferred } from "../nats-base-client/util.ts";
-import { headers } from "../nats-base-client/headers.ts";
-import { JSONCodec } from "../nats-base-client/codec.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { validateName } from "../jetstream/jsutil.ts";
-import { parseSemVer } from "../nats-base-client/semver.ts";
-import { Empty } from "../nats-base-client/encoders.ts";
 import {
+  deferred,
+  Empty,
+  headers,
+  JSONCodec,
+  nanos,
+  nuid,
+  parseSemVer,
+  QueuedIteratorImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  Deferred,
   Msg,
   MsgHdrs,
   Nanos,
@@ -32,26 +34,57 @@ import {
   QueuedIterator,
   ReviverFn,
   Sub,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
 import {
+  ServiceError,
+  ServiceErrorCodeHeader,
+  ServiceErrorHeader,
+  ServiceResponseType,
+  ServiceVerb,
+} from "./types.ts";
+
+import type {
   Endpoint,
   EndpointInfo,
   EndpointOptions,
   NamedEndpointStats,
   Service,
   ServiceConfig,
-  ServiceError,
-  ServiceErrorCodeHeader,
-  ServiceErrorHeader,
   ServiceGroup,
   ServiceHandler,
   ServiceIdentity,
   ServiceInfo,
   ServiceMsg,
-  ServiceResponseType,
   ServiceStats,
-  ServiceVerb,
 } from "./types.ts";
+
+function validateName(context: string, name = "") {
+  if (name === "") {
+    throw Error(`${context} name required`);
+  }
+  const m = validName(name);
+  if (m.length) {
+    throw new Error(`invalid ${context} name - ${context} name ${m}`);
+  }
+}
+
+function validName(name = ""): string {
+  if (name === "") {
+    throw Error(`name required`);
+  }
+  const RE = /^[-\w]+$/g;
+  const m = name.match(RE);
+  if (m === null) {
+    for (const c of name.split("")) {
+      const mm = c.match(RE);
+      if (mm === null) {
+        return `cannot contain '${c}'`;
+      }
+    }
+  }
+  return "";
+}
 
 /**
  * Services have common backplane subject pattern:

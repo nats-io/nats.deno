@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "../../tests/helpers/mod.ts";
+import { cleanup, setup } from "../../src/tests/helpers/mod.ts";
 import { ServiceImpl } from "../service.ts";
 import {
   assert,
@@ -22,10 +22,13 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 
-import { collect, delay } from "../../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+import { collect, delay } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  NatsConnectionImpl,
+  SubscriptionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   EndpointInfo,
   Service,
@@ -57,7 +60,6 @@ import type {
   NatsError,
   QueuedIterator,
 } from "../../src/mod.ts";
-import { SubscriptionImpl } from "../../nats-base-client/protocol.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
