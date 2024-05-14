@@ -12,13 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
+import type {
   Placement,
   Republish,
   StorageType,
   StreamInfo,
   StreamSource,
-} from "../jetstream/jsapi_types.ts";
+} from "jsr:@nats-io/jetstream@3.0.0-2";
 import type { Payload, QueuedIterator } from "jsr:@nats-io/nats-core@3.0.0-12";
 
 export interface KvEntry {

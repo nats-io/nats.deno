@@ -39,7 +39,10 @@ import {
   StorageType,
 } from "../../jetstream/mod.ts";
 
-import type { JetStreamOptions } from "../../jetstream/mod.ts";
+import type {
+  JetStreamOptions,
+  JetStreamSubscriptionInfoable,
+} from "jsr:@nats-io/jetstream@3.0.0-2/internal";
 
 import {
   assert,
@@ -73,7 +76,6 @@ import type {
   QueuedIteratorImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-12/internal";
 import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
-import { JetStreamSubscriptionInfoable } from "../../jetstream/types.ts";
 import { Kvm } from "../kv.ts";
 
 Deno.test("kv - key validation", () => {

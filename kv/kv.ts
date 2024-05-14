@@ -22,6 +22,7 @@ import {
   headers,
   millis,
   nanos,
+  NatsConnectionImpl,
   nuid,
   parseSemVer,
   QueuedIteratorImpl,
@@ -30,7 +31,6 @@ import {
 import type {
   MsgHdrs,
   NatsConnection,
-  NatsConnectionImpl,
   NatsError,
   Payload,
   QueuedIterator,
@@ -43,19 +43,25 @@ import {
   DiscardPolicy,
   jetstream,
   JsHeaders,
+  ListerImpl,
+  PubHeaders,
   RetentionPolicy,
   StorageType,
   StoreCompression,
-} from "../jetstream/mod.ts";
+} from "jsr:@nats-io/jetstream@3.0.0-2/internal";
 
 import type {
   ConsumerConfig,
   ConsumerInfo,
+  DirectStreamAPI,
   JetStreamClient,
+  JetStreamClientImpl,
   JetStreamManager,
   JetStreamPublishOptions,
+  JetStreamSubscriptionInfoable,
   JsMsg,
   Lister,
+  ListerFieldFilter,
   MsgRequest,
   Placement,
   PurgeOpts,
@@ -64,15 +70,9 @@ import type {
   StoredMsg,
   StreamConfig,
   StreamInfo,
+  StreamListResponse,
   StreamSource,
-} from "../jetstream/mod.ts";
-
-import type {
-  DirectStreamAPI,
-  JetStreamSubscriptionInfoable,
-} from "../jetstream/types.ts";
-
-import { JetStreamClientImpl, PubHeaders } from "../jetstream/internal_mod.ts";
+} from "jsr:@nats-io/jetstream@3.0.0-2/internal";
 
 import type {
   KV,
@@ -88,10 +88,6 @@ import type {
 } from "./types.ts";
 
 import { kvPrefix, KvWatchInclude } from "./types.ts";
-
-import type { StreamListResponse } from "../jetstream/jsapi_types.ts";
-import { ListerImpl } from "../jetstream/jslister.ts";
-import type { ListerFieldFilter } from "../jetstream/types.ts";
 
 export function Base64KeyCodec(): KvCodec<string> {
   return {
@@ -205,9 +201,9 @@ export class Kvm {
    */
   constructor(nc: JetStreamClient | NatsConnection) {
     this.js =
-      (nc instanceof JetStreamClientImpl
-        ? nc
-        : jetstream(nc as NatsConnection)) as JetStreamClientImpl;
+      (nc instanceof NatsConnectionImpl
+        ? jetstream(nc)
+        : nc) as JetStreamClientImpl;
   }
 
   /**
