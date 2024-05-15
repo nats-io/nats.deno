@@ -1070,9 +1070,7 @@ export interface TlsOptions {
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_HOST = "127.0.0.1";
 
-export interface ConnectFn {
-  (opts: ConnectionOptions): Promise<NatsConnection>;
-}
+export type ConnectFn = (opts: ConnectionOptions) => Promise<NatsConnection>;
 
 export interface Base {
   subject: string;
