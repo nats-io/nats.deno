@@ -109,7 +109,7 @@ Deno.test("auth - weird chars", async () => {
   const nc = await connect(
     { port: ns.port, user: "admin", pass: pass },
   );
-  await nc.flush;
+  await nc.flush();
   await nc.close();
   await ns.stop();
 });

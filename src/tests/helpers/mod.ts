@@ -13,13 +13,19 @@
  * limitations under the License.
  */
 
-import { NatsServer } from "./launcher.ts";
-import { compare, parseSemVer } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { red, yellow } from "jsr:@std/fmt/colors";
-import { extend } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { connect } from "../../mod.ts";
-import type { ConnectionOptions, NatsConnection } from "../../mod.ts";
+import type {
+  ConnectionOptions,
+  NatsConnection,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import {
+  compare,
+  extend,
+  parseSemVer,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
+import { NatsServer } from "./launcher.ts";
+import { red, yellow } from "jsr:@std/fmt/colors";
+import { connect } from "../../mod.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";
