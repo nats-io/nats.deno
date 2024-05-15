@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 import { assert, assertEquals } from "jsr:@std/assert";
-import { backoff } from "../mod.ts";
-import { SimpleMutex } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { backoff, SimpleMutex } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 Deno.test("util - simple mutex", () => {
   const r = new SimpleMutex(1);

@@ -12,29 +12,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { connect } from "./connect.ts";
 import {
   canonicalMIMEHeaderKey,
-  connect,
   createInbox,
   Empty,
   headers,
   Match,
+  MsgHdrsImpl,
+  MsgImpl,
   NatsError,
+  Parser,
   StringCodec,
-} from "../mod.ts";
-import type { Publisher, RequestOptions } from "../mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  NatsConnectionImpl,
+  Publisher,
+  RequestOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { NatsServer } from "../../test_helpers/launcher.ts";
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 import { TestDispatcher } from "./parser_test.ts";
-import { cleanup, setup } from "../../test_helpers/mod.ts";
-import type {
-  NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import {
-  MsgHdrsImpl,
-  MsgImpl,
-  Parser,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();
@@ -340,7 +339,7 @@ Deno.test("headers - code/description", () => {
 });
 
 Deno.test("headers - codec", async () => {
-  const { ns, nc } = await setup({}, {});
+  const { ns, nc } = await _setup(connect, {}, {});
 
   nc.subscribe("foo", {
     callback: (_err, msg) => {
@@ -357,7 +356,7 @@ Deno.test("headers - codec", async () => {
 });
 
 Deno.test("headers - malformed headers", async () => {
-  const { ns, nc } = await setup();
+  const { ns, nc } = await _setup(connect);
   const nci = nc as NatsConnectionImpl;
 
   type t = {

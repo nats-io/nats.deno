@@ -30,10 +30,11 @@ import type {
   Msg,
   TypedSubscriptionOptions,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import { connect } from "./connect.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
 
 Deno.test("typedsub - rejects no adapter", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   assertThrowsErrorCode(() => {
     new TypedSubscription<string>(
       nc,
@@ -45,7 +46,7 @@ Deno.test("typedsub - rejects no adapter", async () => {
 });
 
 Deno.test("typedsub - iterator gets data", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -84,7 +85,7 @@ Deno.test("typedsub - iterator gets data", async () => {
 });
 
 Deno.test("typedsub - callback gets data", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
   const sc = StringCodec();
 
@@ -114,7 +115,7 @@ Deno.test("typedsub - callback gets data", async () => {
 });
 
 Deno.test("typedsub - dispatched", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -144,7 +145,7 @@ Deno.test("typedsub - dispatched", async () => {
 });
 
 Deno.test("typedsub - cleanup on unsub", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -166,7 +167,7 @@ Deno.test("typedsub - cleanup on unsub", async () => {
 });
 
 Deno.test("typedsub - cleanup on close", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
   const tso = {} as TypedSubscriptionOptions<Msg>;
   tso.adapter = (
@@ -199,7 +200,7 @@ Deno.test("typedsub - checkFn", () => {
 });
 
 Deno.test("typedsub - unsubscribe", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -227,7 +228,7 @@ Deno.test("typedsub - unsubscribe", async () => {
 });
 
 Deno.test("typedsub - drain", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -254,7 +255,7 @@ Deno.test("typedsub - drain", async () => {
 });
 
 Deno.test("typedsub - timeout", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -278,7 +279,7 @@ Deno.test("typedsub - timeout", async () => {
         // nothing
       }
     },
-    NatsError,
+    Error,
     ErrorCode.Timeout,
     undefined,
   );
@@ -287,7 +288,7 @@ Deno.test("typedsub - timeout", async () => {
 });
 
 Deno.test("typedsub - timeout on callback", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const d = deferred<NatsError | null>();
@@ -316,7 +317,7 @@ Deno.test("typedsub - timeout on callback", async () => {
 });
 
 Deno.test("typedsub - timeout cleared on message", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const sc = StringCodec();
@@ -350,7 +351,7 @@ Deno.test("typedsub - timeout cleared on message", async () => {
 });
 
 Deno.test("typedsub - timeout callback cleared on message", async () => {
-  const { nc, ns } = await setup();
+  const { nc, ns } = await _setup(connect);
   const subj = createInbox();
 
   const d = deferred<string | null>();

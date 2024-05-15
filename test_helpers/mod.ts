@@ -26,6 +26,7 @@ import {
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";
 import { connect } from "../src/mod.ts";
+import {ConnectFn} from "../nats-base-client/core.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";
@@ -95,17 +96,21 @@ export function jetstreamServerConf(
   return conf as Record<string, unknown>;
 }
 
-export async function setup(
-  serverConf?: Record<string, unknown>,
-  clientOpts?: Partial<ConnectionOptions>,
-): Promise<{ ns: NatsServer; nc: NatsConnection }> {
+export async function _setup(fn: ConnectFn, serverConf?: Record<string, unknown>, clientOpts?: Partial<ConnectionOptions>): Promise<{ ns: NatsServer; nc: NatsConnection }> {
   const dt = serverConf as { debug: boolean; trace: boolean };
   const debug = dt && (dt.debug || dt.trace);
   const ns = await NatsServer.start(serverConf, debug);
   clientOpts = clientOpts ? clientOpts : {};
   const copts = extend({ port: ns.port }, clientOpts) as ConnectionOptions;
-  const nc = await connect(copts);
+  const nc = await fn(copts);
   return { ns, nc };
+}
+
+export function setup(
+  serverConf?: Record<string, unknown>,
+  clientOpts?: Partial<ConnectionOptions>,
+): Promise<{ ns: NatsServer; nc: NatsConnection }> {
+  return _setup(connect, serverConf, clientOpts);
 }
 
 export async function cleanup(

@@ -13,7 +13,13 @@
  * limitations under the License.
  */
 
-import { connect, createInbox, Empty, ErrorCode, headers } from "../mod.ts";
+import { connect } from "./connect.ts";
+import {
+  createInbox,
+  Empty,
+  ErrorCode,
+  headers,
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
 import { assert, assertEquals, fail } from "jsr:@std/assert";
 

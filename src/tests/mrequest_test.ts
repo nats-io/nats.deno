@@ -12,7 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { connect } from "./connect.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   createInbox,
@@ -22,12 +23,12 @@ import {
   Events,
   RequestStrategy,
   StringCodec,
-} from "../mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import { assert, assertEquals, assertRejects, fail } from "jsr:@std/assert";
 
 async function requestManyCount(noMux = false): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   let payload = "";
@@ -71,7 +72,7 @@ Deno.test("mreq - request many count noMux", async () => {
 });
 
 async function requestManyJitter(noMux = false): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   const subj = createInbox();
@@ -113,7 +114,7 @@ async function requestManySentinel(
   noMux = false,
   partial = false,
 ): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   const subj = createInbox();
@@ -166,7 +167,7 @@ Deno.test("mreq - nomux request many sentinel partial noMux", async () => {
 });
 
 async function requestManyTimerNoResponse(noMux = false): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   const subj = createInbox();
@@ -204,7 +205,7 @@ Deno.test("mreq - request many wait for timer noMux - no response", async () => 
 });
 
 async function requestTimerLateResponse(noMux = false): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   const subj = createInbox();
@@ -243,7 +244,7 @@ Deno.test("mreq - request many waits for timer late response noMux", async () =>
 });
 
 async function requestManyStopsOnError(noMux = false): Promise<void> {
-  const { ns, nc } = await setup({});
+  const { ns, nc } = await _setup(connect, {});
   const nci = nc as NatsConnectionImpl;
 
   const subj = createInbox();
@@ -274,7 +275,7 @@ Deno.test("mreq - request many stops on error noMux", async () => {
 });
 
 Deno.test("mreq - pub permission error", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -313,7 +314,7 @@ Deno.test("mreq - pub permission error", async () => {
 });
 
 Deno.test("mreq - sub permission error", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -361,7 +362,7 @@ Deno.test("mreq - sub permission error", async () => {
 });
 
 Deno.test("mreq - lost sub permission", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",

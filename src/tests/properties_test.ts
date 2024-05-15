@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { connect } from "./connect.ts";
 import {
   assert,
   assertEquals,
@@ -19,11 +20,14 @@ import {
   assertMatch,
 } from "jsr:@std/assert";
 
-import { connect, credsAuthenticator } from "../mod.ts";
-import type { Authenticator, ConnectionOptions } from "../mod.ts";
+import type {
+  Authenticator,
+  ConnectionOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { DenoTransport } from "../deno_transport.ts";
 import {
   Connect,
+  credsAuthenticator,
   defaultOptions,
   extend,
   parseOptions,

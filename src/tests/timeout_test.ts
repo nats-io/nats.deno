@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 import { assertStringIncludes, fail } from "jsr:@std/assert";
-import { connect, createInbox, Empty } from "../mod.ts";
+import { connect } from "../connect.ts";
+import { createInbox, Empty } from "jsr:@nats-io/nats-core@3.0.0-14";
 
 Deno.test("timeout - request noMux stack is useful", async () => {
   const nc = await connect({ servers: "demo.nats.io" });

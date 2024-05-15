@@ -18,7 +18,8 @@ import {
   assertStringIncludes,
   fail,
 } from "jsr:@std/assert";
-import { connect, ErrorCode } from "../mod.ts";
+import { connect } from "./connect.ts";
+import { ErrorCode } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   assertErrorCode,
@@ -27,7 +28,6 @@ import {
   NatsServer,
 } from "../../test_helpers/mod.ts";
 import { join, resolve } from "jsr:@std/path";
-import { Certs } from "../../test_helpers/certs.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
@@ -52,14 +52,10 @@ Deno.test("tls - connects to tls without option", async () => {
 });
 
 Deno.test("tls - custom ca fails without root", async () => {
-  const cwd = Deno.cwd();
+  const tlsConfig = await NatsServer.tlsConfig();
   const config = {
     host: "0.0.0.0",
-    tls: {
-      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
-    },
+    tls: tlsConfig.tls,
   };
 
   const ns = await NatsServer.start(config);
@@ -81,17 +77,14 @@ Deno.test("tls - custom ca fails without root", async () => {
 
   await lock;
   await ns.stop();
+  await Deno.remove(tlsConfig.certsDir, { recursive: true });
 });
 
 Deno.test("tls - custom ca with root connects", async () => {
-  const cwd = Deno.cwd();
+  const tlsConfig = await NatsServer.tlsConfig();
   const config = {
     host: "0.0.0.0",
-    tls: {
-      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
-    },
+    tls: tlsConfig.tls,
   };
 
   const ns = await NatsServer.start(config);
@@ -104,18 +97,15 @@ Deno.test("tls - custom ca with root connects", async () => {
   await nc.flush();
   await nc.close();
   await ns.stop();
+  await Deno.remove(tlsConfig.certsDir, { recursive: true });
 });
 
 Deno.test("tls - available connects with or without", async () => {
-  const cwd = Deno.cwd();
+  const tlsConfig = await NatsServer.tlsConfig();
   const config = {
     host: "0.0.0.0",
     allow_non_tls: true,
-    tls: {
-      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
-    },
+    tls: tlsConfig.tls,
   };
 
   const ns = await NatsServer.start(config);
@@ -147,4 +137,5 @@ Deno.test("tls - available connects with or without", async () => {
   assertEquals(conns[1].protocol.transport.isEncrypted(), false);
 
   await cleanup(ns, ...conns);
+  await Deno.remove(tlsConfig.certsDir, { recursive: true });
 });

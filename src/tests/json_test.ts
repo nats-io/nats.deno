@@ -12,13 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { connect } from "./connect.ts";
 import { assertEquals } from "jsr:@std/assert";
-import { createInbox, ErrorCode, JSONCodec } from "../mod.ts";
-import type { Msg, NatsError } from "../mod.ts";
+import {
+  createInbox,
+  ErrorCode,
+  JSONCodec,
+} from "jsr:@nats-io/nats-core@3.0.0-14";
+import type { Msg, NatsError } from "jsr:@nats-io/nats-core@3.0.0-14";
 import { Lock } from "../../test_helpers/mod.ts";
 import { assertThrowsErrorCode } from "../../test_helpers/asserts.ts";
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};
@@ -33,7 +37,7 @@ Deno.test("json - bad json error in callback", () => {
 
 function macro(input: unknown) {
   return async () => {
-    const { ns, nc } = await setup();
+    const { ns, nc } = await _setup(connect);
     const jc = JSONCodec();
     const lock = Lock();
     const subj = createInbox();

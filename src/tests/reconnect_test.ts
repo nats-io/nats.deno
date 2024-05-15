@@ -13,24 +13,24 @@
  * limitations under the License.
  */
 import { assert, assertEquals, fail } from "jsr:@std/assert";
-import {
-  connect,
-  createInbox,
-  ErrorCode,
-  Events,
-  tokenAuthenticator,
-} from "../mod.ts";
-import type { NatsError } from "../mod.ts";
+import { connect } from "./connect.ts";
 import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
 import {
+  createInbox,
   DataBuffer,
   DebugEvents,
   deferred,
   delay,
+  ErrorCode,
+  Events,
+  tokenAuthenticator,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  NatsConnectionImpl,
+  NatsError,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
 import { deadline } from "jsr:@std/async";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {
@@ -303,7 +303,7 @@ Deno.test("reconnect - wait on first connect off", async () => {
 });
 
 Deno.test("reconnect - close stops reconnects", async () => {
-  const { ns, nc } = await setup({}, {
+  const { ns, nc } = await _setup(connect, {}, {
     maxReconnectAttempts: -1,
     reconnectTimeWait: 500,
   });
@@ -431,7 +431,7 @@ Deno.test("reconnect - stale connections don't close", async () => {
 });
 
 Deno.test("reconnect - protocol errors don't close client", async () => {
-  const { ns, nc } = await setup({}, {
+  const { ns, nc } = await _setup(connect, {}, {
     maxReconnectAttempts: -1,
     reconnectTimeWait: 500,
   });

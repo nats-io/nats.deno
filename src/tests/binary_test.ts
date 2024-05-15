@@ -14,13 +14,17 @@
  */
 
 import { assertEquals } from "jsr:@std/assert";
-import { createInbox, deferred } from "../mod.ts";
-import type { Msg } from "../mod.ts";
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import {
+  createInbox,
+  deferred,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { Msg } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { connect } from "../connect.ts";
 
 function macro(input: Uint8Array) {
   return async () => {
-    const { ns, nc } = await setup();
+    const { ns, nc } = await _setup(connect);
     const subj = createInbox();
     const dm = deferred<Msg>();
     const sub = nc.subscribe(subj, { max: 1 });

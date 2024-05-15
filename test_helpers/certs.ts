@@ -16,15 +16,14 @@ export class Certs {
   }
 
   /**
-   * Dynamically loads an import URL and parses as JSON for a Certs
-   * @param url
+   * Loads the certs.json in this package
    */
-  static import(url: string): Promise<Certs> {
+  static import(): Promise<Certs> {
     const d = deferred<Certs>();
     const certs = new Certs();
-    import(url, { with: { type: "json" } })
+    import("./certs.json", { with: { type: "json" } })
       .then((v) => {
-        certs.#data = v;
+        certs.#data = v.default;
         d.resolve(certs);
       })
       .catch((err) => {
@@ -67,6 +66,13 @@ export class Certs {
     })();
 
     return d;
+  }
+
+  get(n: string): Promise<string> {
+    if(!this.#data[n]) {
+      return Promise.reject(new Error(`cert '${n}' not found`));
+    }
+    return Promise.resolve(this.#data[n]);
   }
 
   /**

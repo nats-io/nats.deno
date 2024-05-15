@@ -13,20 +13,22 @@
  * limitations under the License.
  */
 
-import { cleanup, setup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import type { Auth, Authenticator, NatsConnection } from "../mod.ts";
+import { connect } from "./connect.ts";
+
 import {
   credsAuthenticator,
+  deadline,
   deferred,
+  delay,
   Events,
   jwtAuthenticator,
   nkeyAuthenticator,
   nkeys,
   tokenAuthenticator,
   usernamePasswordAuthenticator,
-} from "../mod.ts";
-import type { Auth, Authenticator, NatsConnection } from "../mod.ts";
-
-import { deadline, delay } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   NatsConnectionImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
@@ -70,7 +72,7 @@ async function testAuthenticatorFn(
     return fn(nonce);
   };
   conf = Object.assign({}, conf, { debug });
-  const { ns, nc } = await setup(conf, {
+  const { ns, nc } = await _setup(connect, conf, {
     authenticator,
   });
 

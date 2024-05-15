@@ -13,9 +13,11 @@
  * limitations under the License.
  */
 
-import { IdleHeartbeatMonitor } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import {
+  deferred,
+  IdleHeartbeatMonitor,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals } from "jsr:@std/assert";
-import { deferred } from "../mod.ts";
 
 Deno.test("idleheartbeat - basic", async () => {
   const d = deferred<number>();

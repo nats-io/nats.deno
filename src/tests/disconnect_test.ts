@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { connect } from "../mod.ts";
+import { connect } from "./connect.ts";
 import { Lock, NatsServer } from "../../test_helpers/mod.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 

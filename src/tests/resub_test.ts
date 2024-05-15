@@ -13,15 +13,19 @@
  * limitations under the License.
  */
 
-import { cleanup, setup } from "../../test_helpers/mod.ts";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { connect } from "./connect.ts";
+import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { createInbox } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  Msg,
+  NatsConnection,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals, assertExists, fail } from "jsr:@std/assert";
-import { createInbox } from "../mod.ts";
-import type { Msg, NatsConnection } from "../mod.ts";
 import type { NatsServer } from "../../test_helpers/launcher.ts";
 
 Deno.test("resub - iter", async () => {
-  const { ns, nc } = await setup();
+  const { ns, nc } = await _setup(connect);
   const nci = nc as NatsConnectionImpl;
   const subja = createInbox();
 
@@ -50,7 +54,7 @@ Deno.test("resub - iter", async () => {
 });
 
 Deno.test("resub - callback", async () => {
-  const { ns, nc } = await setup();
+  const { ns, nc } = await _setup(connect);
   const nci = nc as NatsConnectionImpl;
   const subja = createInbox();
   const buf: Msg[] = [];
@@ -107,7 +111,7 @@ async function assertEqualSubs(
 }
 
 Deno.test("resub - removes server interest", async () => {
-  const { ns, nc } = await setup();
+  const { ns, nc } = await _setup(connect);
 
   nc.subscribe("a", {
     callback() {

@@ -14,10 +14,14 @@
  */
 import { assert, assertEquals, fail } from "jsr:@std/assert";
 
-import { DebugEvents, deferred, delay } from "../mod.ts";
-import type { Status } from "../mod.ts";
-import { Heartbeat } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import type { PH } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import {
+  DebugEvents,
+  deferred,
+  delay,
+  Heartbeat,
+  PH,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { Status } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 function pm(
   lag: number,

@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 import { fail } from "jsr:@std/assert";
-import { connect, ErrorCode } from "../mod.ts";
+import { ErrorCode } from "jsr:@nats-io/nats-core@3.0.0-14";
 import { assertErrorCode, NatsServer } from "../../test_helpers/mod.ts";
+import { connect } from "./connect.ts";
 
 const conf = { authorization: { token: "tokenxxxx" } };
 

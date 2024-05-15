@@ -19,6 +19,7 @@ import { check, jsopts } from "./mod.ts";
 import { extend, timeout } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type { Deferred } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { deferred, delay, nuid } from "../src/mod.ts";
+import {Certs} from "./certs.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: "SIGQUIT",
@@ -654,6 +655,21 @@ export class NatsServer implements PortInfo {
       new TextEncoder().encode(toConf(conf)),
     );
     return this.signal("SIGHUP");
+  }
+
+  static async tlsConfig(): Promise<{tls: {cert_file: string, key_file: string, ca_file: string}, certsDir: string}> {
+    const certsDir = await Deno.makeTempDir({prefix: "certs"});
+    const certs = await Certs.import();
+    await certs.store(certsDir)
+    const tlsconfig = {
+      certsDir,
+      tls: {
+        cert_file: resolve(join(certsDir, "localhost.crt")),
+        key_file: resolve(join(certsDir, "localhost.key")),
+        ca_file: resolve(join(certsDir, "RootCA.crt")),
+      },
+    };
+    return tlsconfig
   }
 
   static async start(conf?: any, debug = false): Promise<NatsServer> {

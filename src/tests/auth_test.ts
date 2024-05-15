@@ -12,7 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import {
+  _setup,
+  assertErrorCode,
+  cleanup,
+  NatsServer,
+} from "../../test_helpers/mod.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -20,10 +25,25 @@ import {
   assertRejects,
   fail,
 } from "jsr:@std/assert";
+import { connect } from "./connect.ts";
 import {
-  connect,
+  encodeAccount,
+  encodeOperator,
+  encodeUser,
+} from "jsr:@nats-io/jwt@0.0.9-3";
+import type {
+  MsgImpl,
+  NatsConnection,
+  NatsConnectionImpl,
+  NatsError,
+  NKeyAuth,
+  Status,
+  UserPass,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import {
   createInbox,
   credsAuthenticator,
+  DEFAULT_MAX_RECONNECT_ATTEMPTS,
   deferred,
   Empty,
   ErrorCode,
@@ -34,31 +54,6 @@ import {
   StringCodec,
   tokenAuthenticator,
   usernamePasswordAuthenticator,
-} from "../mod.ts";
-import type {
-  NatsConnection,
-  NatsError,
-  NKeyAuth,
-  Status,
-  UserPass,
-} from "../mod.ts";
-import {
-  assertErrorCode,
-  cleanup,
-  NatsServer,
-  setup,
-} from "../../test_helpers/mod.ts";
-import {
-  encodeAccount,
-  encodeOperator,
-  encodeUser,
-} from "jsr:@nats-io/jwt@0.0.9-3";
-import type {
-  MsgImpl,
-  NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import {
-  DEFAULT_MAX_RECONNECT_ATTEMPTS,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 const conf = {
@@ -143,7 +138,7 @@ Deno.test("auth - un/pw authenticator", async () => {
 });
 
 Deno.test("auth - sub no permissions keeps connection", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -179,7 +174,7 @@ Deno.test("auth - sub no permissions keeps connection", async () => {
 });
 
 Deno.test("auth - sub iterator no permissions keeps connection", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -221,7 +216,7 @@ Deno.test("auth - sub iterator no permissions keeps connection", async () => {
 });
 
 Deno.test("auth - pub permissions keep connection", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -248,7 +243,7 @@ Deno.test("auth - pub permissions keep connection", async () => {
 });
 
 Deno.test("auth - req permissions keep connection", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -1044,7 +1039,7 @@ Deno.test("auth - perm sub iterator error", async () => {
 });
 
 Deno.test("auth - perm error is not in lastError", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -1120,7 +1115,7 @@ Deno.test("auth - ignore auth error abort", async () => {
 });
 
 Deno.test("auth - sub with permission error discards", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     authorization: {
       users: [{
         user: "a",
@@ -1208,7 +1203,7 @@ Deno.test("auth - creds and un and pw and token", async () => {
 });
 
 Deno.test("auth - request context", async () => {
-  const { ns, nc } = await setup({
+  const { ns, nc } = await _setup(connect, {
     accounts: {
       S: {
         users: [{

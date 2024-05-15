@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-import { Empty, headers } from "../mod.ts";
-import type { Msg, Publisher } from "../mod.ts";
 import {
   DenoBuffer,
+  Empty,
+  headers,
   Kind,
   MsgHdrsImpl,
   MsgImpl,
@@ -25,7 +25,9 @@ import {
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   Dispatcher,
+  Msg,
   ParserEvent,
+  Publisher,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 

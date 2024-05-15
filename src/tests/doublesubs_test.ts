@@ -13,36 +13,31 @@
  * limitations under the License.
  */
 import { NatsServer } from "../../test_helpers/launcher.ts";
+import { Certs } from "../../test_helpers/certs.ts";
+
 import {
-  connect,
   deferred,
   Empty,
   Events,
+  extend,
   headers,
   StringCodec,
-} from "../mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   NatsConnectionImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { extend } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assertArrayIncludes, assertEquals } from "jsr:@std/assert";
-import { join, resolve } from "jsr:@std/path";
+import { connect } from "./connect.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();
 
+  const tlsConfig = await NatsServer.tlsConfig();
+
   let opts = { trace: true, host: "0.0.0.0" };
 
-  const tlsconfig = {
-    tls: {
-      cert_file: resolve(join(cwd, "./src/tests/certs/localhost.crt")),
-      key_file: resolve(join(cwd, "./src/tests/certs/localhost.key")),
-      ca_file: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
-    },
-  };
-
   if (tls) {
-    opts = extend(opts, tlsconfig);
+    opts = extend(opts, { tls: tlsConfig.tls });
   }
 
   let srv = await NatsServer.start(opts);
@@ -56,7 +51,7 @@ async function runDoubleSubsTest(tls: boolean) {
 
   const cert = {
     tls: {
-      caFile: resolve(join(cwd, "./src/tests/certs/RootCA.crt")),
+      caFile: tlsConfig.tls.ca_file,
     },
   };
   if (tls) {
@@ -116,6 +111,8 @@ async function runDoubleSubsTest(tls: boolean) {
       subs.push(m[1]);
     }
   });
+
+  await Deno.remove(tlsConfig.certsDir, { recursive: true });
 
   assertEquals(count, 3);
   assertArrayIncludes(subs, ["foo", "bar", "baz"]);

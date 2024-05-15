@@ -13,15 +13,18 @@
  * limitations under the License.
  */
 
+import { connect } from "./connect.ts";
+import type {
+  Msg,
+  NatsConnection,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
-  connect,
   createInbox,
+  DataBuffer,
   deferred,
   JSONCodec,
   StringCodec,
-} from "../mod.ts";
-import type { Msg, NatsConnection } from "../mod.ts";
-import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals } from "jsr:@std/assert";
 import { NatsServer } from "../../test_helpers/launcher.ts";
 

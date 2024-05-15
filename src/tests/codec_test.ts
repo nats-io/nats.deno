@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { JSONCodec, StringCodec } from "../mod.ts";
+import { JSONCodec, StringCodec } from "jsr:@nats-io/nats-core@3.0.0-14";
 import { assertEquals } from "jsr:@std/assert";
 
 Deno.test("codec - string", () => {
