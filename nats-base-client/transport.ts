@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 The NATS Authors
+ * Copyright 2020-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,13 +14,14 @@
  */
 import { TD } from "./encoders.ts";
 
-import {
+import type {
   ConnectionOptions,
-  DEFAULT_PORT,
   DnsResolveFn,
   Server,
   URLParseFn,
 } from "./core.ts";
+
+import { DEFAULT_PORT } from "./core.ts";
 import { DataBuffer } from "./databuffer.ts";
 
 let transportConfig: TransportFactory;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,22 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import { ListerImpl } from "./jslister.ts";
 import {
   minValidation,
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import {
-  JetStreamOptions,
+import type {
   Nanos,
   NatsConnection,
-} from "../nats-base-client/core.ts";
-import {
-  ConsumerApiAction,
+  NatsConnectionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { Feature } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { ConsumerApiAction } from "./jsapi_types.ts";
+
+import type {
   ConsumerConfig,
   ConsumerInfo,
   ConsumerListResponse,
@@ -36,60 +36,14 @@ import {
   SuccessResponse,
 } from "./jsapi_types.ts";
 
-export interface ConsumerAPI {
-  /**
-   * Returns the ConsumerInfo for the specified consumer in the specified stream.
-   * @param stream
-   * @param consumer
-   */
-  info(stream: string, consumer: string): Promise<ConsumerInfo>;
+import type {
+  ConsumerAPI,
+  JetStreamOptions,
+  Lister,
+  ListerFieldFilter,
+} from "./types.ts";
 
-  /**
-   * Adds a new consumer to the specified stream with the specified consumer options.
-   * @param stream
-   * @param cfg
-   */
-  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
-
-  /**
-   * Updates the consumer configuration for the specified consumer on the specified
-   * stream that has the specified durable name.
-   * @param stream
-   * @param durable
-   * @param cfg
-   */
-  update(
-    stream: string,
-    durable: string,
-    cfg: Partial<ConsumerUpdateConfig>,
-  ): Promise<ConsumerInfo>;
-
-  /**
-   * Deletes the specified consumer name/durable from the specified stream.
-   * @param stream
-   * @param consumer
-   */
-  delete(stream: string, consumer: string): Promise<boolean>;
-
-  /**
-   * Lists all the consumers on the specfied streams
-   * @param stream
-   */
-  list(stream: string): Lister<ConsumerInfo>;
-
-  pause(
-    stream: string,
-    name: string,
-    until?: Date,
-  ): Promise<{ paused: boolean; pause_until?: string }>;
-
-  resume(
-    stream: string,
-    name: string,
-  ): Promise<{ paused: boolean; pause_until?: string }>;
-}
-
-export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
+export class ConsumerAPIImpl extends BaseApiClientImpl implements ConsumerAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
   }
@@ -121,7 +75,7 @@ export class ConsumerAPIImpl extends BaseApiClient implements ConsumerAPI {
       validateDurableName(cr.config.durable_name);
     }
 
-    const nci = this.nc as NatsConnectionImpl;
+    const nci = this.nc as unknown as NatsConnectionImpl;
     let { min, ok: newAPI } = nci.features.get(
       Feature.JS_NEW_CONSUMER_CREATE_API,
     );

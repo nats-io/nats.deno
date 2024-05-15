@@ -14,25 +14,27 @@
  */
 
 import {
-  Deferred,
-  deferred,
-  TlsOptions,
-} from "../nats-base-client/internal_mod.ts";
-import { writeAll } from "https://deno.land/std@0.221.0/io/write_all.ts";
-import {
   checkOptions,
   checkUnsupportedOption,
-  ConnectionOptions,
   DataBuffer,
+  deferred,
   Empty,
   ErrorCode,
   extractProtocolMessage,
   INFO,
   NatsError,
   render,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
+import type {
+  ConnectionOptions,
+  Deferred,
   ServerInfo,
+  TlsOptions,
   Transport,
-} from "../nats-base-client/internal_mod.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
+import { writeAll } from "jsr:@std/io";
 
 const VERSION = "1.25.0";
 const LANG = "nats.deno";

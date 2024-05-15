@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
 import { nuid } from "./nuid.ts";
 
 /**
@@ -195,6 +194,8 @@ export class NatsError extends Error {
   }
 }
 
+export type MsgCallback<T> = (err: NatsError | null, msg: T) => void;
+
 /**
  * Subscription Options
  */
@@ -222,7 +223,7 @@ export interface SubOpts<T> {
    * @param err
    * @param msg
    */
-  callback?: (err: NatsError | null, msg: T) => void;
+  callback?: MsgCallback<T>;
 }
 
 export interface DnsResolveFn {
@@ -445,75 +446,6 @@ export interface Stats {
   outMsgs: number;
 }
 
-export interface ServiceClient {
-  /**
-   * Pings services
-   * @param name - optional
-   * @param id - optional
-   */
-  ping(name?: string, id?: string): Promise<QueuedIterator<ServiceIdentity>>;
-
-  /**
-   * Requests all the stats from services
-   * @param name
-   * @param id
-   */
-  stats(name?: string, id?: string): Promise<QueuedIterator<ServiceStats>>;
-
-  /**
-   * Requests info from services
-   * @param name
-   * @param id
-   */
-  info(name?: string, id?: string): Promise<QueuedIterator<ServiceInfo>>;
-}
-
-export interface ServicesAPI {
-  /**
-   * Adds a {@link Service}
-   * @param config
-   */
-  add(config: ServiceConfig): Promise<Service>;
-
-  /**
-   * Returns a {@link ServiceClient} that can be used to interact with the
-   * observability aspects of the service (discovery, monitoring)
-   * @param opts
-   * @param prefix
-   */
-  client(opts?: RequestManyOptions, prefix?: string): ServiceClient;
-}
-
-/**
- * Options to a JetStream options applied to all  JetStream or JetStreamManager requests.
- */
-export interface JetStreamOptions {
-  /**
-   * Prefix required to interact with JetStream. Must match
-   * server configuration.
-   */
-  apiPrefix?: string;
-  /**
-   * Number of milliseconds to wait for a JetStream API request.
-   * @default ConnectionOptions.timeout
-   * @see ConnectionOptions.timeout
-   */
-  timeout?: number;
-  /**
-   * Name of the JetStream domain. This value automatically modifies
-   * the default JetStream apiPrefix.
-   */
-  domain?: string;
-}
-
-export interface JetStreamManagerOptions extends JetStreamOptions {
-  /**
-   * Allows disabling a check on the account for JetStream enablement see
-   * {@link JetStreamManager.getAccountInfo()}.
-   */
-  checkAPI?: boolean;
-}
-
 export type Payload = Uint8Array | string;
 
 export interface NatsConnection {
@@ -652,31 +584,9 @@ export interface NatsConnection {
   stats(): Stats;
 
   /**
-   * Returns a Promise to a {@link JetStreamManager} which allows the client
-   * to access Streams and Consumers information.
-   *
-   * @param opts
-   */
-  jetstreamManager(opts?: JetStreamManagerOptions): Promise<JetStreamManager>;
-
-  /**
-   * Returns a {@link JetStreamClient} which allows publishing messages to
-   * JetStream or consuming messages from streams.
-   *
-   * @param opts
-   */
-  jetstream(opts?: JetStreamOptions | JetStreamManagerOptions): JetStreamClient;
-
-  /**
    * @return the number of milliseconds it took for a {@link flush}.
    */
   rtt(): Promise<number>;
-
-  /**
-   * Returns a {@link ServicesAPI} which allows you to build services
-   * using NATS.
-   */
-  services: ServicesAPI;
 
   /**
    * Use of this API is experimental, and it is subject to be removed.
@@ -866,50 +776,6 @@ export interface PublishOptions {
  */
 export type Nanos = number;
 
-export interface ServiceMsg extends Msg {
-  respondError(
-    code: number,
-    description: string,
-    data?: Uint8Array,
-    opts?: PublishOptions,
-  ): boolean;
-}
-
-export type ServiceHandler = (err: NatsError | null, msg: ServiceMsg) => void;
-
-/**
- * A service Endpoint
- */
-export type Endpoint = {
-  /**
-   * Subject where the endpoint listens
-   */
-  subject: string;
-  /**
-   * An optional handler - if not set the service is an iterator
-   * @param err
-   * @param msg
-   */
-  handler?: ServiceHandler;
-  /**
-   * Optional metadata about the endpoint
-   */
-  metadata?: Record<string, string>;
-  /**
-   * Optional queue group to run this particular endpoint in. The service's configuration
-   * queue configuration will be used. See {@link ServiceConfig}.
-   */
-  queue?: string;
-};
-export type EndpointOptions = Partial<Endpoint>;
-
-export type EndpointInfo = {
-  name: string;
-  subject: string;
-  metadata?: Record<string, string>;
-  queue_group?: string;
-};
-
 export interface Dispatcher<T> {
   push(v: T): void;
 }
@@ -924,228 +790,6 @@ export interface QueuedIterator<T> extends Dispatcher<T> {
   getPending(): number;
 
   getReceived(): number;
-}
-
-export interface ServiceGroup {
-  /**
-   * The name of the endpoint must be a simple subject token with no wildcards
-   * @param name
-   * @param opts is either a handler or a more complex options which allows a
-   *  subject, handler, and/or schema
-   */
-  addEndpoint(
-    name: string,
-    opts?: ServiceHandler | EndpointOptions,
-  ): QueuedIterator<ServiceMsg>;
-
-  /**
-   * A group is a subject prefix from which endpoints can be added.
-   * Can be empty to allow for prefixes or tokens that are set at runtime
-   * without requiring editing of the service.
-   * Note that an optional queue can be specified, all endpoints added to
-   * the group, will use the specified queue unless the endpoint overrides it.
-   * see {@link EndpointOptions} and {@link ServiceConfig}.
-   * @param subject
-   * @param queue
-   */
-  addGroup(subject?: string, queue?: string): ServiceGroup;
-}
-
-export type ServiceMetadata = {
-  metadata?: Record<string, string>;
-};
-
-export enum ServiceResponseType {
-  STATS = "io.nats.micro.v1.stats_response",
-  INFO = "io.nats.micro.v1.info_response",
-  PING = "io.nats.micro.v1.ping_response",
-}
-
-export interface ServiceResponse {
-  /**
-   * Response type schema
-   */
-  type: ServiceResponseType;
-}
-
-export type ServiceIdentity = ServiceResponse & ServiceMetadata & {
-  /**
-   * The kind of the service reporting the stats
-   */
-  name: string;
-  /**
-   * The unique ID of the service reporting the stats
-   */
-  id: string;
-  /**
-   * A version for the service
-   */
-  version: string;
-};
-export type NamedEndpointStats = {
-  /**
-   * The name of the endpoint
-   */
-  name: string;
-  /**
-   * The subject the endpoint is listening on
-   */
-  subject: string;
-  /**
-   * The number of requests received by the endpoint
-   */
-  num_requests: number;
-  /**
-   * Number of errors that the endpoint has raised
-   */
-  num_errors: number;
-  /**
-   * If set, the last error triggered by the endpoint
-   */
-  last_error?: string;
-  /**
-   * A field that can be customized with any data as returned by stats handler see {@link ServiceConfig}
-   */
-  data?: unknown;
-  /**
-   * Total processing_time for the service
-   */
-  processing_time: Nanos;
-  /**
-   * Average processing_time is the total processing_time divided by the num_requests
-   */
-  average_processing_time: Nanos;
-  /**
-   * The queue group the endpoint is listening on
-   */
-  queue_group?: string;
-};
-/**
- * Statistics for an endpoint
- */
-export type EndpointStats = ServiceIdentity & {
-  endpoints?: NamedEndpointStats[];
-  /**
-   * ISO Date string when the service started
-   */
-  started: string;
-};
-export type ServiceInfo = ServiceIdentity & {
-  /**
-   * Description for the service
-   */
-  description: string;
-  /**
-   * Service metadata
-   */
-  metadata?: Record<string, string>;
-  /**
-   * Information about the Endpoints
-   */
-  endpoints: EndpointInfo[];
-};
-export type ServiceConfig = {
-  /**
-   * A type for a service
-   */
-  name: string;
-  /**
-   * A version identifier for the service
-   */
-  version: string;
-  /**
-   * Description for the service
-   */
-  description?: string;
-  /**
-   * A customized handler for the stats of an endpoint. The
-   * data returned by the endpoint will be serialized as is
-   * @param endpoint
-   */
-  statsHandler?: (
-    endpoint: Endpoint,
-  ) => Promise<unknown | null>;
-
-  /**
-   * Optional metadata about the service
-   */
-  metadata?: Record<string, string>;
-  /**
-   * Optional queue group to run the service in. By default,
-   * then queue name is "q". Note that this configuration will
-   * be the default for all endpoints and groups.
-   */
-  queue?: string;
-};
-/**
- * The stats of a service
- */
-export type ServiceStats = ServiceIdentity & EndpointStats;
-
-export interface Service extends ServiceGroup {
-  /**
-   * A promise that gets resolved to null or Error once the service ends.
-   * If an error, then service exited because of an error.
-   */
-  stopped: Promise<null | Error>;
-  /**
-   * True if the service is stopped
-   */
-  // FIXME: this would be better as stop - but the queued iterator may be an issue perhaps call it `isStopped`
-  isStopped: boolean;
-
-  /**
-   * Returns the stats for the service.
-   */
-  stats(): Promise<ServiceStats>;
-
-  /**
-   * Returns a service info for the service
-   */
-  info(): ServiceInfo;
-
-  /**
-   * Returns the identity used by this service
-   */
-  ping(): ServiceIdentity;
-
-  /**
-   * Resets all the stats
-   */
-  reset(): void;
-
-  /**
-   * Stop the service returning a promise once the service completes.
-   * If the service was stopped due to an error, that promise resolves to
-   * the specified error
-   */
-  stop(err?: Error): Promise<null | Error>;
-}
-
-export const ServiceErrorHeader = "Nats-Service-Error";
-export const ServiceErrorCodeHeader = "Nats-Service-Error-Code";
-
-export class ServiceError extends Error {
-  code: number;
-
-  constructor(code: number, message: string) {
-    super(message);
-    this.code = code;
-  }
-
-  static isServiceError(msg: Msg): boolean {
-    return ServiceError.toServiceError(msg) !== null;
-  }
-
-  static toServiceError(msg: Msg): ServiceError | null {
-    const scode = msg?.headers?.get(ServiceErrorCodeHeader) || "";
-    if (scode !== "") {
-      const code = parseInt(scode) || 400;
-      const description = msg?.headers?.get(ServiceErrorHeader) || "";
-      return new ServiceError(code, description.length ? description : scode);
-    }
-    return null;
-  }
 }
 
 export interface Publisher {
@@ -1426,9 +1070,7 @@ export interface TlsOptions {
 export const DEFAULT_PORT = 4222;
 export const DEFAULT_HOST = "127.0.0.1";
 
-export interface ConnectFn {
-  (opts: ConnectionOptions): Promise<NatsConnection>;
-}
+export type ConnectFn = (opts: ConnectionOptions) => Promise<NatsConnection>;
 
 export interface Base {
   subject: string;
@@ -1441,12 +1083,6 @@ export interface Base {
 
 export interface URLParseFn {
   (u: string, encrypted?: boolean): string;
-}
-
-export enum ServiceVerb {
-  PING = "PING",
-  STATS = "STATS",
-  INFO = "INFO",
 }
 
 export type Context = {

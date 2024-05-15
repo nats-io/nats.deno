@@ -13,20 +13,25 @@
  * limitations under the License.
  */
 
-import { Empty } from "../nats-base-client/encoders.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { backoff, delay, extend } from "../nats-base-client/util.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
-import { checkJsErrorCode } from "./jsutil.ts";
 import {
+  backoff,
+  delay,
+  Empty,
   ErrorCode,
-  JetStreamOptions,
+  extend,
+  JSONCodec,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  Codec,
   Msg,
   NatsConnection,
+  NatsConnectionImpl,
   NatsError,
   RequestOptions,
-} from "../nats-base-client/core.ts";
-import { ApiResponse } from "./jsapi_types.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { checkJsErrorCode } from "./jsutil.ts";
+import type { ApiResponse } from "./jsapi_types.ts";
+import type { JetStreamOptions } from "./types.ts";
 
 const defaultPrefix = "$JS.API";
 const defaultTimeout = 5000;
@@ -48,7 +53,7 @@ export interface StreamNameBySubject {
   subject: string;
 }
 
-export class BaseApiClient {
+export class BaseApiClientImpl {
   nc: NatsConnectionImpl;
   opts: JetStreamOptions;
   prefix: string;
@@ -144,6 +149,9 @@ export class BaseApiClient {
       const err = checkJsErrorCode(r.error.code, r.error.description);
       if (err !== null) {
         err.api_error = r.error;
+        if (r.error.description !== "") {
+          err.message = r.error.description;
+        }
         throw err;
       }
     }

@@ -12,21 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
+import type { JsMsg, PubAck, StreamConfig } from "../mod.ts";
 
-import {
-  AckPolicy,
-  JsMsg,
-  nanos,
-  PubAck,
-  QueuedIterator,
-  StreamConfig,
-} from "../../src/mod.ts";
-import { assert } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import {
-  Empty,
+import { assert } from "jsr:@std/assert";
+import { Empty, nanos, nuid } from "jsr:@nats-io/nats-core@3.0.0-14";
+
+import type {
   NatsConnection,
-  nuid,
-} from "../../nats-base-client/internal_mod.ts";
+  QueuedIterator,
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 
 export async function consume(iter: QueuedIterator<JsMsg>): Promise<JsMsg[]> {
   const buf: JsMsg[] = [];
@@ -44,7 +39,7 @@ export async function initStream(
   stream: string = nuid.next(),
   opts: Partial<StreamConfig> = {},
 ): Promise<{ stream: string; subj: string }> {
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const subj = `${stream}.A`;
   const sc = Object.assign({ name: stream, subjects: [subj] }, opts);
   await jsm.streams.add(sc);
@@ -55,7 +50,7 @@ export async function createConsumer(
   nc: NatsConnection,
   stream: string,
 ): Promise<string> {
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const ci = await jsm.consumers.add(stream, {
     name: nuid.next(),
     inactive_threshold: nanos(2 * 60 * 1000),
@@ -77,7 +72,7 @@ export function fill(
   count = 100,
   opts: Partial<FillOptions> = {},
 ): Promise<PubAck[]> {
-  const js = nc.jetstream();
+  const js = jetstream(nc);
 
   const options = Object.assign({}, {
     randomize: false,

@@ -1,0 +1,7 @@
+{
+  "name": "@nats-io/nuid",
+  "version": "2.0.0-1",
+  "exports": {
+    ".": "./src/mod.ts"
+  }
+}

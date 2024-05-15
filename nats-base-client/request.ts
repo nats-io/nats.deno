@@ -12,18 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred, Timeout, timeout } from "./util.ts";
-import { MuxSubscription } from "./muxsubscription.ts";
+import type { Deferred, Timeout } from "./util.ts";
+import { deferred, timeout } from "./util.ts";
+import type { MuxSubscription } from "./muxsubscription.ts";
 import { nuid } from "./nuid.ts";
-import {
-  ErrorCode,
+import type {
   Msg,
-  NatsError,
   Request,
   RequestManyOptions,
   RequestOptions,
-  RequestStrategy,
 } from "./core.ts";
+import { ErrorCode, NatsError, RequestStrategy } from "./core.ts";
 
 export class BaseRequest {
   token: string;

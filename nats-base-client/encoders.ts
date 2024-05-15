@@ -12,10 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export const Empty = new Uint8Array(0);
+export const Empty: Uint8Array = new Uint8Array(0);
 
-export const TE = new TextEncoder();
-export const TD = new TextDecoder();
+export const TE: TextEncoder = new TextEncoder();
+export const TD: TextDecoder = new TextDecoder();
 
 function concat(...bufs: Uint8Array[]): Uint8Array {
   let max = 0;

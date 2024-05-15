@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 The NATS Authors
+ * Copyright 2018-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,14 +15,13 @@
 import { defaultPort, getUrlParseFn } from "./transport.ts";
 import { shuffle } from "./util.ts";
 import { isIP } from "./ipparser.ts";
-import {
-  DEFAULT_HOST,
-  DEFAULT_PORT,
+import type {
   DnsResolveFn,
   Server,
   ServerInfo,
   ServersChanged,
 } from "./core.ts";
+import { DEFAULT_HOST, DEFAULT_PORT } from "./core.ts";
 
 export function isIPV4OrHostname(hp: string): boolean {
   if (hp.indexOf(".") !== -1) {

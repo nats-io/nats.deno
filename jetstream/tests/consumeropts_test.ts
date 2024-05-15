@@ -13,26 +13,19 @@
  * limitations under the License.
  */
 
-import {
-  assert,
-  assertEquals,
-  assertThrows,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 
-import {
+import { millis } from "jsr:@nats-io/nats-core@3.0.0-14";
+
+import { consumerOpts, isConsumerOptsBuilder } from "../types.ts";
+
+import type {
   ConsumerOpts,
-  consumerOpts,
   ConsumerOptsBuilderImpl,
-  isConsumerOptsBuilder,
   JsMsgCallback,
 } from "../types.ts";
 
-import {
-  AckPolicy,
-  DeliverPolicy,
-  millis,
-  ReplayPolicy,
-} from "../../src/mod.ts";
+import { AckPolicy, DeliverPolicy, ReplayPolicy } from "../mod.ts";
 
 Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder(consumerOpts()), true);

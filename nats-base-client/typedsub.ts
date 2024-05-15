@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The NATS Authors
+ * Copyright 2021-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,25 +12,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { Deferred, deferred } from "./util.ts";
+import type { Deferred } from "./util.ts";
+import { deferred } from "./util.ts";
 import type {
   DispatchedFn,
   IngestionFilterFn,
   ProtocolFilterFn,
 } from "./queued_iterator.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
-import {
-  ErrorCode,
+import type {
   Msg,
   NatsConnection,
-  NatsError,
   Sub,
   SubOpts,
   Subscription,
   SubscriptionOptions,
 } from "./core.ts";
-import { SubscriptionImpl } from "./protocol.ts";
+import { ErrorCode, NatsError } from "./core.ts";
+import type { SubscriptionImpl } from "./protocol.ts";
 
 /**
  * Converts a NATS message into some other type. Implementers are expected to:

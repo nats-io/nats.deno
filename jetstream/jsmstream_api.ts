@@ -13,33 +13,39 @@
  * limitations under the License.
  */
 
-import { Empty, MsgHdrs } from "../nats-base-client/types.ts";
-import { BaseApiClient, StreamNames } from "./jsbaseclient_api.ts";
-import { Lister, ListerFieldFilter, ListerImpl } from "./jslister.ts";
-import { validateStreamName } from "./jsutil.ts";
-import { headers, MsgHdrsImpl } from "../nats-base-client/headers.ts";
-import { KvStatusImpl } from "./kv.ts";
-import { ObjectStoreStatusImpl, osPrefix } from "./objectstore.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
-import { TD } from "../nats-base-client/encoders.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import {
+  Empty,
+  Feature,
+  headers,
+  JSONCodec,
+  MsgHdrsImpl,
+  TD,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
+  Codec,
+  MsgHdrs,
+  NatsConnection,
+  NatsConnectionImpl,
+  ReviverFn,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import type { StreamNames } from "./jsbaseclient_api.ts";
+import { ListerImpl } from "./jslister.ts";
+import { validateStreamName } from "./jsutil.ts";
+import type {
+  Consumer,
+  ConsumerAPI,
   Consumers,
-  kvPrefix,
-  KvStatus,
-  ObjectStoreStatus,
+  JetStreamOptions,
+  Lister,
+  ListerFieldFilter,
+  OrderedConsumerOptions,
   StoredMsg,
   Stream,
   StreamAPI,
   Streams,
 } from "./types.ts";
-import {
-  JetStreamOptions,
-  NatsConnection,
-  ReviverFn,
-} from "../nats-base-client/core.ts";
-import {
+import type {
   ApiPagedRequest,
   ExternalStream,
   MsgDeleteRequest,
@@ -58,13 +64,8 @@ import {
   StreamUpdateConfig,
   SuccessResponse,
 } from "./jsapi_types.ts";
-import {
-  Consumer,
-  OrderedConsumerOptions,
-  OrderedPullConsumerImpl,
-  PullConsumerImpl,
-} from "./consumer.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { OrderedPullConsumerImpl, PullConsumerImpl } from "./consumer.ts";
+import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 
 export function convertStreamSourceDomain(s?: StreamSource) {
   if (s === undefined) {
@@ -212,13 +213,13 @@ export class StreamImpl implements Stream {
   }
 }
 
-export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
+export class StreamAPIImpl extends BaseApiClientImpl implements StreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
   }
 
   checkStreamConfigVersions(cfg: Partial<StreamConfig>) {
-    const nci = this.nc as NatsConnectionImpl;
+    const nci = this.nc as unknown as NatsConnectionImpl;
     if (cfg.metadata) {
       const { min, ok } = nci.features.get(Feature.JS_STREAM_CONSUMER_METADATA);
       if (!ok) {
@@ -452,50 +453,6 @@ export class StreamAPIImpl extends BaseApiClient implements StreamAPI {
 
   find(subject: string): Promise<string> {
     return this.findStream(subject);
-  }
-
-  listKvs(): Lister<KvStatus> {
-    const filter: ListerFieldFilter<KvStatus> = (
-      v: unknown,
-    ): KvStatus[] => {
-      const slr = v as StreamListResponse;
-      const kvStreams = slr.streams.filter((v) => {
-        return v.config.name.startsWith(kvPrefix);
-      });
-      kvStreams.forEach((si) => {
-        this._fixInfo(si);
-      });
-      let cluster = "";
-      if (kvStreams.length) {
-        cluster = this.nc.info?.cluster ?? "";
-      }
-      const status = kvStreams.map((si) => {
-        return new KvStatusImpl(si, cluster);
-      });
-      return status;
-    };
-    const subj = `${this.prefix}.STREAM.LIST`;
-    return new ListerImpl<KvStatus>(subj, filter, this);
-  }
-
-  listObjectStores(): Lister<ObjectStoreStatus> {
-    const filter: ListerFieldFilter<ObjectStoreStatus> = (
-      v: unknown,
-    ): ObjectStoreStatus[] => {
-      const slr = v as StreamListResponse;
-      const objStreams = slr.streams.filter((v) => {
-        return v.config.name.startsWith(osPrefix);
-      });
-      objStreams.forEach((si) => {
-        this._fixInfo(si);
-      });
-      const status = objStreams.map((si) => {
-        return new ObjectStoreStatusImpl(si);
-      });
-      return status;
-    };
-    const subj = `${this.prefix}.STREAM.LIST`;
-    return new ListerImpl<ObjectStoreStatus>(subj, filter, this);
   }
 
   names(subject = ""): Lister<string> {

@@ -13,54 +13,91 @@
  * limitations under the License.
  */
 
-import { Consumer, OrderedConsumerOptions } from "./consumer.ts";
-import {
-  JetStreamOptions,
+import type {
+  Codec,
+  Msg,
   MsgHdrs,
-  Nanos,
+  NatsConnectionImpl,
   NatsError,
   Payload,
   QueuedIterator,
+  RequestOptions,
   ReviverFn,
   Sub,
-} from "../nats-base-client/core.ts";
+  TypedSubscriptionOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { nanos } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
-export type {
-  JetStreamManagerOptions,
-  JetStreamOptions,
-} from "../nats-base-client/core.ts";
-
-import { TypedSubscriptionOptions } from "../nats-base-client/typedsub.ts";
 import {
   AckPolicy,
-  ConsumerConfig,
-  ConsumerInfo,
   defaultConsumer,
   DeliverPolicy,
+  ReplayPolicy,
+} from "./jsapi_types.ts";
+
+import type {
+  ConsumerConfig,
+  ConsumerInfo,
+  ConsumerUpdateConfig,
   DirectBatchOptions,
   DirectMsgRequest,
   JetStreamAccountStats,
   MsgRequest,
-  Placement,
   PullOptions,
   PurgeOpts,
   PurgeResponse,
-  ReplayPolicy,
-  Republish,
-  StorageType,
   StreamAlternate,
   StreamConfig,
   StreamInfo,
   StreamInfoRequestOptions,
-  StreamSource,
   StreamUpdateConfig,
 } from "./jsapi_types.ts";
-import { JsMsg } from "./jsmsg.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { ConsumerAPI } from "./jsmconsumer_api.ts";
+import type { JsMsg } from "./jsmsg.ts";
 import { validateDurableName } from "./jsutil.ts";
-import { Lister } from "./jslister.ts";
-import { nanos } from "../nats-base-client/util.ts";
+
+export interface BaseClient {
+  nc: NatsConnectionImpl;
+  opts: JetStreamOptions;
+  prefix: string;
+  timeout: number;
+  jc: Codec<unknown>;
+
+  getOptions(): JetStreamOptions;
+  findStream(subject: string): Promise<string>;
+  parseJsResponse(m: Msg): unknown;
+  _request(
+    subj: string,
+    data?: unknown,
+    opts?: RequestOptions,
+  ): Promise<unknown>;
+}
+
+export interface JetStreamOptions {
+  /**
+   * Prefix required to interact with JetStream. Must match
+   * server configuration.
+   */
+  apiPrefix?: string;
+  /**
+   * Number of milliseconds to wait for a JetStream API request.
+   * @default ConnectionOptions.timeout
+   * @see ConnectionOptions.timeout
+   */
+  timeout?: number;
+  /**
+   * Name of the JetStream domain. This value automatically modifies
+   * the default JetStream apiPrefix.
+   */
+  domain?: string;
+}
+
+export interface JetStreamManagerOptions extends JetStreamOptions {
+  /**
+   * Allows disabling a check on the account for JetStream enablement see
+   * {@link JetStreamManager.getAccountInfo()}.
+   */
+  checkAPI?: boolean;
+}
 
 /**
  * The response returned by the JetStream server when a message is added to a stream.
@@ -185,20 +222,15 @@ export type JetStreamPullSubscription = JetStreamSubscription & Pullable;
 export type JsMsgCallback = (err: NatsError | null, msg: JsMsg | null) => void;
 
 /**
- * The interface for creating instances of different JetStream materialized views.
+ * An interface for listing. Returns a promise with typed list.
  */
-export interface Views {
-  /**
-   * Gets or creates a JetStream KV store
-   * @param name - name for the KV
-   * @param opts - optional options to configure the KV and stream backing
-   */
-  kv: (name: string, opts?: Partial<KvOptions>) => Promise<KV>;
-  os: (
-    name: string,
-    opts?: Partial<ObjectStoreOptions>,
-  ) => Promise<ObjectStore>;
+export interface Lister<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T>;
+
+  next(): Promise<T[]>;
 }
+
+export type ListerFieldFilter<T> = (v: unknown) => T[];
 
 export interface StreamAPI {
   /**
@@ -266,18 +298,6 @@ export interface StreamAPI {
   find(subject: string): Promise<string>;
 
   /**
-   * Returns a list of KvStatus for all streams that are identified as
-   * being a KV (that is having names that have the prefix `KV_`)
-   */
-  listKvs(): Lister<KvStatus>;
-
-  /**
-   * Returns a list of ObjectStoreInfo for all streams that are identified as
-   * being a ObjectStore (that is having names that have the prefix `OBJ_`)
-   */
-  listObjectStores(): Lister<ObjectStoreStatus>;
-
-  /**
    * Return a Lister of stream names
    * @param subject - if specified, the results are filtered to streams that contain the
    *  subject (can be wildcarded)
@@ -289,6 +309,59 @@ export interface StreamAPI {
    * @param name
    */
   get(name: string): Promise<Stream>;
+}
+
+export interface ConsumerAPI {
+  /**
+   * Returns the ConsumerInfo for the specified consumer in the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  info(stream: string, consumer: string): Promise<ConsumerInfo>;
+
+  /**
+   * Adds a new consumer to the specified stream with the specified consumer options.
+   * @param stream
+   * @param cfg
+   */
+  add(stream: string, cfg: Partial<ConsumerConfig>): Promise<ConsumerInfo>;
+
+  /**
+   * Updates the consumer configuration for the specified consumer on the specified
+   * stream that has the specified durable name.
+   * @param stream
+   * @param durable
+   * @param cfg
+   */
+  update(
+    stream: string,
+    durable: string,
+    cfg: Partial<ConsumerUpdateConfig>,
+  ): Promise<ConsumerInfo>;
+
+  /**
+   * Deletes the specified consumer name/durable from the specified stream.
+   * @param stream
+   * @param consumer
+   */
+  delete(stream: string, consumer: string): Promise<boolean>;
+
+  /**
+   * Lists all the consumers on the specfied streams
+   * @param stream
+   */
+  list(stream: string): Lister<ConsumerInfo>;
+
+  pause(
+    stream: string,
+    name: string,
+    until?: Date,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
+
+  resume(
+    stream: string,
+    name: string,
+  ): Promise<{ paused: boolean; pause_until?: string }>;
 }
 
 /**
@@ -327,7 +400,247 @@ export interface JetStreamManager {
   jetstream(): JetStreamClient;
 }
 
-// FIXME: pulls must limit to maxAcksInFlight
+export type Ordered = {
+  ordered: true;
+};
+export type NextOptions = Expires & Bind;
+export type ConsumeBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & Partial<ThresholdBytes>
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback
+  & AbortOnMissingResource
+  & Bind;
+export type ConsumeMessages =
+  & Partial<MaxMessages>
+  & Partial<ThresholdMessages>
+  & Expires
+  & IdleHeartbeat
+  & ConsumeCallback
+  & AbortOnMissingResource
+  & Bind;
+export type ConsumeOptions = ConsumeBytes | ConsumeMessages;
+/**
+ * Options for fetching bytes
+ */
+export type FetchBytes =
+  & MaxBytes
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat
+  & Bind;
+/**
+ * Options for fetching messages
+ */
+export type FetchMessages =
+  & Partial<MaxMessages>
+  & Expires
+  & IdleHeartbeat
+  & Bind;
+export type FetchOptions = FetchBytes | FetchMessages;
+export type PullConsumerOptions = FetchOptions | ConsumeOptions;
+export type MaxMessages = {
+  /**
+   * Maximum number of messages to retrieve.
+   * @default 100 messages
+   */
+  max_messages: number;
+};
+export type MaxBytes = {
+  /**
+   * Maximum number of bytes to retrieve - note request must fit the entire message
+   * to be honored (this includes, subject, headers, etc). Partial messages are not
+   * supported.
+   */
+  max_bytes: number;
+};
+export type ThresholdMessages = {
+  /**
+   * Threshold message count on which the client will auto-trigger additional requests
+   * from the server. This is only applicable to `consume`.
+   * @default  75% of {@link MaxMessages}.
+   */
+  threshold_messages: number;
+};
+export type ThresholdBytes = {
+  /**
+   * Threshold bytes on which the client wil auto-trigger additional message requests
+   * from the server. This is only applicable to `consume`.
+   * @default 75% of {@link MaxBytes}.
+   */
+  threshold_bytes: number;
+};
+export type Expires = {
+  /**
+   * Amount of milliseconds to wait for messages before issuing another request.
+   * Note this value shouldn't be set by the user, as the default provides proper behavior.
+   * A low value will stress the server.
+   *
+   * Minimum value is 1000 (1s).
+   * @default 30_000 (30s)
+   */
+  expires?: number;
+};
+export type Bind = {
+  /**
+   * If set to true the client will not try to check on its consumer by issuing consumer info
+   * requests. This means that the client may not report consumer not found, etc., and will simply
+   * fail request for messages due to missed heartbeats. This option is exclusive of abort_on_missing_resource.
+   *
+   * This option is not valid on ordered consumers.
+   */
+  bind?: boolean;
+};
+export type AbortOnMissingResource = {
+  /**
+   * If true, consume will abort if the stream or consumer is not found. Default is to recover
+   * once the stream/consumer is restored. This option is exclusive of bind.
+   */
+  abort_on_missing_resource?: boolean;
+};
+export type IdleHeartbeat = {
+  /**
+   * Number of milliseconds to wait for a server heartbeat when not actively receiving
+   * messages. When two or more heartbeats are missed in a row, the consumer will emit
+   * a notification. Note this value shouldn't be set by the user, as the default provides
+   * the proper behavior. A low value will stress the server.
+   */
+  idle_heartbeat?: number;
+};
+export type ConsumerCallbackFn = (r: JsMsg) => void;
+export type ConsumeCallback = {
+  /**
+   * Process messages using a callback instead of an iterator. Note that when using callbacks,
+   * the callback cannot be async. If you must use async functionality, process messages
+   * using an iterator.
+   */
+  callback?: ConsumerCallbackFn;
+};
+
+/**
+ * ConsumerEvents are informational notifications emitted by ConsumerMessages
+ * that may be of interest to a client.
+ */
+export enum ConsumerEvents {
+  /**
+   * Notification that heartbeats were missed. This notification is informational.
+   * The `data` portion of the status, is a number indicating the number of missed heartbeats.
+   * Note that when a client disconnects, heartbeat tracking is paused while
+   * the client is disconnected.
+   */
+  HeartbeatsMissed = "heartbeats_missed",
+  /**
+   * Notification that the consumer was not found. Consumers that were accessible at
+   * least once, will be retried for more messages regardless of the not being found
+   * or timeouts etc. This notification includes a count of consecutive attempts to
+   * find the consumer. Note that if you get this notification possibly your code should
+   * attempt to recreate the consumer. Note that this notification is only informational
+   * for ordered consumers, as the consumer will be created in those cases automatically.
+   */
+  ConsumerNotFound = "consumer_not_found",
+
+  /**
+   * Notification that the stream was not found. Consumers were accessible at least once,
+   * will be retried for more messages regardless of the not being found
+   * or timeouts etc. This notification includes a count of consecutive attempts to
+   * find the consumer. Note that if you get this notification possibly your code should
+   * attempt to recreate the consumer. Note that this notification is only informational
+   * for ordered consumers, as the consumer will be created in those cases automatically.
+   */
+  StreamNotFound = "stream_not_found",
+
+  /*
+   * Notification that the consumer was deleted. This notification
+   * means the consumer will not get messages unless it is recreated. The client
+   * will continue to attempt to pull messages. Ordered consumer will recreate it.
+   */
+  ConsumerDeleted = "consumer_deleted",
+
+  /**
+   * This notification is specific of ordered consumers and will be notified whenever
+   * the consumer is recreated. The argument is the name of the newly created consumer.
+   */
+  OrderedConsumerRecreated = "ordered_consumer_recreated",
+}
+
+/**
+ * These events represent informational notifications emitted by ConsumerMessages
+ * that can be safely ignored by clients.
+ */
+export enum ConsumerDebugEvents {
+  /**
+   * DebugEvents are effectively statuses returned by the server that were ignored
+   * by the client. The `data` portion of the
+   * status is just a string indicating the code/message of the status.
+   */
+  DebugEvent = "debug",
+  /**
+   * Requests for messages can be terminated by the server, these notifications
+   * provide information on the number of messages and/or bytes that couldn't
+   * be satisfied by the consumer request. The `data` portion of the status will
+   * have the format of `{msgsLeft: number, bytesLeft: number}`.
+   */
+  Discard = "discard",
+  /**
+   * Notifies whenever there's a request for additional messages from the server.
+   * This notification telegraphs the request options, which should be treated as
+   * read-only. This notification is only useful for debugging. Data is PullOptions.
+   */
+  Next = "next",
+}
+
+export interface ConsumerStatus {
+  type: ConsumerEvents | ConsumerDebugEvents;
+  data: unknown;
+}
+
+export interface ExportedConsumer {
+  next(
+    opts?: NextOptions,
+  ): Promise<JsMsg | null>;
+
+  fetch(
+    opts?: FetchOptions,
+  ): Promise<ConsumerMessages>;
+
+  consume(
+    opts?: ConsumeOptions,
+  ): Promise<ConsumerMessages>;
+}
+
+export interface Consumer extends ExportedConsumer {
+  info(cached?: boolean): Promise<ConsumerInfo>;
+
+  delete(): Promise<boolean>;
+}
+
+export interface Close {
+  close(): Promise<void | Error>;
+
+  closed(): Promise<void | Error>;
+}
+
+export interface ConsumerMessages extends QueuedIterator<JsMsg>, Close {
+  status(): Promise<AsyncIterable<ConsumerStatus>>;
+}
+
+/**
+ * These options are a subset of {@link ConsumerConfig} and
+ * {@link ConsumerUpdateConfig}
+ */
+export type OrderedConsumerOptions = {
+  name_prefix: string;
+  filterSubjects: string[] | string;
+  deliver_policy: DeliverPolicy;
+  opt_start_seq: number;
+  opt_start_time: string;
+  replay_policy: ReplayPolicy;
+  inactive_threshold: number;
+  headers_only: boolean;
+};
+
 /**
  * Interface for interacting with JetStream data
  */
@@ -411,11 +724,6 @@ export interface JetStreamClient {
     subject: string,
     opts: ConsumerOptsBuilder | Partial<ConsumerOpts>,
   ): Promise<JetStreamSubscription>;
-
-  /**
-   * Accessor for the JetStream materialized views API
-   */
-  views: Views;
 
   /**
    * Returns the JS API prefix as processed from the JetStream Options
@@ -520,135 +828,135 @@ export interface ConsumerOptsBuilder {
   /**
    * User description of this consumer
    */
-  description(description: string): this;
+  description(description: string): ConsumerOptsBuilder;
 
   /**
    * DeliverTo sets the subject where a push consumer receives messages
    * @param subject
    */
-  deliverTo(subject: string): this;
+  deliverTo(subject: string): ConsumerOptsBuilder;
 
   /**
    * Sets the durable name, when not set an ephemeral consumer is created
    * @param name
    */
-  durable(name: string): this;
+  durable(name: string): ConsumerOptsBuilder;
 
   /**
    * The consumer will start at the message with the specified sequence
    * @param seq
    */
-  startSequence(seq: number): this;
+  startSequence(seq: number): ConsumerOptsBuilder;
 
   /**
    * consumer will start with messages received on the specified time/date
    * @param time
    */
-  startTime(time: Date): this;
+  startTime(time: Date): ConsumerOptsBuilder;
 
   /**
    * Consumer will start at first available message on the stream
    */
-  deliverAll(): this;
+  deliverAll(): ConsumerOptsBuilder;
 
   /**
    * Consumer will deliver all the last per messages per subject
    */
-  deliverLastPerSubject(): this;
+  deliverLastPerSubject(): ConsumerOptsBuilder;
 
   /**
    * Consumer will start at the last message
    */
-  deliverLast(): this;
+  deliverLast(): ConsumerOptsBuilder;
 
   /**
    * Consumer will start with new messages (not yet in the stream)
    */
-  deliverNew(): this;
+  deliverNew(): ConsumerOptsBuilder;
 
   /**
    * Start delivering at the at a past point in time
    * @param millis
    */
-  startAtTimeDelta(millis: number): this;
+  startAtTimeDelta(millis: number): ConsumerOptsBuilder;
 
   /**
    * Messages delivered to the consumer will not have a payload. Instead,
    * they will have the header `Nats-Msg-Size` indicating the number of bytes
    * in the message as stored by JetStream.
    */
-  headersOnly(): this;
+  headersOnly(): ConsumerOptsBuilder;
 
   /**
    * Consumer will not track ack for messages
    */
-  ackNone(): this;
+  ackNone(): ConsumerOptsBuilder;
 
   /**
    * Ack'ing a message implicitly acks all messages with a lower sequence
    */
-  ackAll(): this;
+  ackAll(): ConsumerOptsBuilder;
 
   /**
    * Consumer will ack all messages - not that unless {@link manualAck} is set
    * the client will auto ack messages after processing via its callback or when
    * the iterator continues processing.
    */
-  ackExplicit(): this;
+  ackExplicit(): ConsumerOptsBuilder;
 
   /**
    * Sets the time a delivered message might remain unacknowledged before a redelivery is attempted
    * @param millis
    */
-  ackWait(millis: number): this;
+  ackWait(millis: number): ConsumerOptsBuilder;
 
   /**
    * Max number of re-delivery attempts for a particular message
    * @param max
    */
-  maxDeliver(max: number): this;
+  maxDeliver(max: number): ConsumerOptsBuilder;
 
   /**
    * Consumer should filter the messages to those that match the specified filter.
    * This api can be called multiple times.
    * @param s
    */
-  filterSubject(s: string): this;
+  filterSubject(s: string): ConsumerOptsBuilder;
 
   /**
    * Replay messages as fast as possible
    */
-  replayInstantly(): this;
+  replayInstantly(): ConsumerOptsBuilder;
 
   /**
    * Replay at the rate received
    */
-  replayOriginal(): this;
+  replayOriginal(): ConsumerOptsBuilder;
 
   /**
    * Sample a subset of messages expressed as a percentage(0-100)
    * @param n
    */
-  sample(n: number): this;
+  sample(n: number): ConsumerOptsBuilder;
 
   /**
    * Limit message delivery to the specified rate in bits per second.
    * @param bps
    */
-  limit(bps: number): this;
+  limit(bps: number): ConsumerOptsBuilder;
 
   /**
    * Pull subscriber option only. Limits the maximum outstanding messages scheduled
    * via batch pulls as pulls are additive.
    * @param max
    */
-  maxWaiting(max: number): this;
+  maxWaiting(max: number): ConsumerOptsBuilder;
 
   /**
    * Max number of outstanding acks before the server stops sending new messages
    * @param max
    */
-  maxAckPending(max: number): this;
+  maxAckPending(max: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Enables idle heartbeats from the server. If the number of
@@ -656,51 +964,51 @@ export interface ConsumerOptsBuilder {
    * send a heartbeat (status code 100 message) indicating that the JetStream consumer is alive.
    * @param millis
    */
-  idleHeartbeat(millis: number): this;
+  idleHeartbeat(millis: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer flow control - the server sends a status code 100 and uses the delay on the
    * response to throttle inbound messages for a client and prevent slow consumer.
    */
-  flowControl(): this;
+  flowControl(): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Sets the name of the queue group - same as queue
    * @param name
    */
-  deliverGroup(name: string): this;
+  deliverGroup(name: string): ConsumerOptsBuilder;
 
   /**
    * Prevents the consumer implementation from auto-acking messages. Message callbacks
    * and iterators must explicitly ack messages.
    */
-  manualAck(): this;
+  manualAck(): ConsumerOptsBuilder;
 
   /**
    * Standard NATS subscription option which automatically closes the subscription after the specified
    * number of messages (actual stream or flow control) are seen by the client.
    * @param max
    */
-  maxMessages(max: number): this;
+  maxMessages(max: number): ConsumerOptsBuilder;
 
   /**
    * Push consumer only option - Standard NATS queue group option, same as {@link deliverGroup}
    * @param n
    */
-  queue(n: string): this;
+  queue(n: string): ConsumerOptsBuilder;
 
   /**
    * Use a callback to process messages. If not specified, you process messages by iterating
    * on the returned subscription object.
    * @param fn
    */
-  callback(fn: JsMsgCallback): this;
+  callback(fn: JsMsgCallback): ConsumerOptsBuilder;
 
   /**
    * Push consumer only - creates an ordered consumer - ordered consumers cannot be a pull consumer
    * nor specify durable, deliverTo, specify an ack policy, maxDeliver, or flow control.
    */
-  orderedConsumer(): this;
+  orderedConsumer(): ConsumerOptsBuilder;
 
   /**
    * Bind to the specified durable (or consumer name if ephemeral) on the specified stream.
@@ -709,28 +1017,28 @@ export interface ConsumerOptsBuilder {
    * @param stream
    * @param durable
    */
-  bind(stream: string, durable: string): this;
+  bind(stream: string, durable: string): ConsumerOptsBuilder;
 
   /**
    * Specify the name of the stream, avoiding a lookup where the stream is located by
    * searching for a subject.
    * @param stream
    */
-  bindStream(stream: string): this;
+  bindStream(stream: string): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max number of messages that can be pulled in a batch
    * that can be requested by a client during a pull.
    * @param n
    */
-  maxPullBatch(n: number): this;
+  maxPullBatch(n: number): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max amount of time before a pull request expires that
    * may be requested by a client during a pull.
    * @param millis
    */
-  maxPullRequestExpires(millis: number): this;
+  maxPullRequestExpires(millis: number): ConsumerOptsBuilder;
 
   /**
    * Pull consumer only - Sets the max amount of time that an ephemeral consumer will be
@@ -738,24 +1046,24 @@ export interface ConsumerOptsBuilder {
    * specified interval the server will discard the consumer.
    * @param millis
    */
-  inactiveEphemeralThreshold(millis: number): this;
+  inactiveEphemeralThreshold(millis: number): ConsumerOptsBuilder;
 
   /**
    * Force the consumer state to be kept in memory rather than inherit the setting from
    * the Stream
    */
-  memory(): this;
+  memory(): ConsumerOptsBuilder;
 
   /**
    * When set do not inherit the replica count from the stream but specifically set it to this amount
    */
-  numReplicas(n: number): this;
+  numReplicas(n: number): ConsumerOptsBuilder;
 
   /**
    * The name of the consumer
    * @param n
    */
-  consumerName(n: string): this;
+  consumerName(n: string): ConsumerOptsBuilder;
 }
 
 /**
@@ -929,666 +1237,6 @@ export enum JsHeaders {
   PendingBytesHdr = "Nats-Pending-Bytes",
 }
 
-export interface KvEntry {
-  bucket: string;
-  key: string;
-  value: Uint8Array;
-  created: Date;
-  revision: number;
-  delta?: number;
-  operation: "PUT" | "DEL" | "PURGE";
-  length: number;
-
-  /**
-   * Convenience method to parse the entry payload as JSON. This method
-   * will throw an exception if there's a parsing error;
-   */
-  json<T>(): T;
-
-  /**
-   * Convenience method to parse the entry payload as string. This method
-   * may throw an exception if there's a conversion error
-   */
-  string(): string;
-}
-
-/**
- * An interface for encoding and decoding values
- * before they are stored or returned to the client.
- */
-export interface KvCodec<T> {
-  encode(k: T): T;
-
-  decode(k: T): T;
-}
-
-export interface KvCodecs {
-  /**
-   * Codec for Keys in the KV
-   */
-  key: KvCodec<string>;
-  /**
-   * Codec for Data in the KV
-   */
-  value: KvCodec<Uint8Array>;
-}
-
-export interface KvLimits {
-  /**
-   * Sets the specified description on the stream of the KV.
-   */
-  description: string;
-  /**
-   * Number of replicas for the KV (1,3,or 5).
-   */
-  replicas: number;
-  /**
-   * Number of maximum messages allowed per subject (key).
-   */
-  history: number;
-  /**
-   * The maximum number of bytes on the KV
-   */
-  max_bytes: number;
-  /**
-   * @deprecated use max_bytes
-   */
-  maxBucketSize: number;
-  /**
-   * The maximum size of a value on the KV
-   */
-  maxValueSize: number;
-  /**
-   * The maximum number of millis the key should live
-   * in the KV. The server will automatically remove
-   * keys older than this amount. Note that deletion of
-   * delete markers are not performed.
-   */
-  ttl: number; // millis
-  /**
-   * The backing store of the stream hosting the KV
-   */
-  storage: StorageType;
-  /**
-   * Placement hints for the stream hosting the KV
-   */
-  placement: Placement;
-  /**
-   * Republishes edits to the KV on a NATS core subject.
-   */
-  republish: Republish;
-  /**
-   * Maintains a 1:1 mirror of another kv stream with name matching this property.
-   */
-  mirror?: StreamSource;
-  /**
-   * List of Stream names to replicate into this KV
-   */
-  sources?: StreamSource[];
-  /**
-   * @deprecated: use placement
-   */
-  placementCluster: string;
-
-  /**
-   * deprecated: use storage
-   * FIXME: remove this on 1.8
-   */
-  backingStore: StorageType;
-
-  /**
-   * Sets the compression level of the KV. This feature is only supported in
-   * servers 2.10.x and better.
-   */
-  compression?: boolean;
-}
-
-export interface KvStatus extends KvLimits {
-  /**
-   * The simple name for a Kv - this name is typically prefixed by `KV_`.
-   */
-  bucket: string;
-  /**
-   * Number of entries in the KV
-   */
-  values: number;
-
-  /**
-   * @deprecated
-   * FIXME: remove this on 1.8
-   */
-  bucket_location: string;
-
-  /**
-   * The StreamInfo backing up the KV
-   */
-  streamInfo: StreamInfo;
-
-  /**
-   * Size of the bucket in bytes
-   */
-  size: number;
-  /**
-   * Metadata field to store additional information about the stream. Note that
-   * keys starting with `_nats` are reserved. This feature only supported on servers
-   * 2.10.x and better.
-   */
-  metadata?: Record<string, string>;
-}
-
-export interface KvOptions extends KvLimits {
-  /**
-   * How long to wait in milliseconds for a response from the KV
-   */
-  timeout: number;
-  /**
-   * The underlying stream name for the KV
-   */
-  streamName: string;
-  /**
-   * An encoder/decoder for keys and values
-   */
-  codec: KvCodecs;
-  /**
-   * Doesn't attempt to create the KV stream if it doesn't exist.
-   */
-  bindOnly: boolean;
-  /**
-   * If true and on a recent server, changes the way the KV
-   * retrieves values. This option is significantly faster,
-   * but has the possibility of inconsistency during a read.
-   */
-  allow_direct: boolean;
-  /**
-   * Metadata field to store additional information about the kv. Note that
-   * keys starting with `_nats` are reserved. This feature only supported on servers
-   * 2.10.x and better.
-   */
-  metadata?: Record<string, string>;
-}
-
-/**
- * @deprecated use purge(k)
- */
-export interface KvRemove {
-  remove(k: string): Promise<void>;
-}
-
-export enum KvWatchInclude {
-  /**
-   * Include the last value for all the keys
-   */
-  LastValue = "",
-  /**
-   * Include all available history for all keys
-   */
-  AllHistory = "history",
-  /**
-   * Don't include history or last values, only notify
-   * of updates
-   */
-  UpdatesOnly = "updates",
-}
-
-export type KvWatchOptions = {
-  /**
-   * A key or wildcarded key following keys as if they were NATS subject names.
-   * Note you can specify multiple keys if running on server 2.10.x or better.
-   */
-  key?: string | string[];
-  /**
-   * Notification should only include entry headers
-   */
-  headers_only?: boolean;
-  /**
-   * A callback that notifies when the watch has yielded all the initial values.
-   * Subsequent notifications are updates since the initial watch was established.
-   */
-  initializedFn?: () => void;
-  /**
-   * Skips notifying deletes.
-   * @default: false
-   */
-  ignoreDeletes?: boolean;
-  /**
-   * Specify what to include in the watcher, by default all last values.
-   */
-  include?: KvWatchInclude;
-  /**
-   * Starts watching at the specified revision. This is intended for watchers
-   * that have restarted watching and have maintained some state of where they are
-   * in the watch.
-   */
-  resumeFromRevision?: number;
-};
-
-export interface RoKV {
-  /**
-   * Returns the KvEntry stored under the key if it exists or null if not.
-   * Note that the entry returned could be marked with a "DEL" or "PURGE"
-   * operation which signifies the server stored the value, but it is now
-   * deleted.
-   * @param k
-   * @param opts
-   */
-  get(k: string, opts?: { revision: number }): Promise<KvEntry | null>;
-
-  /**
-   * Returns an iterator of the specified key's history (or all keys).
-   * Note you can specify multiple keys if running on server 2.10.x or better.
-   * @param opts
-   */
-  history(opts?: { key?: string | string[] }): Promise<QueuedIterator<KvEntry>>;
-
-  /**
-   * Returns an iterator that will yield KvEntry updates as they happen.
-   * @param opts
-   */
-  watch(
-    opts?: KvWatchOptions,
-  ): Promise<QueuedIterator<KvEntry>>;
-
-  /**
-   * @deprecated - this api is removed.
-   */
-  close(): Promise<void>;
-
-  /**
-   * Returns information about the Kv
-   */
-  status(): Promise<KvStatus>;
-
-  /**
-   * Returns an iterator of all the keys optionally matching
-   * the specified filter.
-   * @param filter
-   */
-  keys(filter?: string): Promise<QueuedIterator<string>>;
-}
-
-export interface KV extends RoKV {
-  /**
-   * Creates a new entry ensuring that the entry does not exist (or
-   * the current version is deleted or the key is purged)
-   * If the entry already exists, this operation fails.
-   * @param k
-   * @param data
-   */
-  create(k: string, data: Payload): Promise<number>;
-
-  /**
-   * Updates the existing entry provided that the previous sequence
-   * for the Kv is at the specified version. This ensures that the
-   * KV has not been modified prior to the update.
-   * @param k
-   * @param data
-   * @param version
-   */
-  update(k: string, data: Payload, version: number): Promise<number>;
-
-  /**
-   * Sets or updates the value stored under the specified key.
-   * @param k
-   * @param data
-   * @param opts
-   */
-  put(
-    k: string,
-    data: Payload,
-    opts?: Partial<KvPutOptions>,
-  ): Promise<number>;
-
-  /**
-   * Deletes the entry stored under the specified key.
-   * Deletes are soft-deletes. The server will add a new
-   * entry marked by a "DEL" operation.
-   * Note that if the KV was created with an underlying limit
-   * (such as a TTL on keys) it is possible for
-   * a key or the soft delete marker to be removed without
-   * additional notification on a watch.
-   * @param k
-   * @param opts
-   */
-  delete(k: string, opts?: Partial<KvDeleteOptions>): Promise<void>;
-
-  /**
-   * Deletes and purges the specified key and any value
-   * history.
-   * @param k
-   * @param opts
-   */
-  purge(k: string, opts?: Partial<KvDeleteOptions>): Promise<void>;
-
-  /**
-   * Destroys the underlying stream used by the KV. This
-   * effectively deletes all data stored under the KV.
-   */
-  destroy(): Promise<boolean>;
-}
-
-export interface KvPutOptions {
-  /**
-   * If set the KV must be at the current sequence or the
-   * put will fail.
-   */
-  previousSeq: number;
-}
-
-export interface KvDeleteOptions {
-  /**
-   * If set the KV must be at the current sequence or the
-   * put will fail.
-   */
-  previousSeq: number;
-}
-
-export type ObjectStoreLink = {
-  /**
-   * name of object store storing the data
-   */
-  bucket: string;
-  /**
-   * link to single object, when empty this means the whole store
-   */
-  name?: string;
-};
-export type ObjectStoreMetaOptions = {
-  /**
-   * If set, the object is a reference to another entry.
-   */
-  link?: ObjectStoreLink;
-  /**
-   * The maximum size in bytes for each chunk.
-   * Note that if the size exceeds the maximum size of a stream
-   * entry, the number will be clamped to the streams maximum.
-   */
-  max_chunk_size?: number;
-};
-export type ObjectStoreMeta = {
-  name: string;
-  description?: string;
-  headers?: MsgHdrs;
-  options?: ObjectStoreMetaOptions;
-  metadata?: Record<string, string>;
-};
-
-export interface ObjectInfo extends ObjectStoreMeta {
-  /**
-   * The name of the bucket where the object is stored.
-   */
-  bucket: string;
-  /**
-   * The current ID of the entries holding the data for the object.
-   */
-  nuid: string;
-  /**
-   * The size in bytes of the object.
-   */
-  size: number;
-  /**
-   * The number of entries storing the object.
-   */
-  chunks: number;
-  /**
-   * A cryptographic checksum of the data as a whole.
-   */
-  digest: string;
-  /**
-   * True if the object was deleted.
-   */
-  deleted: boolean;
-  /**
-   * An UTC timestamp
-   */
-  mtime: string;
-  /**
-   * The revision number for the entry
-   */
-  revision: number;
-}
-
-/**
- * A link reference
- */
-export interface ObjectLink {
-  /**
-   * The object store the source data
-   */
-  bucket: string;
-  /**
-   * The name of the entry holding the data. If not
-   * set it is a complete object store reference.
-   */
-  name?: string;
-}
-
-export type ObjectStoreStatus = {
-  /**
-   * The bucket name
-   */
-  bucket: string;
-  /**
-   * the description associated with the object store.
-   */
-  description: string;
-  /**
-   * The time to live for entries in the object store in nanoseconds.
-   * Convert to millis using the `millis()` function.
-   */
-  ttl: Nanos;
-  /**
-   * The object store's underlying stream storage type.
-   */
-  storage: StorageType;
-  /**
-   * The number of replicas associated with this object store.
-   */
-  replicas: number;
-  /**
-   * Set to true if the object store is sealed and will reject edits.
-   */
-  sealed: boolean;
-  /**
-   * The size in bytes that the object store occupies.
-   */
-  size: number;
-  /**
-   * The underlying storage for the object store. Currently, this always
-   * returns "JetStream".
-   */
-  backingStore: string;
-  /**
-   * The StreamInfo backing up the ObjectStore
-   */
-  streamInfo: StreamInfo;
-  /**
-   * Metadata the object store. Note that
-   * keys starting with `_nats` are reserved. This feature only supported on servers
-   * 2.10.x and better.
-   */
-  metadata?: Record<string, string> | undefined;
-  /**
-   * Compression level of the stream. This feature is only supported in
-   * servers 2.10.x and better.
-   */
-  compression: boolean;
-};
-/**
- * @deprecated {@link ObjectStoreStatus}
- */
-export type ObjectStoreInfo = ObjectStoreStatus;
-export type ObjectStoreOptions = {
-  /**
-   * A description for the object store
-   */
-  description?: string;
-  /**
-   * The time to live for entries in the object store specified
-   * as nanoseconds. Use the `nanos()` function to convert millis to
-   * nanos.
-   */
-  ttl?: Nanos;
-  /**
-   * The underlying stream storage type for the object store.
-   */
-  storage: StorageType;
-  /**
-   * The number of replicas to create.
-   */
-  replicas: number;
-  /**
-   * The maximum amount of data that the object store should store in bytes.
-   */
-  "max_bytes": number;
-  /**
-   * Placement hints for the underlying object store stream
-   */
-  placement: Placement; /**
-   * Metadata field to store additional information about the stream. Note that
-   * keys starting with `_nats` are reserved. This feature only supported on servers
-   * 2.10.x and better.
-   */
-  metadata?: Record<string, string>;
-  /**
-   * Sets the compression level of the stream. This feature is only supported in
-   * servers 2.10.x and better.
-   */
-  compression?: boolean;
-};
-/**
- * An object that allows reading the object stored under a specified name.
- */
-export type ObjectResult = {
-  /**
-   * The info of the object that was retrieved.
-   */
-  info: ObjectInfo;
-  /**
-   * The readable stream where you can read the data.
-   */
-  data: ReadableStream<Uint8Array>;
-  /**
-   * A promise that will resolve to an error if the readable stream failed
-   * to process the entire response. Should be checked when the readable stream
-   * has finished yielding data.
-   */
-  error: Promise<Error | null>;
-};
-export type ObjectStorePutOpts = {
-  /**
-   * maximum number of millis for the put requests to succeed
-   */
-  timeout?: number;
-  /**
-   * If set the ObjectStore must be at the current sequence or the
-   * put will fail. Note the sequence accounts where the metadata
-   * for the entry is stored.
-   */
-  previousRevision?: number;
-};
-
-export interface ObjectStore {
-  /**
-   * Returns the ObjectInfo of the named entry. Or null if the
-   * entry doesn't exist.
-   * @param name
-   */
-  info(name: string): Promise<ObjectInfo | null>;
-  /**
-   * Returns a list of the entries in the ObjectStore
-   */
-  list(): Promise<ObjectInfo[]>;
-  /**
-   * Returns an object you can use for reading the data from the
-   * named stored object or null if the entry doesn't exist.
-   * @param name
-   */
-  get(name: string): Promise<ObjectResult | null>;
-  /**
-   * Returns the data stored for the named entry.
-   * @param name
-   */
-  getBlob(name: string): Promise<Uint8Array | null>;
-  /**
-   * Adds an object to the store with the specified meta
-   * and using the specified ReadableStream to stream the data.
-   * @param meta
-   * @param rs
-   * @param opts
-   */
-  put(
-    meta: ObjectStoreMeta,
-    rs: ReadableStream<Uint8Array>,
-    opts?: ObjectStorePutOpts,
-  ): Promise<ObjectInfo>;
-  /**
-   * Puts the specified bytes into the store with the specified meta.
-   * @param meta
-   * @param data
-   * @param opts
-   */
-  putBlob(
-    meta: ObjectStoreMeta,
-    data: Uint8Array | null,
-    opts?: ObjectStorePutOpts,
-  ): Promise<ObjectInfo>;
-  /**
-   * Deletes the specified entry from the object store.
-   * @param name
-   */
-  delete(name: string): Promise<PurgeResponse>;
-
-  /**
-   * Adds a link to another object in the same store or a different one.
-   * Note that links of links are rejected.
-   * object.
-   * @param name
-   * @param meta
-   */
-  link(name: string, meta: ObjectInfo): Promise<ObjectInfo>;
-
-  /**
-   * Add a link to another object store
-   * @param name
-   * @param bucket
-   */
-  linkStore(name: string, bucket: ObjectStore): Promise<ObjectInfo>;
-  /**
-   * Watch an object store and receive updates of modifications via
-   * an iterator.
-   * @param opts
-   */
-  watch(
-    opts?: Partial<
-      {
-        ignoreDeletes?: boolean;
-        includeHistory?: boolean;
-      }
-    >,
-  ): Promise<QueuedIterator<ObjectInfo | null>>;
-  /**
-   * Seals the object store preventing any further modifications.
-   */
-  seal(): Promise<ObjectStoreStatus>;
-  /**
-   * Returns the runtime status of the object store.
-   * @param opts
-   */
-  status(opts?: Partial<StreamInfoRequestOptions>): Promise<ObjectStoreStatus>;
-
-  /**
-   * Update the metadata for an object. If the name is modified, the object
-   * is effectively renamed and will only be accessible by its new name.
-   * @param name
-   * @param meta
-   */
-  update(name: string, meta: Partial<ObjectStoreMeta>): Promise<PubAck>;
-  /**
-   * Destroys the object store and all its entries.
-   */
-  destroy(): Promise<boolean>;
-}
-
 export enum DirectMsgHeaders {
   Stream = "Nats-Stream",
   Sequence = "Nats-Sequence",
@@ -1619,14 +1267,12 @@ export enum RepublishHeaders {
   Size = "Nats-Msg-Size",
 }
 
-export const kvPrefix = "KV_";
-
 export interface JetStreamSubscriptionInfoable {
   info: JetStreamSubscriptionInfo | null;
 }
 
 export interface JetStreamSubscriptionInfo extends ConsumerOpts {
-  api: BaseApiClient;
+  api: BaseClient;
   last: ConsumerInfo;
   attached: boolean;
   deliver: string;
@@ -1701,23 +1347,23 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return o;
   }
 
-  description(description: string) {
+  description(description: string): ConsumerOptsBuilder {
     this.config.description = description;
     return this;
   }
 
-  deliverTo(subject: string) {
+  deliverTo(subject: string): ConsumerOptsBuilder {
     this.config.deliver_subject = subject;
     return this;
   }
 
-  durable(name: string) {
+  durable(name: string): ConsumerOptsBuilder {
     validateDurableName(name);
     this.config.durable_name = name;
     return this;
   }
 
-  startSequence(seq: number) {
+  startSequence(seq: number): ConsumerOptsBuilder {
     if (seq <= 0) {
       throw new Error("sequence must be greater than 0");
     }
@@ -1726,84 +1372,84 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return this;
   }
 
-  startTime(time: Date) {
+  startTime(time: Date): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.StartTime;
     this.config.opt_start_time = time.toISOString();
     return this;
   }
 
-  deliverAll() {
+  deliverAll(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.All;
     return this;
   }
 
-  deliverLastPerSubject() {
+  deliverLastPerSubject(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.LastPerSubject;
     return this;
   }
 
-  deliverLast() {
+  deliverLast(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.Last;
     return this;
   }
 
-  deliverNew() {
+  deliverNew(): ConsumerOptsBuilder {
     this.config.deliver_policy = DeliverPolicy.New;
     return this;
   }
 
-  startAtTimeDelta(millis: number) {
+  startAtTimeDelta(millis: number): ConsumerOptsBuilder {
     this.startTime(new Date(Date.now() - millis));
     return this;
   }
 
-  headersOnly() {
+  headersOnly(): ConsumerOptsBuilder {
     this.config.headers_only = true;
     return this;
   }
 
-  ackNone() {
+  ackNone(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.None;
     return this;
   }
 
-  ackAll() {
+  ackAll(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.All;
     return this;
   }
 
-  ackExplicit() {
+  ackExplicit(): ConsumerOptsBuilder {
     this.config.ack_policy = AckPolicy.Explicit;
     return this;
   }
 
-  ackWait(millis: number) {
+  ackWait(millis: number): ConsumerOptsBuilder {
     this.config.ack_wait = nanos(millis);
     return this;
   }
 
-  maxDeliver(max: number) {
+  maxDeliver(max: number): ConsumerOptsBuilder {
     this.config.max_deliver = max;
     return this;
   }
 
-  filterSubject(s: string) {
+  filterSubject(s: string): ConsumerOptsBuilder {
     this.filters = this.filters || [];
     this.filters.push(s);
     return this;
   }
 
-  replayInstantly() {
+  replayInstantly(): ConsumerOptsBuilder {
     this.config.replay_policy = ReplayPolicy.Instant;
     return this;
   }
 
-  replayOriginal() {
+  replayOriginal(): ConsumerOptsBuilder {
     this.config.replay_policy = ReplayPolicy.Original;
     return this;
   }
 
-  sample(n: number) {
+  sample(n: number): ConsumerOptsBuilder {
     n = Math.trunc(n);
     if (n < 0 || n > 100) {
       throw new Error(`value must be between 0-100`);
@@ -1812,100 +1458,100 @@ export class ConsumerOptsBuilderImpl implements ConsumerOptsBuilder {
     return this;
   }
 
-  limit(n: number) {
+  limit(n: number): ConsumerOptsBuilder {
     this.config.rate_limit_bps = n;
     return this;
   }
 
-  maxWaiting(max: number) {
+  maxWaiting(max: number): ConsumerOptsBuilder {
     this.config.max_waiting = max;
     return this;
   }
 
-  maxAckPending(max: number) {
+  maxAckPending(max: number): ConsumerOptsBuilder {
     this.config.max_ack_pending = max;
     return this;
   }
 
-  idleHeartbeat(millis: number) {
+  idleHeartbeat(millis: number): ConsumerOptsBuilder {
     this.config.idle_heartbeat = nanos(millis);
     return this;
   }
 
-  flowControl() {
+  flowControl(): ConsumerOptsBuilder {
     this.config.flow_control = true;
     return this;
   }
 
-  deliverGroup(name: string) {
+  deliverGroup(name: string): ConsumerOptsBuilder {
     this.queue(name);
     return this;
   }
 
-  manualAck() {
+  manualAck(): ConsumerOptsBuilder {
     this.mack = true;
     return this;
   }
 
-  maxMessages(max: number) {
+  maxMessages(max: number): ConsumerOptsBuilder {
     this.max = max;
     return this;
   }
 
-  callback(fn: JsMsgCallback) {
+  callback(fn: JsMsgCallback): ConsumerOptsBuilder {
     this.callbackFn = fn;
     return this;
   }
 
-  queue(n: string) {
+  queue(n: string): ConsumerOptsBuilder {
     this.qname = n;
     this.config.deliver_group = n;
     return this;
   }
 
-  orderedConsumer() {
+  orderedConsumer(): ConsumerOptsBuilder {
     this.ordered = true;
     return this;
   }
 
-  bind(stream: string, durable: string) {
+  bind(stream: string, durable: string): ConsumerOptsBuilder {
     this.stream = stream;
     this.config.durable_name = durable;
     this.isBind = true;
     return this;
   }
 
-  bindStream(stream: string) {
+  bindStream(stream: string): ConsumerOptsBuilder {
     this.stream = stream;
     return this;
   }
 
-  inactiveEphemeralThreshold(millis: number) {
+  inactiveEphemeralThreshold(millis: number): ConsumerOptsBuilder {
     this.config.inactive_threshold = nanos(millis);
     return this;
   }
 
-  maxPullBatch(n: number) {
+  maxPullBatch(n: number): ConsumerOptsBuilder {
     this.config.max_batch = n;
     return this;
   }
 
-  maxPullRequestExpires(millis: number) {
+  maxPullRequestExpires(millis: number): ConsumerOptsBuilder {
     this.config.max_expires = nanos(millis);
     return this;
   }
 
-  memory() {
+  memory(): ConsumerOptsBuilder {
     this.config.mem_storage = true;
     return this;
   }
 
-  numReplicas(n: number) {
+  numReplicas(n: number): ConsumerOptsBuilder {
     this.config.num_replicas = n;
     return this;
   }
 
-  consumerName(n: string) {
+  consumerName(n: string): ConsumerOptsBuilder {
     this.config.name = n;
     return this;
   }

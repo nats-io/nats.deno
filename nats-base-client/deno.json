@@ -1,0 +1,16 @@
+{
+  "name": "@nats-io/nats-core",
+  "version": "3.0.0-14",
+  "exports": {
+    ".": "./mod.ts",
+    "./internal": "./internal_mod.ts"
+  },
+  "publish": {
+    "include": [
+      "./**/*"
+    ]
+  },
+  "imports": {
+    "jsr:@nats-io/nkeys": "jsr:@nats-io/nkeys@1.1.1-1"
+  }
+}

@@ -12,8 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Deferred, deferred } from "./util.ts";
-import { ErrorCode, NatsError, QueuedIterator } from "./core.ts";
+import type { Deferred } from "./util.ts";
+import { deferred } from "./util.ts";
+import type { QueuedIterator } from "./core.ts";
+import { ErrorCode, NatsError } from "./core.ts";
 
 export type IngestionFilterFnResult = { ingest: boolean; protocol: boolean };
 
@@ -83,7 +85,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     this.yielding = false;
   }
 
-  [Symbol.asyncIterator]() {
+  [Symbol.asyncIterator](): AsyncIterator<T> {
     return this.iterate();
   }
 

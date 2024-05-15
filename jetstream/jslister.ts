@@ -12,39 +12,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BaseApiClient } from "./jsbaseclient_api.ts";
-import {
+import type { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import type {
   ApiPaged,
   ApiPagedRequest,
   ApiResponse,
   ConsumerListResponse,
   StreamListResponse,
 } from "./jsapi_types.ts";
-
-/**
- * An interface for listing. Returns a promise with typed list.
- */
-export interface Lister<T> {
-  [Symbol.asyncIterator](): AsyncIterator<T>;
-
-  next(): Promise<T[]>;
-}
-
-export type ListerFieldFilter<T> = (v: unknown) => T[];
+import type { Lister, ListerFieldFilter } from "./types.ts";
 
 export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
   err?: Error;
   offset: number;
   pageInfo: ApiPaged;
   subject: string;
-  jsm: BaseApiClient;
+  jsm: BaseApiClientImpl;
   filter: ListerFieldFilter<T>;
   payload: unknown;
 
   constructor(
     subject: string,
     filter: ListerFieldFilter<T>,
-    jsm: BaseApiClient,
+    jsm: BaseApiClientImpl,
     payload?: unknown,
   ) {
     if (!subject) {
@@ -85,8 +75,7 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
         return [];
       }
       this.offset += count;
-      const a = this.filter(r);
-      return a;
+      return this.filter(r);
     } catch (err) {
       this.err = err;
       throw err;
@@ -107,10 +96,9 @@ export class ListerImpl<T> implements Lister<T>, AsyncIterable<T> {
         // has to be a stream...
         return (r as StreamListResponse).streams?.length || 0;
     }
-    return 0;
   }
 
-  async *[Symbol.asyncIterator]() {
+  async *[Symbol.asyncIterator](): AsyncIterator<T> {
     let page = await this.next();
     while (page.length > 0) {
       for (const item of page) {

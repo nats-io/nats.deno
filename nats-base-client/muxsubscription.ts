@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 import { isRequestError } from "./msg.ts";
-import { createInbox, ErrorCode, Msg, NatsError, Request } from "./core.ts";
+import type { Msg, MsgCallback, Request } from "./core.ts";
+import { createInbox, ErrorCode, NatsError } from "./core.ts";
 
 export class MuxSubscription {
   baseInbox!: string;
@@ -82,7 +83,7 @@ export class MuxSubscription {
     return false;
   }
 
-  dispatcher() {
+  dispatcher(): MsgCallback<Msg> {
     return (err: NatsError | null, m: Msg) => {
       const token = this.getToken(m);
       if (token) {

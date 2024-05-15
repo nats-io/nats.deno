@@ -13,8 +13,11 @@
  * limitations under the License.
  */
 
-import { NatsServer, notCompatible } from "../../tests/helpers/mod.ts";
-import { AckPolicy, connect, JSONCodec } from "../../src/mod.ts";
+import { NatsServer, notCompatible } from "../../test_helpers/mod.ts";
+import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
+
+import { connect, JSONCodec } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+
 import {
   assertArrayIncludes,
   assertEquals,
@@ -22,16 +25,16 @@ import {
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import {
+  _setup,
   cleanup,
   jetstreamServerConf,
-  setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
+import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 Deno.test("streams - get", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
-  const js = nc.jetstream();
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
+  const js = jetstream(nc);
 
   await assertRejects(
     async () => {
@@ -41,7 +44,7 @@ Deno.test("streams - get", async () => {
     "stream not found",
   );
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({
     name: "another",
     subjects: ["a.>"],
@@ -66,7 +69,7 @@ Deno.test("streams - get", async () => {
 Deno.test("streams - mirrors", async () => {
   const cluster = await NatsServer.jetstreamCluster(3);
   const nc = await connect({ port: cluster[0].port });
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
 
   // create a stream in a different server in the cluster
   await jsm.streams.add({
@@ -90,7 +93,7 @@ Deno.test("streams - mirrors", async () => {
     },
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const s = await js.streams.get("src");
   assertExists(s);
   assertEquals(s.name, "src");
@@ -116,8 +119,8 @@ Deno.test("streams - mirrors", async () => {
 });
 
 Deno.test("streams - consumers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
-  const js = nc.jetstream();
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
+  const js = jetstream(nc);
 
   // add a stream and a message
   const { stream, subj } = await initStream(nc);
@@ -142,7 +145,7 @@ Deno.test("streams - consumers", async () => {
     "consumer not found",
   );
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(s.name, {
     durable_name: "a",
     ack_policy: AckPolicy.Explicit,
@@ -157,8 +160,8 @@ Deno.test("streams - consumers", async () => {
 });
 
 Deno.test("streams - delete message", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
-  const js = nc.jetstream();
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
+  const js = jetstream(nc);
 
   // add a stream and a message
   const { stream, subj } = await initStream(nc);
@@ -189,12 +192,12 @@ Deno.test("streams - delete message", async () => {
 });
 
 Deno.test("streams - first_seq", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   const si = await jsm.streams.add({
     name: "test",
     first_seq: 50,
@@ -202,18 +205,18 @@ Deno.test("streams - first_seq", async () => {
   });
   assertEquals(si.config.first_seq, 50);
 
-  const pa = await nc.jetstream().publish("foo");
+  const pa = await jetstream(nc).publish("foo");
   assertEquals(pa.seq, 50);
 
   await cleanup(ns, nc);
 });
 
 Deno.test("streams - first_seq fails if wrong server", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const nci = nc as NatsConnectionImpl;
   nci.features.update("2.9.2");
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await assertRejects(
     async () => {
       await jsm.streams.add({

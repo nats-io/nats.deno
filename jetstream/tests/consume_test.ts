@@ -14,41 +14,45 @@
  */
 
 import {
+  _setup,
   cleanup,
   jetstreamServerConf,
   NatsServer,
-  setup,
-} from "../../tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 import {
   assert,
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
-import { AckPolicy, DeliverPolicy } from "../jsapi_types.ts";
 import {
+  connect,
   deadline,
   deferred,
   delay,
   nanos,
-} from "../../nats-base-client/util.ts";
+  syncIterator,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import type { PullConsumerMessagesImpl } from "../consumer.ts";
 import {
+  AckPolicy,
   ConsumerEvents,
-  ConsumerStatus,
-  PullConsumerMessagesImpl,
-} from "../consumer.ts";
-import { syncIterator } from "../../nats-base-client/core.ts";
-import { connect } from "../../src/connect.ts";
+  DeliverPolicy,
+  jetstream,
+  jetstreamManager,
+} from "../mod.ts";
+
+import type { ConsumerStatus } from "../mod.ts";
 
 Deno.test("consumers - consume", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
 
   const count = 1000;
   const { stream, consumer } = await setupStreamAndConsumer(nc, count);
 
-  const js = nc.jetstream({ timeout: 30_000 });
+  const js = jetstream(nc, { timeout: 30_000 });
   const c = await js.consumers.get(stream, consumer);
   const ci = await c.info();
   assertEquals(ci.num_pending, count);
@@ -71,9 +75,9 @@ Deno.test("consumers - consume", async () => {
 });
 
 Deno.test("consumers - consume callback rejects iter", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const { stream, consumer } = await setupStreamAndConsumer(nc, 0);
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, consumer);
   const iter = await c.consume({
     expires: 5_000,
@@ -101,13 +105,13 @@ Deno.test("consume - heartbeats", async () => {
   const servers = await NatsServer.setupDataConnCluster(4);
   const nc = await connect({ port: servers[0].port });
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "a",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, "a");
   const iter = await c.consume({
     max_messages: 100,
@@ -151,15 +155,15 @@ Deno.test("consume - heartbeats", async () => {
 });
 
 Deno.test("consume - deleted consumer", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const { stream } = await initStream(nc);
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: "a",
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, "a");
   const iter = await c.consume({
     expires: 3000,
@@ -201,17 +205,17 @@ Deno.test("consume - deleted consumer", async () => {
 });
 
 Deno.test("consume - sub leaks", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const { stream } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: stream,
     ack_policy: AckPolicy.Explicit,
   });
   //@ts-ignore: test
   assertEquals(nc.protocol.subscriptions.size(), 1);
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, stream);
   const iter = await c.consume({ expires: 30000 });
   const done = (async () => {
@@ -230,16 +234,16 @@ Deno.test("consume - sub leaks", async () => {
 });
 
 Deno.test("consume - drain", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const { stream } = await initStream(nc);
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.consumers.add(stream, {
     durable_name: stream,
     ack_policy: AckPolicy.Explicit,
   });
   //@ts-ignore: test
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get(stream, stream);
   const iter = await c.consume({ expires: 30000 });
   setTimeout(() => {
@@ -257,11 +261,11 @@ Deno.test("consume - drain", async () => {
 });
 
 Deno.test("consume - sync", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager();
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "messages", subjects: ["hello"] });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("hello");
   await js.publish("hello");
 
@@ -284,9 +288,9 @@ Deno.test("consume - sync", async () => {
 });
 
 Deno.test("consume - stream not found request abort", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   await jsm.consumers.add("A", {
@@ -295,7 +299,7 @@ Deno.test("consume - stream not found request abort", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
   const iter = await c.consume({
     expires: 3000,
@@ -317,9 +321,9 @@ Deno.test("consume - stream not found request abort", async () => {
 });
 
 Deno.test("consume - consumer deleted request abort", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   await jsm.consumers.add("A", {
@@ -328,7 +332,7 @@ Deno.test("consume - consumer deleted request abort", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
   const iter = await c.consume({
     expires: 3000,
@@ -353,9 +357,9 @@ Deno.test("consume - consumer deleted request abort", async () => {
 });
 
 Deno.test("consume - consumer not found request abort", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   await jsm.consumers.add("A", {
@@ -364,7 +368,7 @@ Deno.test("consume - consumer not found request abort", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
   await c.delete();
 
@@ -387,9 +391,9 @@ Deno.test("consume - consumer not found request abort", async () => {
 });
 
 Deno.test("consume - consumer bind", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
 
-  const jsm = await nc.jetstreamManager();
+  const jsm = await jetstreamManager(nc);
   await jsm.streams.add({ name: "A", subjects: ["a"] });
 
   await jsm.consumers.add("A", {
@@ -398,7 +402,7 @@ Deno.test("consume - consumer bind", async () => {
     ack_policy: AckPolicy.Explicit,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   const c = await js.consumers.get("A", "a");
   await c.delete();
 

@@ -15,20 +15,14 @@
 
 import { extend } from "./util.ts";
 import { defaultPort, getResolveFn } from "./transport.ts";
-import { createInbox, ServerInfo } from "./core.ts";
+import type { Authenticator, ConnectionOptions, ServerInfo } from "./core.ts";
+import { createInbox, DEFAULT_HOST, ErrorCode, NatsError } from "./core.ts";
 import {
   multiAuthenticator,
   noAuthFn,
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "./authenticator.ts";
-import {
-  Authenticator,
-  ConnectionOptions,
-  DEFAULT_HOST,
-  ErrorCode,
-  NatsError,
-} from "./core.ts";
 
 export const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
 export const DEFAULT_JITTER = 100;

@@ -12,29 +12,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { assertEquals, assertRejects, fail } from "jsr:@std/assert";
+import { AckPolicy, jetstream, jetstreamManager, StorageType } from "../mod.ts";
+
 import {
-  assertEquals,
-  assertRejects,
-  fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
-import {
-  AckPolicy,
   connect,
   createInbox,
   Empty,
-  Msg,
   nanos,
-  StorageType,
   StringCodec,
-} from "../../src/mod.ts";
-import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import type { Msg } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
+import type { JsMsgImpl } from "../jsmsg.ts";
+import { parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
+  _setup,
   cleanup,
   jetstreamServerConf,
-  setup,
-} from "../../tests/helpers/mod.ts";
-import { JetStreamManagerImpl } from "../jsm.ts";
-import { MsgImpl } from "../../nats-base-client/msg.ts";
+} from "../../test_helpers/mod.ts";
+import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"
@@ -144,8 +142,8 @@ Deno.test("jsmsg - acks", async () => {
 });
 
 Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -153,7 +151,7 @@ Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", { durable_name: "a" });
@@ -172,8 +170,8 @@ Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
 });
 
 Deno.test("jsmsg - explicit consumer ackAck", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -181,7 +179,7 @@ Deno.test("jsmsg - explicit consumer ackAck", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", {
@@ -197,8 +195,8 @@ Deno.test("jsmsg - explicit consumer ackAck", async () => {
 });
 
 Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
     subjects: ["a.>"],
@@ -206,7 +204,7 @@ Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
     allow_direct: true,
   });
 
-  const js = nc.jetstream();
+  const js = jetstream(nc);
   await js.publish("a.a");
 
   await jsm.consumers.add("A", { durable_name: "a" });

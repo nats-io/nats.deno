@@ -73,7 +73,7 @@ export class Features {
   /**
    * Removes all disabled entries
    */
-  resetDisabled() {
+  resetDisabled(): void {
     this.disabled.length = 0;
     this.update(this.server);
   }
@@ -82,16 +82,16 @@ export class Features {
    * Disables a particular feature.
    * @param f
    */
-  disable(f: Feature) {
+  disable(f: Feature): void {
     this.disabled.push(f);
     this.update(this.server);
   }
 
-  isDisabled(f: Feature) {
+  isDisabled(f: Feature): boolean {
     return this.disabled.indexOf(f) !== -1;
   }
 
-  update(v: SemVer | string) {
+  update(v: SemVer | string): void {
     if (typeof v === "string") {
       v = parseSemVer(v);
     }
@@ -122,7 +122,7 @@ export class Features {
    * @param f
    * @param requires
    */
-  set(f: Feature, requires: string) {
+  set(f: Feature, requires: string): void {
     this.features.set(f, {
       min: requires,
       ok: compare(this.server, parseSemVer(requires)) >= 0,

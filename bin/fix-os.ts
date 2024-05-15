@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
-import { ObjectStoreImpl, ServerObjectInfo } from "../jetstream/objectstore.ts";
+import { ObjectStoreImpl, ServerObjectInfo } from "../os/objectstore.ts";
 import {
   connect,
   ConnectionOptions,

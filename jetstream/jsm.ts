@@ -13,43 +13,37 @@
  * limitations under the License.
  */
 
-import { BaseApiClient } from "./jsbaseclient_api.ts";
-import { StreamAPIImpl } from "./jsmstream_api.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import {
-  Advisory,
-  AdvisoryKind,
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
+import { DirectMsgHeaders } from "./types.ts";
+import type {
   DirectMsg,
-  DirectMsgHeaders,
   DirectStreamAPI,
-  JetStreamClient,
-  JetStreamManager,
-  StoredMsg,
-  StreamAPI,
-} from "./types.ts";
-import {
   JetStreamOptions,
+  StoredMsg,
+} from "./types.ts";
+import type {
+  Codec,
   Msg,
   MsgHdrs,
   NatsConnection,
   QueuedIterator,
-  RequestStrategy,
   ReviverFn,
-} from "../nats-base-client/core.ts";
+} from "jsr:@nats-io/nats-core@3.0.0-14";
 import {
-  AccountInfoResponse,
-  ApiResponse,
+  Empty,
+  JSONCodec,
+  QueuedIteratorImpl,
+  RequestStrategy,
+  TD,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type {
   DirectBatchOptions,
   DirectMsgRequest,
-  JetStreamAccountStats,
   LastForMsgRequest,
 } from "./jsapi_types.ts";
 import { checkJsError, validateStreamName } from "./jsutil.ts";
-import { Empty, TD } from "../nats-base-client/encoders.ts";
-import { Codec, JSONCodec } from "../nats-base-client/codec.ts";
 
-export class DirectStreamAPIImpl extends BaseApiClient
+export class DirectStreamAPIImpl extends BaseApiClientImpl
   implements DirectStreamAPI {
   constructor(nc: NatsConnection, opts?: JetStreamOptions) {
     super(nc, opts);
@@ -195,48 +189,5 @@ export class DirectMsgImpl implements DirectMsg {
 
   string(): string {
     return TD.decode(this.data);
-  }
-}
-
-export class JetStreamManagerImpl extends BaseApiClient
-  implements JetStreamManager {
-  streams: StreamAPI;
-  consumers: ConsumerAPI;
-  direct: DirectStreamAPI;
-  constructor(nc: NatsConnection, opts?: JetStreamOptions) {
-    super(nc, opts);
-    this.streams = new StreamAPIImpl(nc, opts);
-    this.consumers = new ConsumerAPIImpl(nc, opts);
-    this.direct = new DirectStreamAPIImpl(nc, opts);
-  }
-
-  async getAccountInfo(): Promise<JetStreamAccountStats> {
-    const r = await this._request(`${this.prefix}.INFO`);
-    return r as AccountInfoResponse;
-  }
-
-  jetstream(): JetStreamClient {
-    return this.nc.jetstream(this.getOptions());
-  }
-
-  advisories(): AsyncIterable<Advisory> {
-    const iter = new QueuedIteratorImpl<Advisory>();
-    this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
-      callback: (err, msg) => {
-        if (err) {
-          throw err;
-        }
-        try {
-          const d = this.parseJsResponse(msg) as ApiResponse;
-          const chunks = d.type.split(".");
-          const kind = chunks[chunks.length - 1];
-          iter.push({ kind: kind as AdvisoryKind, data: d });
-        } catch (err) {
-          iter.stop(err);
-        }
-      },
-    });
-
-    return iter;
   }
 }

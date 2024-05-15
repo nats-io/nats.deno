@@ -1,3 +1,2 @@
 export { connect } from "./connect.ts";
-export * from "../nats-base-client/mod.ts";
-export * from "../jetstream/mod.ts";
+export * from "jsr:@nats-io/nats-core@3.0.0-14";

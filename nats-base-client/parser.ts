@@ -15,7 +15,7 @@
  */
 import { DenoBuffer } from "./denobuffer.ts";
 import { TD } from "./encoders.ts";
-import { Dispatcher } from "./core.ts";
+import type { Dispatcher } from "./core.ts";
 
 export enum Kind {
   OK,

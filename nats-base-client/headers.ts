@@ -16,7 +16,8 @@
 // Heavily inspired by Golang's https://golang.org/src/net/http/header.go
 
 import { TD, TE } from "./encoders.ts";
-import { ErrorCode, Match, MsgHdrs, NatsError } from "./core.ts";
+import type { MsgHdrs } from "./core.ts";
+import { ErrorCode, Match, NatsError } from "./core.ts";
 
 // https://www.ietf.org/rfc/rfc822.txt
 // 3.1.2.  STRUCTURE OF HEADER FIELDS
@@ -82,7 +83,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     this.headers = new Map();
   }
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): IterableIterator<[string, string[]]> {
     return this.headers.entries();
   }
 
@@ -276,7 +277,7 @@ export class MsgHdrsImpl implements MsgHdrs {
     });
   }
 
-  get hasError() {
+  get hasError(): boolean {
     return this._code >= 300;
   }
 

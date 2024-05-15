@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The NATS Authors
+ * Copyright 2018-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,38 +13,35 @@
  * limitations under the License.
  */
 import { decode, Empty, encode, TE } from "./encoders.ts";
-import {
-  CR_LF,
-  CRLF,
-  getResolveFn,
-  newTransport,
-  Transport,
-} from "./transport.ts";
-import { Deferred, deferred, delay, extend, Timeout, timeout } from "./util.ts";
+import { CR_LF, CRLF, getResolveFn, newTransport } from "./transport.ts";
+import type { Transport } from "./transport.ts";
+import { deferred, delay, extend, timeout } from "./util.ts";
+import type { Deferred, Timeout } from "./util.ts";
 import { DataBuffer } from "./databuffer.ts";
-import { ServerImpl, Servers } from "./servers.ts";
-import {
+import { Servers } from "./servers.ts";
+import type { ServerImpl } from "./servers.ts";
+import type {
   DispatchedFn,
   IngestionFilterFn,
   IngestionFilterFnResult,
   ProtocolFilterFn,
-  QueuedIteratorImpl,
 } from "./queued_iterator.ts";
+import { QueuedIteratorImpl } from "./queued_iterator.ts";
 import type { MsgHdrsImpl } from "./headers.ts";
 import { MuxSubscription } from "./muxsubscription.ts";
-import { Heartbeat, PH } from "./heartbeats.ts";
-import { Kind, MsgArg, Parser, ParserEvent } from "./parser.ts";
+import { Heartbeat } from "./heartbeats.ts";
+import type { PH } from "./heartbeats.ts";
+import type { MsgArg, ParserEvent } from "./parser.ts";
+import { Kind, Parser } from "./parser.ts";
 import { MsgImpl } from "./msg.ts";
 import { Features, parseSemVer } from "./semver.ts";
-import {
+import { DebugEvents, ErrorCode, Events, NatsError } from "./core.ts";
+
+import type {
   Base,
   ConnectionOptions,
-  DebugEvents,
   Dispatcher,
-  ErrorCode,
-  Events,
   Msg,
-  NatsError,
   Payload,
   Publisher,
   PublishOptions,
@@ -56,6 +53,7 @@ import {
   Subscription,
   SubscriptionOptions,
 } from "./core.ts";
+
 import {
   DEFAULT_MAX_PING_OUT,
   DEFAULT_PING_INTERVAL,
@@ -691,7 +689,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     return h;
   }
 
-  static toError(s: string) {
+  static toError(s: string): NatsError {
     const t = s ? s.toLowerCase() : "";
     if (t.indexOf("permissions violation") !== -1) {
       const err = new NatsError(s, ErrorCode.PermissionsViolation);
@@ -964,7 +962,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
     }
   }
 
-  _subunsub(s: SubscriptionImpl) {
+  _subunsub(s: SubscriptionImpl): SubscriptionImpl {
     this._sub(s);
     if (s.max) {
       this.unsubscribe(s, s.max);

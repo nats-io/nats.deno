@@ -16,31 +16,23 @@
 import { deferred } from "./util.ts";
 import { ProtocolHandler, SubscriptionImpl } from "./protocol.ts";
 import { Empty } from "./encoders.ts";
-import { NatsError, ServiceClient } from "./types.ts";
+import { NatsError } from "./types.ts";
 
-import type { SemVer } from "./semver.ts";
-import { Features, parseSemVer } from "./semver.ts";
+import type { Features, SemVer } from "./semver.ts";
+import { parseSemVer } from "./semver.ts";
 
 import { parseOptions } from "./options.ts";
 import { QueuedIteratorImpl } from "./queued_iterator.ts";
-import {
-  RequestMany,
-  RequestManyOptionsInternal,
-  RequestOne,
-} from "./request.ts";
+import { RequestMany, RequestOne } from "./request.ts";
+
+import type { RequestManyOptionsInternal } from "./request.ts";
+
 import { isRequestError } from "./msg.ts";
-import { JetStreamManagerImpl } from "../jetstream/jsm.ts";
-import { JetStreamClientImpl } from "../jetstream/jsclient.ts";
-import { ServiceImpl } from "./service.ts";
-import { ServiceClientImpl } from "./serviceclient.ts";
-import { JetStreamClient, JetStreamManager } from "../jetstream/types.ts";
-import {
+import { createInbox, ErrorCode, RequestStrategy } from "./core.ts";
+
+import type {
   ConnectionOptions,
   Context,
-  createInbox,
-  ErrorCode,
-  JetStreamManagerOptions,
-  JetStreamOptions,
   Msg,
   NatsConnection,
   Payload,
@@ -48,11 +40,7 @@ import {
   QueuedIterator,
   RequestManyOptions,
   RequestOptions,
-  RequestStrategy,
   ServerInfo,
-  Service,
-  ServiceConfig,
-  ServicesAPI,
   Stats,
   Status,
   Subscription,
@@ -64,7 +52,6 @@ export class NatsConnectionImpl implements NatsConnection {
   protocol!: ProtocolHandler;
   draining: boolean;
   listeners: QueuedIterator<Status>[];
-  _services!: ServicesAPI;
 
   private constructor(opts: ConnectionOptions) {
     this.draining = false;
@@ -126,14 +113,14 @@ export class NatsConnectionImpl implements NatsConnection {
     this.protocol.publish(subject, data, options);
   }
 
-  publishMessage(msg: Msg) {
+  publishMessage(msg: Msg): void {
     return this.publish(msg.subject, msg.data, {
       reply: msg.reply,
       headers: msg.headers,
     });
   }
 
-  respondMessage(msg: Msg) {
+  respondMessage(msg: Msg): boolean {
     if (msg.reply) {
       this.publish(msg.reply, msg.data, {
         reply: msg.reply,
@@ -515,30 +502,6 @@ export class NatsConnectionImpl implements NatsConnection {
     };
   }
 
-  async jetstreamManager(
-    opts: JetStreamManagerOptions = {},
-  ): Promise<JetStreamManager> {
-    const adm = new JetStreamManagerImpl(this, opts);
-    if (opts.checkAPI !== false) {
-      try {
-        await adm.getAccountInfo();
-      } catch (err) {
-        const ne = err as NatsError;
-        if (ne.code === ErrorCode.NoResponders) {
-          ne.code = ErrorCode.JetStreamNotEnabled;
-        }
-        throw ne;
-      }
-    }
-    return adm;
-  }
-
-  jetstream(
-    opts: JetStreamOptions | JetStreamManagerOptions = {},
-  ): JetStreamClient {
-    return new JetStreamClientImpl(this, opts);
-  }
-
   getServerVersion(): SemVer | undefined {
     const info = this.info;
     return info ? parseSemVer(info.version) : undefined;
@@ -557,13 +520,6 @@ export class NatsConnectionImpl implements NatsConnection {
     return this.protocol.features;
   }
 
-  get services(): ServicesAPI {
-    if (!this._services) {
-      this._services = new ServicesFactory(this);
-    }
-    return this._services;
-  }
-
   reconnect(): Promise<void> {
     if (this.isClosed()) {
       return Promise.reject(
@@ -576,25 +532,5 @@ export class NatsConnectionImpl implements NatsConnection {
       );
     }
     return this.protocol.reconnect();
-  }
-}
-
-export class ServicesFactory implements ServicesAPI {
-  nc: NatsConnection;
-  constructor(nc: NatsConnection) {
-    this.nc = nc;
-  }
-
-  add(config: ServiceConfig): Promise<Service> {
-    try {
-      const s = new ServiceImpl(this.nc, config);
-      return s.start();
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  }
-
-  client(opts?: RequestManyOptions, prefix?: string): ServiceClient {
-    return new ServiceClientImpl(this.nc, opts, prefix);
   }
 }

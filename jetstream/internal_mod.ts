@@ -16,22 +16,47 @@ export { checkJsError, isFlowControlMsg, isHeartbeatMsg } from "./jsutil.ts";
 
 export {
   AdvisoryKind,
+  ConsumerDebugEvents,
+  ConsumerEvents,
   consumerOpts,
   DirectMsgHeaders,
   isConsumerOptsBuilder,
   JsHeaders,
-  KvWatchInclude,
   RepublishHeaders,
 } from "./types.ts";
 
+export {
+  jetstream,
+  JetStreamClientImpl,
+  jetstreamManager,
+  toJetStreamClient,
+} from "./jsclient.ts";
+
 export type {
+  AbortOnMissingResource,
   Advisory,
+  Bind,
   Closed,
+  ConsumeBytes,
+  ConsumeCallback,
+  ConsumeMessages,
+  ConsumeOptions,
+  Consumer,
+  ConsumerAPI,
+  ConsumerCallbackFn,
   ConsumerInfoable,
+  ConsumerMessages,
   ConsumerOpts,
   ConsumerOptsBuilder,
   Consumers,
+  ConsumerStatus,
   Destroyable,
+  DirectStreamAPI,
+  Expires,
+  FetchBytes,
+  FetchMessages,
+  FetchOptions,
+  IdleHeartbeat,
   JetStreamClient,
   JetStreamManager,
   JetStreamManagerOptions,
@@ -42,33 +67,20 @@ export type {
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
   JsMsgCallback,
-  KV,
-  KvCodec,
-  KvCodecs,
-  KvDeleteOptions,
-  KvEntry,
-  KvLimits,
-  KvOptions,
-  KvPutOptions,
-  KvStatus,
-  KvWatchOptions,
-  ObjectInfo,
-  ObjectResult,
-  ObjectStore,
-  ObjectStoreLink,
-  ObjectStoreMeta,
-  ObjectStoreMetaOptions,
-  ObjectStoreOptions,
-  ObjectStorePutOpts,
-  ObjectStoreStatus,
+  Lister,
+  ListerFieldFilter,
+  MaxBytes,
+  MaxMessages,
+  NextOptions,
+  OrderedConsumerOptions,
   PubAck,
   Pullable,
-  RoKV,
   StoredMsg,
   Stream,
   StreamAPI,
   Streams,
-  Views,
+  ThresholdBytes,
+  ThresholdMessages,
 } from "./types.ts";
 
 export type { StreamNames } from "./jsbaseclient_api.ts";
@@ -102,6 +114,7 @@ export type {
   StreamConfig,
   StreamConsumerLimits,
   StreamInfo,
+  StreamListResponse,
   StreamSource,
   StreamSourceInfo,
   StreamState,
@@ -110,42 +123,18 @@ export type {
 } from "./jsapi_types.ts";
 
 export type { JsMsg } from "./jsmsg.ts";
-export type { Lister } from "./jslister.ts";
 
 export {
   AckPolicy,
   DeliverPolicy,
   DiscardPolicy,
+  PubHeaders,
   ReplayPolicy,
   RetentionPolicy,
   StorageType,
   StoreCompression,
 } from "./jsapi_types.ts";
 
-export type { ConsumerAPI } from "./jsmconsumer_api.ts";
 export type { DeliveryInfo, StreamInfoRequestOptions } from "./jsapi_types.ts";
 
-export type {
-  AbortOnMissingResource,
-  Bind,
-  ConsumeBytes,
-  ConsumeCallback,
-  ConsumeMessages,
-  ConsumeOptions,
-  Consumer,
-  ConsumerCallbackFn,
-  ConsumerMessages,
-  ConsumerStatus,
-  Expires,
-  FetchBytes,
-  FetchMessages,
-  FetchOptions,
-  IdleHeartbeat,
-  MaxBytes,
-  MaxMessages,
-  NextOptions,
-  OrderedConsumerOptions,
-  ThresholdBytes,
-  ThresholdMessages,
-} from "./consumer.ts";
-export { ConsumerDebugEvents, ConsumerEvents } from "./consumer.ts";
+export { ListerImpl } from "./jslister.ts";

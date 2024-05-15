@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-import { Empty, NatsError } from "../nats-base-client/types.ts";
-import { BaseApiClient } from "./jsbaseclient_api.ts";
+import { BaseApiClientImpl } from "./jsbaseclient_api.ts";
 import {
   checkJsError,
   isFlowControlMsg,
@@ -25,131 +24,183 @@ import {
   validateDurableName,
   validateStreamName,
 } from "./jsutil.ts";
-import { ConsumerAPI, ConsumerAPIImpl } from "./jsmconsumer_api.ts";
-import { JsMsg, JsMsgImpl, toJsMsg } from "./jsmsg.ts";
-import {
-  MsgAdapter,
-  TypedSubscription,
-  TypedSubscriptionOptions,
-} from "../nats-base-client/typedsub.ts";
-import {
-  IngestionFilterFn,
-  IngestionFilterFnResult,
-  QueuedIteratorImpl,
-} from "../nats-base-client/queued_iterator.ts";
+import { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
+import { toJsMsg } from "./jsmsg.ts";
+import type { JsMsg, JsMsgImpl } from "./jsmsg.ts";
 import {
   delay,
+  Empty,
   millis,
   nanos,
-  Timeout,
+  NatsError,
+  QueuedIteratorImpl,
   timeout,
-} from "../nats-base-client/util.ts";
-import { headers } from "../nats-base-client/headers.ts";
-import { Bucket } from "./kv.ts";
-import { Feature } from "../nats-base-client/semver.ts";
-import { ObjectStoreImpl } from "./objectstore.ts";
-import { IdleHeartbeatMonitor } from "../nats-base-client/idleheartbeat_monitor.ts";
+  TypedSubscription,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
+import type {
+  IngestionFilterFn,
+  IngestionFilterFnResult,
+  MsgAdapter,
+  Timeout,
+  TypedSubscriptionOptions,
+} from "jsr:@nats-io/nats-core@3.0.0-14";
+
 import { ConsumersImpl, StreamAPIImpl, StreamsImpl } from "./jsmstream_api.ts";
-import {
+import { consumerOpts, isConsumerOptsBuilder, JsHeaders } from "./types.ts";
+
+import type {
+  Advisory,
+  AdvisoryKind,
+  BaseClient,
+  ConsumerAPI,
   ConsumerInfoable,
   ConsumerOpts,
-  consumerOpts,
   ConsumerOptsBuilder,
   Consumers,
   Destroyable,
-  isConsumerOptsBuilder,
+  DirectStreamAPI,
   JetStreamClient,
   JetStreamManager,
+  JetStreamManagerOptions,
+  JetStreamOptions,
   JetStreamPublishOptions,
   JetStreamPullSubscription,
   JetStreamSubscription,
   JetStreamSubscriptionInfo,
   JetStreamSubscriptionInfoable,
   JetStreamSubscriptionOptions,
-  JsHeaders,
-  KV,
-  KvOptions,
-  ObjectStore,
-  ObjectStoreOptions,
   PubAck,
   Pullable,
+  StreamAPI,
   Streams,
-  Views,
 } from "./types.ts";
 import {
   createInbox,
   ErrorCode,
+  Feature,
+  headers,
+  IdleHeartbeatMonitor,
   isNatsError,
-  JetStreamManagerOptions,
-  JetStreamOptions,
+  nuid,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+
+import type {
   Msg,
   NatsConnection,
   Payload,
   QueuedIterator,
   RequestOptions,
-} from "../nats-base-client/core.ts";
-import { SubscriptionImpl } from "../nats-base-client/protocol.ts";
+  SubscriptionImpl,
+} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   AckPolicy,
+  DeliverPolicy,
+  PubHeaders,
+  ReplayPolicy,
+} from "./jsapi_types.ts";
+import type {
+  AccountInfoResponse,
+  ApiResponse,
   ConsumerConfig,
   ConsumerInfo,
   CreateConsumerRequest,
-  DeliverPolicy,
+  JetStreamAccountStats,
   PullOptions,
-  ReplayPolicy,
 } from "./jsapi_types.ts";
-import { nuid } from "../nats-base-client/nuid.ts";
+import { DirectStreamAPIImpl } from "./jsm.ts";
 
-export enum PubHeaders {
-  MsgIdHdr = "Nats-Msg-Id",
-  ExpectedStreamHdr = "Nats-Expected-Stream",
-  ExpectedLastSeqHdr = "Nats-Expected-Last-Sequence",
-  ExpectedLastMsgIdHdr = "Nats-Expected-Last-Msg-Id",
-  ExpectedLastSubjectSequenceHdr = "Nats-Expected-Last-Subject-Sequence",
+export function toJetStreamClient(
+  nc: NatsConnection | JetStreamClient,
+): JetStreamClient {
+  //@ts-ignore: see if we have a nc
+  if (typeof nc.nc === "undefined") {
+    return jetstream(nc as NatsConnection);
+  }
+  return nc as JetStreamClient;
 }
 
-class ViewsImpl implements Views {
-  js: JetStreamClientImpl;
-  constructor(js: JetStreamClientImpl) {
-    this.js = js;
-  }
-  kv(name: string, opts: Partial<KvOptions> = {}): Promise<KV> {
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_KV);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`kv is only supported on servers ${min} or better`),
-      );
-    }
-    if (opts.bindOnly) {
-      return Bucket.bind(this.js, name, opts);
-    }
+/**
+ * Returns a {@link JetStreamClient} supported by the specified NatsConnection
+ * @param nc
+ * @param opts
+ */
+export function jetstream(
+  nc: NatsConnection,
+  opts: JetStreamManagerOptions = {},
+): JetStreamClient {
+  return new JetStreamClientImpl(nc, opts);
+}
 
-    return Bucket.create(this.js, name, opts);
+/**
+ * Returns a {@link JetStreamManager} supported by the specified NatsConnection
+ * @param nc
+ * @param opts
+ */
+export async function jetstreamManager(
+  nc: NatsConnection,
+  opts: JetStreamOptions | JetStreamManagerOptions = {},
+): Promise<JetStreamManager> {
+  const adm = new JetStreamManagerImpl(nc, opts);
+  if ((opts as JetStreamManagerOptions).checkAPI !== false) {
+    try {
+      await adm.getAccountInfo();
+    } catch (err) {
+      const ne = err as NatsError;
+      if (ne.code === ErrorCode.NoResponders) {
+        ne.code = ErrorCode.JetStreamNotEnabled;
+      }
+      throw ne;
+    }
   }
-  os(
-    name: string,
-    opts: Partial<ObjectStoreOptions> = {},
-  ): Promise<ObjectStore> {
-    if (typeof crypto?.subtle?.digest !== "function") {
-      return Promise.reject(
-        new Error(
-          "objectstore: unable to calculate hashes - crypto.subtle.digest with sha256 support is required",
-        ),
-      );
-    }
-    const jsi = this.js as JetStreamClientImpl;
-    const { ok, min } = jsi.nc.features.get(Feature.JS_OBJECTSTORE);
-    if (!ok) {
-      return Promise.reject(
-        new Error(`objectstore is only supported on servers ${min} or better`),
-      );
-    }
-    return ObjectStoreImpl.create(this.js, name, opts);
+  return adm;
+}
+
+export class JetStreamManagerImpl extends BaseApiClientImpl
+  implements JetStreamManager {
+  streams: StreamAPI;
+  consumers: ConsumerAPI;
+  direct: DirectStreamAPI;
+
+  constructor(nc: NatsConnection, opts?: JetStreamOptions) {
+    super(nc, opts);
+    this.streams = new StreamAPIImpl(nc, opts);
+    this.consumers = new ConsumerAPIImpl(nc, opts);
+    this.direct = new DirectStreamAPIImpl(nc, opts);
+  }
+
+  async getAccountInfo(): Promise<JetStreamAccountStats> {
+    const r = await this._request(`${this.prefix}.INFO`);
+    return r as AccountInfoResponse;
+  }
+
+  jetstream(): JetStreamClient {
+    return jetstream(this.nc, this.getOptions());
+  }
+
+  advisories(): AsyncIterable<Advisory> {
+    const iter = new QueuedIteratorImpl<Advisory>();
+    this.nc.subscribe(`$JS.EVENT.ADVISORY.>`, {
+      callback: (err, msg) => {
+        if (err) {
+          throw err;
+        }
+        try {
+          const d = this.parseJsResponse(msg) as ApiResponse;
+          const chunks = d.type.split(".");
+          const kind = chunks[chunks.length - 1];
+          iter.push({ kind: kind as AdvisoryKind, data: d });
+        } catch (err) {
+          iter.stop(err);
+        }
+      },
+    });
+
+    return iter;
   }
 }
 
-export class JetStreamClientImpl extends BaseApiClient
+export class JetStreamClientImpl extends BaseApiClientImpl
   implements JetStreamClient {
   consumers: Consumers;
   streams: Streams;
@@ -172,15 +223,11 @@ export class JetStreamClientImpl extends BaseApiClient
       this.opts,
       { checkAPI },
     ) as JetStreamManagerOptions;
-    return this.nc.jetstreamManager(opts);
+    return jetstreamManager(this.nc, opts);
   }
 
   get apiPrefix(): string {
     return this.prefix;
-  }
-
-  get views(): Views {
-    return new ViewsImpl(this);
   }
 
   async publish(
@@ -583,7 +630,7 @@ export class JetStreamClientImpl extends BaseApiClient
       jsi.config.ack_policy = AckPolicy.All;
     }
 
-    jsi.api = this;
+    jsi.api = this as unknown as BaseClient;
     jsi.config = jsi.config || {} as ConsumerConfig;
     jsi.stream = jsi.stream ? jsi.stream : await this.findStream(subject);
 
@@ -741,11 +788,11 @@ export class JetStreamClientImpl extends BaseApiClient
 
 export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
   implements JetStreamSubscriptionInfoable, Destroyable, ConsumerInfoable {
-  js: BaseApiClient;
+  js: BaseApiClientImpl;
   monitor: IdleHeartbeatMonitor | null;
 
   constructor(
-    js: BaseApiClient,
+    js: BaseApiClientImpl,
     subject: string,
     opts: JetStreamSubscriptionOptions,
   ) {
@@ -913,7 +960,7 @@ export class JetStreamSubscriptionImpl extends TypedSubscription<JsMsg>
 class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
   implements Pullable {
   constructor(
-    js: BaseApiClient,
+    js: BaseApiClientImpl,
     subject: string,
     opts: TypedSubscriptionOptions<JsMsg>,
   ) {
@@ -966,7 +1013,7 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
         }
       }
 
-      const api = this.info.api as BaseApiClient;
+      const api = this.info.api as unknown as BaseApiClientImpl;
       const subj = `${api.prefix}.CONSUMER.MSG.NEXT.${stream}.${consumer}`;
       const reply = this.sub.subject;
 

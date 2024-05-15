@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The NATS Authors
+ * Copyright 2018-2024 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +14,8 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import { TD } from "./encoders.ts";
-import { ErrorCode, Nanos, NatsError } from "./core.ts";
+import type { Nanos } from "./core.ts";
+import { ErrorCode, NatsError } from "./core.ts";
 
 export type ValueResult<T> = {
   isError: false;
@@ -298,6 +299,6 @@ export function nanos(millis: number): Nanos {
  * Convert the specified Nanos into millis
  * @param ns
  */
-export function millis(ns: Nanos) {
+export function millis(ns: Nanos): number {
   return Math.floor(ns / 1000000);
 }
