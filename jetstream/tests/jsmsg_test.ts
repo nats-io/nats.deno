@@ -27,7 +27,11 @@ import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type { JsMsgImpl } from "../jsmsg.ts";
 import { parseInfo, toJsMsg } from "../jsmsg.ts";
-import { cleanup, jetstreamServerConf, setup } from "../../test_helpers/mod.ts";
+import {
+  _setup,
+  cleanup,
+  jetstreamServerConf,
+} from "../../test_helpers/mod.ts";
 import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {
@@ -138,7 +142,7 @@ Deno.test("jsmsg - acks", async () => {
 });
 
 Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
@@ -166,7 +170,7 @@ Deno.test("jsmsg - no ack consumer is ackAck 503", async () => {
 });
 
 Deno.test("jsmsg - explicit consumer ackAck", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",
@@ -191,7 +195,7 @@ Deno.test("jsmsg - explicit consumer ackAck", async () => {
 });
 
 Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
   const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
   await jsm.streams.add({
     name: "A",

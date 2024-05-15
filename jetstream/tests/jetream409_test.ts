@@ -14,7 +14,12 @@
  */
 
 import { Js409Errors, setMaxWaitingToFail } from "../jsutil.ts";
-import { deferred, nanos, StringCodec } from "jsr:@nats-io/nats-core@3.0.0-14";
+import {
+  connect,
+  deferred,
+  nanos,
+  StringCodec,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
 
 import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-14";
 import {
@@ -27,10 +32,10 @@ import type { JetStreamClient, PullOptions } from "../mod.ts";
 import { assertRejects, assertStringIncludes } from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
 import {
+  _setup,
   cleanup,
   jetstreamServerConf,
   notCompatible,
-  setup,
 } from "../../test_helpers/mod.ts";
 
 type testArgs = {
@@ -91,7 +96,7 @@ async function expectPullSubscribeCallbackError(
 }
 
 Deno.test("409 - max_batch", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await jetstreamManager(nc);
@@ -125,7 +130,7 @@ Deno.test("409 - max_batch", async () => {
 });
 
 Deno.test("409 - max_expires", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await jetstreamManager(nc);
@@ -159,7 +164,7 @@ Deno.test("409 - max_expires", async () => {
 });
 
 Deno.test("409 - max_bytes", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.8.3")) {
     return;
   }
@@ -196,7 +201,7 @@ Deno.test("409 - max_bytes", async () => {
 });
 
 Deno.test("409 - max msg size", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.9.0")) {
     return;
   }
@@ -232,7 +237,7 @@ Deno.test("409 - max msg size", async () => {
 });
 
 Deno.test("409 - max waiting", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const { stream, subj } = await initStream(nc);
 
   const jsm = await jetstreamManager(nc);

@@ -24,12 +24,16 @@ import {
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { cleanup, jetstreamServerConf, setup } from "../../test_helpers/mod.ts";
+import {
+  _setup,
+  cleanup,
+  jetstreamServerConf,
+} from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 Deno.test("streams - get", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const js = jetstream(nc);
 
   await assertRejects(
@@ -115,7 +119,7 @@ Deno.test("streams - mirrors", async () => {
 });
 
 Deno.test("streams - consumers", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const js = jetstream(nc);
 
   // add a stream and a message
@@ -156,7 +160,7 @@ Deno.test("streams - consumers", async () => {
 });
 
 Deno.test("streams - delete message", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const js = jetstream(nc);
 
   // add a stream and a message
@@ -188,7 +192,7 @@ Deno.test("streams - delete message", async () => {
 });
 
 Deno.test("streams - first_seq", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.10.0")) {
     return;
   }
@@ -208,7 +212,7 @@ Deno.test("streams - first_seq", async () => {
 });
 
 Deno.test("streams - first_seq fails if wrong server", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf({}));
+  const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   const nci = nc as NatsConnectionImpl;
   nci.features.update("2.9.2");
 
