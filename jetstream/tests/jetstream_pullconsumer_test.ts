@@ -20,7 +20,7 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy, StorageType } from "../jsapi_types.ts";
 import type { ConsumerConfig } from "../jsapi_types.ts";

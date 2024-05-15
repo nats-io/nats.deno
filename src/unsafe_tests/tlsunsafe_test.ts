@@ -1,5 +1,5 @@
 import { join, resolve } from "jsr:@std/path";
-import { NatsServer } from "../tests/helpers/launcher.ts";
+import { NatsServer } from "../../test_helpers/launcher.ts";
 import { connect } from "../mod.ts";
 
 Deno.test("tls-unsafe - handshake first", async () => {

@@ -31,7 +31,7 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 
 type testArgs = {
   js: JetStreamClient;

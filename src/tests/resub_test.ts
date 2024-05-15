@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals, assertExists, fail } from "jsr:@std/assert";
 import { createInbox } from "../mod.ts";
 import type { Msg, NatsConnection } from "../mod.ts";
-import type { NatsServer } from "./helpers/launcher.ts";
+import type { NatsServer } from "../../test_helpers/launcher.ts";
 
 Deno.test("resub - iter", async () => {
   const { ns, nc } = await setup();

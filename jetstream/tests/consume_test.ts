@@ -18,7 +18,7 @@ import {
   jetstreamServerConf,
   NatsServer,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 import {
   assert,

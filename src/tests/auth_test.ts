@@ -20,8 +20,8 @@ import {
   assertRejects,
   fail,
 } from "jsr:@std/assert";
-import { connect } from "../mod.ts";
 import {
+  connect,
   createInbox,
   credsAuthenticator,
   deferred,
@@ -42,7 +42,12 @@ import type {
   Status,
   UserPass,
 } from "../mod.ts";
-import { assertErrorCode, cleanup, NatsServer, setup } from "./helpers/mod.ts";
+import {
+  assertErrorCode,
+  cleanup,
+  NatsServer,
+  setup,
+} from "../../test_helpers/mod.ts";
 import {
   encodeAccount,
   encodeOperator,

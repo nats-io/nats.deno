@@ -25,7 +25,7 @@ import {
 
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";
-import { connect } from "../../mod.ts";
+import { connect } from "../src/mod.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";

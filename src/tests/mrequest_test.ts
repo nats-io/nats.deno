@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import {
   createInbox,

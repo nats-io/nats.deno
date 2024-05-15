@@ -18,7 +18,7 @@ import {
   cleanup,
   jetstreamServerConf,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { initStream, time } from "./jstest_util.ts";
 import { AckPolicy, StorageType } from "../jsapi_types.ts";
 import {

@@ -22,7 +22,7 @@ import {
   fail,
 } from "jsr:@std/assert";
 
-import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
+import { assertThrowsAsyncErrorCode } from "../../test_helpers/asserts.ts";
 
 import {
   connect,
@@ -48,7 +48,7 @@ import {
   Lock,
   NatsServer,
   setup,
-} from "./helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import type { MsgHdrs, Publisher } from "../mod.ts";
 import type {
   NatsConnectionImpl,

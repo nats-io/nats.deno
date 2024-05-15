@@ -20,7 +20,7 @@ import {
   jetstreamServerConf,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import {
   connect,

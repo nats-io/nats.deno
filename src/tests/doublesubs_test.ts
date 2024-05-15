@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "./helpers/launcher.ts";
+import { NatsServer } from "../../test_helpers/launcher.ts";
 import {
   connect,
   deferred,

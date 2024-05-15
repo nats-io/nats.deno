@@ -21,7 +21,7 @@ import {
   tokenAuthenticator,
 } from "../mod.ts";
 import type { NatsError } from "../mod.ts";
-import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
 import {
   DataBuffer,
   DebugEvents,
@@ -30,7 +30,7 @@ import {
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 import { deadline } from "jsr:@std/async";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {

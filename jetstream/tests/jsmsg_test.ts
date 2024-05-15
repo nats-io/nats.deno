@@ -27,11 +27,7 @@ import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 
 import type { JsMsgImpl } from "../jsmsg.ts";
 import { parseInfo, toJsMsg } from "../jsmsg.ts";
-import {
-  cleanup,
-  jetstreamServerConf,
-  setup,
-} from "../../src/tests/helpers/mod.ts";
+import { cleanup, jetstreamServerConf, setup } from "../../test_helpers/mod.ts";
 import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {

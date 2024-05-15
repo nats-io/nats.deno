@@ -16,7 +16,7 @@
 import { assertEquals } from "jsr:@std/assert";
 import { createInbox, deferred } from "../mod.ts";
 import type { Msg } from "../mod.ts";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 
 function macro(input: Uint8Array) {
   return async () => {

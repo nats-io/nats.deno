@@ -14,7 +14,7 @@
  */
 
 import { connect, createInbox, Empty, ErrorCode, headers } from "../mod.ts";
-import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
 import { assert, assertEquals, fail } from "jsr:@std/assert";
 
 Deno.test("noresponders - option", async () => {

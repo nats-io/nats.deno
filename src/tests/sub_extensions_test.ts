@@ -18,7 +18,7 @@ import type {
   Msg,
   SubscriptionImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const { ns, nc } = await setup();

@@ -70,7 +70,7 @@ import {
   NatsServer,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { JSONCodec } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   QueuedIteratorImpl,

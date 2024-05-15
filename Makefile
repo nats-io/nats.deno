@@ -7,7 +7,7 @@ lint:
 
 test: clean
 	deno test --allow-all --parallel --reload --quiet --coverage=coverage src/tests/ jetstream/tests kv/tests/ os/tests/ service/tests/
-	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage unsafe_tests/
+	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage src/unsafe_tests/
 
 
 testw: clean

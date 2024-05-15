@@ -23,7 +23,7 @@ import {
 import type { Msg, NatsConnection } from "../mod.ts";
 import { DataBuffer } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import { assert, assertEquals } from "jsr:@std/assert";
-import { NatsServer } from "./helpers/launcher.ts";
+import { NatsServer } from "../../test_helpers/launcher.ts";
 
 function mh(nc: NatsConnection, subj: string): Promise<Msg> {
   const dm = deferred<Msg>();

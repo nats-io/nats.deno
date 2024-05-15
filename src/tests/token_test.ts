@@ -14,7 +14,7 @@
  */
 import { fail } from "jsr:@std/assert";
 import { connect, ErrorCode } from "../mod.ts";
-import { assertErrorCode, NatsServer } from "./helpers/mod.ts";
+import { assertErrorCode, NatsServer } from "../../test_helpers/mod.ts";
 
 const conf = { authorization: { token: "tokenxxxx" } };
 

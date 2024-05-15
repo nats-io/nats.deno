@@ -72,7 +72,7 @@ import {
   NatsServer,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { validateName } from "../jsutil.ts";
 import {
   encodeAccount,

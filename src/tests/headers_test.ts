@@ -23,10 +23,10 @@ import {
   StringCodec,
 } from "../mod.ts";
 import type { Publisher, RequestOptions } from "../mod.ts";
-import { NatsServer } from "./helpers/launcher.ts";
+import { NatsServer } from "../../test_helpers/launcher.ts";
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 import { TestDispatcher } from "./parser_test.ts";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 import type {
   NatsConnectionImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";

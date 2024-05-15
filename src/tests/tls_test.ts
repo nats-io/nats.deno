@@ -20,9 +20,14 @@ import {
 } from "jsr:@std/assert";
 import { connect, ErrorCode } from "../mod.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { assertErrorCode, cleanup, Lock, NatsServer } from "./helpers/mod.ts";
+import {
+  assertErrorCode,
+  cleanup,
+  Lock,
+  NatsServer,
+} from "../../test_helpers/mod.ts";
 import { join, resolve } from "jsr:@std/path";
-import { Certs } from "./helpers/certs.ts";
+import { Certs } from "../../test_helpers/certs.ts";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
@@ -48,8 +53,6 @@ Deno.test("tls - connects to tls without option", async () => {
 
 Deno.test("tls - custom ca fails without root", async () => {
   const cwd = Deno.cwd();
-  const certs = await Certs.import("../helpers/certs.json");
-  console.log(certs.list);
   const config = {
     host: "0.0.0.0",
     tls: {

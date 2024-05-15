@@ -16,9 +16,9 @@
 import { assertEquals } from "jsr:@std/assert";
 import { createInbox, ErrorCode, JSONCodec } from "../mod.ts";
 import type { Msg, NatsError } from "../mod.ts";
-import { Lock } from "./helpers/mod.ts";
-import { assertThrowsErrorCode } from "./helpers/asserts.ts";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { Lock } from "../../test_helpers/mod.ts";
+import { assertThrowsErrorCode } from "../../test_helpers/asserts.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};

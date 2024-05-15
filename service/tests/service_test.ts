@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cleanup, setup } from "../../src/tests/helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 import { ServiceImpl } from "../service.ts";
 import {
   assert,

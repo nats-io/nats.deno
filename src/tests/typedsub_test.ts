@@ -13,7 +13,10 @@
  * limitations under the License.
  */
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
-import { assertErrorCode, assertThrowsErrorCode } from "./helpers/asserts.ts";
+import {
+  assertErrorCode,
+  assertThrowsErrorCode,
+} from "../../test_helpers/asserts.ts";
 import {
   checkFn,
   createInbox,
@@ -27,7 +30,7 @@ import type {
   Msg,
   TypedSubscriptionOptions,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 
 Deno.test("typedsub - rejects no adapter", async () => {
   const { nc, ns } = await setup();

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { NatsServer, notCompatible } from "../../src/tests/helpers/mod.ts";
+import { NatsServer, notCompatible } from "../../test_helpers/mod.ts";
 import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
 
 import { connect, JSONCodec } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
@@ -24,11 +24,7 @@ import {
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import {
-  cleanup,
-  jetstreamServerConf,
-  setup,
-} from "../../src/tests/helpers/mod.ts";
+import { cleanup, jetstreamServerConf, setup } from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 

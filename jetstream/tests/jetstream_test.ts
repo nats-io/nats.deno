@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "../../src/tests/helpers/launcher.ts";
+import { NatsServer } from "../../test_helpers/launcher.ts";
 
 import { initStream } from "./jstest_util.ts";
 import {
@@ -66,7 +66,7 @@ import {
   Lock,
   notCompatible,
   setup,
-} from "../../src/tests/helpers/mod.ts";
+} from "../../test_helpers/mod.ts";
 import { ConsumerOptsBuilderImpl } from "../types.ts";
 import { PubHeaders } from "../jsapi_types.ts";
 

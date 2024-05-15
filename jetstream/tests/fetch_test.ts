@@ -13,11 +13,7 @@
  * limitations under the License.
  */
 
-import {
-  cleanup,
-  jetstreamServerConf,
-  setup,
-} from "../../src/tests/helpers/mod.ts";
+import { cleanup, jetstreamServerConf, setup } from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import { assertEquals, assertExists, assertRejects } from "jsr:@std/assert";
 import {

@@ -21,10 +21,10 @@ import {
   syncIterator,
 } from "../mod.ts";
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
-import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
 import { QueuedIteratorImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { cleanup, setup } from "./helpers/mod.ts";
+import { cleanup, setup } from "../../test_helpers/mod.ts";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const { ns, nc } = await setup();
