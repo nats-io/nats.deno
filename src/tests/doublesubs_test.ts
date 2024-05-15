@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 import { NatsServer } from "../../test_helpers/launcher.ts";
-import { Certs } from "../../test_helpers/certs.ts";
 
 import {
   deferred,
@@ -30,8 +29,6 @@ import { assertArrayIncludes, assertEquals } from "jsr:@std/assert";
 import { connect } from "./connect.ts";
 
 async function runDoubleSubsTest(tls: boolean) {
-  const cwd = Deno.cwd();
-
   const tlsConfig = await NatsServer.tlsConfig();
 
   let opts = { trace: true, host: "0.0.0.0" };

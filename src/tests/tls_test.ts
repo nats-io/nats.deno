@@ -27,7 +27,6 @@ import {
   Lock,
   NatsServer,
 } from "../../test_helpers/mod.ts";
-import { join, resolve } from "jsr:@std/path";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();
