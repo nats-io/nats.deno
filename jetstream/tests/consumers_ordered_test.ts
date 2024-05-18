@@ -21,7 +21,12 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { DeliverPolicy, JsMsg } from "../mod.ts";
+import {
+  ConsumerDebugEvents,
+  ConsumerMessages,
+  DeliverPolicy,
+  JsMsg,
+} from "../mod.ts";
 import {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
@@ -85,87 +90,6 @@ Deno.test("ordered consumers - fetch", async () => {
     assertEquals(m.subject, "test.b");
     assertEquals(m.seq, 2);
   }
-
-  await cleanup(ns, nc);
-});
-
-Deno.test("ordered consumers - fetch reset", async () => {
-  const { ns, nc } = await setup(jetstreamServerConf());
-  const js = nc.jetstream();
-
-  const jsm = await nc.jetstreamManager();
-  await jsm.streams.add({ name: "test", subjects: ["test.*"] });
-  await js.publish("test.a");
-  await js.publish("test.b");
-  await js.publish("test.c");
-
-  const oc = await js.consumers.get("test") as OrderedPullConsumerImpl;
-  assertExists(oc);
-
-  const seen: number[] = new Array(3).fill(0);
-  let done = deferred();
-
-  const callback = (m: JsMsg) => {
-    const idx = m.seq - 1;
-    seen[idx]++;
-    // mess with the internals so we see these again
-    if (seen[idx] === 1) {
-      oc.cursor.deliver_seq--;
-      oc.cursor.stream_seq--;
-    }
-    iter.stop();
-    done.resolve();
-  };
-
-  let iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-  done = deferred();
-
-  iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-  done = deferred();
-
-  iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-  done = deferred();
-
-  iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-  done = deferred();
-
-  iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-  done = deferred();
-
-  iter = await oc.fetch({
-    max_messages: 1,
-    //@ts-ignore: callback not exposed
-    callback,
-  });
-  await done;
-
-  assertEquals(seen, [2, 2, 2]);
-  assertEquals(oc.serial, 6);
 
   await cleanup(ns, nc);
 });
@@ -975,6 +899,156 @@ Deno.test("ordered consumers - name prefix", async () => {
     Error,
     "invalid name_prefix name - name_prefix name cannot contain '.'",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - fetch reset", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  const js = nc.jetstream();
+  await js.publish("a", JSON.stringify(1));
+
+  const c = await js.consumers.get("A") as OrderedPullConsumerImpl;
+
+  let resets = 0;
+  function countResets(iter: ConsumerMessages): Promise<void> {
+    return (async () => {
+      for await (const s of await iter.status()) {
+        if (s.type === ConsumerDebugEvents.Reset) {
+          resets++;
+        }
+      }
+    })();
+  }
+
+  // after the first message others will get published
+  let iter = await c.fetch({ max_messages: 10, expires: 3_000 });
+  const first = countResets(iter);
+  const sequences = [];
+  for await (const m of iter) {
+    sequences.push(m.json());
+    // mess with the internal state to cause a reset
+    if (m.seq === 1) {
+      c.cursor.deliver_seq = 3;
+      const buf = [];
+      for (let i = 2; i < 20; i++) {
+        buf.push(js.publish("a", JSON.stringify(i)));
+      }
+      await Promise.all(buf);
+    }
+  }
+
+  iter = await c.fetch({ max_messages: 10, expires: 2_000 });
+  const second = countResets(iter);
+
+  const done = (async () => {
+    for await (const m of iter) {
+      sequences.push(m.json());
+    }
+  })().catch();
+
+  await Promise.all([first, second, done]);
+  assertEquals(c.serial, 2);
+  assertEquals(resets, 1);
+  assertEquals(sequences, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - consume reset", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  const js = nc.jetstream();
+  await js.publish("a", JSON.stringify(1));
+
+  let resets = 0;
+  function countResets(iter: ConsumerMessages): Promise<void> {
+    return (async () => {
+      for await (const s of await iter.status()) {
+        if (s.type === ConsumerDebugEvents.Reset) {
+          resets++;
+        }
+      }
+    })();
+  }
+
+  const c = await js.consumers.get("A") as OrderedPullConsumerImpl;
+
+  // after the first message others will get published
+  let iter = await c.consume({ max_messages: 11, expires: 5000 });
+  countResets(iter).catch();
+  const sequences = [];
+  for await (const m of iter) {
+    sequences.push(m.json());
+    // mess with the internal state to cause a reset
+    if (m.seq === 1) {
+      c.cursor.deliver_seq = 3;
+      const buf = [];
+      for (let i = 2; i < 20; i++) {
+        buf.push(js.publish("a", JSON.stringify(i)));
+      }
+      await Promise.all(buf);
+    }
+    if (m.seq === 11) {
+      break;
+    }
+  }
+
+  assertEquals(c.serial, 2);
+  assertEquals(resets, 1);
+  assertEquals(sequences, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - next reset", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  const js = nc.jetstream();
+  await js.publish("a", JSON.stringify(1));
+  await js.publish("a", JSON.stringify(2));
+
+  const c = await js.consumers.get("A") as OrderedPullConsumerImpl;
+
+  // get the first
+  let m = await c.next({ expires: 1000 });
+  assertExists(m);
+  assertEquals(m.json(), 1);
+
+  // force a reset
+  c.cursor.deliver_seq = 3;
+  await js.publish("a", JSON.stringify(2));
+
+  m = await c.next({ expires: 1000 });
+  assertEquals(m, null);
+  assertEquals(c.serial, 1);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - next reset", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "A", subjects: ["a"] });
+  const js = nc.jetstream();
+
+  await js.publish("a", JSON.stringify(1));
+  await js.publish("a", JSON.stringify(2));
+
+  const c = await js.consumers.get("A") as OrderedPullConsumerImpl;
+  await c.next();
+  await c.next();
+
+  assertEquals(c.serial, 1);
+  await c.info();
+  assertEquals(c.serial, 1);
 
   await cleanup(ns, nc);
 });
