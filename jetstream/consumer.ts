@@ -886,7 +886,7 @@ export class OrderedPullConsumerImpl implements Consumer {
       }
       const dseq = m.info.deliverySequence;
       if (dseq !== this.cursor.deliver_seq + 1) {
-        this.reset(this.opts);
+        this.notifyOrderedResetAndReset();
         return;
       }
       this.cursor.deliver_seq = dseq;
@@ -900,14 +900,37 @@ export class OrderedPullConsumerImpl implements Consumer {
     };
   }
 
-  async reset(opts: ConsumeOptions | FetchOptions = {
-    max_messages: 100,
-    expires: 30_000,
-  } as ConsumeMessages, fromFetch = false): Promise<ConsumerMessages> {
-    this.currentConsumer = await this.resetConsumer(
-      this.cursor.stream_seq + 1,
-    );
-    if (this.iter === null) {
+  async reset(
+    opts: ConsumeOptions | FetchOptions = {
+      max_messages: 100,
+      expires: 30_000,
+    } as ConsumeMessages,
+    info?: Partial<{ fromFetch: boolean; orderedReset: boolean }>,
+  ): Promise<void> {
+    info = info || {};
+    // this is known to be directly related to a pull
+    const fromFetch = info.fromFetch || false;
+    // a sequence order caused the reset
+    const orderedReset = info.orderedReset || false;
+
+    if (this.type === PullConsumerType.Fetch && orderedReset) {
+      // the fetch pull simply needs to end the iterator
+      this.iter?.src.stop();
+      await this.iter?.closed();
+      this.currentConsumer = null;
+      return;
+    }
+
+    if (this.currentConsumer === null || orderedReset) {
+      this.currentConsumer = await this.resetConsumer(
+        this.cursor.stream_seq + 1,
+      );
+    }
+
+    // if we don't have an iterator, or it is a fetch request
+    // we create the iterator - otherwise this is a reset that is happening
+    // while the OC is active, so simply bind the new OC to current iterator.
+    if (this.iter === null || fromFetch) {
       this.iter = new OrderedConsumerMessages();
     }
     this.consumer = new PullConsumerImpl(this.api, this.currentConsumer);
@@ -920,19 +943,21 @@ export class OrderedPullConsumerImpl implements Consumer {
       msgs = await this.consumer.fetch(opts);
     } else if (this.type === PullConsumerType.Consume) {
       msgs = await this.consumer.consume(opts);
-    } else {
-      return Promise.reject("reset called with unset consumer type");
     }
     const msgsImpl = msgs as PullConsumerMessagesImpl;
     msgsImpl.forOrderedConsumer = true;
     msgsImpl.resetHandler = () => {
-      this.reset(this.opts);
+      this.notifyOrderedResetAndReset();
     };
     this.iter.setSource(msgsImpl);
-    return this.iter;
   }
 
-  consume(opts: ConsumeOptions = {
+  notifyOrderedResetAndReset() {
+    this.iter?.notify(ConsumerDebugEvents.Reset, "");
+    this.reset(this.opts, { orderedReset: true });
+  }
+
+  async consume(opts: ConsumeOptions = {
     max_messages: 100,
     expires: 30_000,
   } as ConsumeMessages): Promise<ConsumerMessages> {
@@ -954,10 +979,11 @@ export class OrderedPullConsumerImpl implements Consumer {
     }
     this.type = PullConsumerType.Consume;
     this.opts = opts;
-    return this.reset(opts);
+    await this.reset(opts);
+    return this.iter!;
   }
 
-  fetch(
+  async fetch(
     opts: FetchOptions = { max_messages: 100, expires: 30_000 },
   ): Promise<ConsumerMessages> {
     const copts = opts as ConsumeOptions;
@@ -985,7 +1011,8 @@ export class OrderedPullConsumerImpl implements Consumer {
     this.type = PullConsumerType.Fetch;
     this.opts = opts;
     this.iter = new OrderedConsumerMessages();
-    return this.reset(opts, true);
+    await this.reset(opts, { fromFetch: true });
+    return this.iter!;
   }
 
   async next(

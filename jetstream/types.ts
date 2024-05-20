@@ -584,6 +584,10 @@ export enum ConsumerDebugEvents {
    */
   Discard = "discard",
   /**
+   * Notifies that the current consumer will be reset
+   */
+  Reset = "reset",
+  /**
    * Notifies whenever there's a request for additional messages from the server.
    * This notification telegraphs the request options, which should be treated as
    * read-only. This notification is only useful for debugging. Data is PullOptions.

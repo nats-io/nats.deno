@@ -37,7 +37,7 @@ import {
   jetstream,
   jetstreamManager,
   StorageType,
-} from "../../jetstream/mod.ts";
+} from "jsr:@nats-io/jetstream@3.0.0-3";
 
 import type {
   JetStreamOptions,
