@@ -31,6 +31,7 @@ import type {
   Consumer,
   ConsumerMessages,
   ConsumerStatus,
+  JsMsg,
   PullOptions,
 } from "../mod.ts";
 import { NatsServer } from "../../test_helpers/launcher.ts";
@@ -303,7 +304,7 @@ Deno.test("consumers - cleanup handler", async () => {
   called = false;
   iter = await c.consume({
     expires: 30 * 1000,
-    callback: (_r) => {},
+    callback: (_r: JsMsg) => {},
   }) as PullConsumerMessagesImpl;
   iter.setCleanupHandler(() => {
     called = true;
