@@ -15,7 +15,7 @@
 import type { Deferred } from "./util.ts";
 import { deferred } from "./util.ts";
 import type { QueuedIterator } from "./core.ts";
-import { ErrorCode, NatsError } from "./core.ts";
+import { CallbackFn, Dispatcher, ErrorCode, NatsError } from "./core.ts";
 
 export type IngestionFilterFnResult = { ingest: boolean; protocol: boolean };
 
@@ -49,7 +49,7 @@ export type ProtocolFilterFn<T = unknown> = (data: T | null) => boolean;
  */
 export type DispatchedFn<T = unknown> = (data: T | null) => void;
 
-export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
+export class QueuedIteratorImpl<T> implements QueuedIterator<T>, Dispatcher<T> {
   inflight: number;
   processed: number;
   // FIXME: this is updated by the protocol
@@ -58,7 +58,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
   iterClosed: Deferred<void | Error>;
   done: boolean;
   signal: Deferred<void>;
-  yields: T[];
+  yields: T | CallbackFn[];
   filtered: number;
   pendingFiltered: number;
   ingestionFilterFn?: IngestionFilterFn<T>;
@@ -89,7 +89,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
     return this.iterate();
   }
 
-  push(v: T): void {
+  push(v: T | CallbackFn): void {
     if (this.done) {
       return;
     }
@@ -132,7 +132,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T> {
         this.yields = [];
         for (let i = 0; i < yields.length; i++) {
           if (typeof yields[i] === "function") {
-            const fn = yields[i] as unknown as () => void;
+            const fn = yields[i] as CallbackFn;
             try {
               fn();
             } catch (err) {

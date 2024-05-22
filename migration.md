@@ -64,6 +64,9 @@ these modules for cross-runtime consumption.
 - `services` property has been removed. Install and import the `Services`
   library, and call `services(nc: NatsConnection)`
 
+- QueuedIterator type incorrectly exposed a `push()` operation - this operation
+  is not public API and was removed from the interface.
+
 ## Changes in JetStream
 
 To use JetStream, you must install and import `@nats/jetstream`.

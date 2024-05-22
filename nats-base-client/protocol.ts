@@ -220,7 +220,6 @@ export class SubscriptionImpl extends QueuedIteratorImpl<Msg>
       if (this.noIterator) {
         fn();
       } else {
-        //@ts-ignore: schedule the close once all messages are processed
         this.push(fn);
       }
     }

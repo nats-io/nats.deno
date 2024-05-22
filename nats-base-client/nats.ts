@@ -190,7 +190,6 @@ export class NatsConnectionImpl implements NatsConnection {
     // the iterator for user results
     const qi = new QueuedIteratorImpl<Msg>();
     function stop(err?: Error) {
-      //@ts-ignore: stop function
       qi.push(() => {
         qi.stop(err);
       });
@@ -264,7 +263,6 @@ export class NatsConnectionImpl implements NatsConnection {
 
       const cancel = (err?: Error) => {
         if (err) {
-          //@ts-ignore: error
           qi.push(() => {
             throw err;
           });

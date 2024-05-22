@@ -776,11 +776,13 @@ export interface PublishOptions {
  */
 export type Nanos = number;
 
+export type CallbackFn = () => void;
+
 export interface Dispatcher<T> {
-  push(v: T): void;
+  push(v: T | CallbackFn): void;
 }
 
-export interface QueuedIterator<T> extends Dispatcher<T> {
+export interface QueuedIterator<T> {
   [Symbol.asyncIterator](): AsyncIterator<T>;
 
   stop(err?: Error): void;
