@@ -29,6 +29,7 @@ import type { RequestManyOptionsInternal } from "./request.ts";
 
 import { isRequestError } from "./msg.ts";
 import { createInbox, ErrorCode, RequestStrategy } from "./core.ts";
+import type { Dispatcher } from "./core.ts";
 
 import type {
   ConnectionOptions,
@@ -51,7 +52,7 @@ export class NatsConnectionImpl implements NatsConnection {
   options: ConnectionOptions;
   protocol!: ProtocolHandler;
   draining: boolean;
-  listeners: QueuedIterator<Status>[];
+  listeners: Dispatcher<Status>[];
 
   private constructor(opts: ConnectionOptions) {
     this.draining = false;

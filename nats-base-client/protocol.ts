@@ -45,7 +45,6 @@ import type {
   Payload,
   Publisher,
   PublishOptions,
-  QueuedIterator,
   Request,
   Server,
   ServerInfo,
@@ -381,7 +380,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   publisher: Publisher;
   _closed: boolean;
   closed: Deferred<Error | void>;
-  listeners: QueuedIterator<Status>[];
+  listeners: QueuedIteratorImpl<Status>[];
   heartbeats: Heartbeat;
   parser: Parser;
   outMsgs: number;

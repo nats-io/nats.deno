@@ -58,7 +58,7 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T>, Dispatcher<T> {
   iterClosed: Deferred<void | Error>;
   done: boolean;
   signal: Deferred<void>;
-  yields: T | CallbackFn[];
+  yields: (T | CallbackFn)[];
   filtered: number;
   pendingFiltered: number;
   ingestionFilterFn?: IngestionFilterFn<T>;
@@ -148,15 +148,15 @@ export class QueuedIteratorImpl<T> implements QueuedIterator<T>, Dispatcher<T> {
           }
           // only pass messages that pass the filter
           const ok = this.protocolFilterFn
-            ? this.protocolFilterFn(yields[i])
+            ? this.protocolFilterFn(yields[i] as T)
             : true;
           if (ok) {
             this.processed++;
             const start = Date.now();
-            yield yields[i];
+            yield yields[i] as T;
             this.time = Date.now() - start;
             if (this.dispatchedFn && yields[i]) {
-              this.dispatchedFn(yields[i]);
+              this.dispatchedFn(yields[i] as T);
             }
           } else {
             this.pendingFiltered--;
