@@ -13,4 +13,4 @@
  * limitations under the License.
  */
 
-export { Nuid, nuid } from "jsr:@nats-io/nuid@2.0.0-1";
+export { Nuid, nuid } from "jsr:@nats-io/nuid";
