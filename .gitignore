@@ -26,7 +26,7 @@ settings.json
 coverage/
 
 # Dependency directories
-node_modules
+**/node_modules/
 
 # Optional npm cache directory
 .npm
@@ -36,3 +36,4 @@ vcs.xml
 
 # we copy package.json to read the version so ts, webpack, etc are happy
 src/package.json
+

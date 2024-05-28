@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "Node16",
+    "outDir": "lib/",
+    "moduleResolution": "node16",
+    "sourceMap": true,
+    "declaration": true,
+    "allowJs": true,
+    "removeComments": false,
+  },
+  "include": [
+    "cjs/**/*"
+  ]
+}

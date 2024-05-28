@@ -6,12 +6,13 @@
     "./internal": "./internal_mod.ts"
   },
   "publish": {
-    "include": [
-      "./**/*"
+    "exclude": [
+      "./tests/**/*",
+      "./unsafe_tests/**/*"
     ]
   },
   "imports": {
     "jsr:@nats-io/nkeys": "jsr:@nats-io/nkeys@1.1.1-1",
-    "jsr:@nats-io/nuid": "jsr:@nats-io/nkeys@2.0.0"
+    "jsr:@nats-io/nuid": "jsr:@nats-io/nuid@2.0.0"
   }
 }
