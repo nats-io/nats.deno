@@ -1,33 +1,30 @@
 {
-  "name": "nats-core",
-  "version": "3.0.0-14",
+  "name": "@nats-io/nats-core",
+  "version": "3.0.0-16",
   "files": [
     "lib/",
     "esm/"
   ],
   "types": "./lib/mod.d.js",
   "exports": {
-    ".": {
-      "require": "./lib/mod.js",
-      "module": "./esm/mod.mjs"
-    },
-    "./internal": {
-      "require": "./lib/internal_mod.js",
-      "module": "./esm/internal_mod.mjs"
-    }
+    ".": "./lib/mod.js",
+    "./internal": "./lib/internal_mod.js"
   },
+  "license": "Apache-2.0",
+  "private": false,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "shx rm -Rf ./lib ./cjs ./esm && shx mkdir esm",
-    "pre-process": "npm run clean && deno run -A ../bin/cjs-fix-imports.ts -o ./cjs .",
+    "pre-process": "npm run clean && deno run -A bin/cjs-fix-imports.ts -o ./cjs ./src",
     "build-cjs": "npm run pre-process && tsc",
-    "build-esm": "deno bundle mod.ts esm/mod.mjs && deno bundle internal_mod.ts esm/internal_mod.mjs",
-    "build": "npm run build-cjs && npm run build-esm"
+    "build": "npm run build-cjs",
+    "prepack": "npm run build"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": {
+    "name": "The NATS Authors"
+  },
+  "description": "nats-core library - this library implements all the base functionality for NATS javascript clients",
   "dependencies": {
     "nkeys.js": "^1.1.0",
     "nuid": "^2.0.0",

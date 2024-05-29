@@ -7,24 +7,18 @@ import {
 } from "https://deno.land/std@0.136.0/path/mod.ts";
 
 const argv = parseArgs(
-  Deno.args,
-  {
-    alias: {
-      o: ["out"],
+    Deno.args,
+    {
+      alias: {
+        o: ["out"],
+      },
+      boolean: true,
+      string: ["out"],
+      default: {
+        o: "lib",
+      },
     },
-    boolean: true,
-    string: ["out"],
-    default: {
-      o: "lib",
-    },
-  },
 );
-
-const libs = {
-  "jsr:@nats-io/nkeys": "@nats-io/nkeys",
-  "jsr:@nats-io/nuid": "@nats-io/nuid"
-}
-
 
 
 
@@ -57,21 +51,22 @@ if (argv.debug) {
 
 if (!dirs.length || argv.h || argv.help) {
   console.log(
-    `deno run --allow-all cjs-fix-imports [--debug] [--out build/] dir/ dir2/`,
+      `deno run --allow-all cjs-fix-imports [--debug] [--out build/] dir/ dir2/`,
   );
   Deno.exit(1);
 }
 
 // create out if not exist
 await Deno.lstat(out)
-  .catch(async () => {
-    await Deno.mkdir(out);
-  });
+    .catch(async () => {
+      await Deno.mkdir(out);
+    });
 
 // process each file - remove extensions from requires/import
 for (const fn of files) {
   const data = await Deno.readFile(fn);
   let txt = new TextDecoder().decode(data);
+
 
   let mod = txt.replace(/jsr:@nats-io\/nkeys/gim, "nkeys.js");
   mod = mod.replace(/jsr:@nats-io\/nuid/gim, "nuid");

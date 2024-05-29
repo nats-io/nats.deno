@@ -25,7 +25,8 @@ import {
 
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";
-import { connect } from "../src/mod.ts";
+import { connect } from "./connect.ts";
+export { connect } from "./connect.ts";
 import {ConnectFn} from "../nats-base-client/core.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
@@ -57,8 +58,8 @@ export function jsopts() {
 }
 
 export function jetstreamExportServerConf(
-  opts: unknown = {},
-  prefix = "IPA.>",
+    opts: unknown = {},
+    prefix = "IPA.>",
 ): Record<string, unknown> {
   const template = {
     "no_auth_user": "a",
@@ -87,7 +88,7 @@ export function jetstreamExportServerConf(
 }
 
 export function jetstreamServerConf(
-  opts: unknown = {},
+    opts: unknown = {},
 ): Record<string, unknown> {
   const conf = Object.assign(jsopts(), opts);
   if (typeof conf.jetstream.store_dir !== "string") {
@@ -107,15 +108,15 @@ export async function _setup(fn: ConnectFn, serverConf?: Record<string, unknown>
 }
 
 export function setup(
-  serverConf?: Record<string, unknown>,
-  clientOpts?: Partial<ConnectionOptions>,
+    serverConf?: Record<string, unknown>,
+    clientOpts?: Partial<ConnectionOptions>,
 ): Promise<{ ns: NatsServer; nc: NatsConnection }> {
   return _setup(connect, serverConf, clientOpts);
 }
 
 export async function cleanup(
-  ns: NatsServer,
-  ...nc: NatsConnection[]
+    ns: NatsServer,
+    ...nc: NatsConnection[]
 ): Promise<void> {
   const conns: Promise<void>[] = [];
   nc.forEach((v) => {
@@ -126,16 +127,16 @@ export async function cleanup(
 }
 
 export async function notCompatible(
-  ns: NatsServer,
-  nc: NatsConnection,
-  version?: string,
+    ns: NatsServer,
+    nc: NatsConnection,
+    version?: string,
 ): Promise<boolean> {
   version = version ?? "2.3.3";
   const varz = await ns.varz() as unknown as Record<string, string>;
   const sv = parseSemVer(varz.version);
   if (compare(sv, parseSemVer(version)) < 0) {
     const m = new TextEncoder().encode(yellow(
-      `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
+        `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
     ));
     await Deno.stdout.write(m);
     await cleanup(ns, nc);
