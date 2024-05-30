@@ -1,0 +1,33 @@
+{
+  "name": "@nats-io/jetstream",
+  "version": "3.0.0-3",
+  "files": [
+    "lib/"
+  ],
+  "types": "./lib/mod.d.js",
+  "exports": {
+    ".": "./lib/mod.js",
+    "./internal": "./lib/internal_mod.js"
+  },
+  "license": "Apache-2.0",
+  "private": false,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "shx rm -Rf ./lib ./cjs ./esm && shx mkdir esm",
+    "pre-process": "npm run clean && deno run -A ../bin/cjs-fix-imports.ts -o ./cjs ./",
+    "build-cjs": "npm run pre-process && tsc",
+    "build": "npm run build-cjs",
+    "prepack": "npm run build"
+  },
+  "keywords": [],
+  "author": {
+    "name": "The NATS Authors"
+  },
+  "description": "nats-core library - this library implements all the base functionality for NATS javascript clients",
+  "dependencies": {
+    "nkeys.js": "^1.1.0",
+    "nuid": "^2.0.0",
+    "shx": "^0.3.4",
+    "typescript": "^5.4.5"
+  }
+}

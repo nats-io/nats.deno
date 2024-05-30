@@ -70,6 +70,7 @@ for (const fn of files) {
 
   let mod = txt.replace(/jsr:@nats-io\/nkeys/gim, "nkeys.js");
   mod = mod.replace(/jsr:@nats-io\/nuid/gim, "nuid");
+  mod = mod.replace(/jsr:@nats-io\/nats-core/gim, "@nats-io/nats-core")
   if(!fn.endsWith("nkeys.ts") && !fn.endsWith("nuid.ts")) {
     mod = mod.replace(/from\s+"(\S+).[t|j]s"/gim, 'from "$1"');
   }
