@@ -342,7 +342,7 @@ export class Subscriptions {
       let sub;
       if (ctx.operation === "subscription") {
         sub = subs.find((s) => {
-          return s.subject === ctx.subject;
+          return s.subject === ctx.subject && s.queue === ctx.queue;
         });
       }
       if (ctx.operation === "publish") {
@@ -700,7 +700,13 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
         err.permissionContext = {
           operation: m[1].toLowerCase(),
           subject: m[2],
+          queue: undefined,
         };
+
+        const qm = s.match(/using queue "(\S+)"/);
+        if (qm) {
+          err.permissionContext.queue = qm[1];
+        }
       }
       return err;
     } else if (t.indexOf("authorization violation") !== -1) {
