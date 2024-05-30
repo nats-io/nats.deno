@@ -803,7 +803,11 @@ export function toConf(o: any, indent?: string): string {
             buf.push(`${pad}${k}: ${v}`);
           }
         } else {
-          buf.push(pad + v);
+          if(v.includes(" ")) {
+            buf.push(`${pad}"${v}"`)
+          } else {
+            buf.push(pad + v);
+          }
         }
       }
     }

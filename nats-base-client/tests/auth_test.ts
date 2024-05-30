@@ -23,6 +23,7 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertRejects,
+  assertStringIncludes,
   fail,
 } from "jsr:@std/assert";
 import { connect } from "./connect.ts";
@@ -1256,4 +1257,52 @@ Deno.test("auth - request context", async () => {
   await a.request("q.hello");
 
   await cleanup(ns, nc, a);
+});
+
+Deno.test("auth - sub permission reload", async () => {
+  const conf = {
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permissions: { subscribe: ["q A", "h"] },
+      }],
+    },
+  };
+
+  const { ns, nc } = await _setup(connect, conf, {
+    user: "a",
+    pass: "a",
+    debug: true,
+  });
+
+  const qA = deferred();
+  nc.subscribe("q", {
+    queue: "A",
+    callback: (err, msg) => {
+      if (err) {
+        qA.reject(err);
+      }
+    },
+  });
+
+  const qBad = deferred<NatsError>();
+  nc.subscribe("q", {
+    queue: "bad",
+    callback: (err, msg) => {
+      if (err) {
+        qBad.resolve(err);
+      }
+    },
+  });
+  await nc.flush();
+
+  const err = await qBad;
+  qA.resolve();
+
+  await qA;
+
+  assertEquals(err.code, ErrorCode.PermissionsViolation);
+  assertStringIncludes(err.message, 'using queue "bad"');
+  await cleanup(ns, nc);
 });
