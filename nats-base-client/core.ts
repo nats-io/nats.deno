@@ -143,7 +143,7 @@ export class NatsError extends Error {
   message: string;
   // TODO: on major version this should change to a number/enum
   code: string;
-  permissionContext?: { operation: string; subject: string };
+  permissionContext?: { operation: string; subject: string; queue?: string };
   chainedError?: Error;
   // these are for supporting jetstream
   api_error?: ApiError;

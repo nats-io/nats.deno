@@ -17,6 +17,7 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertRejects,
+  assertStringIncludes,
   fail,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import {
@@ -1253,4 +1254,48 @@ Deno.test("auth - request context", async () => {
   await a.request("q.hello");
 
   await cleanup(ns, nc, a);
+});
+
+Deno.test("auth - sub permission queue", async () => {
+  const conf = {
+    authorization: {
+      users: [{
+        user: "a",
+        password: "a",
+        permissions: { subscribe: ["q A"] },
+      }],
+    },
+  };
+
+  const { ns, nc } = await setup(conf, { user: "a", pass: "a" });
+
+  const qA = deferred();
+  nc.subscribe("q", {
+    queue: "A",
+    callback: (err, msg) => {
+      if (err) {
+        qA.reject(err);
+      }
+    },
+  });
+
+  const qBad = deferred<NatsError>();
+  nc.subscribe("q", {
+    queue: "bad",
+    callback: (err, msg) => {
+      if (err) {
+        qBad.resolve(err);
+      }
+    },
+  });
+  await nc.flush();
+
+  const err = await qBad;
+  qA.resolve();
+
+  await qA;
+
+  assertEquals(err.code, ErrorCode.PermissionsViolation);
+  assertStringIncludes(err.message, 'using queue "bad"');
+  await cleanup(ns, nc);
 });
