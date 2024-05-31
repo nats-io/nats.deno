@@ -1,4 +1,4 @@
-import { deferred } from "jsr:@nats-io/nats-core@3.0.0-14";
+import { deferred } from "../nats-base-client/internal_mod.ts";
 import { join } from "jsr:@std/path";
 
 export class Certs {

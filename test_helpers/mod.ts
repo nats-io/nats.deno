@@ -16,12 +16,12 @@
 import type {
   ConnectionOptions,
   NatsConnection,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "../nats-base-client/internal_mod.ts";
 import {
   compare,
   extend,
   parseSemVer,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "../nats-base-client/internal_mod.ts";
 
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";

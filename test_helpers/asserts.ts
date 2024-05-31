@@ -15,7 +15,7 @@
 
 import { assert, assertThrows, fail } from "jsr:@std/assert";
 import type { NatsError } from "../src/mod.ts";
-import { isNatsError } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { isNatsError } from "../nats-base-client/internal_mod.ts";
 
 export function assertErrorCode(err?: Error, ...codes: string[]) {
   if (!err) {

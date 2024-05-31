@@ -21,7 +21,7 @@ const argv = parseArgs(
 );
 
 // resolve the specified directories to fq
-let dirs = (argv._ as string[]).map((n) => {
+const dirs = (argv._ as string[]).map((n) => {
   return resolve(n);
 });
 // resolve the out dir
@@ -63,7 +63,7 @@ await Deno.lstat(out)
 // process each file - remove extensions from requires/import
 for (const fn of files) {
   const data = await Deno.readFile(fn);
-  let txt = new TextDecoder().decode(data);
+  const txt = new TextDecoder().decode(data);
 
   let mod = txt.replace(/jsr:@nats-io\/nkeys/gim, "nkeys.js");
   mod = mod.replace(/jsr:@nats-io\/nuid/gim, "nuid");

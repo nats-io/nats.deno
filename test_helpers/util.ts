@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { deferred, timeout } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { deferred, timeout } from "../nats-base-client/internal_mod.ts";
 import type { Msg, Subscription } from "../src/mod.ts";
 
 export function consume(sub: Subscription, ms = 1000): Promise<Msg[]> {
