@@ -89,6 +89,7 @@ export enum ErrorCode {
   ProtocolError = "NATS_PROTOCOL_ERR",
   PermissionsViolation = "PERMISSIONS_VIOLATION",
   AuthenticationTimeout = "AUTHENTICATION_TIMEOUT",
+  AccountExpired = "ACCOUNT_EXPIRED",
 }
 
 export function isNatsError(err: NatsError | Error): err is NatsError {
@@ -171,7 +172,8 @@ export class NatsError extends Error {
 
   isAuthError(): boolean {
     return this.code === ErrorCode.AuthenticationExpired ||
-      this.code === ErrorCode.AuthorizationViolation;
+      this.code === ErrorCode.AuthorizationViolation ||
+      this.code === ErrorCode.AccountExpired;
   }
 
   isAuthTimeout(): boolean {
