@@ -340,8 +340,7 @@ export class Subscriptions {
         sub = subs.find((s) => {
           return s.subject === ctx.subject && s.queue === ctx.queue;
         });
-      }
-      if (ctx.operation === "publish") {
+      } else if (ctx.operation === "publish") {
         // we have a no mux subscription
         sub = subs.find((s) => {
           return s.requestSubject === ctx.subject;
@@ -693,22 +692,29 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       const err = new NatsError(s, ErrorCode.PermissionsViolation);
       const m = s.match(/(Publish|Subscription) to "(\S+)"/);
       if (m) {
-        err.permissionContext = {
-          operation: m[1].toLowerCase(),
-          subject: m[2],
-          queue: undefined,
-        };
+        const operation = m[1].toLowerCase();
+        const subject = m[2];
+        let queue = undefined;
 
-        const qm = s.match(/using queue "(\S+)"/);
-        if (qm) {
-          err.permissionContext.queue = qm[1];
+        if (operation === "subscription") {
+          const qm = s.match(/using queue "(\S+)"/);
+          if (qm) {
+            queue = qm[1];
+          }
         }
+        err.permissionContext = {
+          operation,
+          subject,
+          queue,
+        };
       }
       return err;
     } else if (t.indexOf("authorization violation") !== -1) {
       return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationExpired);
+    } else if (t.indexOf("account authentication expired") != -1) {
+      return new NatsError(s, ErrorCode.AccountExpired);
     } else if (t.indexOf("authentication timeout") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationTimeout);
     } else {
