@@ -713,6 +713,8 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       return new NatsError(s, ErrorCode.AuthorizationViolation);
     } else if (t.indexOf("user authentication expired") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationExpired);
+    } else if (t.indexOf("account authentication expired") != -1) {
+      return new NatsError(s, ErrorCode.AccountExpired);
     } else if (t.indexOf("authentication timeout") !== -1) {
       return new NatsError(s, ErrorCode.AuthenticationTimeout);
     } else {

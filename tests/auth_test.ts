@@ -16,6 +16,7 @@
 import {
   assertArrayIncludes,
   assertEquals,
+  assertExists,
   assertRejects,
   assertStringIncludes,
   fail,
@@ -1297,5 +1298,48 @@ Deno.test("auth - sub permission queue", async () => {
 
   assertEquals(err.code, ErrorCode.PermissionsViolation);
   assertStringIncludes(err.message, 'using queue "bad"');
+  await cleanup(ns, nc);
+});
+
+Deno.test("auth - account expired", async () => {
+  const O = nkeys.createOperator();
+  const A = nkeys.createAccount();
+
+  const resolver: Record<string, string> = {};
+  resolver[A.getPublicKey()] = await encodeAccount("A", A, {
+    limits: {
+      conn: -1,
+      subs: -1,
+    },
+  }, { signer: O, exp: Math.round(Date.now() / 1000) + 3 });
+
+  const conf = {
+    operator: await encodeOperator("O", O),
+    resolver: "MEMORY",
+    "resolver_preload": resolver,
+  };
+
+  const U = nkeys.createUser();
+  const ujwt = await encodeUser("U", U, A, { bearer_token: true });
+
+  const { ns, nc } = await setup(conf, {
+    reconnect: false,
+    authenticator: jwtAuthenticator(ujwt),
+  });
+
+  const d = deferred();
+  (async () => {
+    for await (const s of nc.status()) {
+      if (s.type === Events.Error && s.data === ErrorCode.AccountExpired) {
+        d.resolve();
+        break;
+      }
+    }
+  })().catch(() => {});
+
+  const w = await nc.closed();
+  assertExists(w);
+  assertEquals((w as NatsError).code, ErrorCode.AccountExpired);
+
   await cleanup(ns, nc);
 });
