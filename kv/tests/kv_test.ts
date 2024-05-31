@@ -75,7 +75,7 @@ import { JSONCodec } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
 import type {
   QueuedIteratorImpl,
 } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import { Kvm } from "../kv.ts";
 
 Deno.test("kv - key validation", () => {

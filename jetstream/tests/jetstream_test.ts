@@ -44,7 +44,7 @@ import {
   nanos,
   nuid,
   StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import {
   assert,
   assertArrayIncludes,

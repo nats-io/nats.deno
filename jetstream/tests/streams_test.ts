@@ -16,7 +16,7 @@
 import { NatsServer, notCompatible } from "../../test_helpers/mod.ts";
 import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
 
-import { connect, JSONCodec } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import { connect, JSONCodec } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
 import {
   assertArrayIncludes,

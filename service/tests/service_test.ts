@@ -57,7 +57,7 @@ import {
   ServiceVerb,
   Svc,
 } from "../mod.ts";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {

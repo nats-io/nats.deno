@@ -43,7 +43,7 @@ import {
   deadline,
   deferred,
   delay,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf());

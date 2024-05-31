@@ -26,7 +26,7 @@ import {
   assertRejects,
   equal,
 } from "jsr:@std/assert";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import {
   Base64UrlPaddedCodec,
   DataBuffer,

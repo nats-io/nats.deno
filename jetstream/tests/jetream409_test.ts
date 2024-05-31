@@ -19,7 +19,7 @@ import {
   deferred,
   nanos,
   StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-2";
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
 import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-14";
 import {
