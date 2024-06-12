@@ -18,12 +18,12 @@ import type {
   NatsConnection,
   Transport,
   TransportFactory,
-} from "jsr:@nats-io/nats-core@3.0.0-15/internal";
+} from "@nats-io/nats-core/internal";
 
 import {
   NatsConnectionImpl,
   setTransportFactory,
-} from "jsr:@nats-io/nats-core@3.0.0-15/internal";
+} from "@nats-io/nats-core/internal";
 
 export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
   setTransportFactory({
