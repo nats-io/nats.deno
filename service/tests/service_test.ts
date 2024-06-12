@@ -32,7 +32,7 @@ import {
   JSONCodec,
   nuid,
   StringCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   Msg,
   NatsConnection,
@@ -40,7 +40,7 @@ import type {
   NatsError,
   QueuedIterator,
   SubscriptionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   EndpointInfo,
   Service,

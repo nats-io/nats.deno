@@ -20,7 +20,7 @@ import {
   collect,
   parseSemVer,
   StringCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import type { ServiceIdentity, ServiceInfo, ServiceStats } from "../mod.ts";
 import { ServiceError, ServiceResponseType, ServiceVerb, Svc } from "../mod.ts";

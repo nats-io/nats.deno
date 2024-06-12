@@ -17,13 +17,13 @@ import {
   JSONCodec,
   QueuedIteratorImpl,
   RequestStrategy,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import type {
   NatsConnection,
   QueuedIterator,
   RequestManyOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import { ServiceImpl } from "./service.ts";
 import { ServiceVerb } from "./types.ts";

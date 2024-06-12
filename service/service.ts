@@ -21,7 +21,7 @@ import {
   nuid,
   parseSemVer,
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   Deferred,
   Msg,
@@ -34,7 +34,7 @@ import type {
   QueuedIterator,
   ReviverFn,
   Sub,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import {
   ServiceError,
