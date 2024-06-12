@@ -1,1 +1,1 @@
-export * as nkeys from "jsr:@nats-io/nkeys";
+export * as nkeys from "@nats-io/nkeys";

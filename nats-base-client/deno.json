@@ -12,7 +12,7 @@
     ]
   },
   "imports": {
-    "jsr:@nats-io/nkeys": "jsr:@nats-io/nkeys@1.1.1-1",
-    "jsr:@nats-io/nuid": "jsr:@nats-io/nuid@2.0.0"
+    "@nats-io/nkeys": "jsr:@nats-io/nkeys@1.2.0-4",
+    "@nats-io/nuid": "jsr:@nats-io/nuid@2.0.1-2"
   }
 }
