@@ -18,14 +18,14 @@ import {
   headers,
   MsgImpl,
   NatsError,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import type {
   Msg,
   MsgArg,
   MsgHdrsImpl,
   Publisher,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 export function validateDurableName(name?: string) {
   return minValidation("durable", name);

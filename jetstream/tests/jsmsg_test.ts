@@ -23,7 +23,7 @@ import {
   StringCodec,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import type { Msg } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { MsgImpl } from "@nats-io/nats-core/internal";
 
 import type { JsMsgImpl } from "../jsmsg.ts";
 import { parseInfo, toJsMsg } from "../jsmsg.ts";

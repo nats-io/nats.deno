@@ -30,7 +30,7 @@ import {
   jetstreamServerConf,
 } from "../../test_helpers/mod.ts";
 import { initStream } from "./jstest_util.ts";
-import type { NatsConnectionImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 
 Deno.test("streams - get", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));

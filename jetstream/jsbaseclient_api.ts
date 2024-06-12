@@ -20,7 +20,7 @@ import {
   ErrorCode,
   extend,
   JSONCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   Codec,
   Msg,
@@ -28,7 +28,7 @@ import type {
   NatsConnectionImpl,
   NatsError,
   RequestOptions,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import { checkJsErrorCode } from "./jsutil.ts";
 import type { ApiResponse } from "./jsapi_types.ts";
 import type { JetStreamOptions } from "./types.ts";

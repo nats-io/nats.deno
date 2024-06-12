@@ -23,8 +23,8 @@ import type {
   Nanos,
   NatsConnection,
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
-import { Feature } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
+import { Feature } from "@nats-io/nats-core/internal";
 import { ConsumerApiAction } from "./jsapi_types.ts";
 
 import type {

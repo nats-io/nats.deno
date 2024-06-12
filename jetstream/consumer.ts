@@ -20,7 +20,7 @@ import {
   NatsError,
   nuid,
   timeout,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   MsgHdrs,
   QueuedIterator,
@@ -28,20 +28,20 @@ import type {
   Subscription,
   SubscriptionImpl,
   Timeout,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type { ConsumerAPIImpl } from "./jsmconsumer_api.ts";
 import { isHeartbeatMsg, minValidation } from "./jsutil.ts";
 
 import { toJsMsg } from "./jsmsg.ts";
 import type { JsMsg } from "./jsmsg.ts";
 
-import type { MsgImpl } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import type { MsgImpl } from "@nats-io/nats-core/internal";
 import {
   createInbox,
   Events,
   IdleHeartbeatMonitor,
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import { AckPolicy, DeliverPolicy } from "./jsapi_types.ts";
 import type {

@@ -21,7 +21,7 @@ import {
   StringCodec,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
-import type { NatsError } from "jsr:@nats-io/nats-core@3.0.0-14";
+import type { NatsError } from "@nats-io/nats-core";
 import {
   AckPolicy,
   consumerOpts,

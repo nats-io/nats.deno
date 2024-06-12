@@ -16,12 +16,12 @@ import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
 import type { JsMsg, PubAck, StreamConfig } from "../mod.ts";
 
 import { assert } from "jsr:@std/assert";
-import { Empty, nanos, nuid } from "jsr:@nats-io/nats-core@3.0.0-14";
+import { Empty, nanos, nuid } from "@nats-io/nats-core";
 
 import type {
   NatsConnection,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-14";
+} from "@nats-io/nats-core";
 
 export async function consume(iter: QueuedIterator<JsMsg>): Promise<JsMsg[]> {
   const buf: JsMsg[] = [];

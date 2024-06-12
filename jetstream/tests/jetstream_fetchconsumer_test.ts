@@ -41,7 +41,7 @@ import {
 import type {
   NatsConnectionImpl,
   NatsError,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import { Js409Errors } from "../jsutil.ts";
 import { consume } from "./jstest_util.ts";
