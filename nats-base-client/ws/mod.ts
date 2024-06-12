@@ -1,1 +1,2 @@
-export {wsconnect} from "./wsconnect.ts"
+export * from "../mod.ts";
+export {wsconnect} from "./wsconnect.ts";
