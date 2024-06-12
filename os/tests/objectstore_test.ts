@@ -36,13 +36,13 @@ import {
   nuid,
   SHA256,
   StringCodec,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   NatsConnectionImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
 import type { ObjectInfo, ObjectStoreMeta } from "../types.ts";
-import { jetstreamManager, StorageType } from "jsr:@nats-io/jetstream@3.0.0-3";
+import { jetstreamManager, StorageType } from "@nats-io/jetstream";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
 import { digestType, Objm } from "../objectstore.ts";
 
