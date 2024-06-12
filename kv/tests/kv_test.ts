@@ -23,13 +23,13 @@ import {
   parseSemVer,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import type {
   ConnectionOptions,
   NatsConnection,
   NatsConnectionImpl,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import {
   DirectMsgHeaders,
@@ -37,12 +37,12 @@ import {
   jetstream,
   jetstreamManager,
   StorageType,
-} from "jsr:@nats-io/jetstream@3.0.0-3";
+} from "@nats-io/jetstream";
 
 import type {
   JetStreamOptions,
   JetStreamSubscriptionInfoable,
-} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
+} from "@nats-io/jetstream/internal";
 
 import {
   assert,
@@ -71,10 +71,10 @@ import {
   NatsServer,
   notCompatible,
 } from "../../test_helpers/mod.ts";
-import { JSONCodec } from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+import { JSONCodec } from "@nats-io/nats-core/internal";
 import type {
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import { Kvm } from "../kv.ts";
 

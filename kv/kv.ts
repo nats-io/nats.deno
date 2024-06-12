@@ -25,7 +25,7 @@ import {
   nuid,
   parseSemVer,
   QueuedIteratorImpl,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import type {
   MsgHdrs,
@@ -34,7 +34,7 @@ import type {
   NatsError,
   Payload,
   QueuedIterator,
-} from "jsr:@nats-io/nats-core@3.0.0-14/internal";
+} from "@nats-io/nats-core/internal";
 
 import {
   AckPolicy,
@@ -48,7 +48,7 @@ import {
   StorageType,
   StoreCompression,
   toJetStreamClient,
-} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
+} from "@nats-io/jetstream/internal";
 
 import type {
   ConsumerConfig,
@@ -72,7 +72,7 @@ import type {
   StreamInfo,
   StreamListResponse,
   StreamSource,
-} from "jsr:@nats-io/jetstream@3.0.0-3/internal";
+} from "@nats-io/jetstream/internal";
 
 import type {
   KV,
