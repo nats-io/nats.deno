@@ -32,7 +32,6 @@ import {
   Empty,
   ErrorCode,
   Feature,
-  getResolveFn,
   headers,
   isIP,
   JSONCodec,
@@ -1425,10 +1424,24 @@ Deno.test("basics - respond message", async () => {
 });
 
 
-Deno.test("basics - noResolve", async () => {
-  const { ns, nc } = await _setup(connect,{}, { noResolve: true });
-  assertEquals(getResolveFn(), undefined);
-  await cleanup(ns, nc);
+Deno.test("basics - resolve", async () => {
+  const token = Deno.env.get("NGS_CI_USER");
+  if (token === undefined) {
+    disabled(
+        `skipping: NGS_CI_USER is not available in the environment`,
+    );
+    return;
+  }
+
+  const nci = await connect({
+    servers: "connect.ngs.global",
+    authenticator: jwtAuthenticator(token),
+    resolve: false,
+  }) as NatsConnectionImpl;
+
+  const srv = nci.protocol.servers.getCurrentServer();
+  assertEquals(srv.resolves, undefined);
+  await nci.close();
 });
 
 class MM implements Msg {

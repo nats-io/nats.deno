@@ -137,12 +137,13 @@ export class ServerImpl implements Server {
         fn: DnsResolveFn;
         randomize: boolean;
         resolve: boolean;
-        debug?: boolean;
+        debug: boolean;
       }
     >,
   ): Promise<Server[]> {
-    if (!opts.fn) {
+    if (!opts.fn || opts.resolve === false) {
       // we cannot resolve - transport doesn't support it
+      // or user opted out
       // don't add - to resolves or we get a circ reference
       return [this];
     }
