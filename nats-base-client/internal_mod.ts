@@ -4,7 +4,7 @@ export { Nuid, nuid } from "./nuid.ts";
 export type { ServiceClient, TypedSubscriptionOptions } from "./types.ts";
 
 export { MsgImpl } from "./msg.ts";
-export { setTransportFactory } from "./transport.ts";
+export { getResolveFn, setTransportFactory } from "./transport.ts";
 export type { Transport, TransportFactory } from "./transport.ts";
 export { Connect, INFO, ProtocolHandler } from "./protocol.ts";
 export type { Backoff, Deferred, Delay, Perf, Timeout } from "./util.ts";

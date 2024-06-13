@@ -48,6 +48,7 @@ import {
   collect,
   deferred,
   delay,
+  getResolveFn,
   headers,
   isIP,
   NatsConnectionImpl,
@@ -1422,6 +1423,12 @@ Deno.test("basics - respond message", async () => {
   const r = await nc.request("q");
   assertEquals(r.string(), "not in service");
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - noResolve", async () => {
+  const { ns, nc } = await setup({}, { noResolve: true });
+  assertEquals(getResolveFn(), undefined);
   await cleanup(ns, nc);
 });
 
