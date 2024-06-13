@@ -1048,6 +1048,12 @@ export interface ConnectionOptions {
    * additional context as to where the operation was started.
    */
   noAsyncTraces?: boolean;
+
+  /**
+   * When true, the connect function will remove any name resolution provided by
+   * the transport. In some environments (browsers) this is a no-op option.
+   */
+  noResolve?: boolean;
 }
 
 /**

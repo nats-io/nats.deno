@@ -30,7 +30,7 @@ export function connect(opts: ConnectionOptions = {}): Promise<NatsConnection> {
     factory: (): Transport => {
       return new DenoTransport();
     },
-    dnsResolveFn: denoResolveHost,
+    dnsResolveFn: opts.noResolve === true ? undefined : denoResolveHost,
   } as TransportFactory);
 
   return NatsConnectionImpl.connect(opts);

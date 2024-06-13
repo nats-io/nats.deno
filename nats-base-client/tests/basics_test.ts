@@ -32,6 +32,7 @@ import {
   Empty,
   ErrorCode,
   Feature,
+  getResolveFn,
   headers,
   isIP,
   JSONCodec,
@@ -1420,6 +1421,13 @@ Deno.test("basics - respond message", async () => {
   const r = await nc.request("q");
   assertEquals(r.string(), "not in service");
 
+  await cleanup(ns, nc);
+});
+
+
+Deno.test("basics - noResolve", async () => {
+  const { ns, nc } = await _setup(connect,{}, { noResolve: true });
+  assertEquals(getResolveFn(), undefined);
   await cleanup(ns, nc);
 });
 
