@@ -594,10 +594,12 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
   }
 
   async _doDial(srv: Server): Promise<void> {
-    const alts = await srv.resolve({
+    const resolve = this.options.noResolve !== true;
+    const alts = this.options.noResolve === true ? [srv] : await srv.resolve({
       fn: getResolveFn(),
       debug: this.options.debug,
       randomize: !this.options.noRandomize,
+      resolve,
     });
 
     let lastErr: Error | null = null;

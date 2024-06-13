@@ -340,7 +340,14 @@ export interface Server {
   tlsName: string;
 
   resolve(
-    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; debug?: boolean }>,
+    opts: Partial<
+      {
+        fn: DnsResolveFn;
+        randomize: boolean;
+        debug?: boolean;
+        resolve?: boolean;
+      }
+    >,
   ): Promise<Server[]>;
 }
 
