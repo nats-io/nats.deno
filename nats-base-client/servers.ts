@@ -142,8 +142,9 @@ export class ServerImpl implements Server {
       }
     >,
   ): Promise<Server[]> {
-    if (!opts.fn || !opts.resolve) {
+    if (!opts.fn || opts.resolve === false) {
       // we cannot resolve - transport doesn't support it
+      // or user opted out
       // don't add - to resolves or we get a circ reference
       return [this];
     }
