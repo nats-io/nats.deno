@@ -135,6 +135,12 @@ export function parseOptions(opts?: ConnectionOptions): ConnectionOptions {
     }
   }
 
+  // if not set - we set it
+  if (options.resolve === undefined) {
+    // set a default based on whether the client can resolve or not
+    options.resolve = typeof getResolveFn() === "function";
+  }
+
   if (options.resolve) {
     if (typeof getResolveFn() !== "function") {
       throw new NatsError(
