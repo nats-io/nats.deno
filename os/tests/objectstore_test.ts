@@ -37,9 +37,7 @@ import {
   SHA256,
   StringCodec,
 } from "@nats-io/nats-core/internal";
-import type {
-  NatsConnectionImpl,
-} from "@nats-io/nats-core/internal";
+import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
 import type { ObjectInfo, ObjectStoreMeta } from "../types.ts";
 import { jetstreamManager, StorageType } from "@nats-io/jetstream";

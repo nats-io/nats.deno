@@ -20,11 +20,7 @@ import {
   StreamInfo,
   StreamInfoRequestOptions,
 } from "@nats-io/jetstream";
-import {
-  MsgHdrs,
-  Nanos,
-  QueuedIterator,
-} from "@nats-io/nats-core";
+import { MsgHdrs, Nanos, QueuedIterator } from "@nats-io/nats-core";
 
 export type ObjectStoreLink = {
   /**

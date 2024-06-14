@@ -6,8 +6,8 @@ lint:
 	deno lint --ignore=docs/,debug/
 
 test: clean
-	deno test --allow-all --parallel --reload --quiet --coverage=coverage nats-base-client/tests/ jetstream/tests kv/tests/ os/tests/ service/tests/
-	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage nats-base-client/unsafe_tests/
+	deno test --allow-all --parallel --reload --quiet --coverage=coverage core/tests/ jetstream/tests kv/tests/ os/tests/ service/tests/
+	deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=coverage core/unsafe_tests/
 
 
 testw: clean

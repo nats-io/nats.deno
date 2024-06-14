@@ -16,9 +16,9 @@
 import { join, resolve } from "jsr:@std/path";
 import { rgb24 } from "jsr:@std/fmt/colors";
 import { check, jsopts } from "./mod.ts";
-import { extend, timeout } from "../nats-base-client/internal_mod.ts";
-import type { Deferred } from "../nats-base-client/internal_mod.ts";
-import { deferred, delay, nuid } from "../src/mod.ts";
+import { extend, timeout } from "../core/src/internal_mod.ts";
+import type { Deferred } from "../core/src/internal_mod.ts";
+import { deferred, delay, nuid } from "../core/src/mod.ts";
 import {Certs} from "./certs.ts";
 
 export const ServerSignals = Object.freeze({

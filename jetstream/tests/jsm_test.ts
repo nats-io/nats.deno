@@ -23,9 +23,7 @@ import {
 } from "jsr:@std/assert";
 
 import { Feature } from "@nats-io/nats-core/internal";
-import type {
-  NatsConnectionImpl,
-} from "@nats-io/nats-core/internal";
+import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import {
   connect,
   deferred,

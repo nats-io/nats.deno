@@ -26,9 +26,7 @@ import {
   delay,
   nanos,
 } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import type {
-  NatsConnectionImpl,
-} from "@nats-io/nats-core/internal";
+import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import { jetstream, jetstreamManager } from "../mod.ts";
 
 Deno.test("next - basics", async () => {

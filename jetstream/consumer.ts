@@ -326,8 +326,9 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     if (this.listeners.length > 0) {
       (() => {
         this.listeners.forEach((l) => {
-          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
-            l.push({ type, data });
+          const qi = l as QueuedIteratorImpl<ConsumerStatus>;
+          if (!qi.done) {
+            qi.push({ type, data });
           }
         });
       })();
@@ -584,8 +585,9 @@ export class OrderedConsumerMessages extends QueuedIteratorImpl<JsMsg>
     if (this.listeners.length > 0) {
       (() => {
         this.listeners.forEach((l) => {
-          if (!(l as QueuedIteratorImpl<ConsumerStatus>).done) {
-            l.push({ type, data });
+          const qi = l as QueuedIteratorImpl<ConsumerStatus>;
+          if (!qi.done) {
+            qi.push({ type, data });
           }
         });
       })();

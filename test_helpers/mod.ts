@@ -16,18 +16,18 @@
 import type {
   ConnectionOptions,
   NatsConnection,
-} from "../nats-base-client/internal_mod.ts";
+} from "../core/src/internal_mod.ts";
 import {
   compare,
   extend,
   parseSemVer,
-} from "../nats-base-client/internal_mod.ts";
+} from "../core/src/internal_mod.ts";
 
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";
 import { connect } from "./connect.ts";
 export { connect } from "./connect.ts";
-import {ConnectFn} from "../nats-base-client/core.ts";
+import {ConnectFn} from "../core/src/core.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";

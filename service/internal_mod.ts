@@ -1,7 +1,4 @@
-import type {
-  NatsConnection,
-  RequestManyOptions,
-} from "@nats-io/nats-core";
+import type { NatsConnection, RequestManyOptions } from "@nats-io/nats-core";
 import { ServiceImpl } from "./service.ts";
 import { ServiceClientImpl } from "./serviceclient.ts";
 import type { Service, ServiceClient, ServiceConfig } from "./types.ts";
