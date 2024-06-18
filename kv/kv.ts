@@ -126,7 +126,7 @@ export function defaultBucketOpts(): Partial<KvOptions> {
     replicas: 1,
     history: 1,
     timeout: 2000,
-    maxBucketSize: -1,
+    max_bytes: -1,
     maxValueSize: -1,
     codec: NoopKvCodecs(),
     storage: StorageType.File,
