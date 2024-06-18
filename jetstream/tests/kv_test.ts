@@ -2164,3 +2164,14 @@ Deno.test("kv - watcher on server restart", async () => {
   await d;
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - maxBucketSize doesn't override max_bytes", async () => {
+  let { ns, nc } = await setup(
+    jetstreamServerConf({}),
+  );
+  const js = nc.jetstream();
+  const kv = await js.views.kv("A", { max_bytes: 100 });
+  const info = await kv.status();
+  assertEquals(info.max_bytes, 100);
+  await cleanup(ns, nc);
+});
