@@ -2223,12 +2223,12 @@ Deno.test("kv - kv rejects in older servers", async () => {
 });
 
 Deno.test("kv - maxBucketSize doesn't override max_bytes", async () => {
-  let { ns, nc } = await _setup(
-      connect,
-      jetstreamServerConf({}),
+  const { ns, nc } = await _setup(
+    connect,
+    jetstreamServerConf({}),
   );
-  const js = jetstream(nc);
-  const kv = await js.views.kv("A", { max_bytes: 100 });
+  const kvm = new Kvm(nc);
+  const kv = await kvm.create("A", { max_bytes: 100 });
   const info = await kv.status();
   assertEquals(info.max_bytes, 100);
   await cleanup(ns, nc);
