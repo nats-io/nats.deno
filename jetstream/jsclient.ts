@@ -276,7 +276,7 @@ export class JetStreamClientImpl extends BaseApiClient
     if (err) {
       throw err;
     }
-    return toJsMsg(msg);
+    return toJsMsg(msg, this.timeout);
   }
 
   /*
@@ -389,7 +389,7 @@ export class JetStreamClientImpl extends BaseApiClient
           // if we are doing heartbeats, message resets
           monitor?.work();
           qi.received++;
-          qi.push(toJsMsg(msg));
+          qi.push(toJsMsg(msg, this.timeout));
         }
       },
     });
@@ -653,7 +653,7 @@ export class JetStreamClientImpl extends BaseApiClient
     jsi: JetStreamSubscriptionInfo,
   ): TypedSubscriptionOptions<JsMsg> {
     const so = {} as TypedSubscriptionOptions<JsMsg>;
-    so.adapter = msgAdapter(jsi.callbackFn === undefined);
+    so.adapter = msgAdapter(jsi.callbackFn === undefined, this.timeout);
     so.ingestionFilterFn = JetStreamClientImpl.ingestionFn(jsi.ordered);
     so.protocolFilterFn = (jm, ingest = false): boolean => {
       const jsmi = jm as JsMsgImpl;
@@ -979,44 +979,50 @@ class JetStreamPullSubscriptionImpl extends JetStreamSubscriptionImpl
   }
 }
 
-function msgAdapter(iterator: boolean): MsgAdapter<JsMsg> {
+function msgAdapter(iterator: boolean, ackTimeout: number): MsgAdapter<JsMsg> {
   if (iterator) {
-    return iterMsgAdapter;
+    return iterMsgAdapter(ackTimeout);
   } else {
-    return cbMsgAdapter;
+    return cbMsgAdapter(ackTimeout);
   }
 }
 
-function cbMsgAdapter(
-  err: NatsError | null,
-  msg: Msg,
-): [NatsError | null, JsMsg | null] {
-  if (err) {
-    return [err, null];
-  }
-  err = checkJsError(msg);
-  if (err) {
-    return [err, null];
-  }
-  // assuming that the protocolFilterFn is set!
-  return [null, toJsMsg(msg)];
+function cbMsgAdapter(ackTimeout: number): MsgAdapter<JsMsg> {
+  return (
+    err: NatsError | null,
+    msg: Msg,
+  ): [NatsError | null, JsMsg | null] => {
+    if (err) {
+      return [err, null];
+    }
+    err = checkJsError(msg);
+    if (err) {
+      return [err, null];
+    }
+    // assuming that the protocolFilterFn is set!
+    return [null, toJsMsg(msg, ackTimeout)];
+  };
 }
 
 function iterMsgAdapter(
-  err: NatsError | null,
-  msg: Msg,
-): [NatsError | null, JsMsg | null] {
-  if (err) {
-    return [err, null];
-  }
-  // iterator will close if we have an error
-  // check for errors that shouldn't close it
-  const ne = checkJsError(msg);
-  if (ne !== null) {
-    return [hideNonTerminalJsErrors(ne), null];
-  }
-  // assuming that the protocolFilterFn is set
-  return [null, toJsMsg(msg)];
+  ackTimeout: number,
+): MsgAdapter<JsMsg> {
+  return (
+    err: NatsError | null,
+    msg: Msg,
+  ): [NatsError | null, JsMsg | null] => {
+    if (err) {
+      return [err, null];
+    }
+    // iterator will close if we have an error
+    // check for errors that shouldn't close it
+    const ne = checkJsError(msg);
+    if (ne !== null) {
+      return [hideNonTerminalJsErrors(ne), null];
+    }
+    // assuming that the protocolFilterFn is set
+    return [null, toJsMsg(msg, ackTimeout)];
+  };
 }
 
 function hideNonTerminalJsErrors(ne: NatsError): NatsError | null {

@@ -29,6 +29,7 @@ import {
 } from "../../src/mod.ts";
 import { JsMsgImpl, parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
+  assertBetween,
   cleanup,
   jetstreamServerConf,
   setup,
@@ -222,6 +223,100 @@ Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
     Error,
     "TIMEOUT",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - custom consumer ackAck timeout", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream();
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  const start = Date.now();
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck({ timeout: 1500 });
+    },
+    Error,
+    "TIMEOUT",
+  );
+  assertBetween(Date.now() - start, 1300, 1700);
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - custom consumer ackAck timeout in jsopts", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream({ timeout: 2000 });
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  const start = Date.now();
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck();
+    },
+    Error,
+    "TIMEOUT",
+  );
+  assertBetween(Date.now() - start, 1800, 2200);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - ackAck() timeout legacy jsopts", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager() as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  const js = nc.jetstream({ timeout: 1500 });
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const jm = await js.pull("A", "a");
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  const start = Date.now();
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck();
+    },
+    Error,
+    "TIMEOUT",
+  );
+  assertBetween(Date.now() - start, 1300, 1700);
 
   await cleanup(ns, nc);
 });
