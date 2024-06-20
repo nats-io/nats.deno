@@ -2233,3 +2233,40 @@ Deno.test("kv - maxBucketSize doesn't override max_bytes", async () => {
   assertEquals(info.max_bytes, 100);
   await cleanup(ns, nc);
 });
+
+
+Deno.test("kv - keys filter", async () => {
+  const { ns, nc } = await _setup(
+      connect,
+      jetstreamServerConf({}),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const kvm = new Kvm(nc);
+  const b = await kvm.create(nuid.next());
+  await Promise.all([b.put("A", "a"), b.put("B", "b"), b.put("C", "c")]);
+
+  const buf = [];
+  for await (const e of await b.keys()) {
+    buf.push(e);
+  }
+  assertEquals(buf.length, 3);
+  assertArrayIncludes(buf, ["A", "B", "C"]);
+
+  buf.length = 0;
+  for await (const e of await b.keys("A")) {
+    buf.push(e);
+  }
+  assertEquals(buf.length, 1);
+  assertArrayIncludes(buf, ["A"]);
+
+  buf.length = 0;
+  for await (const e of await b.keys(["A", "C"])) {
+    buf.push(e);
+  }
+  assertEquals(buf.length, 2);
+  assertArrayIncludes(buf, ["A", "C"]);
+
+  await cleanup(ns, nc);
+});

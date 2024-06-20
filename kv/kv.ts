@@ -955,12 +955,12 @@ export class Bucket implements KV, KvRemove {
     return qi;
   }
 
-  async keys(k = ">"): Promise<QueuedIterator<string>> {
+  async keys(k: string|string[] = ">"): Promise<QueuedIterator<string>> {
     const keys = new QueuedIteratorImpl<string>();
     const cc = this._buildCC(k, KvWatchInclude.LastValue, {
       headers_only: true,
     });
-    const subj = cc.filter_subject!;
+    const subj = Array.isArray(k) ? ">" : cc.filter_subject!;
     const copts = consumerOpts(cc);
     copts.bindStream(this.stream);
     copts.orderedConsumer();
