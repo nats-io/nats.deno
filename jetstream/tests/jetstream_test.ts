@@ -62,6 +62,7 @@ import type {
 import { defaultJsOptions } from "../jsbaseclient_api.ts";
 import {
   _setup,
+  assertBetween,
   cleanup,
   jetstreamServerConf,
   Lock,
@@ -1104,9 +1105,9 @@ Deno.test("jetstream - backoff", async () => {
     return v - start;
   });
 
-  assert(delta[1] > 250 && delta[1] < 1000, `250 < ${delta[1]} < 1000`);
-  assert(delta[2] > 1250 && delta[2] < 1500, `1250 < ${delta[2]} < 1500`);
-  assert(delta[3] > 4250 && delta[3] < 4500, `4250 < ${delta[3]} < 4500`);
+  assertBetween(delta[1], 250, 1000);
+  assertBetween(delta[2], 1250, 1500);
+  assertBetween(delta[3], 4250, 4500);
 
   await cleanup(ns, nc);
 });

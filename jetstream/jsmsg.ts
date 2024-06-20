@@ -117,8 +117,11 @@ export interface JsMsg {
    * Indicate to the JetStream server that the message was processed
    * successfully and that the JetStream server should acknowledge back
    * that the acknowledgement was received.
+   * @param opts are optional options (currently only a timeout value
+   * if not specified uses the timeout specified in the JetStreamOptions
+   * when creating the JetStream context.
    */
-  ackAck(): Promise<boolean>;
+  ackAck(opts?: Partial<{ timeout: number }>): Promise<boolean>;
 
   /**
    * Convenience method to parse the message payload as JSON. This method
@@ -133,8 +136,8 @@ export interface JsMsg {
   string(): string;
 }
 
-export function toJsMsg(m: Msg): JsMsg {
-  return new JsMsgImpl(m);
+export function toJsMsg(m: Msg, ackTimeout = 5000): JsMsg {
+  return new JsMsgImpl(m, ackTimeout);
 }
 
 export function parseInfo(s: string): DeliveryInfo {
@@ -172,10 +175,12 @@ export class JsMsgImpl implements JsMsg {
   msg: Msg;
   di?: DeliveryInfo;
   didAck: boolean;
+  timeout: number;
 
-  constructor(msg: Msg) {
+  constructor(msg: Msg, timeout: number) {
     this.msg = msg;
     this.didAck = false;
+    this.timeout = timeout;
   }
 
   get subject(): string {
@@ -228,16 +233,18 @@ export class JsMsgImpl implements JsMsg {
 
   // this has to dig into the internals as the message has access
   // to the protocol but not the high-level client.
-  async ackAck(): Promise<boolean> {
+  async ackAck(opts?: Partial<{ timeout: number }>): Promise<boolean> {
     const d = deferred<boolean>();
     if (!this.didAck) {
       this.didAck = true;
       if (this.msg.reply) {
+        opts = opts || {};
+        opts.timeout = opts.timeout || this.timeout;
         const mi = this.msg as MsgImpl;
         const proto = mi.publisher as unknown as ProtocolHandler;
         const trace = !(proto.options?.noAsyncTraces || false);
         const r = new RequestOne(proto.muxSubscriptions, this.msg.reply, {
-          timeout: 1000,
+          timeout: this.timeout,
         }, trace);
         proto.request(r);
         try {

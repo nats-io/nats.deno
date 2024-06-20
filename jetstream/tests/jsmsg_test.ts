@@ -29,6 +29,7 @@ import type { JsMsgImpl } from "../jsmsg.ts";
 import { parseInfo, toJsMsg } from "../jsmsg.ts";
 import {
   _setup,
+  assertBetween,
   cleanup,
   jetstreamServerConf,
 } from "../../test_helpers/mod.ts";
@@ -213,6 +214,40 @@ Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
   // change the subject
   ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
   nc.subscribe("xxxx");
+  const start = Date.now();
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck({ timeout: 1500 });
+    },
+    Error,
+    "TIMEOUT",
+  );
+  assertBetween(Date.now() - start, 1300, 1700);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - ackAck js options timeout", async () => {
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  // default is 5000
+  const js = jetstream(nc, { timeout: 1500 });
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const c = await js.consumers.get("A", "a");
+  const jm = await c.next();
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  const start = Date.now();
   await assertRejects(
     (): Promise<boolean> => {
       return jm!.ackAck();
@@ -220,6 +255,39 @@ Deno.test("jsmsg - explicit consumer ackAck timeout", async () => {
     Error,
     "TIMEOUT",
   );
+  assertBetween(Date.now() - start, 1300, 1700);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("jsmsg - ackAck legacy timeout", async () => {
+  const { ns, nc } = await _setup(connect, jetstreamServerConf());
+  const jsm = await jetstreamManager(nc) as JetStreamManagerImpl;
+  await jsm.streams.add({
+    name: "A",
+    subjects: ["a.>"],
+    storage: StorageType.Memory,
+    allow_direct: true,
+  });
+
+  // default is 5000
+  const js = jetstream(nc, { timeout: 1500 });
+  await js.publish("a.a");
+
+  await jsm.consumers.add("A", { durable_name: "a" });
+  const jm = await js.pull("A", "a");
+  // change the subject
+  ((jm as JsMsgImpl).msg as MsgImpl)._reply = "xxxx";
+  nc.subscribe("xxxx");
+  const start = Date.now();
+  await assertRejects(
+    (): Promise<boolean> => {
+      return jm!.ackAck();
+    },
+    Error,
+    "TIMEOUT",
+  );
+  assertBetween(Date.now() - start, 1300, 1700);
 
   await cleanup(ns, nc);
 });

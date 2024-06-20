@@ -206,7 +206,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
           }
         } else {
           // push the user message
-          this._push(toJsMsg(msg));
+          this._push(toJsMsg(msg, this.consumer.api.timeout));
           this.received++;
           if (this.pending.msgs) {
             this.pending.msgs--;
