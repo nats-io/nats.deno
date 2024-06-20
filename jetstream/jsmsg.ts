@@ -225,7 +225,6 @@ export class JsMsgImpl implements JsMsg {
   async ackAck(opts?: Partial<{ timeout: number }>): Promise<boolean> {
     opts = opts || {};
     opts.timeout = opts.timeout || this.timeout;
-    console.log(opts.timeout);
     const d = deferred<boolean>();
     if (!this.didAck) {
       this.didAck = true;
