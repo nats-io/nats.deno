@@ -341,7 +341,14 @@ export interface Server {
   tlsName: string;
 
   resolve(
-    opts: Partial<{ fn: DnsResolveFn; randomize: boolean; debug?: boolean, resolve?: boolean }>,
+    opts: Partial<
+      {
+        fn: DnsResolveFn;
+        randomize: boolean;
+        debug?: boolean;
+        resolve?: boolean;
+      }
+    >,
   ): Promise<Server[]>;
 }
 
@@ -1050,11 +1057,11 @@ export interface ConnectionOptions {
   noAsyncTraces?: boolean;
 
   /**
-  * When false, the connect function will not perform any hostname resolution. Note that
-  * by default this option will be true if the client supports hostname resolution.
-  * Note that on clients that don't supported (mainly the websocket client, setting this
-  * option to true, will throw an exception as this option is not available.
-  */
+   * When false, the connect function will not perform any hostname resolution. Note that
+   * by default this option will be true if the client supports hostname resolution.
+   * Note that on clients that don't supported (mainly the websocket client, setting this
+   * option to true, will throw an exception as this option is not available.
+   */
   resolve?: boolean;
 }
 

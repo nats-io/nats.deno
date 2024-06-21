@@ -16,7 +16,7 @@ import { assert, assertEquals } from "jsr:@std/assert";
 import { createInbox, deferred, StringCodec } from "../src/internal_mod.ts";
 import type { Msg, SubscriptionImpl } from "../src/internal_mod.ts";
 import { connect } from "./connect.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 
 Deno.test("extensions - cleanup fn called at auto unsub", async () => {
   const { ns, nc } = await _setup(connect);

@@ -1,6 +1,5 @@
 import { join, resolve } from "jsr:@std/path";
-import { NatsServer } from "../../test_helpers/launcher.ts";
-import { connect } from "../../src/mod.ts";
+import { connect, NatsServer } from "test_helpers";
 
 Deno.test("tls-unsafe - handshake first", async () => {
   const cwd = Deno.cwd();
@@ -19,7 +18,7 @@ Deno.test("tls-unsafe - handshake first", async () => {
   };
 
   const ns = await NatsServer.start(config);
-  console.log("port", ns.port)
+  console.log("port", ns.port);
   const nc = await connect({
     debug: true,
     servers: `localhost:${ns.port}`,

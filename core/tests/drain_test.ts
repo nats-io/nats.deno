@@ -13,18 +13,14 @@
  * limitations under the License.
  */
 import { assert, assertEquals, fail } from "jsr:@std/assert";
-import {
-  createInbox,
-  ErrorCode,
-  StringCodec,
-} from "../src/internal_mod.ts";
+import { createInbox, ErrorCode, StringCodec } from "../src/internal_mod.ts";
 import type { Msg } from "../src/internal_mod.ts";
 import {
   assertThrowsAsyncErrorCode,
   assertThrowsErrorCode,
   Lock,
-} from "../../test_helpers/mod.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+} from "test_helpers";
+import { _setup, cleanup } from "test_helpers";
 import { connect } from "./connect.ts";
 
 Deno.test("drain - connection drains when no subs", async () => {

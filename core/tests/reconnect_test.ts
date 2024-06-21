@@ -14,7 +14,7 @@
  */
 import { assert, assertEquals, fail } from "jsr:@std/assert";
 import { connect } from "./connect.ts";
-import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "test_helpers";
 import {
   createInbox,
   DataBuffer,
@@ -27,7 +27,7 @@ import {
 } from "../src/internal_mod.ts";
 import type { NatsConnectionImpl, NatsError } from "../src/internal_mod.ts";
 
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 import { deadline } from "jsr:@std/async";
 
 Deno.test("reconnect - should receive when some servers are invalid", async () => {

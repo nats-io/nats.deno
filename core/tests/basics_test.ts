@@ -45,11 +45,11 @@ import type {
   Msg,
   MsgHdrs,
   NatsConnectionImpl,
+  NatsError,
   Payload,
   Publisher,
   PublishOptions,
   SubscriptionImpl,
-    NatsError,
 } from "../src/internal_mod.ts";
 import {
   _setup,
@@ -58,7 +58,7 @@ import {
   disabled,
   Lock,
   NatsServer,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { connect } from "./connect.ts";
 
 Deno.test("basics - connect port", async () => {
@@ -1207,7 +1207,7 @@ Deno.test("basics - msg typed payload", async () => {
   const nc = await connect({ port: ns.port });
 
   nc.subscribe("echo", {
-    callback: (_err: Error|null, msg: Msg) => {
+    callback: (_err: Error | null, msg: Msg) => {
       msg.respond(msg.data);
     },
   });
@@ -1423,12 +1423,11 @@ Deno.test("basics - respond message", async () => {
   await cleanup(ns, nc);
 });
 
-
 Deno.test("basics - resolve", async () => {
   const token = Deno.env.get("NGS_CI_USER");
   if (token === undefined) {
     disabled(
-        `skipping: NGS_CI_USER is not available in the environment`,
+      `skipping: NGS_CI_USER is not available in the environment`,
     );
     return;
   }

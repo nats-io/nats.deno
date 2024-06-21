@@ -14,13 +14,8 @@
  */
 
 import { connect } from "./connect.ts";
-import {
-  createInbox,
-  Empty,
-  ErrorCode,
-  headers,
-} from "@nats-io/nats-core";
-import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
+import { createInbox, Empty, ErrorCode, headers } from "@nats-io/nats-core";
+import { assertErrorCode, Lock, NatsServer } from "test_helpers";
 import { assert, assertEquals, fail } from "jsr:@std/assert";
 
 Deno.test("noresponders - option", async () => {

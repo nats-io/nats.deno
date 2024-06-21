@@ -14,12 +14,7 @@
  */
 
 import { Js409Errors, setMaxWaitingToFail } from "../jsutil.ts";
-import {
-  connect,
-  deferred,
-  nanos,
-  StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+import { deferred, nanos, StringCodec } from "@nats-io/nats-core";
 
 import type { NatsError } from "@nats-io/nats-core";
 import {
@@ -34,9 +29,10 @@ import { initStream } from "./jstest_util.ts";
 import {
   _setup,
   cleanup,
+  connect,
   jetstreamServerConf,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 
 type testArgs = {
   js: JetStreamClient;

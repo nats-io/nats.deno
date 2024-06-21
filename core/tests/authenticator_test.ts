@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 import { connect } from "./connect.ts";
 
 import {
@@ -28,7 +28,12 @@ import {
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "../src/internal_mod.ts";
-import type { NatsConnectionImpl, Auth, Authenticator, NatsConnection } from "../src/internal_mod.ts";
+import type {
+  Auth,
+  Authenticator,
+  NatsConnection,
+  NatsConnectionImpl,
+} from "../src/internal_mod.ts";
 
 import { assertEquals } from "jsr:@std/assert";
 import {
@@ -37,7 +42,7 @@ import {
   encodeUser,
   fmtCreds,
 } from "jsr:@nats-io/jwt@0.0.9-3";
-import { assertBetween } from "../../test_helpers/mod.ts";
+import { assertBetween } from "test_helpers";
 
 function disconnectReconnect(nc: NatsConnection): Promise<void> {
   const done = deferred<void>();

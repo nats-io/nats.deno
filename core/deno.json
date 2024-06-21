@@ -11,6 +11,9 @@
       "./unsafe_tests/**/*"
     ]
   },
+  "tasks": {
+    "clean": "rm -rf ./lib ./cjs ./esm"
+  },
   "imports": {
     "@nats-io/nkeys": "jsr:@nats-io/nkeys@1.2.0-4",
     "@nats-io/nuid": "jsr:@nats-io/nuid@2.0.1-2"

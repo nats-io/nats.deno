@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup, connect } from "test_helpers";
 import { ServiceImpl } from "../service.ts";
 import {
   assert,
@@ -57,7 +57,6 @@ import {
   ServiceVerb,
   Svc,
 } from "../mod.ts";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {

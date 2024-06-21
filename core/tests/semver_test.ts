@@ -13,7 +13,12 @@
  * limitations under the License.
  */
 
-import { compare, Feature, Features, parseSemVer } from "../src/internal_mod.ts";
+import {
+  compare,
+  Feature,
+  Features,
+  parseSemVer,
+} from "../src/internal_mod.ts";
 import {
   assert,
   assertEquals,

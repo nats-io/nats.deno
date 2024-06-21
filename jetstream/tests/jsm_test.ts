@@ -25,7 +25,6 @@ import {
 import { Feature } from "@nats-io/nats-core/internal";
 import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import {
-  connect,
   deferred,
   Empty,
   ErrorCode,
@@ -36,11 +35,8 @@ import {
   nkeys,
   nuid,
   StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import type {
-  NatsConnection,
-  NatsError,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
+import type { NatsConnection, NatsError } from "@nats-io/nats-core";
 import {
   AckPolicy,
   AdvisoryKind,
@@ -66,11 +62,12 @@ import {
   _setup,
   assertThrowsAsyncErrorCode,
   cleanup,
+  connect,
   jetstreamExportServerConf,
   jetstreamServerConf,
   NatsServer,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { validateName } from "../jsutil.ts";
 import {
   encodeAccount,

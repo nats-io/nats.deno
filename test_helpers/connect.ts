@@ -1,1 +1,1 @@
-export {connect} from "../src/mod.ts";
+export {connect} from "../transport-deno/src/mod.ts";

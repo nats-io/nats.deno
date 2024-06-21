@@ -12,12 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Lock, NatsServer, ServerSignals } from "../../test_helpers/mod.ts";
+import { Lock, NatsServer, ServerSignals } from "test_helpers";
 import { connect } from "./connect.ts";
 import { assertEquals } from "jsr:@std/assert";
-import { delay, Events } from  "../src/internal_mod.ts";
-import type { NatsConnectionImpl, ServersChanged } from "../src/internal_mod.ts";
-import { _setup } from "../../test_helpers/mod.ts";
+import { delay, Events } from "../src/internal_mod.ts";
+import type {
+  NatsConnectionImpl,
+  ServersChanged,
+} from "../src/internal_mod.ts";
+import { _setup } from "test_helpers";
 
 Deno.test("events - close on close", async () => {
   const { ns, nc } = await _setup(connect);

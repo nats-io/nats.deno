@@ -17,13 +17,13 @@ import {
   _setup,
   assertBetween,
   cleanup,
+  connect,
   jetstreamExportServerConf,
   jetstreamServerConf,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { initStream } from "./jstest_util.ts";
 import {
-  connect,
   createInbox,
   DebugEvents,
   deferred,
@@ -37,7 +37,7 @@ import {
   nuid,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 import { consumerOpts, JsHeaders } from "../types.ts";
 
 import type {

@@ -14,15 +14,11 @@
  */
 import { connect } from "./connect.ts";
 import { assertEquals } from "jsr:@std/assert";
-import {
-  createInbox,
-  ErrorCode,
-  JSONCodec,
-} from "../src/internal_mod.ts";
+import { createInbox, ErrorCode, JSONCodec } from "../src/internal_mod.ts";
 import type { Msg, NatsError } from "../src/internal_mod.ts";
-import { Lock } from "../../test_helpers/mod.ts";
+import { Lock } from "test_helpers";
 import { assertThrowsErrorCode } from "../../test_helpers/asserts.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 
 Deno.test("json - bad json error in callback", () => {
   const o = {};

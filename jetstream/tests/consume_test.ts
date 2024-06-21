@@ -16,9 +16,10 @@
 import {
   _setup,
   cleanup,
+  connect,
   jetstreamServerConf,
   NatsServer,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
 import {
   assert,
@@ -28,13 +29,12 @@ import {
 } from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
 import {
-  connect,
   deadline,
   deferred,
   delay,
   nanos,
   syncIterator,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 import type { PullConsumerMessagesImpl } from "../consumer.ts";
 import {
   AckPolicy,

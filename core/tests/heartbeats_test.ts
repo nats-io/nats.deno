@@ -20,7 +20,7 @@ import {
   delay,
   Heartbeat,
 } from "../src/internal_mod.ts";
-import type { Status, PH } from "../src/internal_mod.ts";
+import type { PH, Status } from "../src/internal_mod.ts";
 
 function pm(
   lag: number,

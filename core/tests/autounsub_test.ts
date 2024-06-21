@@ -16,7 +16,7 @@ import { assert, assertEquals } from "jsr:@std/assert";
 
 import { createInbox, Empty, ErrorCode } from "../src/internal_mod.ts";
 import type { NatsConnectionImpl, Subscription } from "../src/internal_mod.ts";
-import { _setup, cleanup, Lock } from "../../test_helpers/mod.ts";
+import { _setup, cleanup, Lock } from "test_helpers";
 import { connect } from "./connect.ts";
 
 Deno.test("autounsub - max option", async () => {

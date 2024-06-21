@@ -16,9 +16,10 @@
 import {
   _setup,
   cleanup,
+  connect,
   jetstreamServerConf,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import {
   assert,
   assertEquals,
@@ -26,7 +27,6 @@ import {
   assertRejects,
   equal,
 } from "jsr:@std/assert";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import {
   Base64UrlPaddedCodec,
   DataBuffer,

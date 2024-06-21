@@ -8,7 +8,12 @@
 // in a browser environment
 
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
-import { DenoBuffer, MAX_SIZE, readAll, writeAll } from "../src/internal_mod.ts";
+import {
+  DenoBuffer,
+  MAX_SIZE,
+  readAll,
+  writeAll,
+} from "../src/internal_mod.ts";
 
 // N controls how many iterations of certain checks are performed.
 const N = 100;

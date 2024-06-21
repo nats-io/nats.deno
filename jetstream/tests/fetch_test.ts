@@ -13,21 +13,16 @@
  * limitations under the License.
  */
 
-import {
-  _setup,
-  cleanup,
-  jetstreamServerConf,
-} from "../../test_helpers/mod.ts";
+import { _setup, cleanup, connect, jetstreamServerConf } from "test_helpers";
 import { initStream } from "./jstest_util.ts";
 import { assertEquals, assertExists, assertRejects } from "jsr:@std/assert";
 import {
-  connect,
   delay,
   Empty,
   nanos,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import {
   AckPolicy,

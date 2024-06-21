@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { NatsServer } from "../../test_helpers/launcher.ts";
+import { connect, NatsServer } from "test_helpers";
 
 import { initStream } from "./jstest_util.ts";
 import {
@@ -33,7 +33,6 @@ import type {
   NatsError,
 } from "@nats-io/nats-core/internal";
 import {
-  connect,
   createInbox,
   deferred,
   delay,
@@ -44,7 +43,7 @@ import {
   nanos,
   nuid,
   StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 import {
   assert,
   assertArrayIncludes,
@@ -67,7 +66,7 @@ import {
   jetstreamServerConf,
   Lock,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { ConsumerOptsBuilderImpl } from "../types.ts";
 import { PubHeaders } from "../jsapi_types.ts";
 

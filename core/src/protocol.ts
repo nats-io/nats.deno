@@ -594,7 +594,7 @@ export class ProtocolHandler implements Dispatcher<ParserEvent> {
       fn: getResolveFn(),
       debug: this.options.debug,
       randomize: !this.options.noRandomize,
-      resolve
+      resolve,
     });
 
     let lastErr: Error | null = null;

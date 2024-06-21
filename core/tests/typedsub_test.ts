@@ -25,9 +25,13 @@ import {
   StringCodec,
   TypedSubscription,
 } from "../src/internal_mod.ts";
-import type { Msg, TypedSubscriptionOptions, NatsError } from "../src/internal_mod.ts";
+import type {
+  Msg,
+  NatsError,
+  TypedSubscriptionOptions,
+} from "../src/internal_mod.ts";
 import { connect } from "./connect.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 
 Deno.test("typedsub - rejects no adapter", async () => {
   const { nc, ns } = await _setup(connect);

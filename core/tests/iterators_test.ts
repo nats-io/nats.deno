@@ -14,7 +14,7 @@
  */
 import { connect } from "./connect.ts";
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
-import { assertErrorCode, Lock, NatsServer } from "../../test_helpers/mod.ts";
+import { assertErrorCode, Lock, NatsServer } from "test_helpers";
 import {
   createInbox,
   delay,
@@ -24,7 +24,7 @@ import {
   syncIterator,
 } from "../src/internal_mod.ts";
 import type { NatsConnectionImpl } from "../src/internal_mod.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 
 Deno.test("iterators - unsubscribe breaks and closes", async () => {
   const { ns, nc } = await _setup(connect);

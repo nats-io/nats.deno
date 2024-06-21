@@ -34,18 +34,10 @@ import type {
   JsMsg,
   PullOptions,
 } from "../mod.ts";
-import { NatsServer } from "../../test_helpers/launcher.ts";
-import {
-  connect,
-  deferred,
-  nanos,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+import { connect, NatsServer } from "test_helpers";
+import { deferred, nanos } from "@nats-io/nats-core";
 import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
-import {
-  _setup,
-  cleanup,
-  jetstreamServerConf,
-} from "../../test_helpers/mod.ts";
+import { _setup, cleanup, jetstreamServerConf } from "test_helpers";
 import type { PullConsumerMessagesImpl } from "../consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {

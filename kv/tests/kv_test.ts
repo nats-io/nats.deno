@@ -66,14 +66,14 @@ import { kvPrefix, validateBucket, validateKey } from "../internal_mod.ts";
 import {
   _setup,
   cleanup,
+  connect,
   jetstreamServerConf,
   Lock,
   NatsServer,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { JSONCodec } from "@nats-io/nats-core/internal";
 import type { QueuedIteratorImpl } from "@nats-io/nats-core/internal";
-import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
 import { Kvm } from "../kv.ts";
 
 Deno.test("kv - key validation", () => {

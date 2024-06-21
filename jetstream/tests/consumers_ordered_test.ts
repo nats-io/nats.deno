@@ -35,15 +35,11 @@ import type {
 import {
   _setup,
   cleanup,
+  connect,
   jetstreamServerConf,
   notCompatible,
-} from "../../test_helpers/mod.ts";
-import {
-  connect,
-  deadline,
-  deferred,
-  delay,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "test_helpers";
+import { deadline, deferred, delay } from "@nats-io/nats-core";
 
 Deno.test("ordered consumers - get", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf());

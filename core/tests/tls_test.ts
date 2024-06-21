@@ -21,12 +21,7 @@ import {
 import { connect } from "./connect.ts";
 import { ErrorCode } from "../src/internal_mod.ts";
 import type { NatsConnectionImpl } from "../src/internal_mod.ts";
-import {
-  assertErrorCode,
-  cleanup,
-  Lock,
-  NatsServer,
-} from "../../test_helpers/mod.ts";
+import { assertErrorCode, cleanup, Lock, NatsServer } from "test_helpers";
 
 Deno.test("tls - fail if server doesn't support TLS", async () => {
   const ns = await NatsServer.start();

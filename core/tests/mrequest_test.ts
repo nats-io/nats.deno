@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 import { connect } from "./connect.ts";
 import type { NatsConnectionImpl } from "../src/internal_mod.ts";
 import {

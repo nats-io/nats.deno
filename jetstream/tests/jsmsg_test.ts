@@ -15,14 +15,8 @@
 import { assertEquals, assertRejects, fail } from "jsr:@std/assert";
 import { AckPolicy, jetstream, jetstreamManager, StorageType } from "../mod.ts";
 
-import {
-  connect,
-  createInbox,
-  Empty,
-  nanos,
-  StringCodec,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import type { Msg } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+import { createInbox, Empty, nanos, StringCodec } from "@nats-io/nats-core";
+import type { Msg } from "@nats-io/nats-core";
 import type { MsgImpl } from "@nats-io/nats-core/internal";
 
 import type { JsMsgImpl } from "../jsmsg.ts";
@@ -31,8 +25,9 @@ import {
   _setup,
   assertBetween,
   cleanup,
+  connect,
   jetstreamServerConf,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import type { JetStreamManagerImpl } from "../jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {

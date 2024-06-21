@@ -16,11 +16,12 @@
 import {
   _setup,
   cleanup,
+  connect,
   disabled,
   jetstreamExportServerConf,
   jetstreamServerConf,
   notCompatible,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { initStream } from "./jstest_util.ts";
 import { AckPolicy, DeliverPolicy, StorageType } from "../jsapi_types.ts";
 import type { ConsumerConfig } from "../jsapi_types.ts";
@@ -35,7 +36,6 @@ import {
 } from "jsr:@std/assert";
 import { checkJsError } from "../jsutil.ts";
 import {
-  connect,
   DebugEvents,
   deferred,
   delay,
@@ -47,7 +47,7 @@ import {
   nuid,
   StringCodec,
   syncIterator,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 
 import type {
   NatsConnectionImpl,

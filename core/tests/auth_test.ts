@@ -12,12 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  _setup,
-  assertErrorCode,
-  cleanup,
-  NatsServer,
-} from "../../test_helpers/mod.ts";
+import { _setup, assertErrorCode, cleanup, NatsServer } from "test_helpers";
 import {
   assert,
   assertArrayIncludes,

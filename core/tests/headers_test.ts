@@ -33,7 +33,7 @@ import type {
 import { NatsServer } from "../../test_helpers/launcher.ts";
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 import { TestDispatcher } from "./parser_test.ts";
-import { _setup, cleanup } from "../../test_helpers/mod.ts";
+import { _setup, cleanup } from "test_helpers";
 
 Deno.test("headers - illegal key", () => {
   const h = headers();

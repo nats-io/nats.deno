@@ -17,8 +17,9 @@ import {
   _setup,
   assertBetween,
   cleanup,
+  connect,
   jetstreamServerConf,
-} from "../../test_helpers/mod.ts";
+} from "test_helpers";
 import { initStream, time } from "./jstest_util.ts";
 import { AckPolicy, StorageType } from "../jsapi_types.ts";
 import {
@@ -30,14 +31,13 @@ import {
   fail,
 } from "jsr:@std/assert";
 import {
-  connect,
   DebugEvents,
   deferred,
   Empty,
   Events,
   nuid,
   syncIterator,
-} from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
+} from "@nats-io/nats-core";
 import type {
   NatsConnectionImpl,
   NatsError,
