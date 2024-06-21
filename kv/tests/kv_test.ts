@@ -2234,11 +2234,10 @@ Deno.test("kv - maxBucketSize doesn't override max_bytes", async () => {
   await cleanup(ns, nc);
 });
 
-
 Deno.test("kv - keys filter", async () => {
   const { ns, nc } = await _setup(
-      connect,
-      jetstreamServerConf({}),
+    connect,
+    jetstreamServerConf({}),
   );
   if (await notCompatible(ns, nc, "2.6.3")) {
     return;

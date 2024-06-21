@@ -2,17 +2,20 @@
   "compilerOptions": {
     "strict": true
   },
-  "imports": {
-    "@nats-io/nats-core": "./core/src/mod.ts",
-    "@nats-io/nats-core/internal": "./core/src/internal_mod.ts",
-    "@nats-io/jetstream": "./jetstream/src/mod.ts",
-    "@nats-io/jetstream/internal": "./jetstream/src/internal_mod.ts",
-    "@nats-io/kv": "jsr:@nats-io/kv",
-    "@nats-io/obj": "jsr:@nats-io/obj",
-    "@nats-io/service": "jsr:@nats-io/service",
-    "@nats-io/nats-transport-deno": "jsr:@nats-io/nats-transport-deno",
-    "@std/io": "jsr:@std/io",
-    "@std/assert": "jsr:@std/assert"
+  "scopes": {
+    "*": {
+      "@nats-io/nats-core": "./core/src/mod.ts",
+      "@nats-io/nats-core/internal": "./core/src/internal_mod.ts",
+      "@nats-io/nats-transport-deno": "./src/mod.ts",
+      "@nats-io/jetstream": "./jetstream/mod.ts",
+      "@nats-io/jetstream/internal": "./jetstream/internal_mod.ts",
+      "@nats-io/kv": "./kv/mod.ts",
+      "@nats-io/kv/internal": "./kv/internal_mod.ts",
+      "@nats-io/obj": "./os/mod.ts",
+      "@nats-io/obj/internal": "./os/internal_mod.ts",
+      "@nats-io/services": "./services/mod.ts",
+      "@nats-io/services/internal": "./services/internal_mod.ts"
+    }
   },
   "workspaces": [
     "./src",

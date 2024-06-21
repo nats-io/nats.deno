@@ -295,7 +295,7 @@ export interface RoKV {
    * the specified filter.
    * @param filter - default is all keys
    */
-  keys(filter?: string|string[]): Promise<QueuedIterator<string>>;
+  keys(filter?: string | string[]): Promise<QueuedIterator<string>>;
 }
 
 export interface KV extends RoKV {

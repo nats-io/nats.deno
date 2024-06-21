@@ -955,7 +955,7 @@ export class Bucket implements KV, KvRemove {
     return qi;
   }
 
-  async keys(k: string|string[] = ">"): Promise<QueuedIterator<string>> {
+  async keys(k: string | string[] = ">"): Promise<QueuedIterator<string>> {
     const keys = new QueuedIteratorImpl<string>();
     const cc = this._buildCC(k, KvWatchInclude.LastValue, {
       headers_only: true,
