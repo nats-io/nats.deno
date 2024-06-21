@@ -14,7 +14,7 @@
  */
 import { Lock, NatsServer, ServerSignals } from "../tests/helpers/mod.ts";
 import { connect, Events, ServersChanged } from "../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { delay, NatsConnectionImpl } from "../nats-base-client/internal_mod.ts";
 import { setup } from "./helpers/mod.ts";
 

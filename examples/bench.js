@@ -1,5 +1,5 @@
 #!/usr/bin/env deno run --allow-all --unstable
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { Bench, connect, Metric, Nuid } from "../src/mod.ts";
 const defaults = {
   s: "127.0.0.1:4222",
@@ -13,7 +13,7 @@ const defaults = {
   pendingLimit: 32,
 };
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {
     alias: {

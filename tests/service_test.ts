@@ -22,7 +22,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 
 import { collect, delay } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";

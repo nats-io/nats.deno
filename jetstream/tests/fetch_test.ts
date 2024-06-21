@@ -24,7 +24,7 @@ import {
   assertEquals,
   assertExists,
   assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { StringCodec } from "../../nats-base-client/codec.ts";
 import { delay, nanos } from "../../nats-base-client/util.ts";

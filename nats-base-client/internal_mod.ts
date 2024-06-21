@@ -40,7 +40,7 @@ export {
 } from "./authenticator.ts";
 export type { Codec } from "./codec.ts";
 export { JSONCodec, StringCodec } from "./codec.ts";
-export * from "./nkeys.ts";
+export * as nkeys from "@nats-io/nkeys";
 export type {
   DispatchedFn,
   IngestionFilterFn,

@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { nkeys } from "./nkeys.ts";
+import * as nkeys from "@nats-io/nkeys";
 import { TD, TE } from "./encoders.ts";
 import {
   Auth,

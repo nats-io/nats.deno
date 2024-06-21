@@ -52,7 +52,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 
 import { assert } from "../../nats-base-client/denobuffer.ts";
 import {

@@ -26,8 +26,8 @@ import {
   tokenAuthenticator,
   usernamePasswordAuthenticator,
 } from "../nats-base-client/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { nkeys } from "../nats-base-client/nkeys.ts";
+import { assertEquals } from "@std/assert";
+import * as nkeys from "@nats-io/nkeys";
 import {
   encodeAccount,
   encodeOperator,

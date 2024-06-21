@@ -1,5 +1,4 @@
-import { resolve } from "https://deno.land/std@0.221.0/path/resolve.ts";
-import { join } from "https://deno.land/std@0.221.0/path/join.ts";
+import { resolve, join } from "@std/path";
 import { NatsServer } from "../tests/helpers/launcher.ts";
 import { connect } from "../src/connect.ts";
 

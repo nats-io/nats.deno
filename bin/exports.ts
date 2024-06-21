@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import {
   basename,
   extname,
   join,
   resolve,
-} from "https://deno.land/std@0.221.0/path/mod.ts";
+} from "@std/path";
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {},
 );

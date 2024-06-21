@@ -14,8 +14,8 @@
  */
 
 import { NatsServer } from "./mod.ts";
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
-import { rgb24 } from "https://deno.land/std@0.221.0/fmt/colors.ts";
+import { parseArgs } from "@std/cli/parse-args";
+import { rgb24 } from "@std/fmt/colors";
 
 const defaults = {
   c: 3,
@@ -26,7 +26,7 @@ const defaults = {
   key: "",
 };
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {
     alias: {

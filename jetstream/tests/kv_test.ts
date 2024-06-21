@@ -45,7 +45,7 @@ import {
   assertExists,
   assertRejects,
   assertThrows,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 
 import {
   Base64KeyCodec,
@@ -64,13 +64,13 @@ import {
 } from "../../tests/helpers/mod.ts";
 import { QueuedIteratorImpl } from "../../nats-base-client/queued_iterator.ts";
 import { connect } from "../../src/mod.ts";
-import { JSONCodec } from "https://deno.land/x/nats@v1.10.2/nats-base-client/codec.ts";
 import { JetStreamOptions } from "../../nats-base-client/core.ts";
 import {
   JetStreamSubscriptionInfoable,
   kvPrefix,
   KvWatchInclude,
 } from "../types.ts";
+import { JSONCodec } from "../../nats-base-client/codec.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [

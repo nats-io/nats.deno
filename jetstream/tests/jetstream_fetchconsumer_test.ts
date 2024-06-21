@@ -28,7 +28,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import {

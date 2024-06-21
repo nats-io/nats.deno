@@ -20,7 +20,7 @@ import {
   assertRejects,
   assertThrows,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 
 import { assertThrowsAsyncErrorCode } from "./helpers/asserts.ts";
 
@@ -57,11 +57,8 @@ import {
   SubscriptionImpl,
 } from "../nats-base-client/internal_mod.ts";
 import { Feature } from "../nats-base-client/semver.ts";
-import { syncIterator } from "../nats-base-client/core.ts";
-import {
-  MsgHdrs,
-  Publisher,
-} from "https://deno.land/x/nats@v1.18.0/nats-base-client/core.ts";
+import { Publisher, syncIterator } from "../nats-base-client/core.ts";
+import { MsgHdrs } from "../nats-base-client/types.ts";
 
 Deno.test("basics - connect port", async () => {
   const ns = await NatsServer.start();

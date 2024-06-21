@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { isIPV4OrHostname, Servers } from "../nats-base-client/servers.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import {
   ServerInfo,
   setTransportFactory,

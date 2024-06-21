@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
+import { cli } from "cobra";
 import {
   connect,
   NatsConnection,
@@ -28,7 +28,7 @@ import {
 
 import { collect } from "../../nats-base-client/util.ts";
 import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
-import Ajv, { JSONSchemaType, ValidateFunction } from "npm:ajv";
+import Ajv, { JSONSchemaType, ValidateFunction } from "ajv";
 
 import { parseSemVer } from "../../nats-base-client/semver.ts";
 

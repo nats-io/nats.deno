@@ -24,7 +24,7 @@ import {
   assertEquals,
   assertFalse,
   assertThrows,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 
 Deno.test("semver", () => {
   const pt: { a: string; b: string; r: number }[] = [

@@ -15,7 +15,7 @@
 
 import { NatsServer } from "./launcher.ts";
 import { compare, parseSemVer } from "../../nats-base-client/semver.ts";
-import { red, yellow } from "https://deno.land/std@0.221.0/fmt/colors.ts";
+import { red, yellow } from "@std/fmt/colors";
 import { extend } from "../../nats-base-client/util.ts";
 import { connect } from "../../src/connect.ts";
 import {

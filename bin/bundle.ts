@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
-import { bundle } from "https://deno.land/x/emit@0.26.0/mod.ts";
+import { cli } from "cobra";
+import { bundle } from "@deno/emit";
 
 const root = cli({
   use: "bundle javascript/typescript",

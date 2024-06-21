@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-all --unstable
 
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import {
   connect,
   ConnectionOptions,
@@ -8,7 +8,7 @@ import {
   StringCodec,
 } from "../src/mod.ts";
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {
     alias: {

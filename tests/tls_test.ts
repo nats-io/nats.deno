@@ -17,11 +17,11 @@ import {
   assertRejects,
   assertStringIncludes,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { connect, ErrorCode } from "../src/mod.ts";
 import { assertErrorCode, Lock, NatsServer } from "./helpers/mod.ts";
 
-import { join, resolve } from "https://deno.land/std@0.221.0/path/mod.ts";
+import { join, resolve } from "@std/path";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
 import { cleanup } from "./helpers/mod.ts";
 

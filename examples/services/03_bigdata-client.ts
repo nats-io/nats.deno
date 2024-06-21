@@ -12,11 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { connect, ConnectionOptions, RequestStrategy } from "../../src/mod.ts";
 import { humanizeBytes } from "./03_util.ts";
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {
     alias: {

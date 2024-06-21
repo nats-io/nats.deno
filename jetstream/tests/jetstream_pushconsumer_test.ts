@@ -45,7 +45,7 @@ import {
   assertExists,
   assertIsError,
   assertRejects,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { callbackConsume } from "./jetstream_test.ts";
 import {
   AckPolicy,

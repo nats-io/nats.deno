@@ -20,7 +20,7 @@ import {
   assertRejects,
   assertStringIncludes,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import {
   connect,
   createInbox,

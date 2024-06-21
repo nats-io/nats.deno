@@ -20,7 +20,7 @@ import {
   assertEquals,
   assertExists,
   fail,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { createInbox, Msg, NatsConnection } from "../nats-base-client/core.ts";
 import { NatsServer } from "./helpers/launcher.ts";
 

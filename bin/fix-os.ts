@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { ObjectStoreImpl, ServerObjectInfo } from "../jetstream/objectstore.ts";
 import {
   connect,
@@ -20,7 +20,7 @@ import {
   credsAuthenticator,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
 
-const argv = parse(
+const argv = parseArgs(
   Deno.args,
   {
     alias: {

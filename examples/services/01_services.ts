@@ -23,7 +23,7 @@ import {
   ServiceMsg,
   ServiceStats,
 } from "../../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 
 // connect to NATS on demo.nats.io
 const nc = await connect({ servers: ["demo.nats.io"] });

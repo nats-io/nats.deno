@@ -25,9 +25,9 @@ import {
 import {
   assertArrayIncludes,
   assertEquals,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { extend } from "../nats-base-client/util.ts";
-import { join, resolve } from "https://deno.land/std@0.221.0/path/mod.ts";
+import { join, resolve } from "@std/path";
 
 async function runDoubleSubsTest(tls: boolean) {
   const cwd = Deno.cwd();

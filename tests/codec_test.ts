@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { JSONCodec, StringCodec } from "../nats-base-client/codec.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 
 Deno.test("codec - string", () => {
   const sc = StringCodec();

@@ -16,7 +16,7 @@ import {
   assert,
   assertEquals,
   assertThrows,
-} from "https://deno.land/std@0.221.0/assert/mod.ts";
+} from "@std/assert";
 import { Bench, connect, createInbox } from "../src/mod.ts";
 import { BenchOpts, Metric } from "../nats-base-client/bench.ts";
 
