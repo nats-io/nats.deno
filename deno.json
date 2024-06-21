@@ -21,7 +21,7 @@
   "publish": {},
   "test": {
     "include": [
-      "tests/**/*._test"
+      "tests/**/*.ts"
     ]
   },
   "bench": {},

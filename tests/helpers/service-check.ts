@@ -28,7 +28,7 @@ import {
 
 import { collect } from "../../nats-base-client/util.ts";
 import { ServiceClientImpl } from "../../nats-base-client/serviceclient.ts";
-import Ajv, { JSONSchemaType, ValidateFunction } from "ajv";
+import { Ajv, JSONSchemaType, ValidateFunction } from "ajv";
 
 import { parseSemVer } from "../../nats-base-client/semver.ts";
 
