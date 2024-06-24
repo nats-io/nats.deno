@@ -15,14 +15,19 @@
 
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
 import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import type { NatsConnection } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import { collect, parseSemVer, StringCodec } from "@nats-io/nats-core/internal";
+import {
+  collect,
+  NatsConnection,
+  parseSemVer,
+  StringCodec,
+} from "@nats-io/nats-core/internal";
 
 import type { ServiceIdentity, ServiceInfo, ServiceStats } from "../mod.ts";
 import { ServiceError, ServiceResponseType, ServiceVerb, Svc } from "../mod.ts";
 
 import type { ServiceClientImpl } from "../serviceclient.ts";
-import type { Ajv, JSONSchemaType, ValidateFunction } from "npm:ajv";
+import type { JSONSchemaType, ValidateFunction } from "npm:ajv";
+import type { Ajv } from "npm:ajv";
 
 const ajv = new Ajv();
 
