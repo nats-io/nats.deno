@@ -58,7 +58,7 @@ jobs:
 
 
       - name: Build nats.js
-        run: deno bundle --unstable src/connect.ts nats.js
+        run: deno bundle --unstable transport-deno/src/connect.ts nats.js
 
       - name: Generate lcov
         run: deno coverage --unstable --lcov ./cov > cov.lcov
