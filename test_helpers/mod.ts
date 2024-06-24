@@ -17,17 +17,13 @@ import type {
   ConnectionOptions,
   NatsConnection,
 } from "../core/src/internal_mod.ts";
-import {
-  compare,
-  extend,
-  parseSemVer,
-} from "../core/src/internal_mod.ts";
+import { compare, extend, parseSemVer } from "../core/src/internal_mod.ts";
 
 import { NatsServer } from "./launcher.ts";
 import { red, yellow } from "jsr:@std/fmt/colors";
 import { connect } from "./connect.ts";
 export { connect } from "./connect.ts";
-import {ConnectFn} from "../core/src/core.ts";
+import { ConnectFn } from "../core/src/core.ts";
 export { check } from "./check.ts";
 export { Lock } from "./lock.ts";
 export { Connection, TestServer } from "./test_server.ts";
@@ -58,8 +54,8 @@ export function jsopts() {
 }
 
 export function jetstreamExportServerConf(
-    opts: unknown = {},
-    prefix = "IPA.>",
+  opts: unknown = {},
+  prefix = "IPA.>",
 ): Record<string, unknown> {
   const template = {
     "no_auth_user": "a",
@@ -88,7 +84,7 @@ export function jetstreamExportServerConf(
 }
 
 export function jetstreamServerConf(
-    opts: unknown = {},
+  opts: unknown = {},
 ): Record<string, unknown> {
   const conf = Object.assign(jsopts(), opts);
   if (typeof conf.jetstream.store_dir !== "string") {
@@ -97,7 +93,11 @@ export function jetstreamServerConf(
   return conf as Record<string, unknown>;
 }
 
-export async function _setup(fn: ConnectFn, serverConf?: Record<string, unknown>, clientOpts?: Partial<ConnectionOptions>): Promise<{ ns: NatsServer; nc: NatsConnection }> {
+export async function _setup(
+  fn: ConnectFn,
+  serverConf?: Record<string, unknown>,
+  clientOpts?: Partial<ConnectionOptions>,
+): Promise<{ ns: NatsServer; nc: NatsConnection }> {
   const dt = serverConf as { debug: boolean; trace: boolean };
   const debug = dt && (dt.debug || dt.trace);
   const ns = await NatsServer.start(serverConf, debug);
@@ -108,15 +108,15 @@ export async function _setup(fn: ConnectFn, serverConf?: Record<string, unknown>
 }
 
 export function setup(
-    serverConf?: Record<string, unknown>,
-    clientOpts?: Partial<ConnectionOptions>,
+  serverConf?: Record<string, unknown>,
+  clientOpts?: Partial<ConnectionOptions>,
 ): Promise<{ ns: NatsServer; nc: NatsConnection }> {
   return _setup(connect, serverConf, clientOpts);
 }
 
 export async function cleanup(
-    ns: NatsServer,
-    ...nc: NatsConnection[]
+  ns: NatsServer,
+  ...nc: NatsConnection[]
 ): Promise<void> {
   const conns: Promise<void>[] = [];
   nc.forEach((v) => {
@@ -127,16 +127,16 @@ export async function cleanup(
 }
 
 export async function notCompatible(
-    ns: NatsServer,
-    nc: NatsConnection,
-    version?: string,
+  ns: NatsServer,
+  nc: NatsConnection,
+  version?: string,
 ): Promise<boolean> {
   version = version ?? "2.3.3";
   const varz = await ns.varz() as unknown as Record<string, string>;
   const sv = parseSemVer(varz.version);
   if (compare(sv, parseSemVer(version)) < 0) {
     const m = new TextEncoder().encode(yellow(
-        `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
+      `skipping test as server (${varz.version}) doesn't implement required feature from ${version} `,
     ));
     await Deno.stdout.write(m);
     await cleanup(ns, nc);

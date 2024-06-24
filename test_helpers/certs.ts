@@ -69,7 +69,7 @@ export class Certs {
   }
 
   get(n: string): Promise<string> {
-    if(!this.#data[n]) {
+    if (!this.#data[n]) {
       return Promise.reject(new Error(`cert '${n}' not found`));
     }
     return Promise.resolve(this.#data[n]);

@@ -19,7 +19,7 @@ import { check, jsopts } from "./mod.ts";
 import { extend, timeout } from "../core/src/internal_mod.ts";
 import type { Deferred } from "../core/src/internal_mod.ts";
 import { deferred, delay, nuid } from "../core/src/mod.ts";
-import {Certs} from "./certs.ts";
+import { Certs } from "./certs.ts";
 
 export const ServerSignals = Object.freeze({
   QUIT: "SIGQUIT",
@@ -657,10 +657,15 @@ export class NatsServer implements PortInfo {
     return this.signal("SIGHUP");
   }
 
-  static async tlsConfig(): Promise<{tls: {cert_file: string, key_file: string, ca_file: string}, certsDir: string}> {
-    const certsDir = await Deno.makeTempDir({prefix: "certs"});
+  static async tlsConfig(): Promise<
+    {
+      tls: { cert_file: string; key_file: string; ca_file: string };
+      certsDir: string;
+    }
+  > {
+    const certsDir = await Deno.makeTempDir({ prefix: "certs" });
     const certs = await Certs.import();
-    await certs.store(certsDir)
+    await certs.store(certsDir);
     const tlsconfig = {
       certsDir,
       tls: {
@@ -669,7 +674,7 @@ export class NatsServer implements PortInfo {
         ca_file: resolve(join(certsDir, "RootCA.crt")),
       },
     };
-    return tlsconfig
+    return tlsconfig;
   }
 
   static async start(conf?: any, debug = false): Promise<NatsServer> {
@@ -803,8 +808,8 @@ export function toConf(o: any, indent?: string): string {
             buf.push(`${pad}${k}: ${v}`);
           }
         } else {
-          if(v.includes(" ")) {
-            buf.push(`${pad}"${v}"`)
+          if (v.includes(" ")) {
+            buf.push(`${pad}"${v}"`);
           } else {
             buf.push(pad + v);
           }
