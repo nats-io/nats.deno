@@ -27,7 +27,7 @@ import { ServiceError, ServiceResponseType, ServiceVerb, Svc } from "../mod.ts";
 
 import type { ServiceClientImpl } from "../serviceclient.ts";
 import type { JSONSchemaType, ValidateFunction } from "npm:ajv";
-import type { Ajv } from "npm:ajv";
+import { Ajv } from "npm:ajv";
 
 const ajv = new Ajv();
 
