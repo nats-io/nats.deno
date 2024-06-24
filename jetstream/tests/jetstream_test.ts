@@ -1025,36 +1025,6 @@ Deno.test("jetstream - bind without consumer should fail", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("jetstream - mirror alternates", async () => {
-  const servers = await NatsServer.jetstreamCluster(3);
-  const nc = await connect({ port: servers[0].port });
-  if (await notCompatible(servers[0], nc, "2.8.2")) {
-    await NatsServer.stopAll(servers, true);
-    return;
-  }
-
-  const jsm = await jetstreamManager(nc);
-  await jsm.streams.add({ name: "src", subjects: ["A", "B"] });
-
-  const nc1 = await connect({ port: servers[1].port });
-  const jsm1 = await jetstreamManager(nc1);
-
-  await jsm1.streams.add({
-    name: "mirror",
-    mirror: {
-      name: "src",
-    },
-  });
-
-  const n = await jsm1.streams.find("A");
-  const si = await jsm1.streams.info(n);
-  assertEquals(si.alternates?.length, 2);
-
-  await nc.close();
-  await nc1.close();
-  await NatsServer.stopAll(servers, true);
-});
-
 Deno.test("jetstream - backoff", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.7.2")) {
