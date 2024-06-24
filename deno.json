@@ -15,7 +15,6 @@
     "test-obj": "deno test -A --parallel --reload --quiet --coverage=coverage os/tests",
     "fmt": "deno fmt src/ doc/ bin/ core/ examples/ debug/ jetstream/ kv/ os/ service/ *.md",
     "cover": "deno coverage --unstable ./coverage --lcov > ./coverage/out.lcov && genhtml -o ./coverage/html ./coverage/out.lcov && open ./coverage/html/index.html"
-
   },
   "scopes": {
     "*": {
