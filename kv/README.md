@@ -1,6 +1,6 @@
-# nats-kv.js
+# kv
 
-The nats-kv.js implements the NATS KV functionality using JetStream for
+The kv module implements the NATS KV functionality using JetStream for
 JavaScript clients. JetStream clients can use streams to store and access data.
 KV is materialized view that presents a different _API_ to interact with the
 data stored in a stream using the API for a Key-Value store which should be
@@ -8,7 +8,7 @@ familiar to many application developers.
 
 ## Installation
 
-Note that this library is distributed in two different bundles:
+Note that this library is distributed in two different registries:
 
 - npm a node-specific library supporting CJS (`require`) and ESM (`import`)
 - jsr a node and other ESM (`import`) compatible runtimes (deno, browser, node)
@@ -28,7 +28,7 @@ npm install @nats-io/kv
 
 ### JSR
 
-The JSR registry hosts the EMS-only [@nats-io/kv](https://jsr.io/@nats-io/kv)
+The JSR registry hosts the ESM-only [@nats-io/kv](https://jsr.io/@nats-io/kv)
 version of the library.
 
 ```bash

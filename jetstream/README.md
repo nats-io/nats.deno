@@ -1,14 +1,16 @@
-# nats-jetstream.js
+# jetstream
 
-The nats-jetstream.js implements the JetStream functionality for JavaScript
-clients. JetStream
+The jetstream module implements the JetStream protocol functionality for
+JavaScript clients.
 
-To use JetStream simply install this library, and call `jetstream(nc)` or
-`jetstreamManager(nc)` with a connection.
+To use JetStream simply install this library, and create a `jetstream(nc)` or
+`jetstreamManager(nc)` with a connection. The JetStreamManager allows you to
+interact with the NATS server to manage JetStream resources. The JetStream
+client allows you interact with JetStream resources.
 
 ## Installation
 
-Note that this library is distributed in two different bundles:
+Note that this library is distributed in two different registries:
 
 - npm a node-specific library supporting CJS (`require`) and ESM (`import`)
 - jsr a node and other ESM (`import`) compatible runtimes (deno, browser, node)
@@ -28,7 +30,7 @@ npm install @nats-io/jetstream
 
 ### JSR
 
-The JSR registry hosts the EMS-only
+The JSR registry hosts the ESM-only
 [@nats-io/jetstream](https://jsr.io/@nats-io/jetstream) version of the library.
 
 ```bash
@@ -92,18 +94,21 @@ and replace your `NatsConnection#jetstream()` or
 
 For example, developers that use JetStream can access it by using the functions
 `jetstream()` and `jetstreamManager()` and provide their NATS connection. Note
-that the `NatsConnection#jetstream/Manager()` APIs are no longer available.
+that were built directly into the NatsConnection
+`NatsConnection#jetstream/Manager()` APIs are no longer available. This enables
+clients that don't use JetStream have a smaller footprint.
 
-Also note that if you are using KV or ObjectStore, these APIs are provided by a
-different libraries `@nats-io/kv` and `@nats-io/obj` respectively. If you are
-only using KV or ObjectStore, there's no need to reference this library directly
-unless you need to do some specific JetStreamManager API, as both `@nats-io/kv`
-and `@nats-io/obj` depend on this library already.
+Also note that if you are using KV or ObjectStore, these APIs are now provided
+by a different libraries `@nats-io/kv` and `@nats-io/obj` respectively. If you
+are only using KV or ObjectStore, there's no need to reference this library
+directly unless you need to do some specific JetStreamManager API, as both
+`@nats-io/kv` and `@nats-io/obj` depend on this library already and use it under
+the hood.
 
 ## JetStreamManager (JSM)
 
-The client provides CRUD functionality to manage streams and consumers, via
-JetStreamManager. To access a JetStream manager:
+The JetStreamManager provides CRUD functionality to manage streams and consumers
+resources. To access a JetStream manager:
 
 ```typescript
 const jsm = await jetstreamManager(nc);
@@ -179,8 +184,8 @@ await jsm.consumers.delete(stream, "me");
 
 ## JetStream Client
 
-The JetStream client presents an API for working with messages stored in a
-stream.
+The JetStream client presents an API for adding messages to a stream or
+processing messages stored in a stream.
 
 ```typescript
 // create the stream
@@ -232,22 +237,6 @@ await js.publish("a.b", Empty, { expect: { lastSubjectSequence: pa.seq } });
 The JetStream API provides different mechanisms for retrieving messages. Each
 mechanism offers a different "buffering strategy" that provides advantages that
 map to how your application works and processes messages.
-
-Starting with nats-base-client (NBC) 1.14.0, a new API for consuming and
-processing JetStream messages is available in the JavaScript clients. The new
-API is currently provided as a _preview_, and will deprecate previous JetStream
-subscribe APIs as [_legacy_](examples/legacy_js/legacy_jetstream.md). It is
-encouraged to start experimenting with the new APIs as soon as possible.
-
-The new API:
-
-- Streamlines consumer creation/updates to only happen within JSM APIs
-- Consuming messages requires a consumer to already exist (unless an ordered
-  consumer) - all consumers are effectively `bound` (a legacy configuration
-  setting that ensured the consumer was not created if it didn't exist).
-- Adopts the "pull" consumer functionality for all consumer operations. The
-  legacy "push" consumer is deprecated. This means that all consumers, except
-  for ordered consumers, can easily scale horizontally.
 
 #### Basics
 

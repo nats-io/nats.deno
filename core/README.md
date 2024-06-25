@@ -1,33 +1,35 @@
-# nats-core.js
+# core
 
-The nats-core.js implements the _nats-core_ functionality for JavaScript
+The _core_ module implements the _nats-core_ functionality for JavaScript
 clients. _Nats-core_ is the basic functionality of a NATS client with respect
 to:
 
-- Authentication
-- Connection and connection lifecycle
+- Connection, authentication connection lifecycle, and NATS protocol handling
 - Messaging functionality (publish, subscribe and request reply)
-- And other standard client protocol handling functionality
 
-JavaScript NATS clients implement native runtime transports (node, deno,
-browser) and export a `connect` function that returns a concrete instance of a
-NATS client transport which uses and re-exports this library to expose the APIs
-codified in this library.
+JavaScript NATS clients implement specific native runtime transports (node,
+deno, browser) and export a `connect` function that returns a concrete instance
+of a NatsConnection which wraps the specific runtime transport. The specific
+runtime transport re-exports this library to expose the APIs implemented in this
+library.
 
-You can use this library to implement other JavaScript functionality that uses a
-NATS client connection without binding your implementation to a particular
-JavaScript runtime. For example, the @nats-io/jetstream library depends on
-@nats-io/nats-core to implement all of its JetStream protocol.
+You can use this library as a runtime agnostic dependency and implement other
+JavaScript functionality that uses a NATS client connection without binding your
+implementation to a particular JavaScript runtime. For example, the
+@nats-io/jetstream library depends on @nats-io/nats-core to implement all of its
+JetStream protocol.
 
 # Installation
 
 If you are not implementing a NATS client compatible library, you can use this
 repository to view the documentation of the NATS core functionality. Your NATS
-client instance already uses and re-exports the library implemented here.
+client instance already uses and re-exports the library implemented here, so
+there's no need for you to directly depend on this library.
 
-Note that this library is distributed in two different bundles:
+Note that this library is distributed in two different registries:
 
-- npm a node-specific library supporting CJS (`require`) and ESM (`import`)
+- npm a node-specific library supporting CJS (`require`) and ESM (`import`) for
+  node specific projects
 - jsr a node and other ESM (`import`) compatible runtimes (deno, browser, node)
 
 If your application doesn't use `require`, you can simply depend on the JSR
@@ -45,7 +47,7 @@ npm install @nats-io/nats-core
 
 ## JSR
 
-The JSR registry hosts the EMS-only
+The JSR registry hosts the ESM-only
 [@nats-io/nats-core](https://jsr.io/@nats-io/nats-core) version of the library.
 
 ```bash

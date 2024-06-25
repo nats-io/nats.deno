@@ -30,4 +30,4 @@ bundle:
 
 
 fmt:
-	deno fmt src/ doc/ bin/ core/ examples/ tests/ debug/ unsafe_tests/ jetstream/ kv/ os/ service/ test_helpers/ jetstream.md README.md migration.md services.md
+	deno fmt transport-deno/ doc/ bin/ core/ examples/ tests/ debug/ unsafe_tests/ jetstream/ kv/ os/ service/ test_helpers/ jetstream.md README.md migration.md services.md
