@@ -75,6 +75,7 @@ export type {
   Dispatcher,
   JwtAuth,
   Msg,
+  MsgCallback,
   MsgHdrs,
   Nanos,
   NatsConnection,

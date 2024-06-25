@@ -48,6 +48,7 @@ export type {
   JwtAuth,
   Msg,
   MsgAdapter,
+  MsgCallback,
   MsgHdrs,
   Nanos,
   NatsConnection,
