@@ -22,10 +22,15 @@ import {
   StringCodec,
 } from "@nats-io/nats-core/internal";
 
-import type { ServiceIdentity, ServiceInfo, ServiceStats } from "../mod.ts";
-import { ServiceError, ServiceResponseType, ServiceVerb, Svc } from "../mod.ts";
+import type { ServiceIdentity, ServiceInfo, ServiceStats } from "../src/mod.ts";
+import {
+  ServiceError,
+  ServiceResponseType,
+  ServiceVerb,
+  Svc,
+} from "../src/mod.ts";
 
-import type { ServiceClientImpl } from "../serviceclient.ts";
+import type { ServiceClientImpl } from "../src/serviceclient.ts";
 import type { JSONSchemaType, ValidateFunction } from "npm:ajv";
 import { Ajv } from "npm:ajv";
 

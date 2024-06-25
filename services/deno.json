@@ -2,15 +2,15 @@
   "name": "@nats-io/services",
   "version": "3.0.0-1",
   "exports": {
-    ".": "./mod.ts",
-    "./internal": "./internal_mod.ts"
+    ".": "./src/mod.ts",
+    "./internal": "./src/internal_mod.ts"
   },
   "publish": {
     "include": [
-      "./**/*"
+      "./src"
     ],
     "exclude": [
-      "./**/tests"
+      "./tests"
     ]
   },
   "imports": {

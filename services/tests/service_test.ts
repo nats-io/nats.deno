@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { _setup, cleanup, connect } from "test_helpers";
-import { ServiceImpl } from "../service.ts";
+import { ServiceImpl } from "../src/service.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -48,7 +48,7 @@ import type {
   ServiceIdentity,
   ServiceInfo,
   ServiceStats,
-} from "../mod.ts";
+} from "../src/mod.ts";
 import {
   ServiceError,
   ServiceErrorCodeHeader,
@@ -56,7 +56,7 @@ import {
   ServiceResponseType,
   ServiceVerb,
   Svc,
-} from "../mod.ts";
+} from "../src/mod.ts";
 
 Deno.test("service - control subject", () => {
   const test = (verb: ServiceVerb) => {
@@ -703,7 +703,7 @@ Deno.test("service - cross platform service test", async () => {
   const args = [
     "run",
     "-A",
-    "./service/tests/service-check.ts",
+    "./services/tests/service-check.ts",
     "--name",
     name,
     "--server",
