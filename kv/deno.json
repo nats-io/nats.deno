@@ -2,12 +2,12 @@
   "name": "@nats-io/kv",
   "version": "3.0.0-2",
   "exports": {
-    ".": "./mod.ts",
-    "./internal": "./internal_mod.ts"
+    ".": "./src/mod.ts",
+    "./internal": "./src/internal_mod.ts"
   },
   "publish": {
     "include": [
-      "./**/*"
+      "./src/*"
     ],
     "exclude": [
       "./**/tests"

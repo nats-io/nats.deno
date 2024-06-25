@@ -53,15 +53,15 @@ import {
   assertThrows,
 } from "jsr:@std/assert";
 
-import type { KV, KvEntry, KvOptions } from "../types.ts";
+import type { KV, KvEntry, KvOptions } from "../src/types.ts";
 
-import type { Bucket } from "../mod.ts";
+import type { Bucket } from "../src/mod.ts";
 
-import { KvWatchInclude } from "../types.ts";
+import { KvWatchInclude } from "../src/types.ts";
 
-import { Base64KeyCodec, NoopKvCodecs } from "../mod.ts";
+import { Base64KeyCodec, NoopKvCodecs } from "../src/mod.ts";
 
-import { kvPrefix, validateBucket, validateKey } from "../internal_mod.ts";
+import { kvPrefix, validateBucket, validateKey } from "../src/internal_mod.ts";
 
 import {
   _setup,
@@ -74,7 +74,7 @@ import {
 } from "test_helpers";
 import { JSONCodec } from "@nats-io/nats-core/internal";
 import type { QueuedIteratorImpl } from "@nats-io/nats-core/internal";
-import { Kvm } from "../kv.ts";
+import { Kvm } from "../src/kv.ts";
 
 Deno.test("kv - key validation", () => {
   const bad = [
