@@ -13,14 +13,19 @@
  * limitations under the License.
  */
 import { assertEquals, assertRejects, fail } from "jsr:@std/assert";
-import { AckPolicy, jetstream, jetstreamManager, StorageType } from "../mod.ts";
+import {
+  AckPolicy,
+  jetstream,
+  jetstreamManager,
+  StorageType,
+} from "../src/mod.ts";
 
 import { createInbox, Empty, nanos, StringCodec } from "@nats-io/nats-core";
 import type { Msg } from "@nats-io/nats-core";
 import type { MsgImpl } from "@nats-io/nats-core/internal";
 
-import type { JsMsgImpl } from "../jsmsg.ts";
-import { parseInfo, toJsMsg } from "../jsmsg.ts";
+import type { JsMsgImpl } from "../src/jsmsg.ts";
+import { parseInfo, toJsMsg } from "../src/jsmsg.ts";
 import {
   _setup,
   assertBetween,
@@ -28,7 +33,7 @@ import {
   connect,
   jetstreamServerConf,
 } from "test_helpers";
-import type { JetStreamManagerImpl } from "../jsclient.ts";
+import type { JetStreamManagerImpl } from "../src/jsclient.ts";
 
 Deno.test("jsmsg - parse", () => {
   // "$JS.ACK.<stream>.<consumer>.<redeliveryCount><streamSeq><deliverySequence>.<timestamp>.<pending>"

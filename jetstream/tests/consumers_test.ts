@@ -26,19 +26,19 @@ import {
   DeliverPolicy,
   jetstream,
   jetstreamManager,
-} from "../mod.ts";
+} from "../src/mod.ts";
 import type {
   Consumer,
   ConsumerMessages,
   ConsumerStatus,
   JsMsg,
   PullOptions,
-} from "../mod.ts";
+} from "../src/mod.ts";
 import { connect, NatsServer } from "test_helpers";
 import { deferred, nanos } from "@nats-io/nats-core";
 import type { NatsConnectionImpl } from "@nats-io/nats-core/internal";
 import { _setup, cleanup, jetstreamServerConf } from "test_helpers";
-import type { PullConsumerMessagesImpl } from "../consumer.ts";
+import type { PullConsumerMessagesImpl } from "../src/consumer.ts";
 
 Deno.test("consumers - min supported server", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));

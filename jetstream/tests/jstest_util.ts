@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
-import type { JsMsg, PubAck, StreamConfig } from "../mod.ts";
+import { AckPolicy, jetstream, jetstreamManager } from "../src/mod.ts";
+import type { JsMsg, PubAck, StreamConfig } from "../src/mod.ts";
 
 import { assert } from "jsr:@std/assert";
 import { Empty, nanos, nuid } from "@nats-io/nats-core";

@@ -35,16 +35,16 @@ import {
   nanos,
   syncIterator,
 } from "@nats-io/nats-core";
-import type { PullConsumerMessagesImpl } from "../consumer.ts";
+import type { PullConsumerMessagesImpl } from "../src/consumer.ts";
 import {
   AckPolicy,
   ConsumerEvents,
   DeliverPolicy,
   jetstream,
   jetstreamManager,
-} from "../mod.ts";
+} from "../src/mod.ts";
 
-import type { ConsumerStatus } from "../mod.ts";
+import type { ConsumerStatus } from "../src/mod.ts";
 
 Deno.test("consumers - consume", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf());

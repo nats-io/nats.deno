@@ -38,14 +38,14 @@ import {
   StringCodec,
   syncIterator,
 } from "@nats-io/nats-core";
-import { consumerOpts, JsHeaders } from "../types.ts";
+import { consumerOpts, JsHeaders } from "../src/types.ts";
 
 import type {
   ConsumerOpts,
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
   PubAck,
-} from "../types.ts";
+} from "../src/types.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -60,11 +60,15 @@ import {
   DeliverPolicy,
   RetentionPolicy,
   StorageType,
-} from "../jsapi_types.ts";
-import type { JsMsg } from "../jsmsg.ts";
-import { isFlowControlMsg, isHeartbeatMsg, Js409Errors } from "../jsutil.ts";
-import type { JetStreamSubscriptionImpl } from "../jsclient.ts";
-import { jetstream, jetstreamManager } from "../mod.ts";
+} from "../src/jsapi_types.ts";
+import type { JsMsg } from "../src/jsmsg.ts";
+import {
+  isFlowControlMsg,
+  isHeartbeatMsg,
+  Js409Errors,
+} from "../src/jsutil.ts";
+import type { JetStreamSubscriptionImpl } from "../src/jsclient.ts";
+import { jetstream, jetstreamManager } from "../src/mod.ts";
 
 Deno.test("jetstream - ephemeral push", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));

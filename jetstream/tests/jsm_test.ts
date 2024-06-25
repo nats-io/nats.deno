@@ -44,7 +44,7 @@ import {
   jetstream,
   jetstreamManager,
   StorageType,
-} from "../mod.ts";
+} from "../src/mod.ts";
 
 import type {
   ConsumerConfig,
@@ -54,7 +54,7 @@ import type {
   StreamConfig,
   StreamInfo,
   StreamSource,
-} from "../mod.ts";
+} from "../src/mod.ts";
 import { initStream } from "./jstest_util.ts";
 import {
   _setup,
@@ -66,16 +66,16 @@ import {
   NatsServer,
   notCompatible,
 } from "test_helpers";
-import { validateName } from "../jsutil.ts";
+import { validateName } from "../src/jsutil.ts";
 import {
   encodeAccount,
   encodeOperator,
   encodeUser,
 } from "jsr:@nats-io/jwt@0.0.9-3";
-import { convertStreamSourceDomain } from "../jsmstream_api.ts";
-import type { ConsumerAPIImpl } from "../jsmconsumer_api.ts";
-import { ConsumerApiAction, StoreCompression } from "../jsapi_types.ts";
-import type { JetStreamManagerImpl } from "../jsclient.ts";
+import { convertStreamSourceDomain } from "../src/jsmstream_api.ts";
+import type { ConsumerAPIImpl } from "../src/jsmconsumer_api.ts";
+import { ConsumerApiAction, StoreCompression } from "../src/jsapi_types.ts";
+import type { JetStreamManagerImpl } from "../src/jsclient.ts";
 
 const StreamNameRequired = "stream name required";
 const ConsumerNameRequired = "durable name required";

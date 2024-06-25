@@ -21,7 +21,7 @@ import {
   jetstreamServerConf,
 } from "test_helpers";
 import { initStream, time } from "./jstest_util.ts";
-import { AckPolicy, StorageType } from "../jsapi_types.ts";
+import { AckPolicy, StorageType } from "../src/jsapi_types.ts";
 import {
   assert,
   assertEquals,
@@ -43,9 +43,9 @@ import type {
   NatsError,
 } from "@nats-io/nats-core/internal";
 
-import { Js409Errors } from "../jsutil.ts";
+import { Js409Errors } from "../src/jsutil.ts";
 import { consume } from "./jstest_util.ts";
-import { jetstream, jetstreamManager } from "../mod.ts";
+import { jetstream, jetstreamManager } from "../src/mod.ts";
 
 Deno.test("jetstream - fetch expires waits", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));

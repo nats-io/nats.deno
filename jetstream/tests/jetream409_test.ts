@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { Js409Errors, setMaxWaitingToFail } from "../jsutil.ts";
+import { Js409Errors, setMaxWaitingToFail } from "../src/jsutil.ts";
 import { deferred, nanos, StringCodec } from "@nats-io/nats-core";
 
 import type { NatsError } from "@nats-io/nats-core";
@@ -22,8 +22,8 @@ import {
   consumerOpts,
   jetstream,
   jetstreamManager,
-} from "../mod.ts";
-import type { JetStreamClient, PullOptions } from "../mod.ts";
+} from "../src/mod.ts";
+import type { JetStreamClient, PullOptions } from "../src/mod.ts";
 import { assertRejects, assertStringIncludes } from "jsr:@std/assert";
 import { initStream } from "./jstest_util.ts";
 import {

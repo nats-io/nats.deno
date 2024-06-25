@@ -14,7 +14,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "shx rm -Rf ./lib ./cjs ./esm && shx mkdir esm",
-    "pre-process": "npm run clean && deno run -A ../bin/cjs-fix-imports.ts -o ./cjs ./",
+    "pre-process": "npm run clean && deno run -A ../bin/cjs-fix-imports.ts -o ./cjs ./src",
     "build-cjs": "npm run pre-process && tsc",
     "build": "npm run build-cjs",
     "prepack": "npm run build"

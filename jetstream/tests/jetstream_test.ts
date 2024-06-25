@@ -25,9 +25,9 @@ import {
   RepublishHeaders,
   RetentionPolicy,
   StorageType,
-} from "../mod.ts";
+} from "../src/mod.ts";
 
-import type { Advisory, JsMsg, JsMsgCallback, PubAck } from "../mod.ts";
+import type { Advisory, JsMsg, JsMsgCallback, PubAck } from "../src/mod.ts";
 import type {
   NatsConnectionImpl,
   NatsError,
@@ -57,8 +57,8 @@ import {
 import type {
   JetStreamClientImpl,
   JetStreamSubscriptionImpl,
-} from "../jsclient.ts";
-import { defaultJsOptions } from "../jsbaseclient_api.ts";
+} from "../src/jsclient.ts";
+import { defaultJsOptions } from "../src/jsbaseclient_api.ts";
 import {
   _setup,
   assertBetween,
@@ -67,8 +67,8 @@ import {
   Lock,
   notCompatible,
 } from "test_helpers";
-import { ConsumerOptsBuilderImpl } from "../types.ts";
-import { PubHeaders } from "../jsapi_types.ts";
+import { ConsumerOptsBuilderImpl } from "../src/types.ts";
+import { PubHeaders } from "../src/jsapi_types.ts";
 
 export function callbackConsume(debug = false): JsMsgCallback {
   return (err: NatsError | null, jm: JsMsg | null) => {

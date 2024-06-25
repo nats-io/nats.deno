@@ -17,15 +17,15 @@ import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
 
 import { millis } from "@nats-io/nats-core";
 
-import { consumerOpts, isConsumerOptsBuilder } from "../types.ts";
+import { consumerOpts, isConsumerOptsBuilder } from "../src/types.ts";
 
 import type {
   ConsumerOpts,
   ConsumerOptsBuilderImpl,
   JsMsgCallback,
-} from "../types.ts";
+} from "../src/types.ts";
 
-import { AckPolicy, DeliverPolicy, ReplayPolicy } from "../mod.ts";
+import { AckPolicy, DeliverPolicy, ReplayPolicy } from "../src/mod.ts";
 
 Deno.test("consumeropts - isConsumerOptsBuilder", () => {
   assertEquals(isConsumerOptsBuilder(consumerOpts()), true);

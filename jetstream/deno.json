@@ -2,8 +2,8 @@
   "name": "@nats-io/jetstream",
   "version": "3.0.0-3",
   "exports": {
-    ".": "./mod.ts",
-    "./internal": "./internal_mod.ts"
+    ".": "./src/mod.ts",
+    "./internal": "./src/internal_mod.ts"
   },
   "publish": {
     "include": [

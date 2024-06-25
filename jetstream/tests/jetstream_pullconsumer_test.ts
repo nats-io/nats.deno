@@ -23,8 +23,8 @@ import {
   notCompatible,
 } from "test_helpers";
 import { initStream } from "./jstest_util.ts";
-import { AckPolicy, DeliverPolicy, StorageType } from "../jsapi_types.ts";
-import type { ConsumerConfig } from "../jsapi_types.ts";
+import { AckPolicy, DeliverPolicy, StorageType } from "../src/jsapi_types.ts";
+import type { ConsumerConfig } from "../src/jsapi_types.ts";
 import {
   assert,
   assertArrayIncludes,
@@ -34,7 +34,7 @@ import {
   assertThrows,
   fail,
 } from "jsr:@std/assert";
-import { checkJsError } from "../jsutil.ts";
+import { checkJsError } from "../src/jsutil.ts";
 import {
   DebugEvents,
   deferred,
@@ -54,17 +54,17 @@ import type {
   NatsError,
 } from "@nats-io/nats-core/internal";
 
-import { consumerOpts } from "../types.ts";
+import { consumerOpts } from "../src/types.ts";
 import type {
   ConsumerOptsBuilderImpl,
   JetStreamSubscriptionInfoable,
   PubAck,
-} from "../types.ts";
+} from "../src/types.ts";
 
-import type { JsMsg } from "../jsmsg.ts";
-import type { JetStreamClientImpl } from "../jsclient.ts";
+import type { JsMsg } from "../src/jsmsg.ts";
+import type { JetStreamClientImpl } from "../src/jsclient.ts";
 import { callbackConsume } from "./jetstream_test.ts";
-import { jetstream, jetstreamManager } from "../mod.ts";
+import { jetstream, jetstreamManager } from "../src/mod.ts";
 
 Deno.test("jetstream - pull no messages", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf({}));

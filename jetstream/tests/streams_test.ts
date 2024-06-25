@@ -14,7 +14,7 @@
  */
 
 import { connect, notCompatible } from "test_helpers";
-import { AckPolicy, jetstream, jetstreamManager } from "../mod.ts";
+import { AckPolicy, jetstream, jetstreamManager } from "../src/mod.ts";
 
 import { JSONCodec } from "@nats-io/nats-core";
 

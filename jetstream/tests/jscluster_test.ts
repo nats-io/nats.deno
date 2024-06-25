@@ -1,4 +1,4 @@
-import { jetstream, jetstreamManager } from "../jsclient.ts";
+import { jetstream, jetstreamManager } from "../src/jsclient.ts";
 import { connect, NatsServer, notCompatible } from "test_helpers";
 import {
   DiscardPolicy,
@@ -6,9 +6,9 @@ import {
   StorageType,
   StreamConfig,
   StreamUpdateConfig,
-} from "../jsapi_types.ts";
+} from "../src/jsapi_types.ts";
 import { nanos } from "@nats-io/nats-core/internal";
-import { Kvm } from "../../kv/kv.ts";
+import { Kvm } from "../../kv/src/kv.ts";
 
 import {
   assertArrayIncludes,

@@ -29,8 +29,8 @@ import {
   DeliverPolicy,
   jetstream,
   jetstreamManager,
-} from "../mod.ts";
-import type { PullConsumerMessagesImpl } from "../consumer.ts";
+} from "../src/mod.ts";
+import type { PullConsumerMessagesImpl } from "../src/consumer.ts";
 
 Deno.test("fetch - no messages", async () => {
   const { ns, nc } = await _setup(connect, jetstreamServerConf());

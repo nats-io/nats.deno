@@ -26,12 +26,12 @@ import {
   DeliverPolicy,
   jetstream,
   jetstreamManager,
-} from "../mod.ts";
-import type { ConsumerMessages, JsMsg } from "../mod.ts";
+} from "../src/mod.ts";
+import type { ConsumerMessages, JsMsg } from "../src/mod.ts";
 import type {
   OrderedConsumerMessages,
   OrderedPullConsumerImpl,
-} from "../consumer.ts";
+} from "../src/consumer.ts";
 import {
   _setup,
   cleanup,
