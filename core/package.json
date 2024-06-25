@@ -13,11 +13,11 @@
   "license": "Apache-2.0",
   "private": false,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "clean": "shx rm -Rf ./lib ./cjs ./esm && shx mkdir esm",
-    "pre-process": "npm run clean && deno run -A bin/cjs-fix-imports.ts -o ./cjs ./src",
+    "clean": "shx rm -Rf ./lib ./cjs ./esm ./docs && shx mkdir esm",
+    "pre-process": "npm run clean && deno run -A ../bin/cjs-fix-imports.ts -o ./cjs ./src",
     "build-cjs": "npm run pre-process && tsc",
     "build": "npm run build-cjs",
+    "doc": "npm run clean && npm run build && node_modules/.bin/typedoc --out ./docs/ && touch ./docs/.nojekyll",
     "prepack": "npm run build"
   },
   "keywords": [],
@@ -26,9 +26,13 @@
   },
   "description": "nats-core library - this library implements all the base functionality for NATS javascript clients",
   "dependencies": {
-    "nkeys.js": "1.2.0-4",
-    "nuid": "2.0.1-2",
+    "@nats-io/nkeys": "^1.2.0-4",
+    "@nats-io/nuid": "^2.0.1-2",
     "shx": "^0.3.4",
     "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typedoc": "^0.25.12"
   }
 }

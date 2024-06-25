@@ -1,32 +1,28 @@
-# core
+# NATS Core
 
-The _core_ module implements the _nats-core_ functionality for JavaScript
-clients. _Nats-core_ is the basic functionality of a NATS client with respect
-to:
+The _core_ module implements the _core_ functionality for JavaScript clients:
 
-- Connection, authentication connection lifecycle, and NATS protocol handling
-- Messaging functionality (publish, subscribe and request reply)
+- Connection, authentication, connection lifecycle
+- NATS protocol handling - messaging functionality (publish, subscribe and
+  request reply)
 
-JavaScript NATS clients implement specific native runtime transports (node,
-deno, browser) and export a `connect` function that returns a concrete instance
-of a NatsConnection which wraps the specific runtime transport. The specific
-runtime transport re-exports this library to expose the APIs implemented in this
-library.
+A native transports (node, deno, browser) module exports a `connect` function
+that returns a concrete instance of a `NatsConnection` which exports all the
+functionality in this module.
 
-You can use this library as a runtime agnostic dependency and implement other
-JavaScript functionality that uses a NATS client connection without binding your
-implementation to a particular JavaScript runtime. For example, the
-@nats-io/jetstream library depends on @nats-io/nats-core to implement all of its
-JetStream protocol.
+You can use this module as a runtime agnostic dependency and implement
+functionality that uses a NATS client connection without binding your code to a
+particular JavaScript runtime. For example, the @nats-io/jetstream library
+depends on @nats-io/nats-core to implement all of its JetStream protocol.
 
 # Installation
 
-If you are not implementing a NATS client compatible library, you can use this
+If you are not implementing a NATS client compatible module, you can use this
 repository to view the documentation of the NATS core functionality. Your NATS
-client instance already uses and re-exports the library implemented here, so
+client instance already uses and re-exports the module implemented here, so
 there's no need for you to directly depend on this library.
 
-Note that this library is distributed in two different registries:
+Note that this module is distributed in two different registries:
 
 - npm a node-specific library supporting CJS (`require`) and ESM (`import`) for
   node specific projects
@@ -75,3 +71,5 @@ import * as nats_core from "@nats-io/nats-core";
 // or in node (only when using CJS)
 const nats_core = require("@nats-io/nats-core");
 ```
+
+The main entry point for this library is the `NatsConnection`.

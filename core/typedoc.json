@@ -1,0 +1,6 @@
+{
+  "readme": "./README.md",
+  "theme": "default",
+  "out": "./docs/",
+  "entryPoints": ["cjs/mod.ts"]
+}

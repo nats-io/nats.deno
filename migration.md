@@ -25,8 +25,8 @@ In order to satisfy those needs, the NATS JavaScript library will split into
 separate libraries which focus on:
 
 - Transport Libraries (nats.js - `@nats-io/node`, nats.deno `@nats-io/deno`,
-  nats.ws `@nats/es-websocket`) - these depend on NatsCore, and only contribute
-  a transport implementation.
+  nats.ws `@nats/websocket`) - these depend on NatsCore, and only contribute a
+  transport implementation.
 - NatsCore `@nats-io/core` ("nats-base-client") -
   publish/subscribe/request-reply.
 - JetStream `@nats-io/jetstream` (depends on `@nats-core`)
@@ -58,12 +58,6 @@ these modules for cross-runtime consumption.
 
 ## Changes in Nats Base Client
 
-- `jetStream()` and `jetStreamManager()` functions have been removed. Install
-  and import the `JetStream` library, and call `jetstream(nc: NatsConnection)`
-  or `jetstreamManager(nc: NatsConnection)`
-- `services` property has been removed. Install and import the `Services`
-  library, and call `services(nc: NatsConnection)`
-
 - QueuedIterator type incorrectly exposed a `push()` operation - this operation
   is not public API and was removed from the interface.
 
@@ -71,10 +65,17 @@ these modules for cross-runtime consumption.
 
 To use JetStream, you must install and import `@nats/jetstream`.
 
-- `views` property has been removed - install the `Kv` or `ObjectStore` library.
+- `jetStream()` and `jetStreamManager()` functions on the `NatsConnection` have
+  been removed. Install and import the `JetStream` library, and call
+  `jetstream(nc: NatsConnection)` or `jetstreamManager(nc: NatsConnection)`
+- `services` property has been removed. Install and import the `Services`
+  library, and call `services(nc: NatsConnection)`
+
+- The `views` property in the JetStream client has been removed - install the
+  `Kv` or `ObjectStore` library.
 - `jetstreamManager.listKvs()` and `jetstreamManager.listObjectStores()` apis
-  have been removed. Use the `list()` methods provided the `Kv` and
-  `ObjectStore` APIs instead.
+  have been removed. Use the `list()` methods provided the `Kvm` and `ObjM` APIs
+  instead.
 - `JetStreamClient#subscribe()`, `JetStreamClient#fetch()` have been removed.
   Use the `Consumers` API to `get()` your consumer.
 
