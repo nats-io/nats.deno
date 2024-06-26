@@ -250,7 +250,7 @@ const c = await js.consumers.get(stream, consumer);
 const oc = await js.consumers.get(stream);
 ```
 
-[full example](examples/jetstream/01_consumers.ts)
+[full example](jetstream/examples/01_consumers.ts)
 
 With the consumer in hand, the client can start reading messages using whatever
 API is appropriate for the application.
@@ -299,7 +299,7 @@ if (m) {
 }
 ```
 
-[full example](examples/jetstream/02_next.ts)
+[full example](jetstream/examples/02_next.ts)
 
 The operation takes an optional argument. Currently, the only option is an
 `expires` option which specifies the maximum number of milliseconds to wait for
@@ -363,7 +363,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/04_consume.ts)
+[full example](jetstream/examples/04_consume.ts)
 
 Note that it is possible to do an automatic version of `next()` by simply
 setting the maximum number of messages to buffer to `1`:
@@ -492,7 +492,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/07_consume_jobs.ts)
+[full example](jetstream/examples/07_consume_jobs.ts)
 
 #### Processing a Stream
 
@@ -533,7 +533,7 @@ keys.forEach((k) => {
 });
 ```
 
-[full example](examples/jetstream/08_consume_process.ts)
+[full example](jetstream/examples/08_consume_process.ts)
 
 ### Heartbeats
 
@@ -576,7 +576,7 @@ while (true) {
 }
 ```
 
-[full example](examples/jetstream/06_heartbeats.ts)
+[full example](jetstream/examples/06_heartbeats.ts)
 
 Note that while the heartbeat interval is configurable, you shouldn't change it.
 

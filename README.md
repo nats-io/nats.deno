@@ -1,24 +1,25 @@
-# NATS.js - A [NATS](http://nats.io) client for JavaScript
+# NATS.js - The JavaScript clients for [NATS](http://nats.io)
 
 [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](./LICENSE)
 ![Test NATS.deno](https://github.com/nats-io/nats.deno/workflows/NATS.deno/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/nats-io/nats.deno/badge.svg?branch=main)](https://coveralls.io/github/nats-io/nats.deno?branch=main)
 
-This repository hosts NATS clients for JavaScript runtimes, including:
+Welcome to the new NATS.js repository! Beginning with the v3 release of the
+JavaScript clients, the NATS.js repository reorganizes the NATS JavaScript
+client libraries into a formal mono-repo.
+
+This repository hosts native runtime support ("transports") for:
 
 - Deno
 - Node/Bun
 - Browsers (W3C websocket)
 
-The repository is a mono-repo which the various runtime transports and a set of
-common modules (libraries) that shape the transports into a NATS client.
+A big change with the v3 clients is that the "nats-base-client" which implements
+all the runtime agnostic functionality of the clients, is now split into several
+modules. This split simplify the initial user experience as well as the
+development and evolution of the current functionality.
 
-Previous versions of the NATS clients merged the specific transport
-functionality (runtime) with the "NATS Base Client", the library providing the
-APIs to interact with the NATS server.
-
-In order to be more flexible and allow the ecosystem to more easily grow the
-basic functionality has been split into 5 modules:
+The new modules are:
 
 - [Core](core/README.md) which implements basic NATS core functionality
 - [JetStream](jetstream/README.md) which implements JetStream functionality
@@ -28,37 +29,36 @@ basic functionality has been split into 5 modules:
 - [Services](obj/README.md) which implements a framework for building NATS
   services
 
-The above modules provide a different way for working with NATS. If you are
-getting started, perhaps you heard about the NATS KV and would incorporate it
-into your app. The KV module may be all that you need to get started. You will
-of course need a transport, but once you know how to make a connection to NATS,
-you can bypass much of the APIs and simply focus on the one that grabbed your
-attention. From there feel free to explore the different aspects of NATS. At
-some point, we are certain that your use most, if not all, of the modules.
+If you are getting started with NATS for the first time, we now have the
+opportunity to have a simplified on-boarding experience that allows you to go
+into one of our NATS technologies. Perhaps you heard about the NATS KV and would
+like to incorporate it into your app. The KV module will shortcut a lot of
+things for you. You will of course need a transport which will connect you to a
+NATS server, but once you know how to create a connection you will be focusing
+on a smaller subset of the APIs. From there, we are certain that you will
+broaden your use of NATS into other areas.
 
-This allows basic clients to be smaller as features such as JetStream or KV are
-opt-in components, and also allowing each module to be versioned separately.
-This provides some additional developer comfort as it allows each module to
-specify its own [semantic version](https://semver.org/), and thus prevent
+Another reason for the change is that it has the potential to make your client a
+bit smaller, and if versions change on a submodule that you don't use, you won't
+be confronted with an upgrade choice. It also allows us to version more
+strictly, and thus telegraph to you the effort or scope of changes and prevent
 surprises when upgrading.
 
-The decoupling of the NATS client functionality from the actual runtime, also
-enables developers to write modules that can run on different runtimes provided
-they follow a pattern where a `NatsConnection` is used regardless of the actual
-runtime. For example, the JetStream module exposes a `jetstream()` function that
-will return a JetStream API that you use to interact with JetStream. The actual
-connection type is not important, and the library will work regardless of the
-runtime provided the runtime has the minimum support required by the library.
-
-[//]: # (- [Node Transport]&#40;&#41; which implements a TCP transport for Node.js)
-[//]: # (- [WebSocket Transport]&#40;&#41; which implements a W3C compatible websocket transport)
-[//]: # (  that can run in Deno, Node.js &#40;22&#41;, and Browsers.)
+The decoupling of the NATS client functionality from a transport, also enables
+developers to create new modules that can run all runtimes so long as they
+follow a pattern where a `NatsConnection` (or some other standard interface) is
+used as the basis of the module. For example, the JetStream module exposes a
+`jetstream()` and `jetstreamManager()` functions that will return a JetStream
+API that you use to interact with JetStream for creating resources or consuming
+streams. The actual connection type is not important, and the library will work
+regardless of the runtime provided the runtime has the minimum support required
+by the library.
 
 # Getting Started
 
 If you are migrating from the legacy nats.deno or nats.js or nats.ws clients
-don't despair. Changes are very easy to on-board, and are all
-[described here](migration.md).
+don't despair. Changes are well documented and should be easy to locate and
+implement, and are all [described here](migration.md).
 
 If you want to get started with NATS the best starting point is the transport
 that matches the runtime you want to use:
@@ -69,7 +69,8 @@ that matches the runtime you want to use:
 The module for the transport will tell you how to install it, and how to use it.
 
 If you want to write a library that uses NATS under the cover, your starting
-point is likely [Core](core/README.md). If data oriented it may be JetStream.
+point is likely [Core](core/README.md). If data oriented, it may be
+[JetStream](jetstream/README.md).
 
 ## Documentation
 

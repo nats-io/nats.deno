@@ -4,9 +4,10 @@ The jetstream module implements the JetStream protocol functionality for
 JavaScript clients.
 
 To use JetStream simply install this library, and create a `jetstream(nc)` or
-`jetstreamManager(nc)` with a connection. The JetStreamManager allows you to
-interact with the NATS server to manage JetStream resources. The JetStream
-client allows you interact with JetStream resources.
+`jetstreamManager(nc)` with a connection provided by your chosen transport
+module. JetStreamManager allows you to interact with the NATS server to manage
+JetStream resources. The JetStream client allows you to interact with JetStream
+resources.
 
 ## Installation
 
@@ -87,23 +88,18 @@ For more information about JetStream, please visit the
 ## Migration
 
 If you were using an embedded version of JetStream as provided by the npm
-nats@^2.0.0 or deno or websocket libraries, you will have to import this library
-and replace your `NatsConnection#jetstream()` or
+nats@^2.0.0 or nats.deno or nats.ws libraries, you will have to import this
+library and replace your usages of `NatsConnection#jetstream()` or
 `NatsConnection#jetstreamManager()` with `jetstream(nc)` or
-`await jetstreamManager(nc)`.
+`await jetstreamManager(nc)` where you pass your actual connection to the above
+functions.
 
-For example, developers that use JetStream can access it by using the functions
-`jetstream()` and `jetstreamManager()` and provide their NATS connection. Note
-that were built directly into the NatsConnection
-`NatsConnection#jetstream/Manager()` APIs are no longer available. This enables
-clients that don't use JetStream have a smaller footprint.
-
-Also note that if you are using KV or ObjectStore, these APIs are now provided
-by a different libraries `@nats-io/kv` and `@nats-io/obj` respectively. If you
-are only using KV or ObjectStore, there's no need to reference this library
-directly unless you need to do some specific JetStreamManager API, as both
-`@nats-io/kv` and `@nats-io/obj` depend on this library already and use it under
-the hood.
+Also note that if you are using [KV](../kv/README.md) or
+[ObjectStore](../obj/README.md), these APIs are now provided by a different
+libraries `@nats-io/kv` and `@nats-io/obj` respectively. If you are only using
+KV or ObjectStore, there's no need to reference this library directly unless you
+need to do some specific JetStreamManager API, as both `@nats-io/kv` and
+`@nats-io/obj` depend on this library already and use it under the hood.
 
 ## JetStreamManager (JSM)
 
@@ -113,12 +109,9 @@ resources. To access a JetStream manager:
 ```typescript
 const jsm = await jetstreamManager(nc);
 
-// list all the streams, the `next()` function
-// retrieves a paged result.
-const streams = await jsm.streams.list().next();
-streams.forEach((si) => {
+for await (const si of jsm.streams.list()) {
   console.log(si);
-});
+}
 
 // add a stream - jetstream can capture nats core messages
 const stream = "mystream";
@@ -312,7 +305,7 @@ const c = await js.consumers.get(stream, consumer);
 const oc = await js.consumers.get(stream);
 ```
 
-[full example](examples/jetstream/01_consumers.ts)
+[full example](examples/01_consumers.ts)
 
 With the consumer in hand, the client can start reading messages using whatever
 API is appropriate for the application.
@@ -361,7 +354,7 @@ if (m) {
 }
 ```
 
-[full example](examples/jetstream/02_next.ts)
+[full example](examples/02_next.ts)
 
 The operation takes an optional argument. Currently, the only option is an
 `expires` option which specifies the maximum number of milliseconds to wait for
@@ -425,7 +418,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/04_consume.ts)
+[full example](examples/04_consume.ts)
 
 Note that it is possible to do an automatic version of `next()` by simply
 setting the maximum number of messages to buffer to `1`:
@@ -554,7 +547,7 @@ for await (const m of messages) {
 }
 ```
 
-[full example](examples/jetstream/07_consume_jobs.ts)
+[full example](examples/07_consume_jobs.ts)
 
 #### Processing a Stream
 
@@ -595,7 +588,7 @@ keys.forEach((k) => {
 });
 ```
 
-[full example](examples/jetstream/08_consume_process.ts)
+[full example](examples/08_consume_process.ts)
 
 ### Heartbeats
 
@@ -638,7 +631,7 @@ while (true) {
 }
 ```
 
-[full example](examples/jetstream/06_heartbeats.ts)
+[full example](examples/06_heartbeats.ts)
 
 Note that while the heartbeat interval is configurable, you shouldn't change it.
 

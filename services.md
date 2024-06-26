@@ -76,7 +76,7 @@ await m.stats("max", id);
 ```
 
 For a more elaborate first example see:
-[simple example here](examples/services/01_services.ts)
+[simple example here](services/examples/01_services.ts)
 
 ## Multiple Endpoints
 
@@ -132,4 +132,4 @@ For those paying attention, you can specify a callback much like in the first
 example, if you don't, the return value of the add endpoint is an iterator.
 
 For a complete example see:
-[multiple endpoints](examples/services/02_multiple_endpoints.ts)
+[multiple endpoints](services/examples/02_multiple_endpoints.ts)

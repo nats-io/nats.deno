@@ -1,8 +1,8 @@
 {
   "name": "@nats-io/nats-transport-deno",
-  "version": "3.0.0-4",
+  "version": "3.0.0-5",
   "exports": {
-    ".": "./mod.ts"
+    ".": "./src/mod.ts"
   },
   "publish": {
     "include": [

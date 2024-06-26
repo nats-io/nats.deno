@@ -20,7 +20,7 @@ import {
   jetstreamServerConf,
   NatsServer,
 } from "test_helpers";
-import { setupStreamAndConsumer } from "../../examples/jetstream/util.ts";
+import { setupStreamAndConsumer } from "../examples/util.ts";
 import {
   assert,
   assertEquals,
