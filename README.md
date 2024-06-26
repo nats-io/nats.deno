@@ -16,8 +16,8 @@ This repository hosts native runtime support ("transports") for:
 
 A big change with the v3 clients is that the "nats-base-client" which implements
 all the runtime agnostic functionality of the clients, is now split into several
-modules. This split simplify the initial user experience as well as the
-development and evolution of the current functionality.
+modules. This split simplifies the initial user experience as well as the
+development and evolution of the JavaScript clients and new functionality.
 
 The new modules are:
 
@@ -29,22 +29,23 @@ The new modules are:
 - [Services](obj/README.md) which implements a framework for building NATS
   services
 
-If you are getting started with NATS for the first time, we now have the
-opportunity to have a simplified on-boarding experience that allows you to go
-into one of our NATS technologies. Perhaps you heard about the NATS KV and would
-like to incorporate it into your app. The KV module will shortcut a lot of
-things for you. You will of course need a transport which will connect you to a
-NATS server, but once you know how to create a connection you will be focusing
-on a smaller subset of the APIs. From there, we are certain that you will
-broaden your use of NATS into other areas.
+If you are getting started with NATS for the first time, you'll be able to pick
+one of our technologies and more easily incorporate it into your apps. Perhaps
+you heard about the NATS KV and would like to incorporate it into your app. The
+KV module will shortcut a lot of things for you. You will of course need a
+transport which will allow you to `connect` you to a NATS server, but once you
+know how to create a connection you will be focusing on a smaller subset of the
+APIs rather than be confronted with all the functionality you can use in a NATS
+client. From there, we are certain that you will broaden your use of NATS into
+other areas, but your initial effort should be more straight forward.
 
 Another reason for the change is that it has the potential to make your client a
 bit smaller, and if versions change on a submodule that you don't use, you won't
-be confronted with an upgrade choice. It also allows us to version more
-strictly, and thus telegraph to you the effort or scope of changes and prevent
-surprises when upgrading.
+be confronted with an upgrade choice. These modules also allows us to version
+more strictly, and thus telegraph to you the effort or scope of changes and
+prevent surprises when upgrading.
 
-The decoupling of the NATS client functionality from a transport, also enables
+By decoupling of the NATS client functionality from a transport, we enable NATS
 developers to create new modules that can run all runtimes so long as they
 follow a pattern where a `NatsConnection` (or some other standard interface) is
 used as the basis of the module. For example, the JetStream module exposes a
