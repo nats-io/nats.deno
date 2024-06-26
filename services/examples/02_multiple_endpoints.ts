@@ -13,15 +13,16 @@
  * limitations under the License.
  */
 
-import { connect, JSONCodec, ServiceError, ServiceMsg } from "../../src/mod.ts";
-
-const jc = JSONCodec();
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-5";
+import { ServiceError, Svc } from "../src/mod.ts";
+import type { ServiceMsg } from "../src/mod.ts";
 
 // connect to NATS on demo.nats.io
 const nc = await connect({ servers: ["demo.nats.io"] });
 
 // create a service - using the statsHandler and decoder
-const calc = await nc.services.add({
+const svc = new Svc(nc);
+const calc = await svc.add({
   name: "calc",
   version: "0.0.1",
   description: "example calculator service",
@@ -61,7 +62,7 @@ const sums = g.addEndpoint("sum", {
     const s = numbers.reduce((sum, v) => {
       return sum + v;
     });
-    m.respond(jc.encode(s));
+    m.respond(JSON.stringify(s));
   }
 })().then();
 
@@ -76,7 +77,7 @@ g.addEndpoint("average", {
     const sum = numbers.reduce((sum, v) => {
       return sum + v;
     });
-    m.respond(jc.encode(sum / numbers.length));
+    m.respond(JSON.stringify(sum / numbers.length));
   },
   metadata: {
     "input": "JSON number array",
@@ -95,7 +96,7 @@ g.addEndpoint("min", {
     const min = numbers.reduce((n, v) => {
       return Math.min(n, v);
     });
-    m.respond(jc.encode(min));
+    m.respond(JSON.stringify(min));
   },
   metadata: {
     "input": "JSON number array",
@@ -113,7 +114,7 @@ g.addEndpoint("max", {
     const max = numbers.reduce((n, v) => {
       return Math.max(n, v);
     });
-    m.respond(jc.encode(max));
+    m.respond(JSON.stringify(max));
   },
   metadata: {
     "input": "JSON number array",
@@ -127,7 +128,7 @@ calc.stopped.then((err: Error | null) => {
 
 // Now we switch gears and look at a client making a request
 async function calculate(op: string, a: number[]): Promise<void> {
-  const r = await nc.request(`calc.${op}`, jc.encode(a));
+  const r = await nc.request(`calc.${op}`, JSON.stringify(a));
   if (ServiceError.isServiceError(r)) {
     console.log(ServiceError.toServiceError(r));
     return;

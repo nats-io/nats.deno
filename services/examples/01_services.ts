@@ -13,17 +13,18 @@
  * limitations under the License.
  */
 
+import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-5";
+
+import type { QueuedIterator } from "jsr:@nats-io/nats-transport-deno@3.0.0-5";
+
 import {
-  connect,
-  JSONCodec,
-  QueuedIterator,
   ServiceError,
   ServiceErrorCodeHeader,
   ServiceErrorHeader,
-  ServiceMsg,
-  ServiceStats,
-} from "../../src/mod.ts";
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
+  Svc,
+} from "../src/mod.ts";
+import type { ServiceMsg, ServiceStats } from "../src/mod.ts";
+import { assertEquals } from "jsr:@std/assert";
 
 // connect to NATS on demo.nats.io
 const nc = await connect({ servers: ["demo.nats.io"] });
@@ -40,8 +41,9 @@ const statsHandler = (): Promise<unknown> => {
   return Promise.resolve({ max: maxMax });
 };
 
-// create a service - using the statsHandler and decoder
-const service = await nc.services.add({
+// create a service - using the statsHandler
+const svc = new Svc(nc);
+const service = await svc.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
@@ -63,7 +65,6 @@ service.stopped.then((err: Error | null) => {
 // starting the service as an async function so that
 // we can have this example be in a single file
 (async () => {
-  const jc = JSONCodec<number>();
   for await (const r of max) {
     // most of the logic is about validating the input
     // and returning an error to the client if the input
@@ -82,7 +83,7 @@ service.stopped.then((err: Error | null) => {
           `${service.info().name} calculated a response of ${max} from ${a.length} values`,
         );
         // finally we respond with a JSON number payload with the maximum value
-        r.respond(jc.encode(max));
+        r.respond(JSON.stringify(max));
       })
       .catch((err) => {
         // if we are here, the initial processing of the array failed
@@ -95,7 +96,7 @@ service.stopped.then((err: Error | null) => {
         r.respondError(
           (err as ServiceError).code || 400,
           err.message,
-          jc.encode(0),
+          JSON.stringify(0),
         );
       });
   }
@@ -103,10 +104,9 @@ service.stopped.then((err: Error | null) => {
 
 // decoder extracts a JSON payload and expects it to be an array of numbers
 function decoder(r: ServiceMsg): Promise<number[]> {
-  const jc = JSONCodec<number[]>();
   try {
     // decode JSON
-    const a = jc.decode(r.data);
+    const a = r.json();
     // if not an array, this is bad input
     if (!Array.isArray(a)) {
       return Promise.reject(
@@ -145,7 +145,7 @@ await nc.request("max").then((r) => {
   assertEquals(r.headers?.get(ServiceErrorCodeHeader), "400");
 });
 // call it with an empty array also expecting an error response
-await nc.request("max", JSONCodec().encode([])).then((r) => {
+await nc.request("max", JSON.stringify([])).then((r) => {
   // Here's an alternative way of checking if the response is an error response
   assertEquals(ServiceError.isServiceError(r), true);
   const se = ServiceError.toServiceError(r);
@@ -154,12 +154,12 @@ await nc.request("max", JSONCodec().encode([])).then((r) => {
 });
 
 // call it with valid arguments
-await nc.request("max", JSONCodec().encode([1, 10, 100])).then((r) => {
+await nc.request("max", JSON.stringify([1, 10, 100])).then((r) => {
   // no error headers
   assertEquals(ServiceError.isServiceError(r), false);
   // and the response is on the payload, so we process the JSON we
   // got from the service
-  assertEquals(JSONCodec().decode(r.data), 100);
+  assertEquals(r.json<number>(), 100);
 });
 
 // Monitoring
@@ -177,7 +177,7 @@ async function collect<T>(p: Promise<QueuedIterator<T>>): Promise<T[]> {
   return buf;
 }
 
-const m = nc.services.client();
+const m = svc.client();
 // discover
 const found = await collect(m.ping());
 assertEquals(found.length, 1);
@@ -199,10 +199,9 @@ await collect(m.stats("max", found[0].id));
 // The id is also optional, but you must know it (from ping or one of
 // other requests that allowed you to discover the service) to
 // target the service specifically as we do here:
-const stats = JSONCodec<ServiceStats>().decode(
-  // note the name of the service matches in case what was specified
-  (await nc.request(`$SRV.STATS.max.${found[0].id}`)).data,
-);
+const r = await nc.request(`$SRV.STATS.max.${found[0].id}`);
+const stats = r.json<ServiceStats>();
+
 assertEquals(stats.name, "max");
 assertEquals(stats.endpoints?.[0].num_requests, 3);
 assertEquals((stats.endpoints?.[0].data as { max: number }).max, 100);

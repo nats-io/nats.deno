@@ -12,8 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
-import { connect, ConnectionOptions, RequestStrategy } from "../../src/mod.ts";
+import { parse } from "jsr:@std/flags";
+import {
+  connect,
+  RequestStrategy,
+} from "jsr:@nats-io/nats-transport-deno@3.0.0-5";
+import type { ConnectionOptions } from "jsr:@nats-io/nats-transport-deno@3.0.0-5";
+
 import { humanizeBytes } from "./03_util.ts";
 
 const argv = parse(
@@ -25,7 +30,7 @@ const argv = parse(
       "c": ["chunk"],
     },
     default: {
-      s: "127.0.0.1:4222",
+      s: "demo.nats.io",
       c: 0,
       a: 1024 * 1024,
     },

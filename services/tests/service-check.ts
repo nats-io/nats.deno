@@ -15,12 +15,9 @@
 
 import { cli } from "https://deno.land/x/cobra@v0.0.9/mod.ts";
 import { connect } from "jsr:@nats-io/nats-transport-deno@3.0.0-4";
-import {
-  collect,
-  NatsConnection,
-  parseSemVer,
-  StringCodec,
-} from "@nats-io/nats-core/internal";
+import { collect, parseSemVer, StringCodec } from "@nats-io/nats-core/internal";
+
+import type { NatsConnection } from "@nats-io/nats-core/internal";
 
 import type { ServiceIdentity, ServiceInfo, ServiceStats } from "../src/mod.ts";
 import {

@@ -1,7 +1,8 @@
-# jetstream
+# JetStream
 
 The jetstream module implements the JetStream protocol functionality for
-JavaScript clients.
+JavaScript clients. JetStream is the NATS persistence engine providing
+streaming, message, and worker queues with At-Least-Once semantics.
 
 To use JetStream simply install this library, and create a `jetstream(nc)` or
 `jetstreamManager(nc)` with a connection provided by your chosen transport

@@ -1,19 +1,23 @@
-# Services Framework
+# Services
 
-The Services Framework introduces a higher-level API for implementing services
-with NATS. NATS has always been a strong technology on which to build services,
-as they are easy to write, are location and DNS independent and can be scaled up
-or down by simply adding or removing instances of the service.
+The Services module introduces a higher-level API for implementing services with
+NATS. NATS has always been a strong technology on which to build services, as
+they are easy to write, are location and DNS independent and can be scaled up or
+down by simply adding or removing instances of the service.
 
-The Services Framework further streamlines their development by providing
+The services module further streamlines their development by providing
 observability and standardization. The Service Framework allows your services to
 be discovered, queried for status and schema information without additional
 work.
 
+To create services using the services module simply install this library and
+create a `new Svc(nc)`.
+
 ## Creating a Service
 
 ```typescript
-const service = await nc.services.add({
+const svc = new Svc(nc);
+const service = await svc.add({
   name: "max",
   version: "0.0.1",
   description: "returns max number in a request",
@@ -55,7 +59,7 @@ sport a different `ID`.
 To discover services that are running, create a monitoring client:
 
 ```typescript
-const m = nc.services.client();
+const m = svc.client();
 
 // you can ping, request info, and stats information.
 // All the operations return iterators describing the services found.
@@ -76,7 +80,7 @@ await m.stats("max", id);
 ```
 
 For a more elaborate first example see:
-[simple example here](services/examples/01_services.ts)
+[simple example here](examples/01_services.ts)
 
 ## Multiple Endpoints
 
@@ -132,4 +136,4 @@ For those paying attention, you can specify a callback much like in the first
 example, if you don't, the return value of the add endpoint is an iterator.
 
 For a complete example see:
-[multiple endpoints](services/examples/02_multiple_endpoints.ts)
+[multiple endpoints](examples/02_multiple_endpoints.ts)
