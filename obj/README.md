@@ -1,6 +1,6 @@
 # obj
 
-The obj module implements the NATS KV functionality using JetStream for
+The obj module implements the NATS ObjectStore functionality using JetStream for
 JavaScript clients. JetStream clients can use streams to store and access data.
 Obj is materialized view that presents a different _API_ to interact with the
 data stored in a stream using the API for a ObjectStore which should be familiar
