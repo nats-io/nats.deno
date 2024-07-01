@@ -424,3 +424,85 @@ Deno.test("mreq - lost sub permission", async () => {
   await d;
   await cleanup(ns, nc);
 });
+
+Deno.test("mreq - timeout doesn't leak subs", async () => {
+  const { ns, nc } = await setup();
+
+  nc.subscribe("q", { callback: () => {} });
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+
+  // there's no error here - the empty response is the timeout
+  const iter = await nc.requestMany("q", Empty, {
+    maxWait: 1000,
+    maxMessages: 10,
+    noMux: true,
+  });
+  for await (const _ of iter) {
+    // nothing
+  }
+
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("mreq - no responder doesn't leak subs", async () => {
+  const { ns, nc } = await setup();
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+
+  await assertRejects(
+    async () => {
+      const iter = await nc.requestMany("q", Empty, {
+        noMux: true,
+        maxWait: 1000,
+        maxMessages: 10,
+      });
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "503",
+  );
+
+  // the mux subscription
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("mreq - no mux request no perms doesn't leak subs", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "s",
+        password: "s",
+        permission: {
+          publish: "q",
+          subscribe: ">",
+          allow_responses: true,
+        },
+      }],
+    },
+  }, { user: "s", pass: "s" });
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+
+  await assertRejects(
+    async () => {
+      const iter = await nc.requestMany("qq", Empty, {
+        noMux: true,
+        maxWait: 1000,
+      });
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "Permissions Violation for Publish",
+  );
+
+  await cleanup(ns, nc);
+});

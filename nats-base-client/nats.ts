@@ -266,6 +266,7 @@ export class NatsConnectionImpl implements NatsConnection {
           }
         },
       });
+      (sub as SubscriptionImpl).requestSubject = subject;
 
       sub.closed
         .then(() => {
@@ -389,6 +390,7 @@ export class NatsConnectionImpl implements NatsConnection {
               if (errCtx && err.code !== ErrorCode.Timeout) {
                 err.stack += `\n\n${errCtx.stack}`;
               }
+              sub.unsubscribe();
               d.reject(err);
             } else {
               err = isRequestError(msg);
