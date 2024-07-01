@@ -621,6 +621,85 @@ Deno.test("basics - no mux requests timeout", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("basics - no mux request timeout doesn't leak subs", async () => {
+  const { ns, nc } = await setup();
+
+  nc.subscribe("q", { callback: () => {} });
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+
+  await assertRejects(
+    async () => {
+      await nc.request("q", Empty, { noMux: true, timeout: 1000 });
+    },
+    Error,
+    "TIMEOUT",
+  );
+
+  assertEquals(nci.protocol.subscriptions.size(), 1);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - no mux request no responders doesn't leak subs", async () => {
+  const { ns, nc } = await setup();
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+
+  await assertRejects(
+    async () => {
+      await nc.request("q", Empty, { noMux: true, timeout: 1000 });
+    },
+    Error,
+    "503",
+  );
+
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("basics - no mux request no perms doesn't leak subs", async () => {
+  const { ns, nc } = await setup({
+    authorization: {
+      users: [{
+        user: "s",
+        password: "s",
+        permission: {
+          publish: "q",
+          subscribe: "response",
+          allow_responses: true,
+        },
+      }],
+    },
+  }, { user: "s", pass: "s" });
+
+  const nci = nc as NatsConnectionImpl;
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+
+  await assertRejects(
+    async () => {
+      await nc.request("qq", Empty, {
+        noMux: true,
+        reply: "response",
+        timeout: 1000,
+      });
+    },
+    Error,
+    "Permissions Violation for Publish",
+  );
+
+  await assertRejects(
+    async () => {
+      await nc.request("q", Empty, { noMux: true, reply: "r", timeout: 1000 });
+    },
+    Error,
+    "Permissions Violation for Subscription",
+  );
+
+  assertEquals(nci.protocol.subscriptions.size(), 0);
+  await cleanup(ns, nc);
+});
+
 Deno.test("basics - no mux requests", async () => {
   const { ns, nc } = await setup({ max_payload: 2048 });
   const subj = createInbox();
