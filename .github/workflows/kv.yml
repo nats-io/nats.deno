@@ -1,0 +1,44 @@
+name: core release
+
+on:
+  push:
+    paths:
+      - 'kv/**'
+    tags: [ 'kv/*' ]
+    branches:
+      - '*'
+jobs:
+  test:
+    name: ${{ matrix.config.kind }} ${{ matrix.config.os }}
+    runs-on: ubuntu-latest
+    environment: CI
+    strategy:
+      matrix:
+        deno-version: [1.44.4]
+
+    steps:
+      - name: Git Checkout Kv
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Use Deno Version ${{ matrix.deno-version }}
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: ${{ matrix.deno-version }}
+
+      - name: Lint Deno Module
+        working-directory: kv
+        run: |
+          deno fmt --check
+          deno lint
+      - name: Test Deno Module
+        working-directory: kv
+        env:
+          TMPDIR: ${{ runner.temp }}
+          CI: true
+          NGS_CI_USER: ${{ secrets.NGS_CI_USER }}
+        run: |
+          deno task test
+
+
