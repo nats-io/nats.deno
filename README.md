@@ -5,11 +5,11 @@
 [![Coverage Status](https://coveralls.io/repos/github/nats-io/nats.deno/badge.svg?branch=main)](https://coveralls.io/github/nats-io/nats.deno?branch=main)
 
 
-[!WARNING]
-This project is still working in progress and not yet released. Currently supported Javascript are
-- [nats.deno](https://github.com/nats-io/nats.deno)
-- [nats.js](https://github.com/nats-io/nats.js)
-- [nats.ws](https://github.com/nats-io/nats.ws)
+> [!CAUTION]
+> This project is still working in progress and not yet released. Currently supported Javascript are
+> - [nats.deno](https://github.com/nats-io/nats.deno)
+> - [nats.js](https://github.com/nats-io/nats.js)
+> - [nats.ws](https://github.com/nats-io/nats.ws)
 
 
 
