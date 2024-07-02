@@ -10,11 +10,14 @@ on:
 jobs:
   test:
     name: ${{ matrix.config.kind }} ${{ matrix.config.os }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     environment: CI
     strategy:
       matrix:
         deno-version: [1.44.4]
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Git Checkout Core

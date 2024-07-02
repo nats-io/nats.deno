@@ -55,9 +55,7 @@ jobs:
           CI: true
           NGS_CI_USER: ${{ secrets.NGS_CI_USER }}
         run: |
-          deno test --allow-all --parallel --reload --quiet --coverage=./coverage core/tests/ jetstream/tests kv/tests/ obj/tests/ services/tests/
-          deno test --allow-all --parallel --reload --quiet --unsafely-ignore-certificate-errors --coverage=./coverage core/unsafe_tests/
-
+          deno task test
 
       - name: Build nats.js
         run: deno bundle --unstable transport-deno/src/connect.ts nats.js
