@@ -137,6 +137,7 @@ export type {
   ConsumerMessages,
   ConsumerStatus,
   Expires,
+  ExportedConsumer,
   FetchBytes,
   FetchMessages,
   FetchOptions,
