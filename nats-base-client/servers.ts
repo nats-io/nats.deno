@@ -25,11 +25,11 @@ import {
 } from "./core.ts";
 
 export function isIPV4OrHostname(hp: string): boolean {
-  if (hp.indexOf(".") !== -1) {
-    return true;
-  }
   if (hp.indexOf("[") !== -1 || hp.indexOf("::") !== -1) {
     return false;
+  }
+  if (hp.indexOf(".") !== -1) {
+    return true;
   }
   // if we have a plain hostname or host:port
   if (hp.split(":").length <= 2) {
