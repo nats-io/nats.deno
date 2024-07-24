@@ -16,6 +16,7 @@
 import {
   cleanup,
   jetstreamServerConf,
+  NatsServer,
   notCompatible,
   setup,
 } from "../../tests/helpers/mod.ts";
@@ -29,7 +30,7 @@ import {
 import { DataBuffer } from "../../nats-base-client/databuffer.ts";
 import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
-import { Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
+import { connect, Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
 import { SHA256 } from "../../nats-base-client/sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
@@ -1112,4 +1113,16 @@ Deno.test("os - compression", async () => {
   status = await none.status();
   assertEquals(status.compression, false);
   await cleanup(ns, nc);
+});
+
+Deno.test("os - replicas", async () => {
+  const servers = await NatsServer.jetstreamCluster(3);
+  const nc = await connect({ port: servers[0].port });
+
+  const js = nc.jetstream();
+  const os = await js.views.os("rep", { replicas: 3 });
+  const status = await os.status();
+  assertEquals(status.replicas, 3);
+  await nc.close();
+  await NatsServer.stopAll(servers);
 });
