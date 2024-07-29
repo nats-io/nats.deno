@@ -2210,3 +2210,30 @@ Deno.test("kv - keys filter", async () => {
 
   await cleanup(ns, nc);
 });
+
+Deno.test("kv - sourced", async () => {
+  const { ns, nc } = await setup(
+    jetstreamServerConf({}),
+  );
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+
+  const js = nc.jetstream();
+  const source = await js.views.kv("source");
+  const target = await js.views.kv("target", {
+    sources: [{ name: "source" }],
+  });
+
+  await source.put("hello", "world");
+  for (let i = 0; i < 10; i++) {
+    const v = await target.get("hello");
+    if (v === null) {
+      await delay(250);
+      continue;
+    }
+    assertEquals(v.string(), "world");
+  }
+
+  await cleanup(ns, nc);
+});
