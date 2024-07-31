@@ -2,9 +2,8 @@
 
 > [!IMPORTANT]
 >
-> Nats.deno is now part of [nats.js](https://github.com/nats-io/nats.js).
-> Please visit the above link for more information.
-
+> Nats.deno is now part of [nats.js](https://github.com/nats-io/nats.js). Please
+> visit the above link for more information.
 
 A Deno client for the [NATS messaging system](https://nats.io).
 
