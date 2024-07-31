@@ -1,5 +1,10 @@
 # NATS.deno - A [NATS](http://nats.io) client for [Deno](https://deno.land)
 
+> [!IMPORTANT]
+>
+> Nats.deno is now part of [nats.js](https://github.com/nats-io/nats.js). Please
+> visit the above link for more information.
+
 A Deno client for the [NATS messaging system](https://nats.io).
 
 [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](./LICENSE)
