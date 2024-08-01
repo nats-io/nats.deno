@@ -41,6 +41,7 @@ import {
 } from "../nats-base-client/core.ts";
 import {
   ApiPagedRequest,
+  ConsumerInfo,
   ExternalStream,
   MsgDeleteRequest,
   MsgRequest,
@@ -60,6 +61,7 @@ import {
 } from "./jsapi_types.ts";
 import {
   Consumer,
+  ExportedConsumer,
   OrderedConsumerOptions,
   OrderedPullConsumerImpl,
   PullConsumerImpl,
@@ -130,6 +132,18 @@ export class ConsumersImpl implements Consumers {
       .catch((err) => {
         return Promise.reject(err);
       });
+  }
+
+  async bind(
+    stream: string,
+    name: string,
+  ): Promise<ExportedConsumer> {
+    await this.checkVersion();
+    const ci: ConsumerInfo = {
+      stream_name: stream,
+      name: name,
+    } as unknown as ConsumerInfo;
+    return Promise.resolve(new PullConsumerImpl(this.api, ci));
   }
 
   async ordered(
