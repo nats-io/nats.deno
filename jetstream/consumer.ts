@@ -977,6 +977,7 @@ export class OrderedPullConsumerImpl implements Consumer {
   iter: OrderedConsumerMessages | null;
   type: PullConsumerType;
   startSeq: number;
+  maxInitialReset: number;
 
   constructor(
     api: ConsumerAPI,
@@ -998,6 +999,7 @@ export class OrderedPullConsumerImpl implements Consumer {
     this.iter = null;
     this.type = PullConsumerType.Unset;
     this.consumerOpts = opts;
+    this.maxInitialReset = 30;
 
     // to support a random start sequence we need to update the cursor
     this.startSeq = this.consumerOpts.opt_start_seq || 0;
@@ -1067,6 +1069,7 @@ export class OrderedPullConsumerImpl implements Consumer {
   }
 
   async resetConsumer(seq = 0): Promise<ConsumerInfo> {
+    const isNew = this.serial === 0;
     // try to delete the consumer
     this.consumer?.delete().catch(() => {});
     seq = seq === 0 ? 1 : seq;
@@ -1096,7 +1099,7 @@ export class OrderedPullConsumerImpl implements Consumer {
           }
         }
 
-        if (seq === 0 && i >= 30) {
+        if (isNew && i >= this.maxInitialReset) {
           // consumer was never created, so we can fail this
           throw err;
         } else {
@@ -1294,7 +1297,7 @@ export class OrderedPullConsumerImpl implements Consumer {
 
   async info(cached?: boolean): Promise<ConsumerInfo> {
     if (this.currentConsumer == null) {
-      this.currentConsumer = await this.resetConsumer(this.serial);
+      this.currentConsumer = await this.resetConsumer(this.startSeq);
       return Promise.resolve(this.currentConsumer);
     }
     if (cached && this.currentConsumer) {
