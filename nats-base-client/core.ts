@@ -1017,11 +1017,11 @@ export type NamedEndpointStats = {
    */
   data?: unknown;
   /**
-   * Total processing_time for the service
+   * Total processing_time for the service in nanoseconds
    */
   processing_time: Nanos;
   /**
-   * Average processing_time is the total processing_time divided by the num_requests
+   * Average processing_time, in nanoseconds, is the total processing_time divided by the num_requests
    */
   average_processing_time: Nanos;
   /**
