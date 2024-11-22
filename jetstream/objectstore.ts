@@ -549,7 +549,10 @@ export class ObjectStoreImpl implements ObjectStore {
     let sub 
     try {
       sub = await this.js.subscribe(subj, oc); 
-    } catch {
+    } catch (err) {
+      if (err.message !== 'no stream matches subject') {
+        throw err
+      }
       const oc = consumerOpts({
         ack_policy: AckPolicy.None
       })
