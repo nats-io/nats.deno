@@ -45,6 +45,7 @@ import {
   QueuedIterator,
 } from "../nats-base-client/core.ts";
 import {
+  AckPolicy,
   DiscardPolicy,
   PurgeResponse,
   StorageType,
