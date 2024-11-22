@@ -549,15 +549,12 @@ export class ObjectStoreImpl implements ObjectStore {
     try {
       sub = await this.js.subscribe(subj, oc); 
     } catch {
+      const co = consumerOpts({
+        ack_policy: AckPolicy.None
+      })
+      co.bindStream("OBJ_" + this.name)
       // HACK: for mirrored ObjectStore
-      sub = await this.js.subscribe(subj, {
-        ...oc,
-        config: {
-          ...oc?.config,
-          ack_policy: 'none'
-        },
-        stream: "OBJ_" + this.name
-      });
+      sub = await this.js.subscribe(subj, co);
     }
     (async () => {
       for await (const jm of sub) {
