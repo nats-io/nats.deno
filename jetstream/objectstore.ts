@@ -545,7 +545,20 @@ export class ObjectStoreImpl implements ObjectStore {
     oc.orderedConsumer();
     const sha = new SHA256();
     const subj = `$O.${this.name}.C.${info.nuid}`;
-    const sub = await this.js.subscribe(subj, oc);
+    let sub 
+    try {
+      sub = await this.js.subscribe(subj, oc); 
+    } catch {
+      // HACK: for mirrored ObjectStore
+      sub = await this.js.subscribe(subj, {
+        ...oc,
+        config: {
+          ...oc?.config,
+          ack_policy: 'none'
+        },
+        stream: "OBJ_" + this.name
+      });
+    }
     (async () => {
       for await (const jm of sub) {
         if (jm.data.length > 0) {
