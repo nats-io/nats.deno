@@ -725,6 +725,7 @@ export class ObjectStoreImpl implements ObjectStore {
     }
     const jc = JSONCodec<ObjectInfo>();
     const copts = consumerOpts();
+    copts.bindStream(this.stream)
     copts.orderedConsumer();
     if (opts.includeHistory) {
       copts.deliverLastPerSubject();
