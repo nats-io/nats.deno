@@ -404,6 +404,57 @@ Deno.test("objectstore - list", async () => {
   await cleanup(ns, nc);
 });
 
+Deno.test("objectstore - mirror list", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf({}));
+  if (await notCompatible(ns, nc, "2.6.3")) {
+    return;
+  }
+  const js = nc.jetstream();
+  const jsm = await js.jetstreamManager()
+
+  const os = await js.views.os("test");
+
+  await jsm.streams.add({
+    name: 'OBJ_mirror',
+    allow_rollup_hdrs: true,
+    mirror: {
+      name: 'OBJ_test',
+      subject_transforms: [
+        {
+          src: '$O.test.C.>',
+          dest: '$O.mirror.C.>',
+        },
+        {
+          src: '$O.test.M.>',
+          dest: '$O.mirror.M.>',
+        },
+      ]
+    }
+  })
+  const mirrorOs = await js.views.os("mirror");
+
+  let infos = await os.list();
+  assertEquals(infos.length, 0);
+
+  let mirrorInfos = await mirrorOs.list();
+  assertEquals(mirrorInfos.length, 0);
+
+  await os.put(
+    { name: "a" },
+    readableStreamFrom(new Uint8Array(0)),
+  );
+
+  infos = await os.list();
+  assertEquals(infos.length, 1);
+  assertEquals(infos[0].name, "a");
+
+  mirrorInfos = await os.list();
+  assertEquals(mirrorInfos.length, 1);
+  assertEquals(mirrorInfos[0].name, "a");
+
+  await cleanup(ns, nc);
+});
+
 Deno.test("objectstore - watch initially empty", async () => {
   const { ns, nc } = await setup(jetstreamServerConf({}));
   if (await notCompatible(ns, nc, "2.6.3")) {
