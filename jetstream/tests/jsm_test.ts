@@ -68,7 +68,7 @@ import {
   encodeAccount,
   encodeOperator,
   encodeUser,
-} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+} from "https://raw.githubusercontent.com/nats-io/jwt.js/v0.0.9/src/jwt.ts";
 import { JetStreamManagerImpl } from "../jsm.ts";
 import { Feature } from "../../nats-base-client/semver.ts";
 import { convertStreamSourceDomain } from "../jsmstream_api.ts";
