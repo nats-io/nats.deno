@@ -41,6 +41,7 @@ import {
 } from "../nats-base-client/core.ts";
 import {
   ApiPagedRequest,
+  ConsumerInfo,
   ExternalStream,
   MsgDeleteRequest,
   MsgRequest,
@@ -108,6 +109,13 @@ export class ConsumersImpl implements Consumers {
       );
     }
     return Promise.resolve();
+  }
+
+  getConsumerFromInfo(ci: ConsumerInfo): Consumer {
+    if (ci.config.deliver_subject !== undefined) {
+      throw new Error("push consumer not supported");
+    }
+    return new PullConsumerImpl(this.api, ci);
   }
 
   async get(
@@ -194,6 +202,11 @@ export class StreamImpl implements Stream {
         this._info = si;
         return this._info;
       });
+  }
+
+  getConsumerFromInfo(ci: ConsumerInfo): Consumer {
+    return new ConsumersImpl(new ConsumerAPIImpl(this.api.nc, this.api.opts))
+      .getConsumerFromInfo(ci);
   }
 
   getConsumer(

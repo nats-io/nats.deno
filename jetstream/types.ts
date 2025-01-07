@@ -467,6 +467,15 @@ export interface Consumers {
     stream: string,
     name?: string | Partial<OrderedConsumerOptions>,
   ): Promise<Consumer>;
+
+  /**
+   * Returns a Consumer API based on the ConsumerInfo specified.
+   * Note this method can throw, and it doesn't validate that the
+   * underlying consumer exists. When using a consumer obtained
+   * by this method it is important to check for ConsumerEvents#HeartbeatsMissed
+   * @param info
+   */
+  getConsumerFromInfo(info: ConsumerInfo): Consumer;
 }
 
 export interface ConsumerOpts {
@@ -884,6 +893,8 @@ export interface Stream {
   getConsumer(
     name?: string | Partial<OrderedConsumerOptions>,
   ): Promise<Consumer>;
+
+  getConsumerFromInfo(ci: ConsumerInfo): Consumer;
 
   getMessage(query: MsgRequest): Promise<StoredMsg>;
 

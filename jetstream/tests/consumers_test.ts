@@ -19,7 +19,7 @@ import {
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { deferred, nanos } from "../../nats-base-client/mod.ts";
+import { deferred, delay, nanos } from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
@@ -549,5 +549,99 @@ Deno.test("consumers - inboxPrefix is respected", async () => {
   assertStringIncludes(iter.inbox, "x.");
   iter.stop();
   await done;
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - getFromConsumerInfo", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+
+  const ci = await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+  });
+
+  let c = 0;
+  nc.subscribe("$JS.API.CONSUMER.INFO.>", {
+    callback: (_) => {
+      c++;
+    },
+  });
+
+  const consumer = js.consumers.getConsumerFromInfo(ci);
+  const iter = await consumer.consume({ bind: true });
+
+  for await (const _m of iter) {
+    break;
+  }
+
+  await nc.flush();
+  assertEquals(c, 0);
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - getFromConsumerInfo non existing misses heartbeats", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
+  const jsm = await nc.jetstreamManager();
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  const js = nc.jetstream();
+  await js.publish("hello");
+
+  const ci = await jsm.consumers.add("messages", {
+    durable_name: "c",
+    deliver_policy: DeliverPolicy.All,
+    ack_policy: AckPolicy.Explicit,
+    ack_wait: nanos(3000),
+    max_waiting: 500,
+    inactive_threshold: nanos(2000),
+  });
+
+  const consumer = js.consumers.getConsumerFromInfo(ci);
+  await consumer.delete();
+
+  await delay(1000);
+  await assertRejects(
+    () => {
+      return jsm.consumers.info("messages", "c");
+    },
+    Error,
+    "consumer not found",
+  );
+
+  let c = 0;
+  nc.subscribe("$JS.API.CONSUMER.INFO.>", {
+    callback: (_) => {
+      c++;
+    },
+  });
+
+  const iter = await consumer.consume({ bind: true, idle_heartbeat: 1000 });
+  (async () => {
+    const status = await iter.status();
+    for await (const s of status) {
+      if (s.type === ConsumerEvents.HeartbeatsMissed) {
+        if (s.data === 2) {
+          iter.stop();
+        }
+      }
+    }
+  })().catch();
+
+  for await (const _m of iter) {
+    break;
+  }
+
+  await nc.flush();
+  assertEquals(c, 0);
+
   await cleanup(ns, nc);
 });
