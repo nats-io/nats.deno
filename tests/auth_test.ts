@@ -51,7 +51,7 @@ import {
   encodeAccount,
   encodeOperator,
   encodeUser,
-} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+} from "https://raw.githubusercontent.com/nats-io/jwt.js/v0.0.9/src/jwt.ts";
 
 import { DEFAULT_MAX_RECONNECT_ATTEMPTS } from "../nats-base-client/options.ts";
 

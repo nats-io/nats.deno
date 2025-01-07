@@ -33,7 +33,7 @@ import {
   encodeOperator,
   encodeUser,
   fmtCreds,
-} from "https://raw.githubusercontent.com/nats-io/jwt.js/main/src/jwt.ts";
+} from "https://raw.githubusercontent.com/nats-io/jwt.js/v0.0.9/src/jwt.ts";
 import { assertBetween } from "./helpers/mod.ts";
 import { deadline, delay } from "../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../nats-base-client/nats.ts";
