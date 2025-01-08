@@ -244,7 +244,7 @@ Deno.test("fetch - listener leaks", async () => {
     for await (const m of iter) {
       assertEquals(nci.protocol.listeners.length, base);
       m?.nak();
-      if (m.info.redeliveryCount > 100) {
+      if (m.info.deliveryCount > 100) {
         done = true;
       }
     }

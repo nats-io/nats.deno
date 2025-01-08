@@ -107,7 +107,7 @@ Deno.test("next - listener leaks", async () => {
     const m = await consumer.next();
     if (m) {
       m.nak();
-      if (m.info?.redeliveryCount > 100) {
+      if (m.info?.deliveryCount > 100) {
         break;
       }
     }

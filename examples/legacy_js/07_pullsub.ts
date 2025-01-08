@@ -33,7 +33,7 @@ const psub = await js.pullSubscribe(subj, {
   for await (const m of psub) {
     console.log(
       `[${m.seq}] ${
-        m.redelivered ? `- redelivery ${m.info.redeliveryCount}` : ""
+        m.redelivered ? `- redelivery ${m.info.deliveryCount}` : ""
       }`,
     );
     if (m.seq % 2 === 0) {
