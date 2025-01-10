@@ -111,7 +111,7 @@ export class ConsumersImpl implements Consumers {
     return Promise.resolve();
   }
 
-  getConsumerFromInfo(ci: ConsumerInfo): Consumer {
+  getPullConsumerFor(ci: ConsumerInfo): Consumer {
     if (ci.config.deliver_subject !== undefined) {
       throw new Error("push consumer not supported");
     }
@@ -206,7 +206,7 @@ export class StreamImpl implements Stream {
 
   getConsumerFromInfo(ci: ConsumerInfo): Consumer {
     return new ConsumersImpl(new ConsumerAPIImpl(this.api.nc, this.api.opts))
-      .getConsumerFromInfo(ci);
+      .getPullConsumerFor(ci);
   }
 
   getConsumer(

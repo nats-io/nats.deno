@@ -552,7 +552,7 @@ Deno.test("consumers - inboxPrefix is respected", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - getFromConsumerInfo", async () => {
+Deno.test("consumers - getPullConsumerFor", async () => {
   const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "messages", subjects: ["hello"] });
@@ -575,7 +575,7 @@ Deno.test("consumers - getFromConsumerInfo", async () => {
     },
   });
 
-  const consumer = js.consumers.getConsumerFromInfo(ci);
+  const consumer = js.consumers.getPullConsumerFor(ci);
   const iter = await consumer.consume({ bind: true });
 
   for await (const _m of iter) {
@@ -588,7 +588,7 @@ Deno.test("consumers - getFromConsumerInfo", async () => {
   await cleanup(ns, nc);
 });
 
-Deno.test("consumers - getFromConsumerInfo non existing misses heartbeats", async () => {
+Deno.test("consumers - getPullConsumerFor non existing misses heartbeats", async () => {
   const { ns, nc } = await setup(jetstreamServerConf(), { inboxPrefix: "x" });
   const jsm = await nc.jetstreamManager();
   await jsm.streams.add({ name: "messages", subjects: ["hello"] });
@@ -605,7 +605,7 @@ Deno.test("consumers - getFromConsumerInfo non existing misses heartbeats", asyn
     inactive_threshold: nanos(2000),
   });
 
-  const consumer = js.consumers.getConsumerFromInfo(ci);
+  const consumer = js.consumers.getPullConsumerFor(ci);
   await consumer.delete();
 
   await delay(1000);

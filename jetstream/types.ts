@@ -469,13 +469,13 @@ export interface Consumers {
   ): Promise<Consumer>;
 
   /**
-   * Returns a Consumer API based on the ConsumerInfo specified.
+   * Returns a Consumer based on the ConsumerInfo specified.
    * Note this method can throw, and it doesn't validate that the
    * underlying consumer exists. When using a consumer obtained
    * by this method it is important to check for ConsumerEvents#HeartbeatsMissed
    * @param info
    */
-  getConsumerFromInfo(info: ConsumerInfo): Consumer;
+  getPullConsumerFor(info: ConsumerInfo): Consumer;
 }
 
 export interface ConsumerOpts {
