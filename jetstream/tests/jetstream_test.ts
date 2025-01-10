@@ -1168,7 +1168,7 @@ Deno.test("jetstream - backoff", async () => {
         start = Date.now();
       }
       arrive.push(Date.now());
-      if (m.info.redeliveryCount === 4) {
+      if (m.info.deliveryCount === 4) {
         break;
       }
     }

@@ -950,7 +950,7 @@ export interface ConsumerUpdateConfig {
    */
   "ack_wait"?: Nanos;
   /**
-   * The number of times a message will be redelivered to consumers if not acknowledged in time
+   * The maximum number of times a message will be delivered to consumers.
    */
   "max_deliver"?: number;
   /**
@@ -1083,7 +1083,11 @@ export interface DeliveryInfo {
    */
   consumer: string;
   /**
-   * The number of times the message has been redelivered.
+   * The number of times the message has been delivered.
+   */
+  deliveryCount: number;
+  /**
+   * @deprecated: use deliveryCount
    */
   redeliveryCount: number;
   /**
