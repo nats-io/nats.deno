@@ -543,6 +543,7 @@ export class ObjectStoreImpl implements ObjectStore {
 
     const oc = consumerOpts();
     oc.orderedConsumer();
+    oc.bindStream(this.stream)
     const sha = new SHA256();
     const subj = `$O.${this.name}.C.${info.nuid}`;
     const sub = await this.js.subscribe(subj, oc);
@@ -723,6 +724,7 @@ export class ObjectStoreImpl implements ObjectStore {
     }
     const jc = JSONCodec<ObjectInfo>();
     const copts = consumerOpts();
+    copts.bindStream(this.stream)
     copts.orderedConsumer();
     if (opts.includeHistory) {
       copts.deliverLastPerSubject();
