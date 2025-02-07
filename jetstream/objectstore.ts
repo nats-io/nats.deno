@@ -36,7 +36,7 @@ import {
   PubAck,
 } from "./types.ts";
 import { QueuedIteratorImpl } from "../nats-base-client/queued_iterator.ts";
-import { SHA256 } from "../nats-base-client/sha256.js";
+import { sha256 } from "../nats-base-client/js-sha256.js";
 
 import {
   MsgHdrs,
@@ -357,7 +357,7 @@ export class ObjectStoreImpl implements ObjectStore {
     const db = new DataBuffer();
     try {
       const reader = rs ? rs.getReader() : null;
-      const sha = new SHA256();
+      const sha = sha256.create();
 
       while (true) {
         const { done, value } = reader
@@ -378,10 +378,8 @@ export class ObjectStoreImpl implements ObjectStore {
 
           // prepare the metadata
           info.mtime = new Date().toISOString();
-          const digest = sha.digest("base64");
-          const pad = digest.length % 3;
-          const padding = pad > 0 ? "=".repeat(pad) : "";
-          info.digest = `${digestType}${digest}${padding}`;
+          const digest = Base64UrlPaddedCodec.encode(sha.digest());
+          info.digest = `${digestType}${digest}`;
           info.deleted = false;
 
           // trailing md for the object
@@ -543,7 +541,7 @@ export class ObjectStoreImpl implements ObjectStore {
 
     const oc = consumerOpts();
     oc.orderedConsumer();
-    const sha = new SHA256();
+    const sha = sha256.create();
     const subj = `$O.${this.name}.C.${info.nuid}`;
     const sub = await this.js.subscribe(subj, oc);
     (async () => {
@@ -553,11 +551,8 @@ export class ObjectStoreImpl implements ObjectStore {
           controller!.enqueue(jm.data);
         }
         if (jm.info.pending === 0) {
-          const hash = sha.digest("base64");
-          // go pads the hash - which should be multiple of 3 - otherwise pads with '='
-          const pad = hash.length % 3;
-          const padding = pad > 0 ? "=".repeat(pad) : "";
-          const digest = `${digestType}${hash}${padding}`;
+          const hash = Base64UrlPaddedCodec.encode(sha.digest());
+          const digest = `${digestType}${hash}`;
           if (digest !== info.digest) {
             controller!.error(
               new Error(

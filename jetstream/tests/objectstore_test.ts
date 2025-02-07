@@ -32,7 +32,7 @@ import { crypto } from "https://deno.land/std@0.221.0/crypto/mod.ts";
 import { ObjectInfo, ObjectStoreMeta, StorageType } from "../mod.ts";
 import { connect, Empty, headers, nanos, StringCodec } from "../../src/mod.ts";
 import { equals } from "https://deno.land/std@0.221.0/bytes/mod.ts";
-import { SHA256 } from "../../nats-base-client/sha256.js";
+import { sha256 } from "../../nats-base-client/js-sha256.js";
 import { Base64UrlPaddedCodec } from "../../nats-base-client/base64.ts";
 import { digestType } from "../objectstore.ts";
 
@@ -80,12 +80,10 @@ function makeData(n: number): Uint8Array {
 }
 
 function digest(data: Uint8Array): string {
-  const sha = new SHA256();
+  const sha = sha256.create();
   sha.update(data);
-  const digest = sha.digest("base64");
-  const pad = digest.length % 3;
-  const padding = pad > 0 ? "=".repeat(pad) : "";
-  return `${digestType}${digest}${padding}`;
+  const digest = Base64UrlPaddedCodec.encode(sha.digest());
+  return `${digestType}${digest}`;
 }
 
 Deno.test("objectstore - basics", async () => {
