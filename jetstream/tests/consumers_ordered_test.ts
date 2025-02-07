@@ -979,7 +979,7 @@ Deno.test("ordered consumers - consume reset", async () => {
   const c = await js.consumers.get("A") as OrderedPullConsumerImpl;
 
   // after the first message others will get published
-  let iter = await c.consume({ max_messages: 11, expires: 5000 });
+  const iter = await c.consume({ max_messages: 11, expires: 5000 });
   countResets(iter).catch();
   const sequences = [];
   for await (const m of iter) {
