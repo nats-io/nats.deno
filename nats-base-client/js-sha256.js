@@ -1,6 +1,7 @@
 // deno-fmt-ignore-file
 // deno-lint-ignore-file
 // This code was bundled using `deno bundle` and it's not recommended to edit it manually
+// https://github.com/emn178/js-sha256 (MIT)
 
 function t(t, e) {
     return e.forEach(function(e) {

@@ -1273,7 +1273,7 @@ Deno.test("auth - sub permission queue", async () => {
   const qA = deferred();
   nc.subscribe("q", {
     queue: "A",
-    callback: (err, msg) => {
+    callback: (err, _msg) => {
       if (err) {
         qA.reject(err);
       }
@@ -1283,7 +1283,7 @@ Deno.test("auth - sub permission queue", async () => {
   const qBad = deferred<NatsError>();
   nc.subscribe("q", {
     queue: "bad",
-    callback: (err, msg) => {
+    callback: (err, _msg) => {
       if (err) {
         qBad.resolve(err);
       }

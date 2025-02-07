@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The NATS Authors
+ * Copyright 2022-2025 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,6 +55,7 @@ import {
 } from "./jsapi_types.ts";
 import { JsMsg } from "./jsmsg.ts";
 import { PubHeaders } from "./jsclient.ts";
+import { checkSha256, parseSha256 } from "./sha_digest.parser.ts";
 
 export const osPrefix = "OBJ_";
 export const digestType = "SHA-256=";
@@ -525,6 +526,16 @@ export class ObjectStoreImpl implements ObjectStore {
       return os.get(ln);
     }
 
+    if (!info.digest.startsWith(digestType)) {
+      return Promise.reject(new Error(`unknown digest type: ${info.digest}`));
+    }
+    const digest = parseSha256(info.digest.substring(8));
+    if (digest === null) {
+      return Promise.reject(
+        new Error(`unable to parse digest: ${info.digest}`),
+      );
+    }
+
     const d = deferred<Error | null>();
 
     const r: Partial<ObjectResult> = {
@@ -551,9 +562,7 @@ export class ObjectStoreImpl implements ObjectStore {
           controller!.enqueue(jm.data);
         }
         if (jm.info.pending === 0) {
-          const hash = Base64UrlPaddedCodec.encode(sha.digest());
-          const digest = `${digestType}${hash}`;
-          if (digest !== info.digest) {
+          if (!checkSha256(digest, sha.digest())) {
             controller!.error(
               new Error(
                 `received a corrupt object, digests do not match received: ${info.digest} calculated ${digest}`,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The NATS Authors
+ * Copyright 2025 The NATS Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,16 +15,17 @@
 import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
 import { ObjectStoreImpl, ServerObjectInfo } from "../jetstream/objectstore.ts";
 import {
-  Base64UrlPaddedCodec,
   connect,
   ConnectionOptions,
   credsAuthenticator,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
+import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
 import {
   SHA256 as BAD_SHA256,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/refs/tags/v1.29.1/nats-base-client/sha256.js";
-import { consumerOpts } from "../jetstream/internal_mod.ts";
-import { sha256 } from "../nats-base-client/js-sha256.js";
+import { consumerOpts } from "../jetstream/mod.ts";
+import { sha256 } from "https://raw.githubusercontent.com/nats-io/nats.deno/refs/tags/v1.29.1/nats-base-client/sha256.js";
+import { checkSha256, parseSha256 } from "../jetstream/sha_digest.parser.ts";
 
 const argv = parse(
   Deno.args,
@@ -54,9 +55,9 @@ if (argv.h || argv.help) {
     "\nThis tool fixes metadata entries in an object store that were written",
   );
   console.log(
-    "with recalculated hashes. Please backup your object stores",
+    "with hashes that were calculated incorrectly due to a bug in the sha256 library.",
   );
-  console.log("before using this tool.");
+  console.log("Please backup your object stores before using this tool.");
 
   Deno.exit(1);
 }
@@ -95,10 +96,32 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
   let fixes = 0;
   const entries = await os.list();
   for (const entry of entries) {
+    if (!entry.digest.startsWith("SHA-256=")) {
+      console.error(
+        `ignoring entry ${entry.name} - unknown objectstore digest:`,
+        entry.digest,
+      );
+      continue;
+    }
+    // plain digest string
+    const digest = entry.digest.substring(8);
+    const parsedDigest = parseSha256(digest);
+    if (parsedDigest === null) {
+      console.error(
+        `ignoring entry ${entry.name} - unable to parse digest:`,
+        digest,
+      );
+      continue;
+    }
+
     const badSha = new BAD_SHA256();
     const sha = sha256.create();
+    let badHash = new Uint8Array(0);
+    let hash = new Uint8Array(0);
 
     const oc = consumerOpts();
+    oc.orderedConsumer();
+
     const subj = `$O.${os.name}.C.${entry.nuid}`;
     let needsFixing = false;
 
@@ -109,19 +132,26 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
         sha.update(m.data);
       }
       if (m.info.pending === 0) {
-        const hash = sha.digest();
-        const badHash = badSha.digest();
-        for (let i = 0; i < hash.length; i++) {
-          if (hash[i] !== badHash[i]) {
-            needsFixing = true;
-            fixes++;
-            break;
-          }
-        }
+        badHash = badSha.digest();
+        hash = sha.digest();
         break;
       }
     }
     sub.unsubscribe();
+
+    if (checkSha256(parsedDigest, badHash)) {
+      // this one could be bad
+      if (!checkSha256(badHash, hash)) {
+        console.log(
+          `[WARN] entry ${entry.name} has a bad hash: ${
+            Base64UrlPaddedCodec.encode(badHash)
+          } - should be ${Base64UrlPaddedCodec.encode(hash)}`,
+        );
+        needsFixing = true;
+        fixes++;
+      }
+    }
+
     if (argv.check) {
       continue;
     }
@@ -131,7 +161,7 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
         last_by_subj: metaSubject,
       });
       const info = m.json<ServerObjectInfo>();
-      const digest = Base64UrlPaddedCodec.encode(sha.digest());
+      const digest = Base64UrlPaddedCodec.encode(hash);
       info.digest = `SHA-256=${digest}`;
       try {
         await js.publish(metaSubject, JSON.stringify(info));
