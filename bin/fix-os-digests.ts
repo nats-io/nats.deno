@@ -13,19 +13,34 @@
  * limitations under the License.
  */
 import { parse } from "https://deno.land/std@0.221.0/flags/mod.ts";
-import { ObjectStoreImpl, ServerObjectInfo } from "../jetstream/objectstore.ts";
 import {
   connect,
   ConnectionOptions,
   credsAuthenticator,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/src/mod.ts";
-import { Base64UrlPaddedCodec } from "../nats-base-client/base64.ts";
+
+import {
+  consumerOpts,
+} from "https://raw.githubusercontent.com/nats-io/nats.deno/main/jetstream/internal_mod.ts";
+
+import {
+  ObjectStoreImpl,
+  ServerObjectInfo,
+} from "https://raw.githubusercontent.com/nats-io/nats.deno/main/jetstream/objectstore.ts";
+
+import {
+  Base64UrlPaddedCodec,
+} from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/base64.ts";
+
+// old sha lib to verify
 import {
   SHA256 as BAD_SHA256,
 } from "https://raw.githubusercontent.com/nats-io/nats.deno/refs/tags/v1.29.1/nats-base-client/sha256.js";
-import { consumerOpts } from "../jetstream/mod.ts";
-import { sha256 } from "https://raw.githubusercontent.com/nats-io/nats.deno/refs/tags/v1.29.1/nats-base-client/sha256.js";
-import { checkSha256, parseSha256 } from "../jetstream/sha_digest.parser.ts";
+import { sha256 } from "https://raw.githubusercontent.com/nats-io/nats.deno/main/nats-base-client/js-sha256.js";
+import {
+  checkSha256,
+  parseSha256,
+} from "https://raw.githubusercontent.com/nats-io/nats.deno/main/jetstream/sha_digest.parser.ts";
 
 const argv = parse(
   Deno.args,
@@ -55,7 +70,7 @@ if (argv.h || argv.help) {
     "\nThis tool fixes metadata entries in an object store that were written",
   );
   console.log(
-    "with hashes that were calculated incorrectly due to a bug in the sha256 library.",
+    "with digests that were calculated incorrectly due to a bug in the sha256 library.",
   );
   console.log("Please backup your object stores before using this tool.");
 
@@ -104,20 +119,20 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
       continue;
     }
     // plain digest string
-    const digest = entry.digest.substring(8);
-    const parsedDigest = parseSha256(digest);
+    const existingDigest = entry.digest.substring(8);
+    const parsedDigest = parseSha256(existingDigest);
     if (parsedDigest === null) {
       console.error(
         `ignoring entry ${entry.name} - unable to parse digest:`,
-        digest,
+        existingDigest,
       );
       continue;
     }
 
     const badSha = new BAD_SHA256();
     const sha = sha256.create();
-    let badHash = new Uint8Array(0);
-    let hash = new Uint8Array(0);
+    let badDigest = new Uint8Array(0);
+    let digest = new Uint8Array(0);
 
     const oc = consumerOpts();
     oc.orderedConsumer();
@@ -132,20 +147,31 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
         sha.update(m.data);
       }
       if (m.info.pending === 0) {
-        badHash = badSha.digest();
-        hash = sha.digest();
+        badDigest = badSha.digest();
+        digest = sha.digest();
         break;
       }
     }
     sub.unsubscribe();
 
-    if (checkSha256(parsedDigest, badHash)) {
+    // this possibly could be made more general, but goal is to fix
+    // things that put by the javascript library, so we only look
+    // at things that match old bad sha256 digests
+    if (checkSha256(parsedDigest, badDigest)) {
       // this one could be bad
-      if (!checkSha256(badHash, hash)) {
+      if (!checkSha256(badDigest, digest)) {
         console.log(
-          `[WARN] entry ${entry.name} has a bad hash: ${
-            Base64UrlPaddedCodec.encode(badHash)
-          } - should be ${Base64UrlPaddedCodec.encode(hash)}`,
+          `[WARN] entry ${entry.name} has a bad digest: ${
+            Base64UrlPaddedCodec.encode(badDigest)
+          } - should be ${Base64UrlPaddedCodec.encode(digest)}`,
+        );
+        needsFixing = true;
+        fixes++;
+      } else if (existingDigest !== Base64UrlPaddedCodec.encode(digest)) {
+        console.log(
+          `[WARN] entry ${entry.name} has an incorrectly formatted digest: ${existingDigest} - should be ${
+            Base64UrlPaddedCodec.encode(digest)
+          }`,
         );
         needsFixing = true;
         fixes++;
@@ -161,12 +187,14 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
         last_by_subj: metaSubject,
       });
       const info = m.json<ServerObjectInfo>();
-      const digest = Base64UrlPaddedCodec.encode(hash);
-      info.digest = `SHA-256=${digest}`;
+      info.digest = `SHA-256=${Base64UrlPaddedCodec.encode(digest)}`;
       try {
         await js.publish(metaSubject, JSON.stringify(info));
+        console.log(`[OK] fixed ${entry.name}`);
       } catch (err) {
-        console.error(`[ERR] failed to update ${metaSubject}: ${err.message}`);
+        console.error(
+          `[ERR] failed to update ${metaSubject}: ${(err as Error).message}`,
+        );
         continue;
       }
       try {
@@ -174,7 +202,9 @@ async function fixDigests(os: ObjectStoreImpl): Promise<void> {
         await jsm.streams.deleteMessage(os.stream, seq);
       } catch (err) {
         console.error(
-          `[WARN] failed to delete bad entry ${metaSubject}: ${err.message} - new entry was added`,
+          `[WARN] failed to delete bad entry ${metaSubject}: ${
+            (err as Error).message
+          } - new entry was added`,
         );
       }
     }
