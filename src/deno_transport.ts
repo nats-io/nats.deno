@@ -34,7 +34,7 @@ import {
   Transport,
 } from "../nats-base-client/internal_mod.ts";
 
-const VERSION = "1.29.1";
+const VERSION = "1.29.2";
 const LANG = "nats.deno";
 
 const ReadBufferSize = 1024 * 256;
