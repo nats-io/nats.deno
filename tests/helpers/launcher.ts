@@ -662,7 +662,7 @@ export class NatsServer implements PortInfo {
   }
 
   static async start(conf?: any, debug = false): Promise<NatsServer> {
-    const exe = Deno.env.get("CI") ? "nats-server/nats-server" : "nats-server";
+    const exe = "nats-server";
     const tmp = path.resolve(Deno.env.get("TMPDIR") || ".");
     conf = NatsServer.confDefaults(conf);
     conf.ports_file_dir = tmp;
