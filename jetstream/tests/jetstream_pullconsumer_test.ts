@@ -495,7 +495,7 @@ Deno.test("jetstream - pull stream doesn't exist", async () => {
       await js.pull("helloworld", "me");
     },
     Error,
-    ErrorCode.Timeout,
+    ErrorCode.NoResponders,
     undefined,
   );
 
@@ -511,7 +511,7 @@ Deno.test("jetstream - pull consumer doesn't exist", async () => {
       await js.pull(stream, "me");
     },
     Error,
-    ErrorCode.Timeout,
+    ErrorCode.NoResponders,
     undefined,
   );
 

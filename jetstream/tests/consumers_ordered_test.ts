@@ -23,7 +23,9 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import {
   ConsumerDebugEvents,
+  ConsumerEvents,
   ConsumerMessages,
+  ConsumerStatus,
   DeliverPolicy,
   JsMsg,
 } from "../mod.ts";
@@ -1070,6 +1072,110 @@ Deno.test("ordered consumers - initial creation fails, consumer fails", async ()
     Error,
     "stream not found",
   );
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages");
+  const iter = await c.consume({ expires: 10_000 });
+  // FIXME: this impl of the consumer has a bug in notification
+  //   that unless it has pulled, it has no way of returning events.
+  //   for a test we want to miss a few, and then recreate.
+  await jsm.streams.delete("messages");
+
+  const buf: ConsumerStatus[] = [];
+  const snfP = deferred();
+  (async () => {
+    const status = await iter.status();
+    for await (const s of status) {
+      console.log(s);
+      buf.push(s);
+      if (s.type === ConsumerEvents.HeartbeatsMissed) {
+        if (s.data === 5) {
+          snfP.resolve();
+        }
+      }
+    }
+  })().then();
+
+  const process = (async () => {
+    for await (const m of iter) {
+      if (m) {
+        break;
+      }
+    }
+  })();
+
+  await snfP;
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  await nc.jetstream().publish("hello");
+  await deadline(process, 15_000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers fetch - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages");
+  await jsm.streams.delete("messages");
+  await assertRejects(
+    async () => {
+      const iter = await c.fetch({ expires: 10_000 });
+      for await (const _ of iter) {
+        // ignored
+      }
+    },
+    Error,
+    "stream not found",
+  );
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await nc.jetstream().publish("hello");
+
+  const d = deferred();
+  const iter = await c.fetch({ expires: 10_000, max_messages: 1 });
+  for await (const _ of iter) {
+    d.resolve();
+  }
+  await d;
+
+  await cleanup(ns, nc);
+});
+
+Deno.test("ordered consumers next - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages");
+  await jsm.streams.delete("messages");
+  await assertRejects(
+    () => {
+      return c.next({ expires: 10_000 });
+    },
+    Error,
+    "stream not found",
+  );
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await nc.jetstream().publish("hello");
+
+  const m = await c.next({ expires: 10_000 });
+  assertExists(m);
 
   await cleanup(ns, nc);
 });

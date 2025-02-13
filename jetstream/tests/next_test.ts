@@ -25,7 +25,7 @@ import {
   assertRejects,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
-import { delay, nanos } from "../../nats-base-client/util.ts";
+import { deadline, delay, nanos } from "../../nats-base-client/util.ts";
 
 Deno.test("next - basics", async () => {
   const { ns, nc } = await setup(jetstreamServerConf());
@@ -138,7 +138,7 @@ Deno.test("next - consumer not found", async () => {
       await c.next({ expires: 1000 });
     },
     Error,
-    "consumer not found",
+    "no responders",
   );
 
   await exited;
@@ -200,7 +200,7 @@ Deno.test("next - stream not found", async () => {
       return c.next({ expires: 4000 });
     },
     Error,
-    "stream not found",
+    "no responders",
   );
 
   await cleanup(ns, nc);
@@ -228,13 +228,83 @@ Deno.test("next - consumer bind", async () => {
     callback: () => {},
   });
 
-  const msg = await c.next({
-    expires: 1000,
-    bind: true,
-  });
+  await assertRejects(
+    () => {
+      return c.next({
+        expires: 1000,
+        bind: true,
+      });
+    },
+    Error,
+    "no responders",
+  );
 
-  assertEquals(msg, null);
   assertEquals(cisub.getProcessed(), 0);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("next - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.streams.delete("messages");
+
+  await assertRejects(
+    () => {
+      return c.next();
+    },
+    Error,
+    "no responders",
+  );
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+  await nc.jetstream().publish("hello");
+
+  await deadline(c.next(), 5_000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("next - no responders - consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.consumers.delete("messages", "c");
+
+  await assertRejects(
+    () => {
+      return c.next();
+    },
+    Error,
+    "no responders",
+  );
+
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+  await nc.jetstream().publish("hello");
+
+  await deadline(c.next(), 5_000);
   await cleanup(ns, nc);
 });

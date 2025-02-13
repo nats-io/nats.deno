@@ -310,7 +310,7 @@ Deno.test("consume - stream not found request abort", async () => {
       }
     },
     Error,
-    "stream not found",
+    "no responders",
   );
 
   await cleanup(ns, nc);
@@ -380,7 +380,7 @@ Deno.test("consume - consumer not found request abort", async () => {
       }
     },
     Error,
-    "consumer not found",
+    "no responders",
   );
 
   await cleanup(ns, nc);

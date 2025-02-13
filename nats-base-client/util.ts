@@ -270,6 +270,21 @@ export interface Backoff {
   backoff(attempt: number): number;
 }
 
+export function backoffWithMax(max = 30_000): Backoff {
+  const a = [max];
+  while (true) {
+    const n = Math.floor(max / 2);
+    if (n < 100) {
+      // always try right away
+      a.unshift(0);
+      break;
+    }
+    a.unshift(n);
+    max = n;
+  }
+  return backoff(a);
+}
+
 /**
  * Returns a Backoff with the specified interval policy set.
  * @param policy
