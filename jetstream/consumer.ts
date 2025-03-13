@@ -314,7 +314,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     super();
     this.consumer = c;
 
-    const copts = opts as ConsumeOptions;
+    const copts = { ...opts } as ConsumeOptions;
 
     this.opts = this.parseOptions(opts, refilling);
     this.callback = copts.callback || null;
@@ -881,7 +881,7 @@ export class PullConsumerImpl implements Consumer {
     opts: NextOptions = { expires: 30_000 },
   ): Promise<JsMsg | null> {
     const d = deferred<JsMsg | null>();
-    const fopts = opts as FetchMessages;
+    const fopts = { ...opts } as FetchMessages;
     fopts.max_messages = 1;
 
     const iter = new PullConsumerMessagesImpl(this, fopts, false);
@@ -1167,14 +1167,14 @@ export class OrderedPullConsumerImpl implements Consumer {
     }
     this.consumer = new PullConsumerImpl(this.api, this.currentConsumer);
 
-    const copts = opts as ConsumeOptions;
+    const copts = { ...opts } as ConsumeOptions;
     copts.callback = this.internalHandler(this.serial);
     let msgs: ConsumerMessages | null = null;
     if (this.type === PullConsumerType.Fetch && fromFetch) {
       // we only repull if client initiates
-      msgs = await this.consumer.fetch(opts);
+      msgs = await this.consumer.fetch(copts);
     } else if (this.type === PullConsumerType.Consume) {
-      msgs = await this.consumer.consume(opts);
+      msgs = await this.consumer.consume(copts);
     }
     const msgsImpl = msgs as PullConsumerMessagesImpl;
     msgsImpl.forOrderedConsumer = true;
@@ -1249,7 +1249,7 @@ export class OrderedPullConsumerImpl implements Consumer {
   async next(
     opts: NextOptions = { expires: 30_000 },
   ): Promise<JsMsg | null> {
-    const copts = opts as ConsumeOptions;
+    const copts = { ...opts } as ConsumeOptions;
     if (copts.bind) {
       return Promise.reject(new Error("bind is not supported"));
     }
