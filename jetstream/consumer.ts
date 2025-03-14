@@ -219,6 +219,12 @@ export enum ConsumerEvents {
    * the consumer is recreated. The argument is the name of the newly created consumer.
    */
   OrderedConsumerRecreated = "ordered_consumer_recreated",
+
+  /**
+   * This notification means that either both the stream and consumer were not
+   * found or that JetStream is not available.
+   */
+  NoResponders = "no_responders",
 }
 
 /**
@@ -304,6 +310,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   resetHandler?: () => void;
   abortOnMissingResource?: boolean;
   bind: boolean;
+  inBackOff: boolean;
 
   // callback: ConsumerCallbackFn;
   constructor(
@@ -329,6 +336,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
     this.forOrderedConsumer = false;
     this.abortOnMissingResource = copts.abort_on_missing_resource === true;
     this.bind = copts.bind === true;
+    this.inBackOff = false;
 
     this.start();
   }
@@ -408,6 +416,17 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
               );
               if (!this.refilling || this.abortOnMissingResource) {
                 const error = new NatsError(description, `${code}`);
+                this.stop(error);
+                return;
+              }
+            } else if (code === 503) {
+              // this is a no responders - possibly the stream/consumer were
+              // deleted from under the client
+              this.notify(ConsumerEvents.NoResponders, `${code} No Responders`);
+              // in cases that we are in consume, the idle heartbeat will kick in
+              // which will do a reset, and possibly refine the error
+              if (!this.refilling || this.abortOnMissingResource) {
+                const error = new NatsError("no responders", `${code}`);
                 this.stop(error);
                 return;
               }
@@ -563,9 +582,13 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
   }
 
   async resetPendingWithInfo(): Promise<boolean> {
+    if (this.inBackOff) {
+      // already failing to get stream or consumer
+      return false;
+    }
     let notFound = 0;
     let streamNotFound = 0;
-    const bo = backoff();
+    const bo = backoff([this.opts.expires]);
     let attempt = 0;
     while (true) {
       if (this.done) {
@@ -578,6 +601,8 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
       try {
         // check we exist
         await this.consumer.info();
+        this.inBackOff = false;
+
         notFound = 0;
         // we exist, so effectively any pending state is gone
         // so reset and re-pull
@@ -616,6 +641,7 @@ export class PullConsumerMessagesImpl extends QueuedIteratorImpl<JsMsg>
           notFound = 0;
           streamNotFound = 0;
         }
+        this.inBackOff = true;
         const to = bo.backoff(attempt);
         // wait for delay or till the client closes
         const de = delay(to);
@@ -1069,6 +1095,7 @@ export class OrderedPullConsumerImpl implements Consumer {
   }
 
   async resetConsumer(seq = 0): Promise<ConsumerInfo> {
+    const id = nuid.next();
     const isNew = this.serial === 0;
     // try to delete the consumer
     this.consumer?.delete().catch(() => {});
@@ -1078,7 +1105,7 @@ export class OrderedPullConsumerImpl implements Consumer {
     const config = this.getConsumerOpts(seq);
     config.max_deliver = 1;
     config.mem_storage = true;
-    const bo = backoff();
+    const bo = backoff([this.opts?.expires || 30_000]);
     let ci;
     for (let i = 0;; i++) {
       try {
@@ -1098,7 +1125,6 @@ export class OrderedPullConsumerImpl implements Consumer {
             return Promise.reject(err);
           }
         }
-
         if (isNew && i >= this.maxInitialReset) {
           // consumer was never created, so we can fail this
           throw err;

@@ -14,12 +14,18 @@
  */
 import { initStream } from "./jstest_util.ts";
 import {
+  assert,
   assertEquals,
   assertExists,
   assertRejects,
   assertStringIncludes,
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { deferred, delay, nanos } from "../../nats-base-client/mod.ts";
+import {
+  deadline,
+  deferred,
+  delay,
+  nanos,
+} from "../../nats-base-client/mod.ts";
 import {
   AckPolicy,
   Consumer,
@@ -643,5 +649,124 @@ Deno.test("consumers - getPullConsumerFor non existing misses heartbeats", async
   await nc.flush();
   assertEquals(c, 0);
 
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.streams.delete("messages");
+  const iter = await c.consume({ expires: 10_000 });
+  const buf: ConsumerStatus[] = [];
+  const hbmP = deferred();
+  (async () => {
+    const status = await iter.status();
+    for await (const s of status) {
+      console.log(s);
+      buf.push(s);
+      if (s.type === ConsumerEvents.HeartbeatsMissed) {
+        if (s.data === 3) {
+          hbmP.resolve();
+        }
+      }
+    }
+  })().then();
+
+  const process = (async () => {
+    for await (const m of iter) {
+      if (m) {
+        break;
+      }
+    }
+  })();
+
+  await hbmP;
+
+  const snfs = buf.filter((s) => {
+    return s.type === ConsumerEvents.StreamNotFound;
+  }).length;
+  assert(snfs > 0);
+
+  const nrs = buf.filter((s) => {
+    return s.type === ConsumerEvents.NoResponders;
+  }).length;
+  assertEquals(nrs, 1);
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  await nc.jetstream().publish("hello");
+  await deadline(process, 5_000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("consumers - no responders - consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.consumers.delete("messages", "c");
+  const iter = await c.consume({ expires: 10_000 });
+  const buf: ConsumerStatus[] = [];
+  const hbmP = deferred();
+  (async () => {
+    const status = await iter.status();
+    for await (const s of status) {
+      console.log(s);
+      buf.push(s);
+      if (s.type === ConsumerEvents.HeartbeatsMissed) {
+        if (s.data === 3) {
+          hbmP.resolve();
+        }
+      }
+    }
+  })().then();
+
+  const process = (async () => {
+    for await (const m of iter) {
+      if (m) {
+        break;
+      }
+    }
+  })();
+
+  await hbmP;
+
+  const snfs = buf.filter((s) => {
+    return s.type === ConsumerEvents.ConsumerNotFound;
+  }).length;
+  assert(snfs > 0);
+
+  const nrs = buf.filter((s) => {
+    return s.type === ConsumerEvents.NoResponders;
+  }).length;
+  assertEquals(nrs, 1);
+
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  await nc.jetstream().publish("hello");
+  await deadline(process, 5_000);
   await cleanup(ns, nc);
 });

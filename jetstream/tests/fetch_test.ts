@@ -27,7 +27,12 @@ import {
 } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { Empty } from "../../nats-base-client/encoders.ts";
 import { StringCodec } from "../../nats-base-client/codec.ts";
-import { delay, nanos } from "../../nats-base-client/util.ts";
+import {
+  deadline,
+  deferred,
+  delay,
+  nanos,
+} from "../../nats-base-client/util.ts";
 import { NatsConnectionImpl } from "../../nats-base-client/nats.ts";
 import { syncIterator } from "../../nats-base-client/core.ts";
 import { PullConsumerMessagesImpl } from "../consumer.ts";
@@ -141,7 +146,7 @@ Deno.test("fetch - consumer not found", async () => {
       }
     },
     Error,
-    "consumer not found",
+    "no responders",
   );
 
   await exited;
@@ -209,7 +214,7 @@ Deno.test("fetch - stream not found", async () => {
       }
     },
     Error,
-    "stream not found",
+    "no responders",
   );
 
   await cleanup(ns, nc);
@@ -308,13 +313,101 @@ Deno.test("fetch - consumer bind", async () => {
     bind: true,
   });
 
-  const done = (async () => {
-    for await (const _ of iter) {
-      // nothing
-    }
-  })();
+  await assertRejects(
+    () => {
+      return (async () => {
+        for await (const _ of iter) {
+          // nothing
+        }
+      })();
+    },
+    Error,
+    "no responders",
+  );
 
-  await done;
   assertEquals(cisub.getProcessed(), 0);
+  await cleanup(ns, nc);
+});
+
+Deno.test("fetch - no responders - stream deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.streams.delete("messages");
+
+  await assertRejects(
+    async () => {
+      const iter = await c.fetch({ expires: 10_000 });
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "no responders",
+  );
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+  await nc.jetstream().publish("hello");
+
+  const mP = deferred<void>();
+  const iter = await c.fetch({ expires: 10_000 });
+  for await (const _ of iter) {
+    mP.resolve();
+    break;
+  }
+  await deadline(mP, 5_000);
+  await cleanup(ns, nc);
+});
+
+Deno.test("fetch - no responders - consumer deleted", async () => {
+  const { ns, nc } = await setup(jetstreamServerConf());
+  const jsm = await nc.jetstreamManager();
+
+  await jsm.streams.add({ name: "messages", subjects: ["hello"] });
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+
+  // stream is deleted
+  const c = await jsm.jetstream().consumers.get("messages", "c");
+  await jsm.consumers.delete("messages", "c");
+
+  await assertRejects(
+    async () => {
+      const iter = await c.fetch({ expires: 10_000 });
+      for await (const _ of iter) {
+        // nothing
+      }
+    },
+    Error,
+    "no responders",
+  );
+
+  await jsm.consumers.add("messages", {
+    name: "c",
+    deliver_policy: DeliverPolicy.All,
+  });
+  await nc.jetstream().publish("hello");
+
+  const mP = deferred<void>();
+  const iter = await c.fetch({ expires: 10_000 });
+  for await (const _ of iter) {
+    mP.resolve();
+    break;
+  }
+  await deadline(mP, 5_000);
   await cleanup(ns, nc);
 });
