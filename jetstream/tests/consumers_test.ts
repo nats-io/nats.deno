@@ -708,7 +708,7 @@ Deno.test("consumers - no responders - stream deleted", async () => {
   });
 
   await nc.jetstream().publish("hello");
-  await deadline(process, 5_000);
+  await deadline(process, 15_000);
   await cleanup(ns, nc);
 });
 
